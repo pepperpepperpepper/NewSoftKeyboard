@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:key="openai_speech_screen"
+    android:title="@string/openai_speech_settings_title">
+
+    <androidx.preference.PreferenceCategory
+        android:key="openai_api_settings_group"
+        android:title="@string/openai_api_settings_group">
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_openai_api_key"
+            android:title="@string/openai_api_key_title"
+            android:summary="@string/openai_api_key_summary"
+            android:dialogTitle="@string/openai_api_key_dialog_title"
+            android:inputType="textPassword"
+            android:persistent="true" />
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_openai_endpoint"
+            android:title="@string/openai_endpoint_title"
+            android:summary="@string/openai_endpoint_summary"
+            android:dialogTitle="@string/openai_endpoint_dialog_title"
+            android:defaultValue="https://api.openai.com/v1/audio/transcriptions"
+            android:persistent="true" />
+
+        <androidx.preference.ListPreference
+            android:key="@string/settings_key_openai_model"
+            android:title="@string/openai_model_title"
+            android:summary="@string/openai_model_summary"
+            android:dialogTitle="@string/openai_model_dialog_title"
+            android:entries="@array/openai_model_entries"
+            android:entryValues="@array/openai_model_values"
+            android:defaultValue="whisper-1"
+            android:persistent="true" />
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_openai_language"
+            android:title="@string/openai_language_title"
+            android:summary="@string/openai_language_summary"
+            android:dialogTitle="@string/openai_language_dialog_title"
+            android:defaultValue="en"
+            android:persistent="true" />
+
+        <androidx.preference.SwitchPreferenceCompat
+            android:key="@string/settings_key_openai_use_default_prompt"
+            android:title="@string/openai_use_default_prompt_title"
+            android:summary="@string/openai_use_default_prompt_summary"
+            android:defaultValue="false"
+            android:persistent="true" />
+
+        <androidx.preference.ListPreference
+            android:key="@string/settings_key_openai_default_prompt_type"
+            android:title="@string/openai_default_prompt_type_title"
+            android:summary="@string/openai_default_prompt_type_summary"
+            android:dialogTitle="@string/openai_default_prompt_type_dialog_title"
+            android:entries="@array/openai_default_prompt_type_entries"
+            android:entryValues="@array/openai_default_prompt_type_values"
+            android:defaultValue="whisper"
+            android:persistent="true"
+            android:dependency="@string/settings_key_openai_use_default_prompt" />
+
+        <androidx.preference.SwitchPreferenceCompat
+            android:key="@string/settings_key_openai_append_custom_prompt"
+            android:title="@string/openai_append_custom_prompt_title"
+            android:summary="@string/openai_append_custom_prompt_summary"
+            android:defaultValue="true"
+            android:persistent="true"
+            android:dependency="@string/settings_key_openai_use_default_prompt" />
+
+        <com.anysoftkeyboard.ui.settings.OpenAIPromptEditTextPreference
+            android:key="@string/settings_key_openai_prompt"
+            android:title="@string/openai_prompt_title"
+            android:summary="@string/openai_prompt_summary"
+            android:dialogTitle="@string/openai_prompt_dialog_title"
+            android:persistent="true" />
+
+        <androidx.preference.Preference
+            android:key="@string/settings_key_openai_saved_prompts"
+            android:title="@string/openai_saved_prompts_title"
+            android:summary="@string/openai_saved_prompts_summary"
+            android:persistent="false" />
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_openai_temperature"
+            android:title="@string/openai_temperature_title"
+            android:summary="@string/openai_temperature_summary"
+            android:dialogTitle="@string/openai_temperature_dialog_title"
+            android:defaultValue="0.0"
+            android:inputType="numberDecimal"
+            android:persistent="true" />
+
+        <androidx.preference.ListPreference
+            android:key="@string/settings_key_openai_response_format"
+            android:title="@string/openai_response_format_title"
+            android:summary="@string/openai_response_format_summary"
+            android:dialogTitle="@string/openai_response_format_dialog_title"
+            android:entries="@array/openai_response_format_entries"
+            android:entryValues="@array/openai_response_format_values"
+            android:defaultValue="text"
+            android:persistent="true" />
+
+        <androidx.preference.ListPreference
+            android:key="@string/settings_key_openai_chunking_strategy"
+            android:title="@string/openai_chunking_strategy_title"
+            android:summary="@string/openai_chunking_strategy_summary"
+            android:dialogTitle="@string/openai_chunking_strategy_dialog_title"
+            android:entries="@array/openai_chunking_strategy_entries"
+            android:entryValues="@array/openai_chunking_strategy_values"
+            android:defaultValue="auto"
+            android:persistent="true" />
+
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory
+        android:key="openai_audio_settings_group"
+        android:title="@string/openai_audio_settings_group">
+
+        <androidx.preference.CheckBoxPreference
+            android:key="@string/settings_key_openai_auto_punctuation"
+            android:title="@string/openai_auto_punctuation_title"
+            android:summary="@string/openai_auto_punctuation_summary"
+            android:defaultValue="true"
+            android:persistent="true" />
+
+        <androidx.preference.CheckBoxPreference
+            android:key="@string/settings_key_openai_timestamps"
+            android:title="@string/openai_timestamps_title"
+            android:summary="@string/openai_timestamps_summary"
+            android:defaultValue="false"
+            android:persistent="true" />
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_openai_copy_destination"
+            android:title="@string/openai_copy_destination_title"
+            android:summary="@string/openai_copy_destination_summary"
+            android:dialogTitle="@string/openai_copy_destination_dialog_title"
+            android:defaultValue=""
+            android:persistent="true" />
+
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory
+        android:key="openai_behavior_settings_group"
+        android:title="@string/openai_behavior_settings_group">
+
+        <androidx.preference.CheckBoxPreference
+            android:key="@string/settings_key_openai_enabled"
+            android:title="@string/openai_enabled_title"
+            android:summary="@string/openai_enabled_summary"
+            android:defaultValue="false"
+            android:persistent="true" />
+
+        
+
+        <androidx.preference.CheckBoxPreference
+            android:key="@string/settings_key_openai_add_trailing_space"
+            android:title="@string/openai_add_trailing_space_title"
+            android:summary="@string/openai_add_trailing_space_summary"
+            android:defaultValue="true"
+            android:persistent="true" />
+
+    </androidx.preference.PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

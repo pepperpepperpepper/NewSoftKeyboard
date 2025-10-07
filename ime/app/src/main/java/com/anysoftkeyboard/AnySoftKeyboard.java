@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
 import android.net.Uri;
+import android.os.Build;
 import android.os.IBinder;
 import android.text.TextUtils;
 import android.util.Log;
@@ -38,6 +39,8 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.collection.SparseArrayCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
+import com.anysoftkeyboard.addons.PackagesChangedReceiver;
+import com.anysoftkeyboard.addons.UserUnlockedReceiver;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.DictionaryAddOnAndBuilder;
@@ -53,7 +56,6 @@ import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
 import com.anysoftkeyboard.keyboards.KeyboardSwitcher.NextKeyboardType;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardView;
 import com.anysoftkeyboard.prefs.AnimationsLevel;
-import com.anysoftkeyboard.receivers.PackagesChangedReceiver;
 import com.anysoftkeyboard.rx.GenericOnError;
 import com.anysoftkeyboard.ui.VoiceInputNotInstalledActivity;
 import com.anysoftkeyboard.ui.dev.DevStripActionProvider;
@@ -74,7 +76,8 @@ import net.evendanan.pixel.GeneralDialogController;
 public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   private final PackagesChangedReceiver mPackagesChangedReceiver =
-      new PackagesChangedReceiver(this);
+      new PackagesChangedReceiver(this::onCriticalPackageChanged);
+  @Nullable private UserUnlockedReceiver mUserUnlockedReceiver;
 
   private final StringBuilder mTextCapitalizerWorkspace = new StringBuilder();
   private boolean mShowKeyboardIconInStatusBar;
@@ -89,6 +92,19 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private VoiceRecognitionTrigger mVoiceRecognitionTrigger;
   private View mFullScreenExtractView;
   private EditText mFullScreenExtractTextView;
+
+  // Enum for different voice input states
+  private enum VoiceInputState {
+    IDLE,           // Shows "English" or current language
+    RECORDING,      // Shows "🎤 RECORDING"
+    WAITING,        // Shows "⏳ WAITING" - when recording ended and waiting for OpenAI, also during transcription
+    ERROR           // Shows "❌ ERROR" (with flashing)
+  }
+  
+  private VoiceInputState mVoiceInputState = VoiceInputState.IDLE;
+  private boolean mErrorFlashState = false;
+  private android.os.Handler mErrorFlashHandler = new android.os.Handler();
+  private Runnable mErrorFlashRunnable = null;
 
   private boolean mAutoCap;
   private boolean mKeyboardAutoCap;
@@ -216,8 +232,17 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     ContextCompat.registerReceiver(
         this,
         mPackagesChangedReceiver,
-        mPackagesChangedReceiver.createIntentFilter(),
+        PackagesChangedReceiver.createIntentFilter(),
         ContextCompat.RECEIVER_EXPORTED);
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+      mUserUnlockedReceiver = new UserUnlockedReceiver(this::onUserUnlocked);
+      ContextCompat.registerReceiver(
+          this,
+          mUserUnlockedReceiver,
+          UserUnlockedReceiver.createIntentFilter(),
+          ContextCompat.RECEIVER_EXPORTED);
+    }
 
     addDisposable(
         prefs()
@@ -230,6 +255,72 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
                 GenericOnError.onError("settings_key_keyboard_icon_in_status_bar")));
 
     mVoiceRecognitionTrigger = new VoiceRecognitionTrigger(this);
+    
+    // Set up callback for voice recording state changes
+    mVoiceRecognitionTrigger.setRecordingStateCallback(isRecording -> {
+      // Update voice key state when recording state changes
+      android.util.Log.d("AnySoftKeyboard", "Voice recording state changed: " + isRecording);
+      updateVoiceKeyState();
+      // Update space bar text to show recording status
+      updateSpaceBarRecordingStatus(isRecording);
+    });
+    
+    // Set up transcription status callback for OpenAI
+    if (mVoiceRecognitionTrigger instanceof com.google.android.voiceime.VoiceRecognitionTrigger) {
+      ((com.google.android.voiceime.VoiceRecognitionTrigger) mVoiceRecognitionTrigger)
+          .setTranscriptionStateCallback(isTranscribing -> {
+            android.util.Log.d("AnySoftKeyboard", "Voice transcription state changed: " + isTranscribing);
+            updateVoiceInputStatus(isTranscribing ? VoiceInputState.WAITING : VoiceInputState.IDLE);
+          });
+          
+      // Set up error callback for OpenAI
+      ((com.google.android.voiceime.VoiceRecognitionTrigger) mVoiceRecognitionTrigger)
+          .setTranscriptionErrorCallback(error -> {
+            android.util.Log.d("AnySoftKeyboard", "Voice transcription error: " + error);
+            updateVoiceInputStatus(VoiceInputState.ERROR);
+            // Show error toast
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+              android.widget.Toast.makeText(AnySoftKeyboard.this, 
+                  "OpenAI Error: " + error, 
+                  android.widget.Toast.LENGTH_LONG).show();
+            });
+          });
+          
+      // Set up recording ended callback - when recording ends and audio is sent to OpenAI
+      ((com.google.android.voiceime.VoiceRecognitionTrigger) mVoiceRecognitionTrigger)
+          .setRecordingEndedCallback(() -> {
+            // Log suppressed - no longer showing "Voice recording ended - audio sent to OpenAI" message
+            // android.util.Log.d("AnySoftKeyboard", "Voice recording ended - audio sent to OpenAI");
+            android.util.Log.d("VoiceKeyDebug", "RecordingEndedCallback called - current state: " + mVoiceInputState);
+            android.util.Log.d("VoiceKeyDebug", "RecordingEndedCallback - attempting to set state to WAITING");
+            // This is the moment when recording ends and we're waiting for OpenAI's response
+            // Update the space bar to show "⏳ WAITING"
+            updateVoiceInputStatus(VoiceInputState.WAITING);
+            android.util.Log.d("VoiceKeyDebug", "RecordingEndedCallback - after updateVoiceInputStatus call, state is: " + mVoiceInputState);
+            // You can add custom logic here for this specific state
+            // Toast suppressed - no longer showing "Recording sent to OpenAI..." message
+            // new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            //   android.widget.Toast.makeText(AnySoftKeyboard.this, 
+            //       "Recording sent to OpenAI...", 
+            //       android.widget.Toast.LENGTH_SHORT).show();
+            // });
+          });
+          
+      // Set up text written callback - when transcribed text has been written to input field
+      ((com.google.android.voiceime.VoiceRecognitionTrigger) mVoiceRecognitionTrigger)
+          .setTextWrittenCallback(text -> {
+            // Log suppressed - no longer showing "Voice transcription text written: ..." message
+            // android.util.Log.d("AnySoftKeyboard", "Voice transcription text written: " + text);
+            // This is the moment after the text has actually been written out
+            // You can add custom logic here for when text is committed
+            // Toast suppressed - no longer showing "Text written: ..." message
+            // new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+            //   android.widget.Toast.makeText(AnySoftKeyboard.this, 
+            //       "Text written: " + (text.length() > 20 ? text.substring(0, 20) + "..." : text), 
+            //       android.widget.Toast.LENGTH_SHORT).show();
+            // });
+          });
+    }
 
     mDevToolsAction = new DevStripActionProvider(this);
   }
@@ -238,6 +329,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   public void onDestroy() {
     Logger.i(TAG, "AnySoftKeyboard has been destroyed! Cleaning resources..");
     unregisterReceiver(mPackagesChangedReceiver);
+    if (mUserUnlockedReceiver != null) unregisterReceiver(mUserUnlockedReceiver);
+    mUserUnlockedReceiver = null;
 
     final IBinder imeToken = getImeToken();
     if (imeToken != null) mInputMethodManager.hideStatusIcon(imeToken);
@@ -254,6 +347,21 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     }
 
     super.onDestroy();
+  }
+
+  public void onCriticalPackageChanged(Intent eventIntent) {
+    if (((AnyApplication) getApplication()).onPackageChanged(eventIntent)) {
+      onAddOnsCriticalChange();
+    }
+  }
+
+  public void onUserUnlocked(Intent eventIntent) {
+    var receiver = mUserUnlockedReceiver;
+    if (receiver != null) {
+      unregisterReceiver(mUserUnlockedReceiver);
+      mUserUnlockedReceiver = null;
+      onCriticalPackageChanged(eventIntent);
+    }
   }
 
   @Override
@@ -276,6 +384,9 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     if (mVoiceRecognitionTrigger != null) {
       mVoiceRecognitionTrigger.onStartInputView();
     }
+    
+    // Reset voice key state when input view starts
+    updateVoiceKeyState();
 
     InputViewBinder inputView = getInputView();
     inputView.resetInputView();
@@ -379,6 +490,141 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     updateShiftStateNow();
   }
 
+  private void updateVoiceKeyState() {
+    android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: Starting method...");
+    AnyKeyboard currentKeyboard = getCurrentAlphabetKeyboard();
+    if (currentKeyboard != null) {
+      boolean isRecording = mVoiceRecognitionTrigger.isRecording();
+      android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: currentKeyboard is not null, isRecording: " + isRecording);
+      android.util.Log.d("AnySoftKeyboard", "updateVoiceKeyState called - isRecording: " + isRecording);
+      boolean stateChanged = currentKeyboard.setVoice(isRecording, false);
+      android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: setVoice returned stateChanged: " + stateChanged);
+      android.util.Log.d("AnySoftKeyboard", "setVoice returned stateChanged: " + stateChanged);
+      
+      if (stateChanged) {
+        android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: state changed, invalidating input view...");
+        // Invalidate keyboard view to update voice key appearance
+        if (getInputView() instanceof android.view.View) {
+          android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: getInputView is a View, invalidating...");
+          android.util.Log.d("AnySoftKeyboard", "Invalidating input view");
+          ((android.view.View) getInputView()).invalidate();
+        } else {
+          android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: getInputView is not a View or is null!");
+        }
+      } else {
+        android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: state did not change, no invalidation needed");
+      }
+    } else {
+      android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: currentKeyboard is null!");
+      android.util.Log.d("AnySoftKeyboard", "updateVoiceKeyState called - currentKeyboard is null");
+    }
+  }
+
+  /**
+   * Updates the space bar text to show recording status.
+   * This provides clear visual feedback when voice recording is active.
+   */
+  private void updateSpaceBarRecordingStatus(boolean isRecording) {
+    if (isRecording) {
+      updateVoiceInputStatus(VoiceInputState.RECORDING);
+    } else {
+      // Only set to IDLE if we're not already in WAITING state
+      // This prevents overriding the WAITING state when recording ends
+      if (mVoiceInputState != VoiceInputState.WAITING) {
+        updateVoiceInputStatus(VoiceInputState.IDLE);
+      }
+    }
+  }
+  
+  private void updateVoiceInputStatus(VoiceInputState newState) {
+    android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus called - newState: " + newState + ", currentState: " + mVoiceInputState);
+    
+    if (mVoiceInputState == newState) {
+      android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - no change needed, returning early");
+      return; // No change needed
+    }
+    
+    // Cancel any ongoing error flashing
+    if (mErrorFlashRunnable != null) {
+      mErrorFlashHandler.removeCallbacks(mErrorFlashRunnable);
+      mErrorFlashRunnable = null;
+    }
+    
+    mVoiceInputState = newState;
+    
+    AnyKeyboard currentKeyboard = getCurrentAlphabetKeyboard();
+    if (currentKeyboard != null) {
+      // Find the space bar key and update its label
+      for (Keyboard.Key key : currentKeyboard.getKeys()) {
+        if (key.getPrimaryCode() == KeyCodes.SPACE) {
+          android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - Found space bar key!");
+          
+          String statusText = getStatusTextForState(mVoiceInputState);
+          key.label = statusText;
+          android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - Set space bar to: " + statusText);
+          
+          // If error state, start flashing
+          if (mVoiceInputState == VoiceInputState.ERROR) {
+            startErrorFlashing();
+          }
+          
+          // Invalidate the keyboard view to update the display
+          if (getInputView() instanceof android.view.View) {
+            ((android.view.View) getInputView()).invalidate();
+            android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - Invalidated view");
+          }
+          break; // Found the space bar, no need to continue searching
+        }
+      }
+    } else {
+      android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - currentKeyboard is null!");
+    }
+  }
+  
+  private String getStatusTextForState(VoiceInputState state) {
+    switch (state) {
+      case RECORDING:
+        return "🎤 RECORDING";
+      case WAITING:
+        return "⏳ WAITING";
+      case ERROR:
+        return mErrorFlashState ? "❌ ERROR" : "❌";
+      case IDLE:
+      default:
+        return "English"; // Default language text
+    }
+  }
+  
+  private void startErrorFlashing() {
+    mErrorFlashRunnable = new Runnable() {
+      @Override
+      public void run() {
+        if (mVoiceInputState == VoiceInputState.ERROR) {
+          mErrorFlashState = !mErrorFlashState;
+          
+          AnyKeyboard currentKeyboard = getCurrentAlphabetKeyboard();
+          if (currentKeyboard != null) {
+            for (Keyboard.Key key : currentKeyboard.getKeys()) {
+              if (key.getPrimaryCode() == KeyCodes.SPACE) {
+                key.label = getStatusTextForState(mVoiceInputState);
+                if (getInputView() instanceof android.view.View) {
+                  ((android.view.View) getInputView()).invalidate();
+                }
+                break;
+              }
+            }
+          }
+          
+          // Schedule next flash (flash every 500ms)
+          mErrorFlashHandler.postDelayed(this, 500);
+        }
+      }
+    };
+    
+    // Start flashing immediately
+    mErrorFlashHandler.post(mErrorFlashRunnable);
+  }
+
   private void onFunctionKey(final int primaryCode, final Keyboard.Key key, final boolean fromUI) {
     if (BuildConfig.DEBUG) Logger.d(TAG, "onFunctionKey %d", primaryCode);
 
@@ -463,15 +709,30 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
         sendDownUpKeyEvents(KeyEvent.KEYCODE_MOVE_END);
         break;
       case KeyCodes.VOICE_INPUT:
+        android.util.Log.d("VoiceKeyDebug", "onFunctionKey: VOICE_INPUT key handled!");
+        android.util.Log.d("LongPressDebug", "VOICE_INPUT key code received - checking if this interferes with long press");
         if (mVoiceRecognitionTrigger.isInstalled()) {
+          android.util.Log.d("VoiceKeyDebug", "onFunctionKey: Voice recognition is installed, starting recognition...");
+          android.util.Log.d("LongPressDebug", "Voice recognition is installed - this might be causing interference");
           mVoiceRecognitionTrigger.startVoiceRecognition(
               getCurrentAlphabetKeyboard().getDefaultDictionaryLocale());
+          
+          // Update voice key state based on recording state
+          android.util.Log.d("VoiceKeyDebug", "onFunctionKey: Calling updateVoiceKeyState()...");
+          updateVoiceKeyState();
         } else {
+          android.util.Log.d("VoiceKeyDebug", "onFunctionKey: Voice recognition is NOT installed!");
+          android.util.Log.d("LongPressDebug", "Voice recognition is NOT installed - no interference expected");
           Intent voiceInputNotInstalledIntent =
               new Intent(getApplicationContext(), VoiceInputNotInstalledActivity.class);
           voiceInputNotInstalledIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
           startActivity(voiceInputNotInstalledIntent);
         }
+        break;
+      case KeyCodes.MICROPHONE_LONG_PRESS:
+        android.util.Log.d("LongPressDebug", "MICROPHONE_LONG_PRESS key code received!");
+        android.util.Log.d("LongPressDebug", "Launching OpenAI settings...");
+        launchOpenAISettings();
         break;
       case KeyCodes.CANCEL:
         if (!handleCloseRequest()) {
@@ -504,6 +765,28 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
           showLanguageSelectionDialog();
         } else {
           nextKeyboard(getCurrentInputEditorInfo(), NextKeyboardType.Alphabet);
+        }
+        break;
+      case KeyCodes.DIRECT_LAYOUT_MIKE_ROZOFF_MAIN:
+        android.util.Log.d("MikeRozoff", "Switching to main keyboard");
+        getKeyboardSwitcher().nextAlphabetKeyboard(getCurrentInputEditorInfo(), "mike-rozoff-main-001");
+        break;
+      case KeyCodes.DIRECT_LAYOUT_MIKE_ROZOFF_SYMBOLS:
+        android.util.Log.d("MikeRozoff", "Switching to symbols keyboard");
+        getKeyboardSwitcher().nextAlphabetKeyboard(getCurrentInputEditorInfo(), "mike-rozoff-symbols-001");
+        break;
+      case KeyCodes.DIRECT_LAYOUT_MIKE_ROZOFF_SYMBOLS_EXTENDED:
+        android.util.Log.d("MikeRozoff", "Switching to symbols extended keyboard");
+        getKeyboardSwitcher().nextAlphabetKeyboard(getCurrentInputEditorInfo(), "mike-rozoff-symbols-ext-001");
+        break;
+      case KeyCodes.CUSTOM_KEYBOARD_SWITCH:
+        // Custom keyboard switching - the target keyboard ID should be stored in the key's popupCharacters
+        if (key != null && !TextUtils.isEmpty(key.popupCharacters)) {
+          String targetKeyboardId = key.popupCharacters.toString();
+          android.util.Log.d("CustomKeyboardSwitch", "Switching to keyboard: " + targetKeyboardId);
+          getKeyboardSwitcher().nextAlphabetKeyboard(getCurrentInputEditorInfo(), targetKeyboardId);
+        } else {
+          android.util.Log.w("CustomKeyboardSwitch", "No target keyboard ID specified in key.popupCharacters");
         }
         break;
       case KeyCodes.UTILITY_KEYBOARD:
@@ -1000,6 +1283,21 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     }
   }
 
+  private void handleVoice() {
+    android.util.Log.d("VoiceKeyDebug", "handleVoice called - active: " + mVoiceKeyState.isActive() + ", locked: " + mVoiceKeyState.isLocked());
+    if (getInputView() != null) {
+      Logger.d(
+          TAG,
+          "voice Setting UI active:%s, locked: %s",
+          mVoiceKeyState.isActive(),
+          mVoiceKeyState.isLocked());
+      android.util.Log.d("VoiceKeyDebug", "handleVoice: calling getInputView().setVoice(" + mVoiceKeyState.isActive() + ", " + mVoiceKeyState.isLocked() + ")");
+      getInputView().setVoice(mVoiceKeyState.isActive(), mVoiceKeyState.isLocked());
+    } else {
+      android.util.Log.d("VoiceKeyDebug", "handleVoice: getInputView() is null!");
+    }
+  }
+
   private void handleShift() {
     if (getInputView() != null) {
       Logger.d(
@@ -1025,10 +1323,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
     // https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/2481
     // the host app may report -1 as indexes (when nothing is selected)
-    if (et.text == null
-        || selectionStart == selectionEnd
-        || selectionEnd == -1
-        || selectionStart == -1) return;
+    if (et.text == null || selectionStart == selectionEnd || selectionEnd < 0 || selectionStart < 0)
+      return;
     final CharSequence selectedText = et.text.subSequence(selectionStart, selectionEnd);
 
     if (selectedText.length() > 0) {
@@ -1082,10 +1378,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
     // https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/2481
     // the host app may report -1 as indexes (when nothing is selected)
-    if (et.text == null
-        || selectionStart == selectionEnd
-        || selectionEnd == -1
-        || selectionStart == -1) return;
+    if (et.text == null || selectionStart == selectionEnd || selectionEnd < 0 || selectionStart < 0)
+      return;
     final CharSequence selectedText = et.text.subSequence(selectionStart, selectionEnd);
 
     if (selectedText.length() > 0) {
@@ -1128,6 +1422,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private void setKeyboardFinalStuff() {
     mShiftKeyState.reset();
     mControlKeyState.reset();
+    mVoiceKeyState.reset();
     // changing dictionary
     setDictionariesForCurrentKeyboard();
     // Notifying if needed
@@ -1186,6 +1481,19 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     } else {
       mControlKeyState.onOtherKeyReleased();
     }
+
+    if (primaryCode == KeyCodes.VOICE_INPUT) {
+      android.util.Log.d("VoiceKeyDebug", "onRelease: VOICE_INPUT key released!");
+      mVoiceKeyState.onRelease(mMultiTapTimeout, mLongPressTimeout);
+      // Only update voice key state when the voice key itself is released
+      // This prevents unnecessary state updates on other key releases
+      android.util.Log.d("VoiceKeyDebug", "onRelease: Calling updateVoiceKeyState() for VOICE_INPUT key...");
+      updateVoiceKeyState();
+    } else {
+      mVoiceKeyState.onOtherKeyReleased();
+      // Do NOT call updateVoiceKeyState() here - it causes visual feedback to not persist
+      // The recording state callback will handle state changes when needed
+    }
     handleControl();
   }
 
@@ -1194,6 +1502,16 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     Intent intent = new Intent();
     intent.setClass(AnySoftKeyboard.this, MainSettingsActivity.class);
     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    startActivity(intent);
+  }
+
+  private void launchOpenAISettings() {
+    hideWindow();
+    Intent intent = new Intent();
+    intent.setClass(AnySoftKeyboard.this, MainSettingsActivity.class);
+    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    // Add extra to navigate directly to OpenAI settings
+    intent.putExtra("navigate_to_openai_settings", true);
     startActivity(intent);
   }
 

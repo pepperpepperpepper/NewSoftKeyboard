@@ -69,6 +69,17 @@
             android:title="@string/volume_key_for_left_right_support"/>
     </androidx.preference.PreferenceCategory>
 
+    <androidx.preference.PreferenceCategory
+        android:key="speech_recognition_group"
+        android:title="@string/speech_recognition_group">
+        
+        <Preference
+            android:key="@string/settings_key_openai_speech_settings"
+            android:title="@string/openai_speech_settings_title"
+            android:summary="@string/openai_speech_settings_summary"/>
+            
+    </androidx.preference.PreferenceCategory>
+
     <Preference
         android:key="@string/tweaks_group_key"
         android:title="@string/tweaks_group"/>

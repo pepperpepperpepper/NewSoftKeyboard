@@ -30,6 +30,11 @@ public class KeyCodes {
   public static final int KEYBOARD_CYCLE_INSIDE_MODE = -95;
   public static final int KEYBOARD_MODE_CHANGE = -94;
 
+  public static final int DIRECT_LAYOUT_MIKE_ROZOFF_MAIN = -300;
+  public static final int DIRECT_LAYOUT_MIKE_ROZOFF_SYMBOLS = -301;
+  public static final int DIRECT_LAYOUT_MIKE_ROZOFF_SYMBOLS_EXTENDED = -302;
+  public static final int CUSTOM_KEYBOARD_SWITCH = -303;
+
   public static final int ARROW_LEFT = -20;
   public static final int ARROW_RIGHT = -21;
   public static final int ARROW_UP = -22;
@@ -68,6 +73,7 @@ public class KeyCodes {
   public static final int PRE_PREPARED_EMAILS_POPUP = -152;
 
   public static final int EXTERNAL_INTEGRATION = -200;
+  public static final int MICROPHONE_LONG_PRESS = -201;
 
   public static boolean isOutputKeyCode(final int code) {
     if (code > 0) {

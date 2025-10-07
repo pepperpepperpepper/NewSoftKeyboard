@@ -22,7 +22,7 @@ jobs:
   bazel:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
       - uses: bazel-contrib/setup-bazel@0.15.0
         with:
           bazelisk-cache: true
@@ -42,7 +42,7 @@ jobs:
       - name: ensure all bazel binaries are working
         run: bazel query 'kind('js_binary', //...) union kind('java_binary', //...)' | xargs -I %s bazel run %s -- -h || true
       - name: bazel code-coverage
-        uses: codecov/codecov-action@v5.4.3
+        uses: codecov/codecov-action@v5.5.1
         with:
           fail_ci_if_error: false
           codecov_yml_path: "${{ github.workspace }}/codecov_bazel.yml"
@@ -55,15 +55,15 @@ jobs:
     container: ghcr.io/menny/android:1.21.2
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           fetch-depth: 2
       - uses: actions/cache@v4.2.4
         with:
           path: .github_cache_gradle/
-          key: global-v11-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
+          key: global-v12-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: |
-            global-v11-
+            global-v12-
       - name: setup
         run: ./scripts/ci/ci_setup.sh
       - name: check
@@ -89,15 +89,15 @@ jobs:
     container: ghcr.io/menny/android:1.21.2
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           fetch-depth: 2
       - uses: actions/cache@v4.2.4
         with:
           path: .github_cache_gradle/
-          key: global-v11-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
+          key: global-v12-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: |
-            global-v11-
+            global-v12-
       - name: setup
         run: ./scripts/ci/ci_setup.sh
       - name: check
@@ -157,16 +157,16 @@ jobs:
             tasks: "testAllAddOnsUnitTest"
             actual_shard: app
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           fetch-depth: 2
       - uses: actions/cache@v4.2.4
         with:
           path: .github_cache_gradle/
-          key: tests-v11-${{ matrix.actual_shard }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
+          key: tests-v12-${{ matrix.actual_shard }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: |
-            tests-v11-${{ matrix.actual_shard }}-
-            global-v11-
+            tests-v12-${{ matrix.actual_shard }}-
+            global-v12-
       - name: setup
         run: ./scripts/ci/ci_setup.sh
       - name: setup robolectric
@@ -178,7 +178,7 @@ jobs:
       - name: tests
         run: ./gradlew $(cat /tmp/gradle.tasks.lst) ${{ matrix.extra_args }}
       - name: Android code-coverage
-        uses: codecov/codecov-action@v5.4.3
+        uses: codecov/codecov-action@v5.5.1
         with:
           fail_ci_if_error: false
           codecov_yml_path: "${{ github.workspace }}/codecov_android.yml"
@@ -222,16 +222,16 @@ jobs:
             supports_canary: true
             supports_logo: false
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           fetch-depth: 2
       - uses: actions/cache@v4.2.4
         with:
           path: .github_cache_gradle/
-          key: deploy-v11-${{ matrix.shard_type }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
+          key: deploy-v12-${{ matrix.shard_type }}-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
           restore-keys: |
-            deploy-v11-${{ matrix.shard_type }}-
-            global-v11
+            deploy-v12-${{ matrix.shard_type }}-
+            global-v12-
       - name: setup
         run: ./scripts/ci/ci_setup.sh
       - name: generate projects list for sharding
@@ -286,7 +286,7 @@ jobs:
     if: always()
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
       - uses: bazel-contrib/setup-bazel@0.15.0
         with:
           bazelisk-cache: true
@@ -302,7 +302,7 @@ jobs:
     needs: [all-green-requirement]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
       - uses: ./.github/actions/deploy-request
         with:
           gh_user: ${{ secrets.BOT_MASTER_RW_GITHUB_USERNAME }}
@@ -315,7 +315,7 @@ jobs:
     runs-on: ubuntu-24.04
     container: ghcr.io/menny/android_base:1.21.2
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v5.0.0
         with:
           token: ${{ secrets.BOT_MASTER_RW_GITHUB_TOKEN }}
           fetch-depth: 0

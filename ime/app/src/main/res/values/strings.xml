@@ -948,7 +948,104 @@
     <string name="notification_read_contacts_ticker">Contacts permission needed</string>
     <string name="notification_action_approve_permission">Approve permission</string>
     <string name="notification_action_dismiss_permission">Disable Contacts Dictionary</string>
-    <string name="wizard_allow_notification_permission">Allow notifications from AnySoftKeyboard</string>
-    <string name="setup_wizard_step_notification_permissions_details">In rare cases (for example app crashes) we would need to post a device notification. This is recommended but disallow notification will not affect the behavior of this app.</string>
+<string name="wizard_allow_notification_permission">Allow notifications from AnySoftKeyboard</string>
+    <string name="setup_wizard_step_notification_permissions_details">In rare cases (for example app crashes) we would need to post a device notification. This is recommended but disallow notification will not affect behavior of this app.</string>
     <string name="wizard_skip_notification_permission">Do not allow notifications</string>
-</resources>
+
+    <!-- OpenAI Speech-to-Text Settings -->
+    <string name="openai_speech_settings_title">OpenAI Speech-to-Text</string>
+    
+    <string name="openai_api_settings_group">API Settings</string>
+    <string name="openai_api_key_title">API Key</string>
+    <string name="openai_api_key_summary">Your OpenAI API key for speech-to-text</string>
+    <string name="openai_api_key_dialog_title">Enter OpenAI API Key</string>
+    
+    <string name="openai_endpoint_title">API Endpoint</string>
+    <string name="openai_endpoint_summary">URL for OpenAI audio transcription API</string>
+    <string name="openai_endpoint_dialog_title">Enter API Endpoint URL</string>
+    
+    <string name="openai_model_title">Model</string>
+    <string name="openai_model_summary">Whisper model to use for transcription</string>
+    <string name="openai_model_dialog_title">Select Whisper Model</string>
+    
+    <string name="openai_language_title">Language</string>
+    <string name="openai_language_summary">Language code for transcription (e.g., en, es, fr)</string>
+    <string name="openai_language_dialog_title">Enter Language Code</string>
+    
+    <string name="openai_audio_settings_group">Audio Settings</string>
+    <string name="openai_temperature_title">Temperature</string>
+    <string name="openai_temperature_summary">Controls randomness in transcription (0.0 = more accurate, 1.0 = more creative)</string>
+    <string name="openai_temperature_dialog_title">Set Temperature (0.0 - 1.0)</string>
+    
+    <string name="openai_response_format_title">Response Format</string>
+    <string name="openai_response_format_summary">Output format for the transcription</string>
+    <string name="openai_response_format_dialog_title">Select Response Format</string>
+    
+    <string name="openai_chunking_strategy_title">Chunking Strategy</string>
+    <string name="openai_chunking_strategy_summary">How to handle long audio files (auto = split automatically, none = no splitting)</string>
+    <string name="openai_chunking_strategy_dialog_title">Select Chunking Strategy</string>
+    
+    <string name="openai_auto_punctuation_title">Auto Punctuation</string>
+    <string name="openai_auto_punctuation_summary">Automatically add punctuation to transcribed text</string>
+    
+    <string name="openai_timestamps_title">Include Timestamps</string>
+    <string name="openai_timestamps_summary">Include word-level timestamps in response</string>
+    
+    <string name="openai_prompt_title">Prompt</string>
+    <string name="openai_prompt_summary">Optional prompt to guide transcription style and spelling (max 224 tokens)</string>
+    <string name="openai_prompt_dialog_title">Enter Transcription Customization Prompt</string>
+    <string name="openai_prompt_clear_button">Clear</string>
+    <string name="openai_prompt_save_button">Save</string>
+    
+    <string name="openai_behavior_settings_group">Behavior Settings</string>
+    <string name="openai_enabled_title">Enable OpenAI Speech-to-Text</string>
+    <string name="openai_enabled_summary">Use OpenAI API instead of Google speech recognition</string>
+    
+    
+    
+    <string name="openai_add_trailing_space_title">Add Trailing Space</string>
+    <string name="openai_add_trailing_space_summary">Add space after transcribed text</string>
+    
+    <!-- OpenAI Error Messages -->
+    <string name="openai_error_api_key_unset">OpenAI API key is not set. Please configure it in settings.</string>
+    <string name="openai_error_microphone_permission">Microphone permission not granted. Please add permission for microphone in app settings.</string>
+    <string name="openai_error_endpoint_unset">OpenAI API endpoint is not set. Please configure it in settings.</string>
+    <string name="openai_error_network">Network error occurred while contacting OpenAI API.</string>
+    <string name="openai_error_api_error">OpenAI API error: %s</string>
+    <string name="openai_error_recording_failed">Audio recording failed. Please try again.</string>
+    <string name="openai_error_transcription_failed">Speech transcription failed. Please try again.</string>
+    
+    <!-- OpenAI Status Messages -->
+    <string name="openai_status_recording">Recording audio...</string>
+    <string name="openai_status_processing">Processing audio...</string>
+    <string name="openai_status_transcribing">Transcribing with OpenAI...</string>
+    
+    <!-- OpenAI Settings Menu -->
+    <string name="speech_recognition_group">Speech Recognition</string>
+<string name="openai_speech_settings_summary">Configure OpenAI API for voice input</string>
+    
+    <!-- OpenAI Saved Prompts -->
+    <string name="openai_saved_prompts_title">Saved Prompts</string>
+    <string name="openai_saved_prompts_summary">Manage your library of saved transcription prompts</string>
+    <string name="openai_saved_prompts_manage_title">Manage Saved Prompts</string>
+    <string name="openai_saved_prompts_empty">No saved prompts yet</string>
+    <string name="openai_saved_prompts_add">Add New Prompt</string>
+    <string name="openai_saved_prompts_edit">Edit Prompt</string>
+    <string name="openai_saved_prompts_delete">Delete Prompt</string>
+    <string name="openai_saved_prompts_delete_confirm">Are you sure you want to delete this prompt?</string>
+    <string name="openai_saved_prompts_delete_yes">Yes, Delete</string>
+    <string name="openai_saved_prompts_delete_no">Cancel</string>
+    <string name="openai_saved_prompts_text_hint">Prompt text</string>
+    <string name="openai_saved_prompts_save">Save</string>
+    <string name="openai_saved_prompts_cancel">Cancel</string>
+    <string name="openai_saved_prompts_insert">Insert</string>
+    <string name="openai_saved_prompts_insert_success">Prompt inserted into main prompt field</string>
+    <string name="openai_saved_prompts_save_success">Prompt saved successfully</string>
+    <string name="openai_saved_prompts_delete_success">Prompt deleted successfully</string>
+    <string name="openai_saved_prompts_error_text_required">Please enter prompt text</string>
+    <string name="openai_saved_prompts_error_save_failed">Failed to save prompt</string>
+    <string name="openai_copy_destination_title">Copy Audio Files To</string>
+    <string name="openai_copy_destination_summary">Directory path where audio files will be copied before sending to OpenAI API</string>
+    <string name="openai_copy_destination_dialog_title">Enter Destination Directory Path</string>
+    <string name="openai_copy_destination_default">Default (app external files directory)</string>
+    </resources>

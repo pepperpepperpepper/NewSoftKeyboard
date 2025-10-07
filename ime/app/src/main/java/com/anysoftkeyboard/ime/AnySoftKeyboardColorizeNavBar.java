@@ -43,7 +43,7 @@ public abstract class AnySoftKeyboardColorizeNavBar extends AnySoftKeyboardIncog
         mNavigationBarHeightId,
         mNavigationBarShownId);
 
-    if (Build.VERSION.SDK_INT >= 36) {
+    if (Build.VERSION.SDK_INT >= 35) {
       mPrefsToShow = true;
     } else {
       addDisposable(
@@ -64,7 +64,8 @@ public abstract class AnySoftKeyboardColorizeNavBar extends AnySoftKeyboardIncog
             .asObservable()
             .subscribe(
                 val ->
-                    mExtraBottomPadding = (int) (getResources().getDisplayMetrics().density * val),
+                    mExtraBottomPadding =
+                        Math.max(0, (int) getResources().getDisplayMetrics().density * val),
                 GenericOnError.onError("settings_key_bottom_extra_padding_in_portrait")));
   }
 
