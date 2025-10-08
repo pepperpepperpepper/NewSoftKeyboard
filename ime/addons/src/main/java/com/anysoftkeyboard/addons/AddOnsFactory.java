@@ -335,8 +335,7 @@ public abstract class AddOnsFactory<E extends AddOn> {
 
   /**
    * Returns a list of add-ons that support UI card functionality.
-   * An add-on supports UI cards if it implements AddOnUICardPublisher interface
-   * or has the uiCard attribute set to true in its XML declaration.
+   * An add-on supports UI cards if it has the uiCard attribute set to true in its XML declaration.
    */
   public final synchronized List<E> getAddOnsWithUICard() {
     List<E> allAddOns = getAllAddOns();
@@ -354,10 +353,7 @@ public abstract class AddOnsFactory<E extends AddOn> {
   /**
    * Checks if an add-on has UI card capability.
    * This can be determined by:
-   * 1. The add-on implementing AddOnUICardPublisher interface (checked in subclass)
-   * 2. The add-on having uiCard="true" in its XML declaration
-   * 
-   * Subclasses should override this method to check for AddOnUICardPublisher interface.
+   * 1. The add-on having uiCard="true" in its XML declaration
    */
   protected boolean hasUICardCapability(E addOn) {
     // Check if the add-on has UI card attribute set (for AddOnImpl instances)
