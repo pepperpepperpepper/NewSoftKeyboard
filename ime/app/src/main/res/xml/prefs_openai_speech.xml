@@ -6,6 +6,26 @@
     android:title="@string/openai_speech_settings_title">
 
     <androidx.preference.PreferenceCategory
+        android:key="openai_behavior_settings_group"
+        android:title="@string/openai_behavior_settings_group">
+
+        <androidx.preference.CheckBoxPreference
+            android:key="@string/settings_key_openai_enabled"
+            android:title="@string/openai_enabled_title"
+            android:summary="@string/openai_enabled_summary"
+            android:defaultValue="false"
+            android:persistent="true" />
+
+        <androidx.preference.CheckBoxPreference
+            android:key="@string/settings_key_openai_add_trailing_space"
+            android:title="@string/openai_add_trailing_space_title"
+            android:summary="@string/openai_add_trailing_space_summary"
+            android:defaultValue="true"
+            android:persistent="true" />
+
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory
         android:key="openai_api_settings_group"
         android:title="@string/openai_api_settings_group">
 
@@ -137,28 +157,6 @@
             android:summary="@string/openai_copy_destination_summary"
             android:dialogTitle="@string/openai_copy_destination_dialog_title"
             android:defaultValue=""
-            android:persistent="true" />
-
-    </androidx.preference.PreferenceCategory>
-
-    <androidx.preference.PreferenceCategory
-        android:key="openai_behavior_settings_group"
-        android:title="@string/openai_behavior_settings_group">
-
-        <androidx.preference.CheckBoxPreference
-            android:key="@string/settings_key_openai_enabled"
-            android:title="@string/openai_enabled_title"
-            android:summary="@string/openai_enabled_summary"
-            android:defaultValue="false"
-            android:persistent="true" />
-
-        
-
-        <androidx.preference.CheckBoxPreference
-            android:key="@string/settings_key_openai_add_trailing_space"
-            android:title="@string/openai_add_trailing_space_title"
-            android:summary="@string/openai_add_trailing_space_summary"
-            android:defaultValue="true"
             android:persistent="true" />
 
     </androidx.preference.PreferenceCategory>
