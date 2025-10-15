@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources>
-    <color name="app_accent">#663399</color>
-    <color name="app_color_primary">#FF9966CC</color>
-    <color name="app_color_primary_dark">#FF7744AA</color>
+    <color name="app_accent">#2C4BFF</color>
+    <color name="app_color_primary">#FF1D39FF</color>
+    <color name="app_color_primary_dark">#FF0F24D4</color>
     <color name="text_color_link">#ff0099cc</color>
     <color name="app_card_background">#555</color>
     <color name="menu_background_normal">#666</color>

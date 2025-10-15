@@ -140,7 +140,7 @@ public class OpenAISavedPromptsDialogFragment extends DialogFragment implements 
         
         // Update SharedPreferences directly
         android.content.SharedPreferences prefs = getActivity().getSharedPreferences(
-                "com.menny.android.anysoftkeyboard_preferences", android.content.Context.MODE_PRIVATE);
+                "wtf.uhoh.newsoftkeyboard_preferences", android.content.Context.MODE_PRIVATE);
         android.content.SharedPreferences.Editor editor = prefs.edit();
         editor.putString(getActivity().getString(R.string.settings_key_openai_prompt), promptText);
         editor.apply();

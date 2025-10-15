@@ -37,7 +37,9 @@ public class AboutAnySoftKeyboardFragmentTest
 
     Assert.assertNotNull(intent);
     Assert.assertEquals(Intent.ACTION_VIEW, intent.getAction());
-    Assert.assertEquals("https://anysoftkeyboard.github.io/", intent.getData().toString());
+    Assert.assertEquals(
+        ApplicationProvider.getApplicationContext().getString(R.string.main_site_url),
+        intent.getData().toString());
   }
 
   @Test
@@ -74,7 +76,8 @@ public class AboutAnySoftKeyboardFragmentTest
     Assert.assertNotNull(intent);
     Assert.assertEquals(Intent.ACTION_VIEW, intent.getAction());
     Assert.assertEquals(
-        "http://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard",
+        ApplicationProvider.getApplicationContext()
+            .getString(R.string.rate_app_in_store_url, BuildConfig.APPLICATION_ID),
         intent.getData().toString());
   }
 
@@ -93,7 +96,8 @@ public class AboutAnySoftKeyboardFragmentTest
     Assert.assertNotNull(intent);
     Assert.assertEquals(Intent.ACTION_VIEW, intent.getAction());
     Assert.assertEquals(
-        "http://anysoftkeyboard.github.io/privacy-policy/", intent.getData().toString());
+        ApplicationProvider.getApplicationContext().getString(R.string.privacy_policy),
+        intent.getData().toString());
   }
 
   @Test
@@ -117,13 +121,11 @@ public class AboutAnySoftKeyboardFragmentTest
   public void testVersionInfo() {
     AboutAnySoftKeyboardFragment fragment = startFragment();
     TextView copyright = fragment.getView().findViewById(R.id.about_copyright);
-    Assert.assertTrue(copyright.getText().toString().contains("Menny"));
-    Assert.assertTrue(copyright.getText().toString().contains("©"));
-    Assert.assertTrue(
-        copyright
-            .getText()
-            .toString()
-            .contains(Integer.toString(new GregorianCalendar().get(Calendar.YEAR))));
+    int currentYear = new GregorianCalendar().get(Calendar.YEAR);
+    String expectedCopyright =
+        ApplicationProvider.getApplicationContext()
+            .getString(R.string.about_copyright_text, currentYear);
+    Assert.assertEquals(expectedCopyright, copyright.getText().toString());
 
     TextView version = fragment.getView().findViewById(R.id.about_app_version);
     Assert.assertTrue(version.getText().toString().contains(BuildConfig.VERSION_NAME));

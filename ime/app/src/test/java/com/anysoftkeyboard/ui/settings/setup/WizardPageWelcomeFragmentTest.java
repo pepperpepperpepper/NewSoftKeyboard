@@ -76,7 +76,7 @@ public class WizardPageWelcomeFragmentTest
             .getNextStartedActivity();
     Assert.assertEquals(Intent.ACTION_VIEW, wikiIntent.getAction());
     Assert.assertEquals(
-        "http://anysoftkeyboard.github.io/privacy-policy/", wikiIntent.getData().toString());
+        getApplicationContext().getString(R.string.privacy_policy), wikiIntent.getData().toString());
   }
 
   @Test

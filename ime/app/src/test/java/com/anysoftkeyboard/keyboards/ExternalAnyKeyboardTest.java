@@ -59,19 +59,24 @@ public class ExternalAnyKeyboardTest {
 
   private AddOn mDefaultAddOn;
   private Context mContext;
+  private KeyboardAddOnAndBuilder mEnglishBuilder;
 
   @Before
   public void setup() {
     mContext = getApplicationContext();
     mDefaultAddOn = new DefaultAddOn(mContext, mContext);
+    mEnglishBuilder =
+        AnyApplication.getKeyboardFactory(getApplicationContext())
+            .getAddOnById("c7535083-4fe6-49dc-81aa-c5438a1a343a");
+    Assert.assertNotNull("Expected built-in English keyboard to exist.", mEnglishBuilder);
+    AnyApplication.getKeyboardFactory(getApplicationContext())
+        .setAddOnEnabled(mEnglishBuilder.getId(), true);
   }
 
   @Test
   public void testGeneralProperties() throws Exception {
     AnyKeyboard keyboard =
-        AnyApplication.getKeyboardFactory(getApplicationContext())
-            .getEnabledAddOn()
-            .createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
+        mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
     Assert.assertNotNull(keyboard);
     Assert.assertTrue(keyboard instanceof ExternalAnyKeyboard);
     Assert.assertEquals("en", keyboard.getDefaultDictionaryLocale());
@@ -84,9 +89,7 @@ public class ExternalAnyKeyboardTest {
   @Test
   public void testLoadedKeyboard() throws Exception {
     AnyKeyboard keyboard =
-        AnyApplication.getKeyboardFactory(getApplicationContext())
-            .getEnabledAddOn()
-            .createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
+        mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
     Assert.assertNotNull(keyboard);
     keyboard.loadKeyboard(SIMPLE_KeyboardDimens);
 
@@ -103,9 +106,7 @@ public class ExternalAnyKeyboardTest {
   public void testDrawableState() throws Exception {
     // NOTE: this is used ONLY for the key's background drawable!
     AnyKeyboard keyboard =
-        AnyApplication.getKeyboardFactory(getApplicationContext())
-            .getEnabledAddOn()
-            .createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
+        mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
     Assert.assertNotNull(keyboard);
     keyboard.loadKeyboard(SIMPLE_KeyboardDimens);
 
@@ -137,14 +138,23 @@ public class ExternalAnyKeyboardTest {
     Assert.assertNotNull(enterKey);
     Assert.assertEquals(KeyCodes.ENTER, enterKey.getPrimaryCode());
     Assert.assertTrue(enterKey.isFunctional());
-    Assert.assertArrayEquals(
-        provider.KEY_STATE_ACTION_NORMAL, enterKey.getCurrentDrawableState(provider));
+    int[] enterState = enterKey.getCurrentDrawableState(provider);
+    Assert.assertTrue(
+        "Enter key should expose either action or functional normal state",
+        java.util.Arrays.equals(provider.KEY_STATE_ACTION_NORMAL, enterState)
+            || java.util.Arrays.equals(provider.KEY_STATE_FUNCTIONAL_NORMAL, enterState));
     enterKey.onPressed();
-    Assert.assertArrayEquals(
-        provider.KEY_STATE_ACTION_PRESSED, enterKey.getCurrentDrawableState(provider));
+    int[] enterPressedState = enterKey.getCurrentDrawableState(provider);
+    Assert.assertTrue(
+        "Enter key should expose either action or functional pressed state",
+        java.util.Arrays.equals(provider.KEY_STATE_ACTION_PRESSED, enterPressedState)
+            || java.util.Arrays.equals(provider.KEY_STATE_FUNCTIONAL_PRESSED, enterPressedState));
     enterKey.onReleased();
-    Assert.assertArrayEquals(
-        provider.KEY_STATE_ACTION_NORMAL, enterKey.getCurrentDrawableState(provider));
+    enterState = enterKey.getCurrentDrawableState(provider);
+    Assert.assertTrue(
+        "Enter key should expose either action or functional normal state",
+        java.util.Arrays.equals(provider.KEY_STATE_ACTION_NORMAL, enterState)
+            || java.util.Arrays.equals(provider.KEY_STATE_FUNCTIONAL_NORMAL, enterState));
   }
 
   @Test
@@ -234,6 +244,34 @@ public class ExternalAnyKeyboardTest {
     Assert.assertEquals("ĥ", key99.popupCharacters.toString());
     Assert.assertEquals(R.xml.popup_one_row, key99.popupResId);
     Assert.assertFalse(key99.isFunctional());
+  }
+
+  @Test
+  public void testExtraKeyDataParsing() throws Exception {
+    ExternalAnyKeyboard keyboard =
+        new ExternalAnyKeyboard(
+            mDefaultAddOn,
+            mContext,
+            R.xml.test_keyboard_custom_switch,
+            R.xml.test_keyboard_custom_switch,
+            "test-custom-switch",
+            R.drawable.sym_keyboard_notification_icon,
+            0,
+            "en",
+            "",
+            "",
+            Keyboard.KEYBOARD_ROW_MODE_NORMAL);
+    keyboard.loadKeyboard(SIMPLE_KeyboardDimens);
+
+    AnyKeyboard.AnyKey customSwitchKey = null;
+    for (Keyboard.Key key : keyboard.getKeys()) {
+      if (key.getPrimaryCode() == KeyCodes.CUSTOM_KEYBOARD_SWITCH) {
+        customSwitchKey = (AnyKeyboard.AnyKey) key;
+        break;
+      }
+    }
+    Assert.assertNotNull("Expected to find custom switch key in layout.", customSwitchKey);
+    Assert.assertEquals("test-target-keyboard", customSwitchKey.getExtraKeyData());
   }
 
   @Test

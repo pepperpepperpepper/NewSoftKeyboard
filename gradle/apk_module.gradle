@@ -10,7 +10,7 @@ static <T> T getExtValue(Project proj, String key, T defaultValue) {
 
 static String calculateApplicationId(Project proj) {
     String addOnName = proj.parent.name
-    String defaultId = "com.anysoftkeyboard."
+    String defaultId = "wtf.uhoh.newsoftkeyboard."
     if (proj.path.contains('languages')) {
         defaultId += "languagepack.${addOnName}"
     } else if (proj.path.contains('themes')) {
@@ -18,7 +18,7 @@ static String calculateApplicationId(Project proj) {
     } else if (proj.path.contains('quicktexts')) {
         defaultId += "quicktexts.${addOnName}"
     } else if (proj.path.contains('ime')) {
-        defaultId = 'com.menny.android.anysoftkeyboard'
+        defaultId = 'wtf.uhoh.newsoftkeyboard'
     } else {
         throw new IllegalStateException('Called on an APK project that has an unknown parent')
     }

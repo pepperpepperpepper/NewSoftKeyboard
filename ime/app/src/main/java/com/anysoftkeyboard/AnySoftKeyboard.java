@@ -66,6 +66,7 @@ import com.google.android.voiceime.VoiceRecognitionTrigger;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
+import com.anysoftkeyboard.debug.ImeStateTracker;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -95,9 +96,9 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   // Enum for different voice input states
   private enum VoiceInputState {
-    IDLE,           // Shows "English" or current language
+    IDLE,           // Shows blank text so the space bar stays clean
     RECORDING,      // Shows "🎤 RECORDING"
-    WAITING,        // Shows "⏳ WAITING" - when recording ended and waiting for OpenAI, also during transcription
+    WAITING,        // Shows "⏳ Waiting" - when recording ended and waiting for OpenAI, also during transcription
     ERROR           // Shows "❌ ERROR" (with flashing)
   }
   
@@ -380,7 +381,11 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
         restarting);
 
     super.onStartInputView(attribute, restarting);
-
+    AnyKeyboard keyboardForDebug = getCurrentAlphabetKeyboard();
+    if (keyboardForDebug == null) {
+      keyboardForDebug = getCurrentKeyboard();
+    }
+    ImeStateTracker.onKeyboardVisible(keyboardForDebug, attribute);
     if (mVoiceRecognitionTrigger != null) {
       mVoiceRecognitionTrigger.onStartInputView();
     }
@@ -389,6 +394,15 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     updateVoiceKeyState();
 
     InputViewBinder inputView = getInputView();
+    if (BuildConfig.DEBUG) {
+      Log.d(TAG, "onStartInputView using inputView binder=" + inputView.getClass().getName());
+    }
+    if (inputView instanceof com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase) {
+      ImeStateTracker.reportKeyboardView(
+          (com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase) inputView);
+    } else {
+      ImeStateTracker.reportKeyboardView(null);
+    }
     inputView.resetInputView();
     inputView.setKeyboardActionType(attribute.imeOptions);
 
@@ -411,6 +425,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   @Override
   public void onFinishInputView(boolean finishingInput) {
+    ImeStateTracker.onKeyboardHidden();
     super.onFinishInputView(finishingInput);
 
     getInputView().resetInputView();
@@ -584,14 +599,14 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private String getStatusTextForState(VoiceInputState state) {
     switch (state) {
       case RECORDING:
-        return "🎤 RECORDING";
+        return "🎤 Recording";
       case WAITING:
-        return "⏳ WAITING";
+        return "⏳ Waiting";
       case ERROR:
-        return mErrorFlashState ? "❌ ERROR" : "❌";
+        return mErrorFlashState ? "❌ Error" : "❌";
       case IDLE:
       default:
-        return "English"; // Default language text
+        return ""; // Default space bar text stays empty when idle
     }
   }
   
@@ -767,27 +782,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
           nextKeyboard(getCurrentInputEditorInfo(), NextKeyboardType.Alphabet);
         }
         break;
-      case KeyCodes.DIRECT_LAYOUT_MIKE_ROZOFF_MAIN:
-        android.util.Log.d("MikeRozoff", "Switching to main keyboard");
-        getKeyboardSwitcher().nextAlphabetKeyboard(getCurrentInputEditorInfo(), "mike-rozoff-main-001");
-        break;
-      case KeyCodes.DIRECT_LAYOUT_MIKE_ROZOFF_SYMBOLS:
-        android.util.Log.d("MikeRozoff", "Switching to symbols keyboard");
-        getKeyboardSwitcher().nextAlphabetKeyboard(getCurrentInputEditorInfo(), "mike-rozoff-symbols-001");
-        break;
-      case KeyCodes.DIRECT_LAYOUT_MIKE_ROZOFF_SYMBOLS_EXTENDED:
-        android.util.Log.d("MikeRozoff", "Switching to symbols extended keyboard");
-        getKeyboardSwitcher().nextAlphabetKeyboard(getCurrentInputEditorInfo(), "mike-rozoff-symbols-ext-001");
-        break;
       case KeyCodes.CUSTOM_KEYBOARD_SWITCH:
-        // Custom keyboard switching - the target keyboard ID should be stored in the key's popupCharacters
-        if (key != null && !TextUtils.isEmpty(key.popupCharacters)) {
-          String targetKeyboardId = key.popupCharacters.toString();
-          android.util.Log.d("CustomKeyboardSwitch", "Switching to keyboard: " + targetKeyboardId);
-          getKeyboardSwitcher().nextAlphabetKeyboard(getCurrentInputEditorInfo(), targetKeyboardId);
-        } else {
-          android.util.Log.w("CustomKeyboardSwitch", "No target keyboard ID specified in key.popupCharacters");
-        }
+        handleCustomKeyboardSwitch(key, primaryCode);
         break;
       case KeyCodes.UTILITY_KEYBOARD:
         final InputViewBinder inputViewForUtilityKeyboardRequest = getInputView();
@@ -840,6 +836,37 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
           Logger.w(TAG, "UNHANDLED FUNCTION KEY! primary code %d. Ignoring.", primaryCode);
         }
     }
+  }
+
+  private void handleCustomKeyboardSwitch(@Nullable Keyboard.Key key, int primaryCode) {
+    final String targetKeyboardId = resolveCustomKeyboardTarget(key);
+    if (TextUtils.isEmpty(targetKeyboardId)) {
+      Log.w(
+          "CustomKeyboardSwitch",
+          "No target keyboard ID specified for code "
+              + primaryCode
+              + (key != null ? " (primary: " + key.getPrimaryCode() + ')' : ""));
+      return;
+    }
+    Log.d("CustomKeyboardSwitch", "Switching to keyboard: " + targetKeyboardId);
+    getKeyboardSwitcher().showAlphabetKeyboardById(getCurrentInputEditorInfo(), targetKeyboardId);
+  }
+
+  @Nullable
+  private String resolveCustomKeyboardTarget(@Nullable Keyboard.Key key) {
+    if (key == null) {
+      return null;
+    }
+    if (key instanceof AnyKeyboard.AnyKey anyKey) {
+      final String extraData = anyKey.getExtraKeyData();
+      if (!TextUtils.isEmpty(extraData)) {
+        return extraData;
+      }
+    }
+    if (!TextUtils.isEmpty(key.popupCharacters)) {
+      return key.popupCharacters.toString();
+    }
+    return null;
   }
 
   // convert ASCII codes to Android KeyEvent codes
@@ -1004,6 +1031,14 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     super.onAlphabetKeyboardSet(keyboard);
     setKeyboardFinalStuff();
     mKeyboardAutoCap = keyboard.autoCap;
+    ImeStateTracker.onKeyboardVisible(keyboard, getCurrentInputEditorInfo());
+    InputViewBinder inputView = getInputView();
+    if (inputView instanceof com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase) {
+      ImeStateTracker.reportKeyboardView(
+          (com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase) inputView);
+    } else {
+      ImeStateTracker.reportKeyboardView(null);
+    }
   }
 
   @Override
@@ -1716,4 +1751,5 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     mShiftKeyState.setActiveState(inputSaysCaps);
     handleShift();
   }
+
 }

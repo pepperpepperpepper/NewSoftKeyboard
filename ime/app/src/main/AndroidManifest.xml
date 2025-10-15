@@ -131,11 +131,17 @@
 
         <!-- keyboards -->
         <intent>
-            <action android:name="com.menny.android.anysoftkeyboard.KEYBOARD" />
+            <action android:name="wtf.uhoh.newsoftkeyboard.KEYBOARD" />
+        </intent>
+        <intent>
+            <action android:name="com.anysoftkeyboard.plugin.KEYBOARD" />
         </intent>
         <!-- dictionaries -->
         <intent>
-            <action android:name="com.menny.android.anysoftkeyboard.DICTIONARY" />
+            <action android:name="wtf.uhoh.newsoftkeyboard.DICTIONARY" />
+        </intent>
+        <intent>
+            <action android:name="com.anysoftkeyboard.plugin.DICTIONARY" />
         </intent>
         <!-- extension-keyboard (rows) -->
         <intent>
@@ -148,6 +154,10 @@
         <!-- quick-text (emoji) -->
         <intent>
             <action android:name="com.anysoftkeyboard.plugin.QUICK_TEXT_KEY" />
+        </intent>
+        <!-- add-on UI card publishers -->
+        <intent>
+            <action android:name="com.anysoftkeyboard.api.action.REQUEST_ADDON_UI_CARDS" />
         </intent>
 
         <!-- other IMEs -->

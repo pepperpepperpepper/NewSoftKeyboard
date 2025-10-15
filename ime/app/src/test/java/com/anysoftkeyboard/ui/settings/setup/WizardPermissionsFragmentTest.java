@@ -78,7 +78,7 @@ public class WizardPermissionsFragmentTest
             .getNextStartedActivity();
     Assert.assertEquals(Intent.ACTION_VIEW, wikiIntent.getAction());
     Assert.assertEquals(
-        "https://github.com/AnySoftKeyboard/AnySoftKeyboard/wiki/Why-Does-AnySoftKeyboard-Requires-Extra-Permissions",
+        getApplicationContext().getString(R.string.permissions_wiki_site_url),
         wikiIntent.getData().toString());
     // can disable Contacts
     fragment.getView().findViewById(R.id.disable_contacts_dictionary).performClick();

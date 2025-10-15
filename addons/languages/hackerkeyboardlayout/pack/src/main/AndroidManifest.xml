@@ -5,7 +5,7 @@
             android:name="com.anysoftkeyboard.languagepack.hackerkeyboardlayout.PackBroadcastReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.menny.android.anysoftkeyboard.KEYBOARD" />
+                <action android:name="wtf.uhoh.newsoftkeyboard.KEYBOARD" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.ALTERNATIVE" />
@@ -13,7 +13,7 @@
             </intent-filter>
 
             <meta-data
-                android:name="com.menny.android.anysoftkeyboard.keyboards"
+                android:name="wtf.uhoh.newsoftkeyboard.keyboards"
                 android:resource="@xml/hacker_keyboard_layouts" />
         </receiver>
     </application>

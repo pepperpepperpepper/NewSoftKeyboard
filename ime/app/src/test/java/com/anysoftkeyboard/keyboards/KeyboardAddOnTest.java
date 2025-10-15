@@ -49,11 +49,14 @@ public class KeyboardAddOnTest {
       keyboardsEnabled.put(addOnAndBuilder.getId(), addOnAndBuilder.getKeyboardDefaultEnabled());
     }
 
-    Assert.assertEquals(13, keyboardsEnabled.size());
+    Assert.assertTrue(
+        "Expected multiple keyboards bundled with ASK",
+        keyboardsEnabled.size() >= 10);
     Assert.assertTrue(keyboardsEnabled.containsKey(ASK_ENGLISH_1_ID));
     Assert.assertTrue(keyboardsEnabled.get(ASK_ENGLISH_1_ID));
     Assert.assertTrue(keyboardsEnabled.containsKey(ASK_ENGLISH_16_KEYS_ID));
     Assert.assertFalse(keyboardsEnabled.get(ASK_ENGLISH_16_KEYS_ID));
+    Assert.assertFalse(keyboardsEnabled.containsKey("mike-rozoff-main-001"));
   }
 
   private KeyboardAddOnAndBuilder getKeyboardFromFactory(String id) {

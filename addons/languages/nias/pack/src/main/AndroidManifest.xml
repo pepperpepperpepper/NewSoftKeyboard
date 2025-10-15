@@ -5,23 +5,23 @@
             android:name="com.anysoftkeyboard.languagepack.nias.PackBroadcastReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.menny.android.anysoftkeyboard.KEYBOARD" />
+                <action android:name="wtf.uhoh.newsoftkeyboard.KEYBOARD" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.ALTERNATIVE" />
                 <category android:name="android.intent.category.SELECTED_ALTERNATIVE" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.menny.android.anysoftkeyboard.DICTIONARY" />
+                <action android:name="wtf.uhoh.newsoftkeyboard.DICTIONARY" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.ALTERNATIVE" />
                 <category android:name="android.intent.category.SELECTED_ALTERNATIVE" />
             </intent-filter>
 
             <meta-data
-                android:name="com.menny.android.anysoftkeyboard.keyboards"
+                android:name="wtf.uhoh.newsoftkeyboard.keyboards"
                 android:resource="@xml/nias_keyboards" />
             <meta-data
-                android:name="com.menny.android.anysoftkeyboard.dictionaries"
+                android:name="wtf.uhoh.newsoftkeyboard.dictionaries"
                 android:resource="@xml/nias_dictionaries" />
         </receiver>
     </application>

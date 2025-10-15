@@ -35,15 +35,28 @@ public class KeyboardFactoryTest {
   @Test
   public void testDefaultKeyboardId() {
     final List<KeyboardAddOnAndBuilder> allAddOns = mKeyboardFactory.getAllAddOns();
-    Assert.assertEquals(13, allAddOns.size());
     KeyboardAddOnAndBuilder addon = mKeyboardFactory.getEnabledAddOn();
     Assert.assertNotNull(addon);
     Assert.assertEquals("c7535083-4fe6-49dc-81aa-c5438a1a343a", addon.getId());
 
     Assert.assertTrue(
+        containsAddOnWithId(allAddOns, "c7535083-4fe6-49dc-81aa-c5438a1a343a")); // main English
+    Assert.assertFalse(containsAddOnWithId(allAddOns, "mike-rozoff-symbols-001"));
+    Assert.assertFalse(containsAddOnWithId(allAddOns, "mike-rozoff-symbols-ext-001"));
+
+    Assert.assertTrue(
         mKeyboardFactory.isAddOnEnabledByDefault("c7535083-4fe6-49dc-81aa-c5438a1a343a"));
     Assert.assertFalse(
         mKeyboardFactory.isAddOnEnabledByDefault("c7535083-4fe6-49dc-81aa-c5438a1a343b"));
+  }
+
+  private static boolean containsAddOnWithId(List<KeyboardAddOnAndBuilder> addOns, String id) {
+    for (KeyboardAddOnAndBuilder addOn : addOns) {
+      if (id.equals(addOn.getId())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Test

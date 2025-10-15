@@ -173,9 +173,9 @@ public class AnySoftKeyboardThemeOverlayTest extends AnySoftKeyboardBaseTest {
             new ComponentName(
                 ApplicationProvider.getApplicationContext(), MainSettingsActivity.class));
     Assert.assertTrue(normal.isValid());
-    Assert.assertEquals(0xFFCC99FF, normal.getPrimaryColor());
-    Assert.assertEquals(0xFFAA77DD, normal.getPrimaryDarkColor());
-    Assert.assertEquals(0xFF000000, normal.getPrimaryTextColor());
+    Assert.assertEquals(0xFF0000FF, normal.getPrimaryColor());
+    Assert.assertEquals(0xFF0000B2, normal.getPrimaryDarkColor());
+    Assert.assertEquals(0xFFFFFFFF, normal.getPrimaryTextColor());
 
     PowerSavingTest.sendBatteryState(true);
 

@@ -3,5 +3,12 @@
 
     <application
         android:name="com.anysoftkeyboard.debug.DebugAnyApplication"
-        tools:replace="android:name" />
+        tools:replace="android:name" >
+
+        <activity
+            android:name="com.anysoftkeyboard.debug.TestInputActivity"
+            android:exported="true"
+            android:label="Keyboard Test Harness"
+            android:windowSoftInputMode="adjustResize|stateVisible" />
+    </application>
 </manifest>

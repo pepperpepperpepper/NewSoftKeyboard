@@ -16,6 +16,20 @@
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
         <action
+            android:id="@+id/action_mainFragment_to_languageSettingsFragment"
+            app:destination="@id/languageSettingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_mainFragment_to_openAISpeechSettingsFragment"
+            app:destination="@id/openAISpeechSettingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
             android:id="@+id/action_mainFragment_to_mainTweaksFragment"
             app:destination="@id/mainTweaksFragment"
             app:enterAnim="@anim/slide_in_right"
@@ -56,6 +70,10 @@
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
     </fragment>
+    <fragment
+        android:id="@+id/openAISpeechSettingsFragment"
+        android:name="com.anysoftkeyboard.ui.settings.OpenAISpeechSettingsFragment"
+        android:label="@string/openai_speech_settings_title" />
     <fragment
         android:id="@+id/userInterfaceSettingsFragment"
         android:name="com.anysoftkeyboard.ui.settings.UserInterfaceSettingsFragment"
@@ -318,8 +336,4 @@
         android:id="@+id/fullChangeLogFragment"
         android:name="com.anysoftkeyboard.releaseinfo.ChangeLogFragment$FullChangeLogFragment"
         android:label="FullChangeLogFragment" />
-    <fragment
-        android:id="@+id/openAISpeechSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.OpenAISpeechSettingsFragment"
-        android:label="OpenAI Speech Settings" />
 </navigation>

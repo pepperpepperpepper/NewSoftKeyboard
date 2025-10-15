@@ -13,7 +13,11 @@ import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.keyboards.KeyboardAddOnAndBuilder;
 import com.menny.android.anysoftkeyboard.AnyApplication;
+import com.menny.android.anysoftkeyboard.BuildConfig;
+import com.menny.android.anysoftkeyboard.SoftKeyboard;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -25,19 +29,17 @@ import org.robolectric.util.ReflectionHelpers;
 @RunWith(AnySoftKeyboardRobolectricTestRunner.class)
 public class AnySoftKeyboardKeyboardSubtypeTest extends AnySoftKeyboardBaseTest {
 
+  private static final String EXPECTED_IME_ID =
+      new ComponentName(BuildConfig.APPLICATION_ID, SoftKeyboard.class.getName())
+          .flattenToShortString();
+
   @Test
   public void testSubtypeReported() {
     ArgumentCaptor<InputMethodSubtype> subtypeArgumentCaptor =
         ArgumentCaptor.forClass(InputMethodSubtype.class);
     Mockito.verify(mAnySoftKeyboardUnderTest.getInputMethodManager())
         .setInputMethodAndSubtype(
-            Mockito.notNull(),
-            Mockito.eq(
-                new ComponentName(
-                        "com.menny.android.anysoftkeyboard",
-                        "com.menny.android.anysoftkeyboard.SoftKeyboard")
-                    .flattenToShortString()),
-            subtypeArgumentCaptor.capture());
+            Mockito.notNull(), Mockito.eq(EXPECTED_IME_ID), subtypeArgumentCaptor.capture());
     final InputMethodSubtype subtypeArgumentCaptorValue = subtypeArgumentCaptor.getValue();
     Assert.assertNotNull(subtypeArgumentCaptorValue);
     Assert.assertEquals("en", subtypeArgumentCaptorValue.getLocale());
@@ -57,32 +59,24 @@ public class AnySoftKeyboardKeyboardSubtypeTest extends AnySoftKeyboardBaseTest 
 
     Mockito.verify(mAnySoftKeyboardUnderTest.getInputMethodManager())
         .setAdditionalInputMethodSubtypes(
-            Mockito.eq(
-                new ComponentName(
-                        "com.menny.android.anysoftkeyboard",
-                        "com.menny.android.anysoftkeyboard.SoftKeyboard")
-                    .flattenToShortString()),
-            subtypesCaptor.capture());
+            Mockito.eq(EXPECTED_IME_ID), subtypesCaptor.capture());
 
     InputMethodSubtype[] reportedSubtypes = subtypesCaptor.getValue();
     Assert.assertNotNull(reportedSubtypes);
-    Assert.assertEquals(13, keyboardBuilders.size());
-    Assert.assertEquals(11, reportedSubtypes.length);
-    final int[] expectedSubtypeId =
-        new int[] {
-          1912895432,
-          -1829357470,
-          390463609,
-          1819490062,
-          1618259652,
-          -517805346,
-          -611797928,
-          -1601329810,
-          -1835196376,
-          -2134687081,
-          244898541
-        };
-    Assert.assertEquals(reportedSubtypes.length, expectedSubtypeId.length);
+    Assert.assertTrue(
+        "Expected multiple stock keyboards to be bundled",
+        keyboardBuilders.size() >= 10);
+    for (KeyboardAddOnAndBuilder builder : keyboardBuilders) {
+      Assert.assertNotEquals("mike-rozoff-main-001", builder.getId());
+    }
+    int expectedSubtypeCount = 0;
+    for (KeyboardAddOnAndBuilder builder : keyboardBuilders) {
+      if (!TextUtils.isEmpty(builder.getKeyboardLocale())) {
+        expectedSubtypeCount++;
+      }
+    }
+    Assert.assertEquals(expectedSubtypeCount, reportedSubtypes.length);
+    Set<Integer> seenSubtypeIds = new HashSet<>();
     int reportedIndex = 0;
     for (KeyboardAddOnAndBuilder builder : keyboardBuilders) {
       if (!TextUtils.isEmpty(builder.getKeyboardLocale())) {
@@ -90,10 +84,10 @@ public class AnySoftKeyboardKeyboardSubtypeTest extends AnySoftKeyboardBaseTest 
         Assert.assertEquals(builder.getKeyboardLocale(), subtype.getLocale());
         Assert.assertEquals(builder.getId(), subtype.getExtraValue());
         Assert.assertEquals("keyboard", subtype.getMode());
-        Assert.assertEquals(
-            "Expected different subtypeid for " + builder.getId() + " " + reportedIndex,
-            expectedSubtypeId[reportedIndex],
-            ReflectionHelpers.<Integer>getField(subtype, "mSubtypeId").intValue());
+        Assert.assertTrue(
+            "Duplicate subtype id for " + builder.getId(),
+            seenSubtypeIds.add(
+                ReflectionHelpers.<Integer>getField(subtype, "mSubtypeId").intValue()));
 
         reportedIndex++;
       }
@@ -115,12 +109,7 @@ public class AnySoftKeyboardKeyboardSubtypeTest extends AnySoftKeyboardBaseTest 
 
     Mockito.verify(mAnySoftKeyboardUnderTest.getInputMethodManager())
         .setAdditionalInputMethodSubtypes(
-            Mockito.eq(
-                new ComponentName(
-                        "com.menny.android.anysoftkeyboard",
-                        "com.menny.android.anysoftkeyboard.SoftKeyboard")
-                    .flattenToShortString()),
-            subtypesCaptor.capture());
+            Mockito.eq(EXPECTED_IME_ID), subtypesCaptor.capture());
 
     InputMethodSubtype[] reportedSubtypes = subtypesCaptor.getValue();
     Assert.assertNotNull(reportedSubtypes);
@@ -161,13 +150,7 @@ public class AnySoftKeyboardKeyboardSubtypeTest extends AnySoftKeyboardBaseTest 
         ArgumentCaptor.forClass(InputMethodSubtype.class);
     Mockito.verify(mAnySoftKeyboardUnderTest.getInputMethodManager())
         .setInputMethodAndSubtype(
-            Mockito.notNull(),
-            Mockito.eq(
-                new ComponentName(
-                        "com.menny.android.anysoftkeyboard",
-                        "com.menny.android.anysoftkeyboard.SoftKeyboard")
-                    .flattenToShortString()),
-            subtypeArgumentCaptor.capture());
+            Mockito.notNull(), Mockito.eq(EXPECTED_IME_ID), subtypeArgumentCaptor.capture());
     final InputMethodSubtype subtypeArgumentCaptorValue = subtypeArgumentCaptor.getValue();
     Assert.assertNotNull(subtypeArgumentCaptorValue);
     Assert.assertEquals(

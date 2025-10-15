@@ -30,9 +30,9 @@ public class InputMethodManagerShadow extends org.robolectric.shadows.ShadowInpu
 
     final InputMethodInfo askIme =
         new InputMethodInfo(
-            "com.menny.android.anysoftkeyboard",
+            BuildConfig.APPLICATION_ID,
             "com.anysoftkeyboard.TestableAnySoftKeyboard",
-            "AnySoftKeyboard",
+            "New Soft Keyboard",
             ".MainSettingsActivity");
     final InputMethodInfo gBoardIme =
         new InputMethodInfo(
@@ -70,7 +70,8 @@ public class InputMethodManagerShadow extends org.robolectric.shadows.ShadowInpu
     // TODO support API 34
     var currentFlat =
         isCurrent
-            ? new ComponentName(context, ".SoftKeyboard").flattenToString()
+            ? new ComponentName(BuildConfig.APPLICATION_ID, SoftKeyboard.class.getName())
+                .flattenToString()
             : new ComponentName("com.example", ".OtherSoftKeyboard").flattenToString();
     Settings.Secure.putString(
         context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD, currentFlat);

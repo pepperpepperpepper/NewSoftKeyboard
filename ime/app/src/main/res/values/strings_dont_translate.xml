@@ -30,13 +30,13 @@
     <string name="version_text">Version\u0020<xliff:g id="version_name">%s</xliff:g>,\u0020version-code <xliff:g id="version_number">%d</xliff:g>.</string>
     <string name="quick_text_tab_title_template"><xliff:g id="first_key">%s</xliff:g>\u0020<xliff:g id="name">%s</xliff:g></string>
 
-    <string name="about_copyright_text">Copyright\u0020©\u0020<xliff:g id="year">%d</xliff:g>\u0020Menny Even-Danan</string>
-    <string name="main_site_url">https://anysoftkeyboard.github.io/</string>
-    <string name="permissions_wiki_site_url">https://github.com/AnySoftKeyboard/AnySoftKeyboard/wiki/Why-Does-AnySoftKeyboard-Requires-Extra-Permissions</string>
+    <string name="about_copyright_text">Copyright\u0020©\u0020<xliff:g id="year">%d</xliff:g>\u0020Uh-Oh WTF (fork of AnySoftKeyboard)</string>
+    <string name="main_site_url">https://fdroid.uh-oh.wtf/</string>
+    <string name="permissions_wiki_site_url">https://github.com/pepperpepperpepper/AnySoftKeyboard</string>
 
     <string name="switch_incognito_template">🕵️\u0020<xliff:g id="incognito">%s</xliff:g></string>
 
-    <string name="rate_app_in_store_url">http://play.google.com/store/apps/details?id=<xliff:g id="rate_url">%s</xliff:g></string>
+    <string name="rate_app_in_store_url">https://fdroid.uh-oh.wtf/</string>
 
     <string name="deeplink_url_keyboards">anysoftkeyboard://settings/language/layouts</string>
     <string name="deeplink_url_themes">anysoftkeyboard://settings/ui/themes</string>
@@ -46,5 +46,5 @@
 
     <string name="label_subtype_generic">%s</string>
 
-    <string name="developer_strict_mode_change_restart">Restart AnySoftKeyboard to take affect!</string>
+    <string name="developer_strict_mode_change_restart">Restart New Soft Keyboard to take effect!</string>
 </resources>

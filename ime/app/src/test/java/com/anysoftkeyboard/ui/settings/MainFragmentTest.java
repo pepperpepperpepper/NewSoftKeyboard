@@ -98,8 +98,7 @@ public class MainFragmentTest extends RobolectricFragmentTestCase<MainFragment> 
 
     Assert.assertEquals(
         View.VISIBLE, fragment.getView().findViewById(R.id.testing_build_message).getVisibility());
-    Assert.assertEquals(
-        View.GONE, fragment.getView().findViewById(R.id.beta_sign_up).getVisibility());
+    Assert.assertNull(fragment.getView().findViewById(R.id.beta_sign_up));
   }
 
   @Test
@@ -117,8 +116,7 @@ public class MainFragmentTest extends RobolectricFragmentTestCase<MainFragment> 
 
     Assert.assertEquals(
         View.GONE, fragment.getView().findViewById(R.id.testing_build_message).getVisibility());
-    Assert.assertEquals(
-        View.VISIBLE, fragment.getView().findViewById(R.id.beta_sign_up).getVisibility());
+    Assert.assertNull(fragment.getView().findViewById(R.id.beta_sign_up));
   }
 
   @Test

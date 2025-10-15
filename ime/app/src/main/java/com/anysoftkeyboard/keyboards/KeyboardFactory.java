@@ -22,11 +22,11 @@ import android.util.AttributeSet;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
+import com.anysoftkeyboard.addons.AddOnsFactory.ReceiverSpec;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
-
 public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<KeyboardAddOnAndBuilder> {
   private static final String TAG = "ASKKeyboardFactory";
 
@@ -42,21 +42,23 @@ public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<Keyboar
       "physicalKeyboardMappingResId";
   private static final String XML_DEFAULT_ATTRIBUTE = "defaultEnabled";
   public static final String PREF_ID_PREFIX = "keyboard_";
-
   public KeyboardFactory(@NonNull Context context) {
     super(
         context,
         DirectBootAwareSharedPreferences.create(context),
         TAG,
-        "com.menny.android.anysoftkeyboard.KEYBOARD",
-        "com.menny.android.anysoftkeyboard.keyboards",
+        "wtf.uhoh.newsoftkeyboard.KEYBOARD",
+        "wtf.uhoh.newsoftkeyboard.keyboards",
         "Keyboards",
         "Keyboard",
         PREF_ID_PREFIX,
         R.xml.english_keyboards,
         R.string.settings_default_keyboard_id,
         true,
-        BuildConfig.TESTING_BUILD);
+        BuildConfig.TESTING_BUILD,
+        new ReceiverSpec(
+            "com.anysoftkeyboard.plugin.KEYBOARD",
+            "com.anysoftkeyboard.plugindata.keyboards"));
   }
 
   @Override
@@ -116,6 +118,8 @@ public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<Keyboar
                 + " defaultDictionary:"
                 + defaultDictionary);
       }
+      final boolean finalHidden = isHidden;
+      final boolean finalDefaultEnabled = keyboardDefault && !finalHidden;
       return new KeyboardAddOnAndBuilder(
           askContext,
           context,
@@ -130,9 +134,9 @@ public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<Keyboar
           additionalIsLetterExceptions,
           sentenceSeparators,
           description,
-          isHidden,
+          finalHidden,
           sortIndex,
-          keyboardDefault);
+          finalDefaultEnabled);
     }
   }
 
@@ -142,8 +146,6 @@ public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<Keyboar
 
   @Override
   protected boolean isAddOnEnabledByDefault(@NonNull String addOnId) {
-    final KeyboardAddOnAndBuilder addOnById = getAddOnById(addOnId);
-    return super.isAddOnEnabledByDefault(addOnId)
-        || (addOnById != null && addOnById.getKeyboardDefaultEnabled());
+    return TextUtils.equals(addOnId, mContext.getString(R.string.main_english_keyboard_id));
   }
 }

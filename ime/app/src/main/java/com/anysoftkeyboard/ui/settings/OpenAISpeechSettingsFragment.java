@@ -136,7 +136,7 @@ public class OpenAISpeechSettingsFragment extends PreferenceFragmentCompat {
             promptPreference.setText(promptText);
             // Also ensure the SharedPreferences is updated
             android.content.SharedPreferences prefs = requireContext().getSharedPreferences(
-                    "com.menny.android.anysoftkeyboard_preferences", android.content.Context.MODE_PRIVATE);
+                    "wtf.uhoh.newsoftkeyboard_preferences", android.content.Context.MODE_PRIVATE);
             android.content.SharedPreferences.Editor editor = prefs.edit();
             editor.putString(getString(R.string.settings_key_openai_prompt), promptText);
             editor.apply();

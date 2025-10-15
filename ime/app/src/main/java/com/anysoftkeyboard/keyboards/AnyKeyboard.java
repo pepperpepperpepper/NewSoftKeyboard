@@ -835,6 +835,7 @@ boolean stateChanged = mVoiceState != initialState;
     @NonNull private List<String> mKeyTags = Collections.emptyList();
     @NonNull private List<EmojiUtils.Gender> mKeyGenders = Collections.emptyList();
     @NonNull private List<EmojiUtils.SkinTone> mKeySkinTones = Collections.emptyList();
+    @Nullable private String mExtraKeyData;
 
     public AnyKey(Row row, KeyboardDimens keyboardDimens) {
       super(row, keyboardDimens);
@@ -899,6 +900,9 @@ boolean stateChanged = mVoiceState != initialState;
                 mKeyTags = Arrays.asList(tags.split(","));
               }
               break;
+            case R.attr.extra_key_data:
+              mExtraKeyData = a.getString(remoteIndex);
+              break;
             case R.attr.genders:
               String genders = a.getString(remoteIndex);
               if (!TextUtils.isEmpty(genders)) {
@@ -957,8 +961,8 @@ boolean stateChanged = mVoiceState != initialState;
 
     private static <T extends Enum<T>> List<T> stringsToEnum(Class<T> enumClazz, String enumsCSV) {
       if (TextUtils.isEmpty(enumsCSV)) {
-        return Collections.emptyList();
-      }
+      return Collections.emptyList();
+    }
       String[] enumStrings = enumsCSV.split(",");
       @SuppressWarnings("unchecked")
       T[] enums = (T[]) Array.newInstance(enumClazz, enumStrings.length);
@@ -976,6 +980,11 @@ boolean stateChanged = mVoiceState != initialState;
 
     public boolean isShiftCodesAlways() {
       return mShiftCodesAlways;
+    }
+
+    @Nullable
+    public String getExtraKeyData() {
+      return mExtraKeyData;
     }
 
     public void enable() {

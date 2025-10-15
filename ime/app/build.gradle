@@ -3,7 +3,7 @@ import java.util.stream.Collectors
 
 group 'net.evendanan'
 
-ext.override_app_id = 'com.menny.android.anysoftkeyboard'
+ext.override_app_id = 'wtf.uhoh.newsoftkeyboard'
 ext.shouldBePublished = true
 ext.override_release_key_alias = 'anysoftkeyboard'
 ext.closedTestingTrackName = 'alpha'
@@ -139,6 +139,15 @@ dependencies {
     testImplementation project(path: ':ime:base-test')
     testImplementation 'com.github.triplet.simpleprovider:simpleprovider:1.1.0'
     testImplementation 'androidx.test.ext:junit:1.3.0'
+
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test:runner:1.6.1'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
+    androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
+    androidTestUtil 'androidx.test:orchestrator:1.4.2'
 
     //allAddOns have all the add-ons packs as dependencies
     rootProject.findProject(":addons").subprojects.forEach {

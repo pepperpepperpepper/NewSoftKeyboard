@@ -47,6 +47,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -59,6 +60,7 @@ public abstract class AddOnsFactory<E extends AddOn> {
   private static final String XML_DEV_ADD_ON_ATTRIBUTE = "devOnly";
   private static final String XML_HIDDEN_ADD_ON_ATTRIBUTE = "hidden";
   private static final String XML_UI_CARD_ATTRIBUTE = "uiCard";
+  private static final String XML_NAME_ATTRIBUTE = "name";
   @NonNull protected final Context mContext;
   protected final String mTag;
   protected final SharedPreferences mSharedPreferences;
@@ -77,6 +79,7 @@ public abstract class AddOnsFactory<E extends AddOn> {
    * itself.
    */
   private final String mReceiverMetaData;
+  private final List<ReceiverSpec> mReceiverSpecs;
 
   private final boolean mReadExternalPacksToo;
   private final String mRootNodeTag;
@@ -86,6 +89,28 @@ public abstract class AddOnsFactory<E extends AddOn> {
 
   // NOTE: this should only be used when interacting with shared-prefs!
   private final String mPrefIdPrefix;
+  public static class ReceiverSpec {
+    final String action;
+    final String metaData;
+
+    public ReceiverSpec(@NonNull String action, @NonNull String metaData) {
+      this.action = action;
+      this.metaData = metaData;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) return true;
+      if (obj == null || getClass() != obj.getClass()) return false;
+      ReceiverSpec that = (ReceiverSpec) obj;
+      return action.equals(that.action) && metaData.equals(that.metaData);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(action, metaData);
+    }
+  }
 
   protected AddOnsFactory(
       @NonNull Context context,
@@ -99,11 +124,22 @@ public abstract class AddOnsFactory<E extends AddOn> {
       @XmlRes int buildInAddonResId,
       @StringRes int defaultAddOnStringId,
       boolean readExternalPacksToo,
-      boolean isDebugBuild) {
+      boolean isDebugBuild,
+      ReceiverSpec... additionalReceiverSpecs) {
     mContext = context;
     mTag = tag;
     mReceiverInterface = receiverInterface;
     mReceiverMetaData = receiverMetaData;
+    mReceiverSpecs = new ArrayList<>();
+    ReceiverSpec primarySpec = new ReceiverSpec(receiverInterface, receiverMetaData);
+    mReceiverSpecs.add(primarySpec);
+    if (additionalReceiverSpecs != null) {
+      for (ReceiverSpec spec : additionalReceiverSpecs) {
+        if (spec != null && !mReceiverSpecs.contains(spec)) {
+          mReceiverSpecs.add(spec);
+        }
+      }
+    }
     mRootNodeTag = rootNodeTag;
     mAddonNodeTag = addonNodeTag;
     if (TextUtils.isEmpty(prefIdPrefix)) {
@@ -120,11 +156,13 @@ public abstract class AddOnsFactory<E extends AddOn> {
     mSharedPreferences = sharedPreferences;
 
     if (isDebugBuild && readExternalPacksToo) {
-      Logger.d(
-          mTag,
-          "Will read external addons with ACTION '%s' and meta-data '%s'",
-          mReceiverInterface,
-          mReceiverMetaData);
+      for (ReceiverSpec spec : mReceiverSpecs) {
+        Logger.d(
+            mTag,
+            "Will read external addons with ACTION '%s' and meta-data '%s'",
+            spec.action,
+            spec.metaData);
+      }
     }
   }
 
@@ -298,10 +336,12 @@ public abstract class AddOnsFactory<E extends AddOn> {
             || !aReceiver.applicationInfo.enabled) {
           continue;
         }
-        try (final XmlResourceParser xml =
-            aReceiver.loadXmlMetaData(mContext.getPackageManager(), mReceiverMetaData)) {
-          if (xml != null) {
-            return true;
+        for (ReceiverSpec spec : mReceiverSpecs) {
+          try (final XmlResourceParser xml =
+              aReceiver.loadXmlMetaData(mContext.getPackageManager(), spec.metaData)) {
+            if (xml != null) {
+              return true;
+            }
           }
         }
       }
@@ -405,42 +445,56 @@ public abstract class AddOnsFactory<E extends AddOn> {
 
   private List<E> getExternalAddOns() {
     final PackageManager packageManager = mContext.getPackageManager();
-    final List<ResolveInfo> broadcastReceivers =
-        packageManager.queryBroadcastReceivers(
-            new Intent(mReceiverInterface), PackageManager.GET_META_DATA);
-
     final List<E> externalAddOns = new ArrayList<>();
+    final Set<String> handledReceivers = new HashSet<>();
 
-    for (final ResolveInfo receiver : broadcastReceivers) {
-      if (receiver.activityInfo == null) {
-        Logger.e(
-            mTag,
-            "BroadcastReceiver has null ActivityInfo. Receiver's label is "
-                + receiver.loadLabel(packageManager));
-        Logger.e(mTag, "Is the external keyboard a service instead of BroadcastReceiver?");
-        // Skip to next receiver
-        continue;
-      }
+    for (ReceiverSpec spec : mReceiverSpecs) {
+      final Intent queryIntent = new Intent(spec.action);
+      final List<ResolveInfo> broadcastReceivers =
+          packageManager.queryBroadcastReceivers(queryIntent, PackageManager.GET_META_DATA);
 
-      if (!receiver.activityInfo.enabled || !receiver.activityInfo.applicationInfo.enabled) {
-        continue;
-      }
+      for (final ResolveInfo receiver : broadcastReceivers) {
+        if (receiver.activityInfo == null) {
+          Logger.e(
+              mTag,
+              "BroadcastReceiver has null ActivityInfo. Receiver's label is "
+                  + receiver.loadLabel(packageManager));
+          Logger.e(mTag, "Is the external keyboard a service instead of BroadcastReceiver?");
+          // Skip to next receiver
+          continue;
+        }
 
-      if (!mReadExternalPacksToo
-          && !mContext.getPackageName().equalsIgnoreCase(receiver.activityInfo.packageName)) {
-        // Skipping external packages
-        continue;
-      }
-      try {
-        final Context externalPackageContext =
-            mContext.createPackageContext(
-                receiver.activityInfo.packageName, Context.CONTEXT_IGNORE_SECURITY);
-        final List<E> packageAddOns =
-            getAddOnsFromActivityInfo(externalPackageContext, receiver.activityInfo);
+        if (!receiver.activityInfo.enabled || !receiver.activityInfo.applicationInfo.enabled) {
+          continue;
+        }
 
-        externalAddOns.addAll(packageAddOns);
-      } catch (final NameNotFoundException e) {
-        Logger.e(mTag, "Did not find package: " + receiver.activityInfo.packageName);
+        if (!mReadExternalPacksToo
+            && !mContext.getPackageName().equalsIgnoreCase(receiver.activityInfo.packageName)) {
+          // Skipping external packages
+          continue;
+        }
+
+        final String receiverKey =
+            receiver.activityInfo.packageName
+                + "/"
+                + receiver.activityInfo.name
+                + "#"
+                + spec.metaData;
+        if (!handledReceivers.add(receiverKey)) {
+          continue;
+        }
+
+        try {
+          final Context externalPackageContext =
+              mContext.createPackageContext(
+                  receiver.activityInfo.packageName, Context.CONTEXT_IGNORE_SECURITY);
+          final List<E> packageAddOns =
+              getAddOnsFromActivityInfo(externalPackageContext, receiver.activityInfo, spec.metaData);
+
+          externalAddOns.addAll(packageAddOns);
+        } catch (final NameNotFoundException e) {
+          Logger.e(mTag, "Did not find package: " + receiver.activityInfo.packageName);
+        }
       }
     }
 
@@ -453,9 +507,10 @@ public abstract class AddOnsFactory<E extends AddOn> {
     }
   }
 
-  private List<E> getAddOnsFromActivityInfo(Context packContext, ActivityInfo ai) {
+  private List<E> getAddOnsFromActivityInfo(
+      Context packContext, ActivityInfo ai, String receiverMetaData) {
     try (final XmlResourceParser xml =
-        ai.loadXmlMetaData(mContext.getPackageManager(), mReceiverMetaData)) {
+        ai.loadXmlMetaData(mContext.getPackageManager(), receiverMetaData)) {
       if (xml == null) {
         // issue 718: maybe a bad package?
         return Collections.emptyList();
@@ -503,8 +558,11 @@ public abstract class AddOnsFactory<E extends AddOn> {
   private E createAddOnFromXmlAttributes(AttributeSet attrs, Context packContext) {
     final CharSequence prefId =
         getTextFromResourceOrText(packContext, attrs, XML_PREF_ID_ATTRIBUTE);
-    final CharSequence name =
+    CharSequence name =
         getTextFromResourceOrText(packContext, attrs, XML_NAME_RES_ID_ATTRIBUTE);
+    if (TextUtils.isEmpty(name)) {
+      name = getTextFromResourceOrText(packContext, attrs, XML_NAME_ATTRIBUTE);
+    }
 
     if (!mDevAddOnsIncluded
         && attrs.getAttributeBooleanValue(null, XML_DEV_ADD_ON_ATTRIBUTE, false)) {
@@ -607,7 +665,8 @@ public abstract class AddOnsFactory<E extends AddOn> {
         @XmlRes int buildInAddonResId,
         @StringRes int defaultAddOnStringId,
         boolean readExternalPacksToo,
-        boolean isTestingBuild) {
+        boolean isTestingBuild,
+        ReceiverSpec... additionalReceiverSpecs) {
       super(
           context,
           sharedPreferences,
@@ -620,7 +679,8 @@ public abstract class AddOnsFactory<E extends AddOn> {
           buildInAddonResId,
           defaultAddOnStringId,
           readExternalPacksToo,
-          isTestingBuild);
+          isTestingBuild,
+          additionalReceiverSpecs);
     }
 
     @Override
@@ -660,7 +720,8 @@ public abstract class AddOnsFactory<E extends AddOn> {
         @XmlRes int buildInAddonResId,
         @StringRes int defaultAddOnStringId,
         boolean readExternalPacksToo,
-        boolean isTestingBuild) {
+        boolean isTestingBuild,
+        ReceiverSpec... additionalReceiverSpecs) {
       super(
           context,
           sharedPreferences,
@@ -673,7 +734,8 @@ public abstract class AddOnsFactory<E extends AddOn> {
           buildInAddonResId,
           defaultAddOnStringId,
           readExternalPacksToo,
-          isTestingBuild);
+          isTestingBuild,
+          additionalReceiverSpecs);
 
       mSortedIdsPrefId = prefIdPrefix + "AddOnsFactory_order_key";
     }

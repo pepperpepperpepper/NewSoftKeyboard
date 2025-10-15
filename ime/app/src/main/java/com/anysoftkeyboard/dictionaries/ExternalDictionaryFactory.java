@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.collection.ArrayMap;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
+import com.anysoftkeyboard.addons.AddOnsFactory.ReceiverSpec;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.KeyboardFactory;
@@ -55,15 +56,18 @@ public class ExternalDictionaryFactory extends AddOnsFactory<DictionaryAddOnAndB
         context,
         DirectBootAwareSharedPreferences.create(context),
         TAG,
-        "com.menny.android.anysoftkeyboard.DICTIONARY",
-        "com.menny.android.anysoftkeyboard.dictionaries",
+        "wtf.uhoh.newsoftkeyboard.DICTIONARY",
+        "wtf.uhoh.newsoftkeyboard.dictionaries",
         "Dictionaries",
         "Dictionary",
         "dictionary_",
         R.xml.english_dictionaries,
         0,
         true,
-        BuildConfig.TESTING_BUILD);
+        BuildConfig.TESTING_BUILD,
+        new ReceiverSpec(
+            "com.anysoftkeyboard.plugin.DICTIONARY",
+            "com.anysoftkeyboard.plugindata.dictionaries"));
   }
 
   public static String getDictionaryOverrideKey(AnyKeyboard currentKeyboard) {

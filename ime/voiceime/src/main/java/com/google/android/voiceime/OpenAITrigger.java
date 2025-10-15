@@ -359,7 +359,7 @@ public class OpenAITrigger implements Trigger {
             mInputMethodService.getString(R.string.settings_key_openai_endpoint), 
             "https://api.openai.com/v1/audio/transcriptions");
         String model = mSharedPreferences.getString(
-            mInputMethodService.getString(R.string.settings_key_openai_model), "whisper-1");
+            mInputMethodService.getString(R.string.settings_key_openai_model), "gpt-4o-transcribe");
         String language = mSharedPreferences.getString(
             mInputMethodService.getString(R.string.settings_key_openai_language), "en");
         String temperature = mSharedPreferences.getString(
@@ -368,7 +368,7 @@ public class OpenAITrigger implements Trigger {
             mInputMethodService.getString(R.string.settings_key_openai_response_format), "text");
         Log.d(TAG, "Response format from settings: " + responseFormat);
         String chunkingStrategy = mSharedPreferences.getString(
-            mInputMethodService.getString(R.string.settings_key_openai_chunking_strategy), "auto");
+            mInputMethodService.getString(R.string.settings_key_openai_chunking_strategy), "none");
         String prompt = mSharedPreferences.getString(
             mInputMethodService.getString(R.string.settings_key_openai_prompt), "");
         Log.d(TAG, "Prompt from settings: '" + prompt + "' (length: " + prompt.length() + ")");
@@ -393,8 +393,8 @@ public class OpenAITrigger implements Trigger {
         
         // Validate chunking strategy
         if (!isValidChunkingStrategy(chunkingStrategy)) {
-            Log.w(TAG, "Invalid chunking strategy: " + chunkingStrategy + ", using default auto");
-            chunkingStrategy = "auto";
+            Log.w(TAG, "Invalid chunking strategy: " + chunkingStrategy + ", using default none");
+            chunkingStrategy = "none";
         }
         boolean addTrailingSpace = mSharedPreferences.getBoolean(
             mInputMethodService.getString(R.string.settings_key_openai_add_trailing_space), true);

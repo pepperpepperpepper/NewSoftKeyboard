@@ -52,7 +52,7 @@
             android:dialogTitle="@string/openai_model_dialog_title"
             android:entries="@array/openai_model_entries"
             android:entryValues="@array/openai_model_values"
-            android:defaultValue="whisper-1"
+            android:defaultValue="gpt-4o-transcribe"
             android:persistent="true" />
 
         <androidx.preference.EditTextPreference
@@ -128,7 +128,7 @@
             android:dialogTitle="@string/openai_chunking_strategy_dialog_title"
             android:entries="@array/openai_chunking_strategy_entries"
             android:entryValues="@array/openai_chunking_strategy_values"
-            android:defaultValue="auto"
+            android:defaultValue="none"
             android:persistent="true" />
 
     </androidx.preference.PreferenceCategory>

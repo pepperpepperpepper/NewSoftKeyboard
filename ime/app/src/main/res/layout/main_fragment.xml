@@ -145,26 +145,5 @@
             android:layout_margin="4dp"
             android:layout_marginTop="8dp" />
 
-        <!-- this box will be should shown
-         only if the build type is not release -->
-        <androidx.cardview.widget.CardView
-            android:id="@+id/beta_sign_up"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="4dp"
-            android:layout_marginTop="8dp"
-            android:visibility="gone">
-
-            <TextView
-                style="@style/Ask.Text.Normal"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:autoLink="web"
-                android:padding="8dp"
-                android:text="@string/ask_beta_link_promo"
-                android:textColor="?android:textColorSecondary" />
-        </androidx.cardview.widget.CardView>
-
     </LinearLayout>
 </ScrollView>
