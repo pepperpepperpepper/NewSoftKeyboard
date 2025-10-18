@@ -4,7 +4,7 @@
 
     <style name="MikeRozoffTheme" parent="@style/YocheesDarkTheme">
         <item name="keyBackground">@drawable/mike_rozoff_key</item>
-        <item name="keyTextColor">#FFFFFFFF</item>
+        <item name="keyTextColor">@color/mike_rozoff_key_text</item>
         <item name="hintTextColor">#FFB8C4FF</item>
         <item name="hintTextSize">@dimen/mike_rozoff_hint_text_size</item>
         <item name="hintLabelAlign">center</item>

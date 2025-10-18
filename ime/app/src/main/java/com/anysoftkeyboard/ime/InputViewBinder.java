@@ -27,6 +27,24 @@ public interface InputViewBinder extends InputViewActionsProvider, ThemeableChil
   boolean setControl(boolean active);
 
   /**
+   * Sets the state of the alt key of the keyboard, if any.
+   *
+   * @param active whether or not to enable the state of the alt key
+   * @param locked whether or not to lock the alt key state
+   * @return true if the alt key state changed, false if there was no change
+   */
+  boolean setAlt(boolean active, boolean locked);
+
+  /**
+   * Sets the state of the function key of the keyboard, if any.
+   *
+   * @param active whether or not to enable the state of the function key
+   * @param locked whether or not to lock the function key state
+   * @return true if the function key state changed, false if there was no change
+   */
+  boolean setFunction(boolean active, boolean locked);
+
+  /**
    * Sets the state of the shift key of the keyboard, if any.
    *
    * @param active whether or not to enable the state of the shift key

@@ -75,6 +75,27 @@ public final class ImeStateTracker {
     return NOTICE.computeKeyCenterByPopup(popupCharacters);
   }
 
+  @Nullable
+  public static PointF locateKeyByPrimaryCode(int primaryCode) {
+    return NOTICE.computeKeyCenterByPrimaryCode(primaryCode);
+  }
+
+  public static boolean isShiftActive() {
+    return NOTICE.isShiftActive();
+  }
+
+  public static boolean isControlActive() {
+    return NOTICE.isControlActive();
+  }
+
+  public static boolean isAltActive() {
+    return NOTICE.isAltActive();
+  }
+
+  public static boolean isFunctionActive() {
+    return NOTICE.isFunctionActive();
+  }
+
   private static final class KeyboardVisibilityNotice implements OnVisible {
     @Nullable private volatile String mLastKeyboardId;
     @Nullable private volatile String mLastKeyboardName;
@@ -193,6 +214,72 @@ public final class ImeStateTracker {
       }
       Log.d(TAG, "computeKeyCenterByPopup could not find popupCharacters=" + popupCharacters);
       return null;
+    }
+
+    @Nullable
+    PointF computeKeyCenterByPrimaryCode(int primaryCode) {
+      AnyKeyboard keyboard = mLastKeyboard;
+      AnyKeyboardViewBase keyboardView = mLastKeyboardView;
+      if (keyboard == null || keyboardView == null) {
+        Log.d(
+            TAG,
+            "computeKeyCenterByPrimaryCode missing data keyboard="
+                + keyboard
+                + " view="
+                + keyboardView);
+        return null;
+      }
+      List<Keyboard.Key> keys = keyboard.getKeys();
+      if (keys == null) {
+        Log.d(TAG, "computeKeyCenterByPrimaryCode keys list null");
+        return null;
+      }
+      for (Keyboard.Key key : keys) {
+        if (key.getPrimaryCode() == primaryCode) {
+          int[] location = new int[2];
+          keyboardView.getLocationOnScreen(location);
+          float centerX = location[0] + key.x + (key.width / 2.0f);
+          float centerY = location[1] + key.y + (key.height / 2.0f);
+          return new PointF(centerX, centerY);
+        }
+      }
+      if (BuildConfig.DEBUG) {
+        StringBuilder codes = new StringBuilder();
+        for (Keyboard.Key key : keys) {
+          if (codes.length() > 0) {
+            codes.append(',');
+          }
+          codes.append(key.getPrimaryCode());
+        }
+        Log.d(
+            TAG,
+            "computeKeyCenterByPrimaryCode could not find code="
+                + primaryCode
+                + " existing="
+                + codes);
+      }
+      Log.d(TAG, "computeKeyCenterByPrimaryCode could not find code=" + primaryCode);
+      return null;
+    }
+
+    boolean isShiftActive() {
+      AnyKeyboard keyboard = mLastKeyboard;
+      return keyboard != null && keyboard.isShifted();
+    }
+
+    boolean isControlActive() {
+      AnyKeyboard keyboard = mLastKeyboard;
+      return keyboard != null && keyboard.isControl();
+    }
+
+    boolean isAltActive() {
+      AnyKeyboard keyboard = mLastKeyboard;
+      return keyboard != null && keyboard.isAltActive();
+    }
+
+    boolean isFunctionActive() {
+      AnyKeyboard keyboard = mLastKeyboard;
+      return keyboard != null && keyboard.isFunctionActive();
     }
   }
 }

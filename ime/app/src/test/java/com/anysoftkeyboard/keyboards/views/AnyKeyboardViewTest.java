@@ -11,17 +11,21 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.ArgumentMatchers.nullable;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 import android.view.MotionEvent;
 import android.widget.PopupWindow;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.test.core.app.ApplicationProvider;
 import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import com.anysoftkeyboard.ViewTestUtils;
@@ -121,16 +125,21 @@ public class AnyKeyboardViewTest extends AnyKeyboardViewWithMiniKeyboardTest {
   @Test
   public void testKeyRepeatClickHappyPath() {
     AnyKeyboard.AnyKey key = findKey(KeyCodes.DELETE);
+    Assert.assertEquals(KeyCodes.DELETE_WORD, key.longPressCode);
     ViewTestUtils.navigateFromTo(mViewUnderTest, key, key, 2000, true, true);
 
-    InOrder inOrder = Mockito.inOrder(mMockKeyboardListener);
-    inOrder.verify(mMockKeyboardListener).onPress(KeyCodes.DELETE);
-    inOrder
-        .verify(
-            mMockKeyboardListener, Mockito.times(35 /*this could change if timeouts are changed*/))
-        .onKey(eq(KeyCodes.DELETE), same(key), eq(0), any(int[].class), eq(true));
-    inOrder.verify(mMockKeyboardListener).onRelease(KeyCodes.DELETE);
-    inOrder.verifyNoMoreInteractions();
+    ArgumentCaptor<Integer> codesCaptor = ArgumentCaptor.forClass(Integer.class);
+    Mockito.verify(mMockKeyboardListener).onPress(KeyCodes.DELETE);
+    Mockito.verify(mMockKeyboardListener, Mockito.atLeast(2))
+        .onKey(codesCaptor.capture(), same(key), eq(0), nullable(int[].class), eq(true));
+    Mockito.verify(mMockKeyboardListener).onRelease(KeyCodes.DELETE);
+
+    final java.util.List<Integer> codes = codesCaptor.getAllValues();
+    Assert.assertFalse("Expected repeat onKey callbacks.", codes.isEmpty());
+    Assert.assertEquals(KeyCodes.DELETE, (int) codes.get(0));
+    Assert.assertTrue(
+        "Long-press repeat should delete words.",
+        codes.stream().skip(1).allMatch(code -> code == KeyCodes.DELETE_WORD));
   }
 
   @Test
@@ -512,6 +521,23 @@ public class AnyKeyboardViewTest extends AnyKeyboardViewWithMiniKeyboardTest {
             eq(0),
             Mockito.nullable(int[].class),
             eq(true));
+  }
+
+  @Test
+  public void testMikeRozoffFunctionKeyActiveColorUsesCheckedState() {
+    ColorStateList colorStateList =
+        ContextCompat.getColorStateList(mViewUnderTest.getContext(), R.color.mike_rozoff_key_text);
+    Assert.assertNotNull(colorStateList);
+    KeyDrawableStateProvider provider =
+        new KeyDrawableStateProvider(
+            R.attr.key_type_function,
+            R.attr.key_type_action,
+            R.attr.action_done,
+            R.attr.action_search,
+            R.attr.action_go);
+    int[] activeState = provider.KEY_STATE_FUNCTIONAL_ON;
+    int activeColor = colorStateList.getColorForState(activeState, Color.TRANSPARENT);
+    Assert.assertEquals(Color.parseColor("#29ABE2"), activeColor);
   }
 
   @Test

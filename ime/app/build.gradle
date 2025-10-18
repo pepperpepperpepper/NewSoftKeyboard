@@ -5,9 +5,11 @@ group 'net.evendanan'
 
 ext.override_app_id = 'wtf.uhoh.newsoftkeyboard'
 ext.shouldBePublished = true
-ext.override_release_key_alias = 'anysoftkeyboard'
+ext.override_release_key_alias = 'fdroidrepo'
 ext.closedTestingTrackName = 'alpha'
 ext.openTestingTrackName = 'beta'
+ext.override_version_code = 15067
+ext.override_version_name = '13.8.16'
 
 apply from: "${rootDir}/gradle/apk_module.gradle"
 
@@ -146,6 +148,7 @@ dependencies {
     androidTestImplementation 'androidx.test:rules:1.6.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
     androidTestImplementation 'androidx.test.espresso:espresso-intents:3.6.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-contrib:3.6.1'
     androidTestImplementation 'androidx.test.uiautomator:uiautomator:2.3.0'
     androidTestUtil 'androidx.test:orchestrator:1.4.2'
 

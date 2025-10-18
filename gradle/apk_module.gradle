@@ -89,6 +89,11 @@ android {
             debuggable false
             minifyEnabled false
         }
+        debug {
+            if (keystoreFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
     }
 }
 

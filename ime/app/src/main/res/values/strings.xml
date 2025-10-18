@@ -551,8 +551,10 @@
     <string name="extension_kbd_top_nav_alt_no_numb">Navigation keys alternative. No numbers row in pwd mode</string>
     <string name="extension_kbd_top_numbers_simple">Simple, numbers only</string>
     <string name="extension_kbd_top_terminal">Terminal</string>
+    <string name="extension_kbd_top_dev">Dev</string>
     <string name="extension_kbd_top_text_editing">Quick text editing</string>
 
+    <string name="extension_kbd_bottom_none">No bottom row</string>
     <string name="extension_kbd_bottom_regular_with_voice">Regular</string>
     <string name="extension_kbd_bottom_regular">Classic (no mic)</string>
     <string name="extension_kbd_bottom_iphone">iPhone styled (no mic)</string>

@@ -21,6 +21,8 @@ public class KeyCodes {
   public static final int CTRL = -11;
   public static final int SHIFT_LOCK = -14;
   public static final int CTRL_LOCK = -15;
+  public static final int ALT_MODIFIER = -16;
+  public static final int FUNCTION = -17;
 
   public static final int MODE_SYMBOLS = -2;
   public static final int MODE_ALPHABET = -99;

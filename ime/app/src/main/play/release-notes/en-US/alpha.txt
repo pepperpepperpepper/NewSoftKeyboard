@@ -1,3 +1,24 @@
-Work in progress for version 1.13.
+New Soft Keyboard 13.8.16
+- Mike Rozoff Blue: Ctrl/Alt/Fn are back to full-size mixed-case labels and tint blue when active just like Shift.
 
-More here: https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/95
+New Soft Keyboard 13.8.7
+- Mike Rozoff Blue theme: sticky Ctrl/Alt/Fn labels now tint to blue (not just the key body) when active, matching the Shift arrow treatment.
+
+New Soft Keyboard 13.8.6
+- Mirrors Shift behavior for stickies: Mike Rozoff Blue now recolors Ctrl/Alt/Fn while toggled (checked or locked), matching the live Shift feedback.
+- Includes every enhancement from 13.8.4 and 13.8.5 (sticky visuals, Dev tools row, Fn label refresh, etc.).
+
+New Soft Keyboard 13.8.5
+- Mike Rozoff Blue now mirrors the Shift key behavior: sticky Ctrl/Alt/Fn pick up the active blue background even when not pressed.
+
+New Soft Keyboard 13.8.4
+- Mike Rozoff Blue: Ctrl/Alt/Fn keys now glow with a brighter blue and lighter label when toggled, making sticky modifiers obvious.
+- Rolls up all prior 13.8 fixes (Dev top row, Fn number labels, word-delete backspace, etc.).
+
+New Soft Keyboard 13.8.3
+- Ctrl/Alt/Fn keys now highlight exactly like Shift when toggled so you always see active modifiers.
+- Includes all earlier 13.8 series improvements (Dev top row, word-delete backspace, Fn number labels, etc.).
+
+New Soft Keyboard 13.8.2
+- Fn key now refreshes the number row labels on every layout (no more blank space after switching to symbols).
+- Keeps all recent modifier, Dev top-row, backspace, and theme updates from 13.8.

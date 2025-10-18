@@ -75,6 +75,10 @@ public abstract class AnySoftKeyboardBase extends InputMethodService
       new ModifierKeyState(false /*does not support locked state*/);
   protected final ModifierKeyState mVoiceKeyState =
       new ModifierKeyState(true /*supports locked state*/);
+  protected final ModifierKeyState mAltKeyState =
+      new ModifierKeyState(true /*supports locked state*/);
+  protected final ModifierKeyState mFunctionKeyState =
+      new ModifierKeyState(true /*supports locked state*/);
 
   @NonNull protected final CompositeDisposable mInputSessionDisposables = new CompositeDisposable();
   private int mOrientation;

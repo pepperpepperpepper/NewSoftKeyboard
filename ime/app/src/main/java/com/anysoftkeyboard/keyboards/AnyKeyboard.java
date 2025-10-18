@@ -60,8 +60,12 @@ public abstract class AnyKeyboard extends Keyboard {
   private int mShiftState = STICKY_KEY_OFF;
   private int mControlState = STICKY_KEY_OFF;
   private int mVoiceState = STICKY_KEY_OFF;
+  private int mAltState = STICKY_KEY_OFF;
+  private int mFunctionState = STICKY_KEY_OFF;
   private Key mShiftKey;
   private Key mControlKey;
+  private AnyKey mAltKey;
+  private AnyKey mFunctionKey;
   private AnyKey mVoiceKey;
   private EnterKey mEnterKey;
   private boolean mRightToLeftLayout = false; // the "super" ctor will create
@@ -111,6 +115,12 @@ public abstract class AnyKeyboard extends Keyboard {
       final KeyboardDimens keyboardDimens,
       @NonNull KeyboardExtension topRowPlugin,
       @NonNull KeyboardExtension bottomRowPlugin) {
+    mShiftKey = null;
+    mControlKey = null;
+    mAltKey = null;
+    mFunctionKey = null;
+    mAltState = STICKY_KEY_OFF;
+    mFunctionState = STICKY_KEY_OFF;
     super.loadKeyboard(keyboardDimens);
 
     addGenericRows(keyboardDimens, topRowPlugin, bottomRowPlugin);
@@ -346,6 +356,22 @@ public abstract class AnyKeyboard extends Keyboard {
       final int rowWidth = Key.getEndX(rowKey);
       if (rowWidth > mMaxGenericRowsWidth) mMaxGenericRowsWidth = rowWidth;
       keys.add(rowKeyInsertIndex, rowKey);
+      if (rowKey instanceof AnyKey) {
+        final AnyKey anyRowKey = (AnyKey) rowKey;
+        switch (anyRowKey.getPrimaryCode()) {
+          case KeyCodes.CTRL:
+            mControlKey = anyRowKey;
+            break;
+          case KeyCodes.ALT_MODIFIER:
+            mAltKey = anyRowKey;
+            break;
+          case KeyCodes.FUNCTION:
+            mFunctionKey = anyRowKey;
+            break;
+          default:
+            // no-op
+        }
+      }
       rowKeyInsertIndex++;
     }
 
@@ -482,8 +508,14 @@ public abstract class AnyKeyboard extends Keyboard {
         case KeyCodes.CTRL:
           mControlKey = key;
           break;
+        case KeyCodes.ALT_MODIFIER:
+          mAltKey = (AnyKey) key;
+          break;
         case KeyCodes.SHIFT:
           mShiftKey = key; // I want to reference used by than super.
+          break;
+        case KeyCodes.FUNCTION:
+          mFunctionKey = (AnyKey) key;
           break;
         case KeyCodes.VOICE_INPUT:
           android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - Creating VoiceKey for VOICE_INPUT!");
@@ -495,6 +527,13 @@ public abstract class AnyKeyboard extends Keyboard {
           android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - VoiceKey created and assigned to mVoiceKey: " + mVoiceKey.hashCode());
           android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - VoiceKey instance: " + key.hashCode() + ", mVoiceKey instance: " + mVoiceKey.hashCode());
           break;
+      }
+
+      if (primaryCode == KeyCodes.DELETE && key instanceof AnyKey) {
+        AnyKey anyKey = (AnyKey) key;
+        if (anyKey.longPressCode == 0) {
+          anyKey.longPressCode = KeyCodes.DELETE_WORD;
+        }
       }
 
       // detecting LTR languages
@@ -674,6 +713,60 @@ public abstract class AnyKeyboard extends Keyboard {
     } else {
       return false;
     }
+  }
+
+  public boolean isControlActive() {
+    return mControlKey != null && mControlState != STICKY_KEY_OFF;
+  }
+
+  public boolean setAlt(boolean active, boolean locked) {
+    if (mAltKey != null) {
+      final int initialState = mAltState;
+      if (active) {
+        if (locked) {
+          mAltState = STICKY_KEY_LOCKED;
+        } else if (mAltState == STICKY_KEY_OFF) {
+          mAltState = STICKY_KEY_ON;
+        }
+      } else {
+        mAltState = STICKY_KEY_OFF;
+      }
+      return mAltState != initialState;
+    }
+    return false;
+  }
+
+  public boolean isAltActive() {
+    return mAltKey != null && mAltState != STICKY_KEY_OFF;
+  }
+
+  public boolean isAltLocked() {
+    return mAltKey != null && mAltState == STICKY_KEY_LOCKED;
+  }
+
+  public boolean setFunction(boolean active, boolean locked) {
+    if (mFunctionKey != null) {
+      final int initialState = mFunctionState;
+      if (active) {
+        if (locked) {
+          mFunctionState = STICKY_KEY_LOCKED;
+        } else if (mFunctionState == STICKY_KEY_OFF) {
+          mFunctionState = STICKY_KEY_ON;
+        }
+      } else {
+        mFunctionState = STICKY_KEY_OFF;
+      }
+      return mFunctionState != initialState;
+    }
+    return false;
+  }
+
+  public boolean isFunctionActive() {
+    return mFunctionKey != null && mFunctionState != STICKY_KEY_OFF;
+  }
+
+  public boolean isFunctionLocked() {
+    return mFunctionKey != null && mFunctionState == STICKY_KEY_LOCKED;
   }
 
 public boolean setVoice(boolean active, boolean locked) {
@@ -1018,6 +1111,48 @@ boolean stateChanged = mVoiceState != initialState;
 
     @Override
     public int[] getCurrentDrawableState(KeyDrawableStateProvider provider) {
+      final AnyKeyboard parentKeyboard = (AnyKeyboard) row.mParent;
+      final int primaryCode = getPrimaryCode();
+      if (primaryCode == KeyCodes.CTRL) {
+        if (parentKeyboard.isControlActive()) {
+          return ensureCheckableState(
+              pressed
+                  ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
+                  : provider.KEY_STATE_FUNCTIONAL_ON);
+        }
+        return ensureCheckableState(
+            pressed
+                ? provider.KEY_STATE_FUNCTIONAL_PRESSED
+                : provider.KEY_STATE_FUNCTIONAL_NORMAL);
+      } else if (primaryCode == KeyCodes.ALT_MODIFIER) {
+        if (parentKeyboard.isAltActive()) {
+          if (parentKeyboard.isAltLocked()) {
+            return ensureCheckableState(provider.KEY_STATE_FUNCTIONAL_ON);
+          }
+          return ensureCheckableState(
+              pressed
+                  ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
+                  : provider.KEY_STATE_FUNCTIONAL_ON);
+        }
+        return ensureCheckableState(
+            pressed
+                ? provider.KEY_STATE_FUNCTIONAL_PRESSED
+                : provider.KEY_STATE_FUNCTIONAL_NORMAL);
+      } else if (primaryCode == KeyCodes.FUNCTION) {
+        if (parentKeyboard.isFunctionActive()) {
+          if (parentKeyboard.isFunctionLocked()) {
+            return ensureCheckableState(provider.KEY_STATE_FUNCTIONAL_ON);
+          }
+          return ensureCheckableState(
+              pressed
+                  ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
+                  : provider.KEY_STATE_FUNCTIONAL_ON);
+        }
+        return ensureCheckableState(
+            pressed
+                ? provider.KEY_STATE_FUNCTIONAL_PRESSED
+                : provider.KEY_STATE_FUNCTIONAL_NORMAL);
+      }
       if (mFunctionalKey) {
         if (pressed) {
           return provider.KEY_STATE_FUNCTIONAL_PRESSED;
@@ -1026,6 +1161,17 @@ boolean stateChanged = mVoiceState != initialState;
         }
       }
       return super.getCurrentDrawableState(provider);
+    }
+
+    private int[] ensureCheckableState(int[] baseState) {
+      for (int state : baseState) {
+        if (state == android.R.attr.state_checkable) {
+          return baseState;
+        }
+      }
+      int[] merged = Arrays.copyOf(baseState, baseState.length + 1);
+      merged[baseState.length] = android.R.attr.state_checkable;
+      return merged;
     }
 
     @NonNull

@@ -1007,6 +1007,24 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   @Override
+  public boolean setAlt(boolean active, boolean locked) {
+    if (mKeyboard != null && mKeyboard.setAlt(active, locked)) {
+      invalidateAllKeys();
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean setFunction(boolean active, boolean locked) {
+    if (mKeyboard != null && mKeyboard.setFunction(active, locked)) {
+      invalidateAllKeys();
+      return true;
+    }
+    return false;
+  }
+
+  @Override
   public boolean setVoice(boolean active, boolean locked) {
     if (mKeyboard != null && mKeyboard.setVoice(active, locked)) {
       // The whole keyboard probably needs to be redrawn
@@ -1067,6 +1085,81 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
       if (key.isShiftCodesAlways()) key.shiftedKeyLabel = label;
     }
     return label;
+  }
+
+  @VisibleForTesting
+  CharSequence adjustLabelForFunctionState(AnyKey key, CharSequence currentLabel) {
+    if (!(mKeyboard instanceof AnyKeyboard)) {
+      return currentLabel;
+    }
+    final AnyKeyboard anyKeyboard = (AnyKeyboard) mKeyboard;
+    final boolean functionActive = anyKeyboard.isFunctionActive();
+    final boolean shiftActive = anyKeyboard.isShifted();
+    if (!functionActive && !shiftActive) {
+      return currentLabel;
+    }
+    final int primaryCode = key.getCodeAtIndex(0, false);
+    final String fnLabel;
+    switch (primaryCode) {
+      case KeyCodes.ARROW_UP:
+        fnLabel = "PgUp";
+        break;
+      case KeyCodes.ARROW_DOWN:
+        fnLabel = "PgDn";
+        break;
+      case KeyCodes.ARROW_LEFT:
+        fnLabel = "Home";
+        break;
+      case KeyCodes.ARROW_RIGHT:
+        fnLabel = "End";
+        break;
+      default:
+        fnLabel = null;
+        break;
+    }
+    if (fnLabel != null && (functionActive || shiftActive)) {
+      return fnLabel;
+    }
+    if (!functionActive) {
+      return currentLabel;
+    }
+    final String functionDigitLabel;
+    switch (primaryCode) {
+      case '1':
+        functionDigitLabel = "F1";
+        break;
+      case '2':
+        functionDigitLabel = "F2";
+        break;
+      case '3':
+        functionDigitLabel = "F3";
+        break;
+      case '4':
+        functionDigitLabel = "F4";
+        break;
+      case '5':
+        functionDigitLabel = "F5";
+        break;
+      case '6':
+        functionDigitLabel = "F6";
+        break;
+      case '7':
+        functionDigitLabel = "F7";
+        break;
+      case '8':
+        functionDigitLabel = "F8";
+        break;
+      case '9':
+        functionDigitLabel = "F9";
+        break;
+      case '0':
+        functionDigitLabel = "F10";
+        break;
+      default:
+        functionDigitLabel = null;
+        break;
+    }
+    return functionDigitLabel != null ? functionDigitLabel : currentLabel;
   }
 
   @Override
@@ -1132,6 +1225,20 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     final ThemeResourcesHolder themeResourcesHolder = mThemeOverlayCombiner.getThemeResources();
     final ColorStateList keyTextColor = themeResourcesHolder.getKeyTextColor();
 
+    final AnyKeyboard activeKeyboard =
+        mKeyboard instanceof AnyKeyboard ? (AnyKeyboard) mKeyboard : null;
+    final boolean functionModeActive =
+        activeKeyboard != null && activeKeyboard.isFunctionActive();
+    final boolean controlModeActive =
+        activeKeyboard != null && activeKeyboard.isControlActive();
+    final boolean altModeActive = activeKeyboard != null && activeKeyboard.isAltActive();
+    int modifierActiveTextColor =
+        keyTextColor.getColorForState(
+            mDrawableStatesProvider.KEY_STATE_FUNCTIONAL_ON, keyTextColor.getDefaultColor());
+    if (modifierActiveTextColor == 0) {
+      modifierActiveTextColor = keyTextColor.getDefaultColor();
+    }
+
     // allow preferences to override theme settings for hint text position
     final int hintAlign =
         mCustomHintGravity == Gravity.NO_GRAVITY
@@ -1177,15 +1284,28 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
       }
       int[] drawableState = key.getCurrentDrawableState(mDrawableStatesProvider);
 
+      int resolvedTextColor;
       if (keyIsSpace) {
-        paint.setColor(themeResourcesHolder.getNameTextColor());
+        resolvedTextColor = themeResourcesHolder.getNameTextColor();
       } else {
-        paint.setColor(keyTextColor.getColorForState(drawableState, 0xFF000000));
+        resolvedTextColor = keyTextColor.getColorForState(drawableState, 0xFF000000);
       }
+      if (activeKeyboard != null) {
+        final int primaryCode = key.getPrimaryCode();
+        if (primaryCode == KeyCodes.FUNCTION && functionModeActive) {
+          resolvedTextColor = modifierActiveTextColor;
+        } else if (primaryCode == KeyCodes.CTRL && controlModeActive) {
+          resolvedTextColor = modifierActiveTextColor;
+        } else if (primaryCode == KeyCodes.ALT_MODIFIER && altModeActive) {
+          resolvedTextColor = modifierActiveTextColor;
+        }
+      }
+      paint.setColor(resolvedTextColor);
       keyBackground.setState(drawableState);
 
       // Switch the character to uppercase if shift is pressed
       CharSequence label = key.label == null ? null : adjustLabelToShiftState(key);
+      label = adjustLabelForFunctionState(key, label);
 
       final Rect bounds = keyBackground.getBounds();
       if ((key.width != bounds.right) || (key.height != bounds.bottom)) {
@@ -1699,6 +1819,24 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
         }
         case KeyCodes.CTRL -> {
           if (mKeyboard.isControl()) {
+            icon.setState(mDrawableStatesProvider.DRAWABLE_STATE_MODIFIER_PRESSED);
+          } else {
+            icon.setState(mDrawableStatesProvider.DRAWABLE_STATE_MODIFIER_NORMAL);
+          }
+        }
+        case KeyCodes.ALT_MODIFIER -> {
+          if (mKeyboard.isAltLocked()) {
+            icon.setState(mDrawableStatesProvider.DRAWABLE_STATE_MODIFIER_LOCKED);
+          } else if (mKeyboard.isAltActive()) {
+            icon.setState(mDrawableStatesProvider.DRAWABLE_STATE_MODIFIER_PRESSED);
+          } else {
+            icon.setState(mDrawableStatesProvider.DRAWABLE_STATE_MODIFIER_NORMAL);
+          }
+        }
+        case KeyCodes.FUNCTION -> {
+          if (mKeyboard.isFunctionLocked()) {
+            icon.setState(mDrawableStatesProvider.DRAWABLE_STATE_MODIFIER_LOCKED);
+          } else if (mKeyboard.isFunctionActive()) {
             icon.setState(mDrawableStatesProvider.DRAWABLE_STATE_MODIFIER_PRESSED);
           } else {
             icon.setState(mDrawableStatesProvider.DRAWABLE_STATE_MODIFIER_NORMAL);

@@ -71,11 +71,11 @@ public class KeyboardExtensionFactoryTest {
   public void testGetAllAvailableExtensions() throws Exception {
     assertBasicListDetails(
         AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns(),
-        16,
+        17,
         KeyboardExtension.TYPE_BOTTOM);
     assertBasicListDetails(
         AnyApplication.getTopRowFactory(getApplicationContext()).getAllAddOns(),
-        11,
+        12,
         KeyboardExtension.TYPE_TOP);
     assertBasicListDetails(
         AnyApplication.getKeyboardExtensionFactory(getApplicationContext()).getAllAddOns(),

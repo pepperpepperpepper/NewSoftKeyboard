@@ -303,12 +303,12 @@ public class ExternalAnyKeyboardRowsTest {
 
   @Test
   public void testKeyboardRowEmailModeWhenEmailRowProvided() throws Exception {
-    // ensuring that 4 is actually the bottom row without password specific row
+    // ensuring that 5 is actually the bottom row without password specific row
     Assert.assertEquals(
         "3DFFC2AD-8BC8-47F3-962A-918156AD8DD0",
-        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(4).getId());
+        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(5).getId());
     AnyKeyboard keyboard =
-        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_EMAIL, 4);
+        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_EMAIL, 5);
 
     Assert.assertEquals(Keyboard.KEYBOARD_ROW_MODE_EMAIL, keyboard.getKeyboardMode());
     Assert.assertEquals(
@@ -318,11 +318,11 @@ public class ExternalAnyKeyboardRowsTest {
   @Test
   public void testKeyboardRowPasswordModeWhenNoPasswordRowProvided() throws Exception {
     AnyKeyboard keyboard =
-        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_PASSWORD, 4);
-    // ensuring that 4 is actually the bottom row without password specific row
+        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_PASSWORD, 5);
+    // ensuring that 5 is actually the bottom row without password specific row
     Assert.assertEquals(
         "3DFFC2AD-8BC8-47F3-962A-918156AD8DD0",
-        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(4).getId());
+        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(5).getId());
 
     Assert.assertEquals(Keyboard.KEYBOARD_ROW_MODE_PASSWORD, keyboard.getKeyboardMode());
     Assert.assertEquals(
@@ -332,11 +332,11 @@ public class ExternalAnyKeyboardRowsTest {
   @Test
   public void testKeyboardWithoutMultiLayoutsEnabledIsWhenApplicable() throws Exception {
     AnyKeyboard keyboard =
-        createAndLoadKeyboardForModeWithRowsIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 0, 6);
+        createAndLoadKeyboardForModeWithRowsIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 0, 7);
     // sanity
     Assert.assertEquals(
         "3659b9e0-dee2-11e0-9572-0800200c9a55",
-        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(3).getId());
+        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(4).getId());
     Assert.assertFalse(
         AnyApplication.getKeyboardFactory(getApplicationContext()).hasMultipleAlphabets());
 
@@ -361,11 +361,11 @@ public class ExternalAnyKeyboardRowsTest {
     AddOnTestUtils.ensureKeyboardAtIndexEnabled(1, true);
 
     AnyKeyboard keyboard =
-        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 3);
+        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 4);
     // sanity
     Assert.assertEquals(
         "3659b9e0-dee2-11e0-9572-0800200c9a55",
-        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(3).getId());
+        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(4).getId());
     Assert.assertTrue(
         AnyApplication.getKeyboardFactory(getApplicationContext()).hasMultipleAlphabets());
 
@@ -385,11 +385,11 @@ public class ExternalAnyKeyboardRowsTest {
   @Test
   public void testKeyboardWithoutMultiLayoutsEnabledAndKeyIsAlways() throws Exception {
     AnyKeyboard keyboard =
-        createAndLoadKeyboardForModeWithRowsIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 1, 6);
+        createAndLoadKeyboardForModeWithRowsIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 1, 7);
     // sanity
     Assert.assertEquals(
         "3659b9e0-dee2-11e0-9572-0800200c9a55",
-        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(3).getId());
+        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(4).getId());
     Assert.assertFalse(
         AnyApplication.getKeyboardFactory(getApplicationContext()).hasMultipleAlphabets());
 
@@ -420,11 +420,11 @@ public class ExternalAnyKeyboardRowsTest {
     Assert.assertTrue(KeyboardPrefs.alwaysHideLanguageKey(getApplicationContext()));
 
     AnyKeyboard keyboard =
-        createAndLoadKeyboardForModeWithRowsIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 1, 6);
+        createAndLoadKeyboardForModeWithRowsIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 1, 7);
     // sanity
     Assert.assertEquals(
         "3659b9e0-dee2-11e0-9572-0800200c9a55",
-        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(3).getId());
+        AnyApplication.getBottomRowFactory(getApplicationContext()).getAllAddOns().get(4).getId());
     Assert.assertTrue(
         AnyApplication.getKeyboardFactory(getApplicationContext()).hasMultipleAlphabets());
 
@@ -447,7 +447,7 @@ public class ExternalAnyKeyboardRowsTest {
   public void testKeyboardWithoutMultiLayoutsEnabledTopRowPositionsAndGapsAreValid()
       throws Exception {
     AnyKeyboard keyboard =
-        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 3);
+        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 4);
 
     // should have four keys at top row
     final int topY = (int) SIMPLE_KeyboardDimens.getRowVerticalGap();
@@ -490,7 +490,7 @@ public class ExternalAnyKeyboardRowsTest {
     AddOnTestUtils.ensureKeyboardAtIndexEnabled(1, true);
 
     AnyKeyboard keyboard =
-        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 3);
+        createAndLoadKeyboardForModeWithBottomRowIndex(Keyboard.KEYBOARD_ROW_MODE_NORMAL, 4);
 
     // should have four keys at top row
     final int topY = (int) SIMPLE_KeyboardDimens.getRowVerticalGap();

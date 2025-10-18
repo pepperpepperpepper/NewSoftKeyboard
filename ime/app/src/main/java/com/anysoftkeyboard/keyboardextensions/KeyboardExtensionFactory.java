@@ -43,6 +43,10 @@ public class KeyboardExtensionFactory extends AddOnsFactory.SingleAddOnsFactory<
   private static final String XML_EXT_KEYBOARD_RES_ID_ATTRIBUTE = "extensionKeyboardResId";
   private static final String XML_EXT_KEYBOARD_TYPE_ATTRIBUTE = "extensionKeyboardType";
 
+  static {
+    ensureGenericRowResourcesAreKept();
+  }
+
   @KeyboardExtension.KeyboardExtensionType private final int mExtensionType;
 
   public KeyboardExtensionFactory(
@@ -137,5 +141,19 @@ public class KeyboardExtensionFactory extends AddOnsFactory.SingleAddOnsFactory<
   @KeyboardExtension.KeyboardExtensionType
   public int getExtensionType() {
     return mExtensionType;
+  }
+
+  private static void ensureGenericRowResourcesAreKept() {
+    if (BuildConfig.DEBUG) {
+      return;
+    }
+    final int sentinel =
+        R.xml.ext_kbd_top_row_dev
+            ^ R.xml.ext_kbd_bottom_row_none
+            ^ R.string.extension_kbd_top_dev
+            ^ R.string.extension_kbd_bottom_none;
+    if (sentinel == Integer.MIN_VALUE) {
+      throw new AssertionError("Unreachable sentinel guard.");
+    }
   }
 }

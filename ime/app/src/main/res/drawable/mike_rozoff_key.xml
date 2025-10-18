@@ -9,6 +9,10 @@
         android:drawable="@drawable/mike_rozoff_key_function" />
 
     <!-- Functional keys -->
+    <item ask:key_type_function="true" android:state_checked="true" android:state_pressed="true"
+        android:drawable="@drawable/mike_rozoff_key_pressed" />
+    <item ask:key_type_function="true" android:state_checked="true"
+        android:drawable="@drawable/mike_rozoff_key_active" />
     <item ask:key_type_function="true" android:state_pressed="true"
         android:drawable="@drawable/mike_rozoff_key_pressed" />
     <item ask:key_type_function="true"
@@ -20,7 +24,7 @@
     <item android:state_checkable="true" android:state_pressed="true"
         android:drawable="@drawable/mike_rozoff_key_pressed" />
     <item android:state_checkable="true" android:state_checked="true"
-        android:drawable="@drawable/mike_rozoff_key_pressed" />
+        android:drawable="@drawable/mike_rozoff_key_active" />
     <item android:state_checkable="true"
         android:drawable="@drawable/mike_rozoff_key_function" />
 

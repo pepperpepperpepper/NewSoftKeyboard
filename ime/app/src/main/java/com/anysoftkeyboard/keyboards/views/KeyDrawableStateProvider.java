@@ -10,6 +10,10 @@ public class KeyDrawableStateProvider {
 
   public final int[] KEY_STATE_FUNCTIONAL_PRESSED;
 
+  public final int[] KEY_STATE_FUNCTIONAL_ON;
+
+  public final int[] KEY_STATE_FUNCTIONAL_ON_PRESSED;
+
   public final int[] DRAWABLE_STATE_MODIFIER_NORMAL = new int[] {};
   public final int[] DRAWABLE_STATE_MODIFIER_PRESSED = new int[] {android.R.attr.state_pressed};
   public final int[] DRAWABLE_STATE_MODIFIER_LOCKED = new int[] {android.R.attr.state_checked};
@@ -30,6 +34,11 @@ public class KeyDrawableStateProvider {
       final int keyActionTypeGoAttrId /*R.attr.action_go*/) {
     KEY_STATE_FUNCTIONAL_NORMAL = new int[] {keyTypeFunctionAttrId};
     KEY_STATE_FUNCTIONAL_PRESSED = new int[] {keyTypeFunctionAttrId, android.R.attr.state_pressed};
+    KEY_STATE_FUNCTIONAL_ON = new int[] {keyTypeFunctionAttrId, android.R.attr.state_checked};
+    KEY_STATE_FUNCTIONAL_ON_PRESSED =
+        new int[] {
+          keyTypeFunctionAttrId, android.R.attr.state_checked, android.R.attr.state_pressed
+        };
 
     DRAWABLE_STATE_ACTION_DONE = new int[] {keyActionTypeDoneAttrId};
     DRAWABLE_STATE_ACTION_SEARCH = new int[] {keyActionTypeSearchAttrId};
