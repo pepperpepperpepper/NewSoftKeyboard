@@ -34,7 +34,7 @@ public class AdditionalLanguageSettingsFragment extends PreferenceFragmentCompat
     addPreferencesFromResource(R.xml.prefs_addtional_language_prefs);
     
     // Debug: Check if the OpenAI preference exists
-    Preference openaiPref = findPreference(getString(R.string.settings_key_openai_speech_settings));
+    Preference openaiPref = findPreference(getString(R.string.settings_key_speech_to_text_settings));
     if (openaiPref != null) {
       android.util.Log.d("AdditionalLanguageSettings", "OpenAI preference found: " + openaiPref.getTitle());
     } else {
@@ -54,7 +54,7 @@ public class AdditionalLanguageSettingsFragment extends PreferenceFragmentCompat
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
     findPreference(getString(R.string.tweaks_group_key)).setOnPreferenceClickListener(this);
-    findPreference(getString(R.string.settings_key_openai_speech_settings)).setOnPreferenceClickListener(this);
+    findPreference(getString(R.string.settings_key_speech_to_text_settings)).setOnPreferenceClickListener(this);
   }
 
   @Override
@@ -71,11 +71,11 @@ public class AdditionalLanguageSettingsFragment extends PreferenceFragmentCompat
               AdditionalLanguageSettingsFragmentDirections
                   .actionAdditionalLanguageSettingsFragmentToLanguageTweaksFragment());
       return true;
-    } else if (preference.getKey().equals(getString(R.string.settings_key_openai_speech_settings))) {
+    } else if (preference.getKey().equals(getString(R.string.settings_key_speech_to_text_settings))) {
       Navigation.findNavController(requireView())
           .navigate(
               AdditionalLanguageSettingsFragmentDirections
-                  .actionAdditionalLanguageSettingsFragmentToOpenAISpeechSettingsFragment());
+                  .actionAdditionalLanguageSettingsFragmentToSpeechToTextSettingsFragment());
       return true;
     }
     return false;

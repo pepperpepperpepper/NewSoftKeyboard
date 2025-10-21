@@ -10,13 +10,6 @@
         android:title="@string/openai_behavior_settings_group">
 
         <androidx.preference.CheckBoxPreference
-            android:key="@string/settings_key_openai_enabled"
-            android:title="@string/openai_enabled_title"
-            android:summary="@string/openai_enabled_summary"
-            android:defaultValue="false"
-            android:persistent="true" />
-
-        <androidx.preference.CheckBoxPreference
             android:key="@string/settings_key_openai_add_trailing_space"
             android:title="@string/openai_add_trailing_space_title"
             android:summary="@string/openai_add_trailing_space_summary"

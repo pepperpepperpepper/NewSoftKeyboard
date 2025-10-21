@@ -2,6 +2,12 @@
 <resources>
     <!-- OpenAI Speech-to-Text Settings -->
     <string name="settings_key_openai_enabled">settings_key_openai_enabled</string>
+    <string name="settings_key_speech_to_text_backend">settings_key_speech_to_text_backend</string>
+    <string name="settings_key_elevenlabs_api_key">settings_key_elevenlabs_api_key</string>
+    <string name="settings_key_elevenlabs_endpoint">settings_key_elevenlabs_endpoint</string>
+    <string name="settings_key_elevenlabs_model">settings_key_elevenlabs_model</string>
+    <string name="settings_key_elevenlabs_language">settings_key_elevenlabs_language</string>
+    <string name="settings_key_elevenlabs_add_trailing_space">settings_key_elevenlabs_add_trailing_space</string>
     <string name="settings_key_openai_api_key">settings_key_openai_api_key</string>
     <string name="settings_key_openai_endpoint">settings_key_openai_endpoint</string>
     <string name="settings_key_openai_model">settings_key_openai_model</string>

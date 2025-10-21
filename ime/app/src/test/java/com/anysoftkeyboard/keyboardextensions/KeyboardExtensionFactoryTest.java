@@ -75,7 +75,7 @@ public class KeyboardExtensionFactoryTest {
         KeyboardExtension.TYPE_BOTTOM);
     assertBasicListDetails(
         AnyApplication.getTopRowFactory(getApplicationContext()).getAllAddOns(),
-        12,
+        13,
         KeyboardExtension.TYPE_TOP);
     assertBasicListDetails(
         AnyApplication.getKeyboardExtensionFactory(getApplicationContext()).getAllAddOns(),

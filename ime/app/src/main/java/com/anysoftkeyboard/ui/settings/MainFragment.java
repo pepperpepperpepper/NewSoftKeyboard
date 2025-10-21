@@ -146,7 +146,7 @@ public class MainFragment extends Fragment {
       return;
     }
 
-    OpenAIVoiceSetupCardController.sync(requireContext());
+    SpeechToTextSetupCardController.sync(requireContext());
 
     Logger.d(TAG, "Container exists: " + (mAddOnUICardsContainer != null) + 
                ", Manager exists: " + (mAddOnUICardManager != null));
@@ -371,6 +371,9 @@ public class MainFragment extends Fragment {
     switch (destination) {
       case "language":
         navTarget = R.id.action_mainFragment_to_languageSettingsFragment;
+        break;
+      case "speech-to-text":
+        navTarget = R.id.action_mainFragment_to_speechToTextSettingsFragment;
         break;
       case "openai-speech":
         navTarget = R.id.action_mainFragment_to_openAISpeechSettingsFragment;

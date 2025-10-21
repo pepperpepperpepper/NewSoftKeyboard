@@ -130,86 +130,97 @@ public class MainSettingsActivity extends AppCompatActivity {
     PermissionRequestHelper.check(this, PermissionRequestHelper.CONTACTS_PERMISSION_REQUEST_CODE);
   }
 
-public void navigateToOpenAISettings() {
+  public void navigateToOpenAISettings() {
     navigateToOpenAISettings(null);
   }
-  
+
   public void navigateToOpenAISettings(String promptText) {
-    android.util.Log.d("MainSettingsActivity", "navigateToOpenAISettings called with prompt: " + promptText);
-    
-    // Navigate to OpenAI settings fragment
+    android.util.Log.d(
+        "MainSettingsActivity",
+        "navigateToOpenAISettings called with prompt: " + promptText);
+
     final NavController navController =
         ((NavHostFragment)
                 Objects.requireNonNull(
                     getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment)))
             .getNavController();
-    
-    // Set intent extra to open prompt dialog
+
+    // Mark intent so the fragment opens the prompt dialog when we arrive.
     getIntent().putExtra("open_prompt_dialog", true);
-    
-    // If we have prompt text, store it for later use
     if (promptText != null) {
-        getIntent().putExtra("prompt_text_to_load", promptText);
+      getIntent().putExtra("prompt_text_to_load", promptText);
     }
-    
-    // Check if we're already at OpenAI settings fragment
-    if (navController.getCurrentDestination() != null && 
-        navController.getCurrentDestination().getId() == R.id.openAISpeechSettingsFragment) {
-      android.util.Log.d("MainSettingsActivity", "Already at OpenAI settings, showing prompt dialog");
-      // We're already at OpenAI settings, just trigger the prompt dialog
-      OpenAISpeechSettingsFragment currentFragment = (OpenAISpeechSettingsFragment) 
-          ((NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment))
-              .getChildFragmentManager().getFragments().get(0);
+
+    if (navController.getCurrentDestination() != null
+        && navController.getCurrentDestination().getId()
+            == R.id.openAISpeechSettingsFragment) {
+      android.util.Log.d(
+          "MainSettingsActivity", "Already at OpenAI settings, triggering prompt dialog");
+      OpenAISpeechSettingsFragment currentFragment =
+          (OpenAISpeechSettingsFragment)
+              ((NavHostFragment) getSupportFragmentManager()
+                      .findFragmentById(R.id.nav_host_fragment))
+                  .getChildFragmentManager()
+                  .getFragments()
+                  .get(0);
       if (currentFragment != null) {
         if (promptText != null) {
-            currentFragment.updatePromptPreference(promptText);
+          currentFragment.updatePromptPreference(promptText);
         }
         currentFragment.showPromptDialog();
       }
-    } else {
-      android.util.Log.d("MainSettingsActivity", "Navigating to OpenAI settings through navigation flow");
-      android.util.Log.d("MainSettingsActivity", "Current destination: " + (navController.getCurrentDestination() != null ? navController.getCurrentDestination().getId() : "null"));
-      
-      // Navigate: Language Settings -> Additional Language Settings -> OpenAI Settings
-      // First, select Language Settings tab in bottom navigation
-      BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
-      if (bottomNavigationView != null) {
-        android.util.Log.d("MainSettingsActivity", "Setting selected item to languageSettingsFragment");
-        bottomNavigationView.setSelectedItemId(R.id.languageSettingsFragment);
-        
-// Then navigate with proper navigation flow using NavController.OnDestinationChangedListener
-      new Handler().postDelayed(() -> {
-        try {
-            android.util.Log.d("MainSettingsActivity", "Navigating to additional language settings");
-            navController.navigate(R.id.action_languageSettingsFragment_to_additionalLanguageSettingsFragment);
-            
-            // Add listener to wait for navigation to complete
-            navController.addOnDestinationChangedListener(new NavController.OnDestinationChangedListener() {
-                @Override
-                public void onDestinationChanged(@NonNull NavController controller, @NonNull NavDestination destination, @Nullable Bundle arguments) {
-                    if (destination.getId() == R.id.additionalLanguageSettingsFragment) {
-                        android.util.Log.d("MainSettingsActivity", "Reached additional language settings, navigating to OpenAI settings");
-                        // Remove the listener to avoid multiple calls
-                        controller.removeOnDestinationChangedListener(this);
-                        
-                        // Navigate to OpenAI settings after a short delay
-                        new Handler().postDelayed(() -> {
-                            try {
-                                navController.navigate(R.id.action_additionalLanguageSettingsFragment_to_openAISpeechSettingsFragment);
-                            } catch (Exception e) {
-                                android.util.Log.e("MainSettingsActivity", "Error navigating to OpenAI settings", e);
-                            }
-                        }, 300);
-                    }
-                }
-            });
-          } catch (Exception e) {
-            android.util.Log.e("MainSettingsActivity", "Error navigating to additional language settings", e);
-          }
-        }, 200);      } else {
-        android.util.Log.e("MainSettingsActivity", "BottomNavigationView is null!");
-      }
+      return;
     }
+
+    BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
+    if (bottomNavigationView == null) {
+      android.util.Log.e("MainSettingsActivity", "BottomNavigationView is null!");
+      return;
+    }
+
+    bottomNavigationView.setSelectedItemId(R.id.languageSettingsFragment);
+
+    Handler handler = new Handler();
+    handler.postDelayed(
+        () -> {
+          try {
+            navController.navigate(
+                R.id.action_languageSettingsFragment_to_additionalLanguageSettingsFragment);
+            navController.addOnDestinationChangedListener(
+                new NavController.OnDestinationChangedListener() {
+                  private boolean navigatedToSpeechSettings;
+
+                  @Override
+                  public void onDestinationChanged(
+                      @NonNull NavController controller,
+                      @NonNull NavDestination destination,
+                      @Nullable Bundle arguments) {
+                    if (destination.getId() == R.id.additionalLanguageSettingsFragment
+                        && !navigatedToSpeechSettings) {
+                      navigatedToSpeechSettings = true;
+                      handler.postDelayed(
+                          () ->
+                              navController.navigate(
+                                  R.id
+                                      .action_additionalLanguageSettingsFragment_to_speechToTextSettingsFragment),
+                          200);
+                    } else if (destination.getId() == R.id.speechToTextSettingsFragment) {
+                      controller.removeOnDestinationChangedListener(this);
+                      handler.postDelayed(
+                          () ->
+                              navController.navigate(
+                                  R.id
+                                      .action_speechToTextSettingsFragment_to_openAISpeechSettingsFragment),
+                          200);
+                    }
+                  }
+                });
+          } catch (Exception e) {
+            android.util.Log.e(
+                "MainSettingsActivity", "Error navigating to speech-to-text settings", e);
+          }
+        },
+        200);
   }
 
   @Override

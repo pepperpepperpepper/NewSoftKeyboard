@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/elevenlabs_speech_settings_title">
+
+    <androidx.preference.PreferenceCategory
+        android:title="@string/elevenlabs_api_settings_group">
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_elevenlabs_api_key"
+            android:title="@string/elevenlabs_api_key_title"
+            android:summary="@string/elevenlabs_api_key_summary"
+            android:dialogTitle="@string/elevenlabs_api_key_dialog_title"
+            android:inputType="textPassword"
+            android:persistent="true" />
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_elevenlabs_endpoint"
+            android:title="@string/elevenlabs_endpoint_title"
+            android:summary="@string/elevenlabs_endpoint_summary"
+            android:dialogTitle="@string/elevenlabs_endpoint_dialog_title"
+            android:defaultValue="https://api.elevenlabs.io/v1/speech-to-text"
+            android:persistent="true" />
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_elevenlabs_model"
+            android:title="@string/elevenlabs_model_title"
+            android:summary="@string/elevenlabs_model_summary"
+            android:dialogTitle="@string/elevenlabs_model_dialog_title"
+            android:defaultValue="scribe_v1"
+            android:persistent="true" />
+
+        <androidx.preference.EditTextPreference
+            android:key="@string/settings_key_elevenlabs_language"
+            android:title="@string/elevenlabs_language_title"
+            android:summary="@string/elevenlabs_language_summary"
+            android:dialogTitle="@string/elevenlabs_language_dialog_title"
+            android:persistent="true" />
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory
+        android:title="@string/elevenlabs_behavior_settings_group">
+
+        <androidx.preference.SwitchPreferenceCompat
+            android:key="@string/settings_key_elevenlabs_add_trailing_space"
+            android:title="@string/elevenlabs_add_trailing_space_title"
+            android:summary="@string/elevenlabs_add_trailing_space_summary"
+            android:defaultValue="true"
+            android:persistent="true" />
+    </androidx.preference.PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

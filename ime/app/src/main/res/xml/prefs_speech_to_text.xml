@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="@string/speech_to_text_settings_title">
+
+    <androidx.preference.ListPreference
+        android:key="@string/settings_key_speech_to_text_backend"
+        android:title="@string/speech_to_text_backend_title"
+        android:summary="@string/speech_to_text_backend_summary"
+        android:entries="@array/speech_to_text_backend_entries"
+        android:entryValues="@array/speech_to_text_backend_values"
+        android:defaultValue="openai"
+        app:useSimpleSummaryProvider="true" />
+
+    <androidx.preference.PreferenceCategory
+        android:key="speech_to_text_provider_status_group"
+        android:title="@string/speech_recognition_group">
+
+        <androidx.preference.Preference
+            android:key="speech_to_text_openai_settings"
+            android:title="@string/openai_speech_settings_title"
+            android:summary="@string/openai_speech_settings_summary"
+            app:iconSpaceReserved="false" />
+
+        <androidx.preference.Preference
+            android:key="speech_to_text_elevenlabs_settings"
+            android:title="@string/elevenlabs_speech_settings_title"
+            android:summary="@string/elevenlabs_speech_settings_summary"
+            app:iconSpaceReserved="false" />
+    </androidx.preference.PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

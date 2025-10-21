@@ -690,6 +690,8 @@
     <string name="openai_ui_card_title">Get OpenAI voice input ready</string>
     <string name="openai_ui_card_message_permissions"><![CDATA[Grant <a href="settings://permissions">microphone and notification access</a> so voice dictation can record audio and post status updates.]]></string>
     <string name="openai_ui_card_message_api"><![CDATA[Open the <a href="ask-settings://openai-speech">OpenAI Speech-to-Text settings</a> to enter your API key and choose how transcription behaves.]]></string>
+    <string name="elevenlabs_ui_card_title">Get ElevenLabs voice input ready</string>
+    <string name="elevenlabs_ui_card_message_api"><![CDATA[Open the <a href="ask-settings://speech-to-text">speech-to-text settings</a> to enter your ElevenLabs API key and adjust transcription options.]]></string>
     
     
 
@@ -961,6 +963,18 @@
     <string name="setup_wizard_step_notification_permissions_details">In rare cases (for example app crashes) we would need to post a device notification. This is recommended but disallow notification will not affect behavior of this app.</string>
     <string name="wizard_skip_notification_permission">Do not allow notifications</string>
 
+    <!-- Speech-to-Text Providers -->
+    <string name="speech_to_text_settings_title">Speech-to-Text Providers</string>
+    <string name="speech_to_text_settings_summary">Choose and configure a speech-to-text backend</string>
+    <string name="speech_to_text_backend_title">Preferred speech-to-text backend</string>
+    <string name="speech_to_text_backend_summary">Select the service handling voice transcription</string>
+    <string name="speech_to_text_backend_entry_none">Disabled</string>
+    <string name="speech_to_text_backend_entry_openai">OpenAI Whisper / GPT</string>
+    <string name="speech_to_text_backend_entry_elevenlabs">ElevenLabs</string>
+    <string name="speech_to_text_provider_status_configured">Configured</string>
+    <string name="speech_to_text_provider_status_missing_api_key">Missing API key</string>
+    <string name="speech_to_text_provider_status_not_selected">Not selected</string>
+
     <!-- OpenAI Speech-to-Text Settings -->
     <string name="openai_speech_settings_title">OpenAI Speech-to-Text</string>
     
@@ -1014,7 +1028,7 @@
     
     <string name="openai_add_trailing_space_title">Add Trailing Space</string>
     <string name="openai_add_trailing_space_summary">Add space after transcribed text</string>
-    
+
     <!-- OpenAI Error Messages -->
     <string name="openai_error_api_key_unset">OpenAI API key is not set. Please configure it in settings.</string>
     <string name="openai_error_microphone_permission">Microphone permission not granted. Please add permission for microphone in app settings.</string>
@@ -1032,6 +1046,28 @@
     <!-- OpenAI Settings Menu -->
     <string name="speech_recognition_group">Speech Recognition</string>
 <string name="openai_speech_settings_summary">Configure OpenAI API for voice input</string>
+
+    <!-- ElevenLabs Speech-to-Text Settings -->
+    <string name="elevenlabs_speech_settings_title">ElevenLabs Speech-to-Text</string>
+    <string name="elevenlabs_speech_settings_summary">Configure ElevenLabs API for voice input</string>
+    <string name="elevenlabs_api_settings_group">API Settings</string>
+    <string name="elevenlabs_api_key_title">API Key</string>
+    <string name="elevenlabs_api_key_summary">Your ElevenLabs API key for speech-to-text</string>
+    <string name="elevenlabs_api_key_dialog_title">Enter ElevenLabs API Key</string>
+    <string name="elevenlabs_endpoint_title">API Endpoint</string>
+    <string name="elevenlabs_endpoint_summary">URL for ElevenLabs speech-to-text API</string>
+    <string name="elevenlabs_endpoint_dialog_title">Enter ElevenLabs API Endpoint</string>
+    <string name="elevenlabs_model_title">Model</string>
+    <string name="elevenlabs_model_summary">ElevenLabs model identifier (e.g., scribe_v1)</string>
+    <string name="elevenlabs_model_dialog_title">Enter Model Identifier</string>
+    <string name="elevenlabs_language_title">Language</string>
+    <string name="elevenlabs_language_summary">Optional language hint (leave blank to auto-detect)</string>
+    <string name="elevenlabs_language_dialog_title">Enter Language Code</string>
+    <string name="elevenlabs_behavior_settings_group">Behavior Settings</string>
+    <string name="elevenlabs_add_trailing_space_title">Add Trailing Space</string>
+    <string name="elevenlabs_add_trailing_space_summary">Add space after transcribed text</string>
+    <string name="elevenlabs_status_transcribing">Transcribing with ElevenLabs...</string>
+    <string name="elevenlabs_error_api_key_unset">ElevenLabs API key is not set. Please configure it in settings.</string>
     
     <!-- OpenAI Saved Prompts -->
     <string name="openai_saved_prompts_title">Saved Prompts</string>

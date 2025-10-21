@@ -357,7 +357,13 @@
     <string name="settings_key_openai_response_format">settings_key_openai_response_format</string>
     <string name="settings_key_openai_chunking_strategy">settings_key_openai_chunking_strategy</string>
     <string name="settings_key_openai_add_trailing_space">settings_key_openai_add_trailing_space</string>
-    <string name="settings_key_openai_speech_settings">settings_key_openai_speech_settings</string>
+    <string name="settings_key_speech_to_text_settings">settings_key_speech_to_text_settings</string>
+    <string name="settings_key_speech_to_text_backend">settings_key_speech_to_text_backend</string>
+    <string name="settings_key_elevenlabs_api_key">settings_key_elevenlabs_api_key</string>
+    <string name="settings_key_elevenlabs_endpoint">settings_key_elevenlabs_endpoint</string>
+    <string name="settings_key_elevenlabs_model">settings_key_elevenlabs_model</string>
+    <string name="settings_key_elevenlabs_language">settings_key_elevenlabs_language</string>
+    <string name="settings_key_elevenlabs_add_trailing_space">settings_key_elevenlabs_add_trailing_space</string>
     <string name="settings_key_openai_auto_punctuation">settings_key_openai_auto_punctuation</string>
     <string name="settings_key_openai_timestamps">settings_key_openai_timestamps</string>
     <string name="settings_key_openai_prompt">settings_key_openai_prompt</string>

@@ -19,7 +19,10 @@ package com.google.android.voiceime;
 import android.inputmethodservice.InputMethodService;
 import android.view.inputmethod.InputMethodSubtype;
 
-/** Triggers a voice recognition by using {@link ImeTrigger}, {@link IntentApiTrigger}, or {@link OpenAITrigger}. */
+import com.google.android.voiceime.backends.SpeechToTextBackend;
+import com.google.android.voiceime.backends.SpeechToTextBackendRegistry;
+
+/** Triggers a voice recognition by using {@link ImeTrigger}, {@link IntentApiTrigger}, or {@link ThirdPartySpeechTrigger}. */
 public class VoiceRecognitionTrigger {
 
   private final InputMethodService mInputMethodService;
@@ -28,7 +31,8 @@ public class VoiceRecognitionTrigger {
 
   private ImeTrigger mImeTrigger;
   private IntentApiTrigger mIntentApiTrigger;
-  private OpenAITrigger mOpenAITrigger;
+  private ThirdPartySpeechTrigger mThirdPartyTrigger;
+  private SpeechToTextBackend mCurrentBackend;
   
   /** Callback interface for recording state changes */
   public interface RecordingStateCallback {
@@ -67,11 +71,17 @@ public class VoiceRecognitionTrigger {
   }
 
   private Trigger getTrigger() {
-    // Check if OpenAI speech-to-text is enabled and configured
-    if (OpenAITrigger.isAvailable(mInputMethodService)) {
-      return getOpenAITrigger();
-    } else if (ImeTrigger.isInstalled(mInputMethodService)) {
-      // Prioritize IME as it's usually a better experience
+    SpeechToTextBackend backend =
+        SpeechToTextBackendRegistry.getSelectedBackend(mInputMethodService);
+    if (backend != null) {
+      android.content.SharedPreferences prefs =
+          android.preference.PreferenceManager.getDefaultSharedPreferences(mInputMethodService);
+      if (prefs != null && backend.isConfigured(mInputMethodService, prefs)) {
+        return getThirdPartyTrigger(backend);
+      }
+    }
+
+    if (ImeTrigger.isInstalled(mInputMethodService)) {
       return getImeTrigger();
     } else if (IntentApiTrigger.isInstalled(mInputMethodService)) {
       return getIntentTrigger();
@@ -94,17 +104,73 @@ public class VoiceRecognitionTrigger {
     return mImeTrigger;
   }
 
-  private Trigger getOpenAITrigger() {
-    if (mOpenAITrigger == null) {
-      mOpenAITrigger = new OpenAITrigger(mInputMethodService);
-      // Set up callback to forward recording state changes
-      mOpenAITrigger.setRecordingStateCallback(isRecording -> {
-        if (mRecordingStateCallback != null) {
-          mRecordingStateCallback.onRecordingStateChanged(isRecording);
-        }
-      });
+  private Trigger getThirdPartyTrigger(SpeechToTextBackend backend) {
+    if (mThirdPartyTrigger == null || mCurrentBackend != backend) {
+      mThirdPartyTrigger = new ThirdPartySpeechTrigger(mInputMethodService, backend);
+      mCurrentBackend = backend;
+      applyCallbacksToThirdPartyTrigger();
     }
-    return mOpenAITrigger;
+    return mThirdPartyTrigger;
+  }
+
+  private void applyCallbacksToThirdPartyTrigger() {
+    if (mThirdPartyTrigger == null) {
+      return;
+    }
+    if (mRecordingStateCallback != null) {
+      mThirdPartyTrigger.setRecordingStateCallback(
+          isRecording -> {
+            if (mRecordingStateCallback != null) {
+              mRecordingStateCallback.onRecordingStateChanged(isRecording);
+            }
+          });
+    } else {
+      mThirdPartyTrigger.setRecordingStateCallback(null);
+    }
+
+    if (mTranscriptionStateCallback != null) {
+      mThirdPartyTrigger.setTranscriptionStateCallback(
+          isTranscribing -> {
+            if (mTranscriptionStateCallback != null) {
+              mTranscriptionStateCallback.onTranscriptionStateChanged(isTranscribing);
+            }
+          });
+    } else {
+      mThirdPartyTrigger.setTranscriptionStateCallback(null);
+    }
+
+    if (mTranscriptionErrorCallback != null) {
+      mThirdPartyTrigger.setTranscriptionErrorCallback(
+          error -> {
+            if (mTranscriptionErrorCallback != null) {
+              mTranscriptionErrorCallback.onTranscriptionError(error);
+            }
+          });
+    } else {
+      mThirdPartyTrigger.setTranscriptionErrorCallback(null);
+    }
+
+    if (mRecordingEndedCallback != null) {
+      mThirdPartyTrigger.setRecordingEndedCallback(
+          () -> {
+            if (mRecordingEndedCallback != null) {
+              mRecordingEndedCallback.onRecordingEnded();
+            }
+          });
+    } else {
+      mThirdPartyTrigger.setRecordingEndedCallback(null);
+    }
+
+    if (mTextWrittenCallback != null) {
+      mThirdPartyTrigger.setTextWrittenCallback(
+          text -> {
+            if (mTextWrittenCallback != null) {
+              mTextWrittenCallback.onTextWritten(text);
+            }
+          });
+    } else {
+      mThirdPartyTrigger.setTextWrittenCallback(null);
+    }
   }
 
   public boolean isInstalled() {
@@ -118,8 +184,8 @@ public class VoiceRecognitionTrigger {
 
   // For testing
   public String getKind() {
-    if (mOpenAITrigger != null) {
-      return "openai";
+    if (mThirdPartyTrigger != null && mCurrentBackend != null) {
+      return mCurrentBackend.getId();
     } else if (mImeTrigger != null && mIntentApiTrigger != null) {
       return "both";
     } else if (mImeTrigger != null) {
@@ -164,8 +230,8 @@ public class VoiceRecognitionTrigger {
    * This allows the UI to update the microphone button state.
    */
   public boolean isRecording() {
-    if (mTrigger instanceof OpenAITrigger) {
-      return ((OpenAITrigger) mTrigger).isRecording();
+    if (mTrigger instanceof ThirdPartySpeechTrigger) {
+      return ((ThirdPartySpeechTrigger) mTrigger).isRecording();
     }
     return false;
   }
@@ -174,71 +240,28 @@ public class VoiceRecognitionTrigger {
    * Sets the callback for recording state changes.
    * @param callback The callback to be notified when recording state changes
    */
-public void setRecordingStateCallback(RecordingStateCallback callback) {
+  public void setRecordingStateCallback(RecordingStateCallback callback) {
     mRecordingStateCallback = callback;
-    // If we already have an OpenAITrigger, set the callback on it too
-    if (mOpenAITrigger != null) {
-      mOpenAITrigger.setRecordingStateCallback(isRecording -> {
-        if (mRecordingStateCallback != null) {
-          mRecordingStateCallback.onRecordingStateChanged(isRecording);
-        }
-      });
-    }
-    // If the current trigger is OpenAI, ensure callback is set
-    if (mTrigger instanceof OpenAITrigger) {
-      ((OpenAITrigger) mTrigger).setRecordingStateCallback(isRecording -> {
-        if (mRecordingStateCallback != null) {
-          mRecordingStateCallback.onRecordingStateChanged(isRecording);
-        }
-      });
-    }
+    applyCallbacksToThirdPartyTrigger();
   }
-  
+
   public void setTranscriptionStateCallback(TranscriptionStateCallback callback) {
     mTranscriptionStateCallback = callback;
-    // If the current trigger is OpenAI, set the callback
-    if (mTrigger instanceof OpenAITrigger) {
-      ((OpenAITrigger) mTrigger).setTranscriptionStateCallback(isTranscribing -> {
-        if (mTranscriptionStateCallback != null) {
-          mTranscriptionStateCallback.onTranscriptionStateChanged(isTranscribing);
-        }
-      });
-    }
+    applyCallbacksToThirdPartyTrigger();
   }
-  
+
   public void setTranscriptionErrorCallback(TranscriptionErrorCallback callback) {
     mTranscriptionErrorCallback = callback;
-    // If the current trigger is OpenAI, set the callback
-    if (mTrigger instanceof OpenAITrigger) {
-      ((OpenAITrigger) mTrigger).setTranscriptionErrorCallback(error -> {
-        if (mTranscriptionErrorCallback != null) {
-          mTranscriptionErrorCallback.onTranscriptionError(error);
-        }
-      });
-    }
+    applyCallbacksToThirdPartyTrigger();
   }
-  
+
   public void setRecordingEndedCallback(RecordingEndedCallback callback) {
     mRecordingEndedCallback = callback;
-    // If the current trigger is OpenAI, set the callback
-    if (mTrigger instanceof OpenAITrigger) {
-      ((OpenAITrigger) mTrigger).setRecordingEndedCallback(() -> {
-        if (mRecordingEndedCallback != null) {
-          mRecordingEndedCallback.onRecordingEnded();
-        }
-      });
-    }
+    applyCallbacksToThirdPartyTrigger();
   }
-  
+
   public void setTextWrittenCallback(TextWrittenCallback callback) {
     mTextWrittenCallback = callback;
-    // If the current trigger is OpenAI, set the callback
-    if (mTrigger instanceof OpenAITrigger) {
-      ((OpenAITrigger) mTrigger).setTextWrittenCallback(text -> {
-        if (mTextWrittenCallback != null) {
-          mTextWrittenCallback.onTextWritten(text);
-        }
-      });
-    }
+    applyCallbacksToThirdPartyTrigger();
   }
 }
