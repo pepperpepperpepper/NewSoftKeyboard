@@ -67,6 +67,7 @@ import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import com.anysoftkeyboard.debug.ImeStateTracker;
+import com.anysoftkeyboard.quicktextkeys.ui.EmojiSearchOverlay;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -106,6 +107,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private boolean mErrorFlashState = false;
   private android.os.Handler mErrorFlashHandler = new android.os.Handler();
   private Runnable mErrorFlashRunnable = null;
+
+  @Nullable private EmojiSearchOverlay mEmojiSearchOverlay;
 
   private boolean mAutoCap;
   private boolean mKeyboardAutoCap;
@@ -815,6 +818,9 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
       case KeyCodes.QUICK_TEXT_POPUP:
         onQuickTextKeyboardRequested(key);
         break;
+      case KeyCodes.EMOJI_SEARCH:
+        handleEmojiSearchRequest();
+        break;
       case KeyCodes.MODE_SYMBOLS:
         nextKeyboard(getCurrentInputEditorInfo(), NextKeyboardType.Symbols);
         break;
@@ -910,6 +916,61 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
       return key.popupCharacters.toString();
     }
     return null;
+  }
+
+  private void handleEmojiSearchRequest() {
+    if (isEmojiSearchOverlayShowing()) {
+      return;
+    }
+    final var tagsExtractor = getQuickTextTagsSearcher();
+    if (tagsExtractor == null || !tagsExtractor.isEnabled()) {
+      showToastMessage(R.string.emoji_search_disabled_toast, true);
+      return;
+    }
+
+    handleCloseRequest();
+    ensureEmojiSearchOverlay();
+    final View anchor = getInputViewContainer();
+    if (anchor == null) {
+      return;
+    }
+    mEmojiSearchOverlay.show(
+        anchor,
+        tagsExtractor,
+        getQuickKeyHistoryRecords(),
+        new EmojiSearchOverlay.Listener() {
+          @Override
+          public void onEmojiPicked(CharSequence emoji) {
+            commitEmojiFromSearch(emoji);
+          }
+
+          @Override
+          public void onOverlayDismissed() {
+            // no-op - state handled via isShowing checks
+          }
+        });
+  }
+
+  private void ensureEmojiSearchOverlay() {
+    if (mEmojiSearchOverlay == null) {
+      mEmojiSearchOverlay = new EmojiSearchOverlay(this);
+    }
+  }
+
+  private boolean dismissEmojiSearchOverlay() {
+    if (mEmojiSearchOverlay != null && mEmojiSearchOverlay.isShowing()) {
+      mEmojiSearchOverlay.dismiss();
+      return true;
+    }
+    return false;
+  }
+
+  private boolean isEmojiSearchOverlayShowing() {
+    return mEmojiSearchOverlay != null && mEmojiSearchOverlay.isShowing();
+  }
+
+  private void commitEmojiFromSearch(CharSequence emoji) {
+    super.onText(null, emoji);
   }
 
   // convert ASCII codes to Android KeyEvent codes
@@ -1128,13 +1189,26 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
       int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI) {
     final InputConnection ic = getCurrentInputConnection();
     if (ic != null) ic.beginBatchEdit();
-    super.onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
-    if (primaryCode > 0) {
-      onNonFunctionKey(primaryCode, key, multiTapIndex, nearByKeyCodes);
-    } else {
-      onFunctionKey(primaryCode, key, fromUI);
+    boolean handledByOverlay =
+        isEmojiSearchOverlayShowing()
+            && mEmojiSearchOverlay.handleKey(primaryCode, key);
+    if (!handledByOverlay) {
+      super.onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
+      if (primaryCode > 0) {
+        onNonFunctionKey(primaryCode, key, multiTapIndex, nearByKeyCodes);
+      } else {
+        onFunctionKey(primaryCode, key, fromUI);
+      }
     }
     if (ic != null) ic.endBatchEdit();
+  }
+
+  @Override
+  public void onText(Keyboard.Key key, CharSequence text) {
+    if (isEmojiSearchOverlayShowing() && mEmojiSearchOverlay.handleText(text)) {
+      return;
+    }
+    super.onText(key, text);
   }
 
   private boolean isTerminalEmulation() {
@@ -1612,13 +1686,15 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   @Override
   protected boolean handleCloseRequest() {
-    return super.handleCloseRequest()
+    return dismissEmojiSearchOverlay()
+        || super.handleCloseRequest()
         || (getInputView() != null && getInputView().resetInputView());
   }
 
   @Override
   public void onWindowHidden() {
     super.onWindowHidden();
+    dismissEmojiSearchOverlay();
 
     abortCorrectionAndResetPredictionState(true);
   }

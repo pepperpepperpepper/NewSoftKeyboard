@@ -162,6 +162,11 @@
         colon (:)
     </string>
     <string name="quick_text_tags_search_off_summary"/>
+    <string name="emoji_search_title">Emoji search</string>
+    <string name="emoji_search_hint">Type on the keyboard to find emojis. Tap a result to insert it.</string>
+    <string name="emoji_search_empty_results">No emojis match your search yet.</string>
+    <string name="emoji_search_clear_content_description">Clear emoji search query</string>
+    <string name="emoji_search_disabled_toast">Enable emoji tag search in settings to use emoji search.</string>
     <string name="hide_soft_when_physical">Hide keyboard on physical key</string>
     <string name="hide_soft_when_physical_on_summary">Hide soft keyboard when physical keyboard is
         used

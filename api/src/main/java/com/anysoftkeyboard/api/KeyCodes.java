@@ -33,6 +33,7 @@ public class KeyCodes {
   public static final int KEYBOARD_MODE_CHANGE = -94;
 
   public static final int CUSTOM_KEYBOARD_SWITCH = -303;
+  public static final int EMOJI_SEARCH = -304;
 
   public static final int ARROW_LEFT = -20;
   public static final int ARROW_RIGHT = -21;

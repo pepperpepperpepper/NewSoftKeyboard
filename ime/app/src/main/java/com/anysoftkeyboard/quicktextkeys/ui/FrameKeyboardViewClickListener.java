@@ -24,6 +24,9 @@ import com.menny.android.anysoftkeyboard.R;
       case R.id.quick_keys_popup_backspace:
         mKeyboardActionListener.onKey(KeyCodes.DELETE, null, 0, null, true);
         break;
+      case R.id.quick_keys_popup_search:
+        mKeyboardActionListener.onKey(KeyCodes.EMOJI_SEARCH, null, 0, null, true);
+        break;
       case R.id.quick_keys_popup_quick_keys_insert_media:
         mKeyboardActionListener.onKey(KeyCodes.IMAGE_MEDIA_POPUP, null, 0, null, true);
         break;
@@ -56,6 +59,7 @@ import com.menny.android.anysoftkeyboard.R;
   void registerOnViews(View rootView) {
     rootView.findViewById(R.id.quick_keys_popup_close).setOnClickListener(this);
     rootView.findViewById(R.id.quick_keys_popup_backspace).setOnClickListener(this);
+    rootView.findViewById(R.id.quick_keys_popup_search).setOnClickListener(this);
     rootView.findViewById(R.id.quick_keys_popup_quick_keys_settings).setOnClickListener(this);
     rootView.findViewById(R.id.quick_keys_popup_quick_keys_insert_media).setOnClickListener(this);
     rootView
