@@ -602,6 +602,10 @@ public class SuggestionsProvider {
         || mPredictionEngineMode == PredictionEngineMode.HYBRID;
   }
 
+  public boolean isPresageEnabled() {
+    return usesPresageEngine();
+  }
+
   private void recordPresageContext(@NonNull String word) {
     if (TextUtils.isEmpty(word)) return;
     if (mPresageContext.size() == PRESAGE_CONTEXT_WINDOW) {

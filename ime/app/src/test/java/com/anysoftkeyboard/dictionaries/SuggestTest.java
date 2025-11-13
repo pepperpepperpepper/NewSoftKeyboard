@@ -946,4 +946,40 @@ public class SuggestTest {
     Assert.assertEquals("hellonworld", suggestions.get(0).toString());
     Assert.assertEquals(-1, mUnderTest.getLastValidSuggestionIndex());
   }
+
+  @Test
+  public void testNextSuggestionsUsePresageWhenWordInvalid() {
+    Mockito.doReturn(false).when(mProvider).isValidWord(Mockito.any());
+    Mockito.doReturn(true).when(mProvider).isPresageEnabled();
+    Mockito.doAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              final List<CharSequence> holder = invocation.getArgument(1);
+              holder.add("and");
+              holder.add("the");
+              return null;
+            })
+        .when(mProvider)
+        .getNextWords(Mockito.anyString(), Mockito.anyList(), Mockito.anyInt());
+
+    final List<CharSequence> suggestions = mUnderTest.getNextSuggestions("zorg", false);
+
+    Assert.assertEquals(2, suggestions.size());
+    Assert.assertEquals("and", suggestions.get(0).toString());
+    Assert.assertEquals("the", suggestions.get(1).toString());
+    Mockito.verify(mProvider)
+        .getNextWords(Mockito.eq("zorg"), Mockito.anyList(), Mockito.eq(12));
+  }
+
+  @Test
+  public void testNextSuggestionsSkippedForInvalidWhenPresageDisabled() {
+    Mockito.doReturn(false).when(mProvider).isValidWord(Mockito.any());
+    Mockito.doReturn(false).when(mProvider).isPresageEnabled();
+
+    final List<CharSequence> suggestions = mUnderTest.getNextSuggestions("zorg", false);
+
+    Assert.assertTrue(suggestions.isEmpty());
+    Mockito.verify(mProvider, Mockito.never())
+        .getNextWords(Mockito.anyString(), Mockito.anyList(), Mockito.anyInt());
+  }
 }

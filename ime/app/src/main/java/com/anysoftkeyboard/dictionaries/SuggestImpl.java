@@ -172,41 +172,47 @@ public class SuggestImpl implements Suggest {
     }
 
     mNextSuggestions.clear();
-    mIsAllUpperCase = inAllUpperCaseState;
+   mIsAllUpperCase = inAllUpperCaseState;
 
-    // only adding VALID words
-    if (isValidWord(previousWord)) {
-      final String currentWord = previousWord.toString();
-      mSuggestionsProvider.getNextWords(currentWord, mNextSuggestions, mPrefMaxSuggestions);
-      if (BuildConfig.DEBUG) {
+    final boolean validWord = isValidWord(previousWord);
+    final boolean presageEnabled = mSuggestionsProvider.isPresageEnabled();
+
+    if (!validWord && !presageEnabled) {
+      Logger.d(TAG, "getNextSuggestions for '%s' is invalid and no Presage engine is active.", previousWord);
+      return mNextSuggestions;
+    }
+
+    final String currentWord = previousWord.toString();
+    mSuggestionsProvider.getNextWords(currentWord, mNextSuggestions, mPrefMaxSuggestions);
+    if (BuildConfig.DEBUG) {
+      Logger.d(
+          TAG,
+          "getNextSuggestions sources for '%s' (capital? %s, valid? %s, presage? %s):",
+          previousWord,
+          mIsAllUpperCase,
+          validWord,
+          presageEnabled);
+      for (int suggestionIndex = 0;
+          suggestionIndex < mNextSuggestions.size();
+          suggestionIndex++) {
         Logger.d(
             TAG,
-            "getNextSuggestions from user-dictionary for '%s' (capital? %s):",
-            previousWord,
-            mIsAllUpperCase);
-        for (int suggestionIndex = 0;
-            suggestionIndex < mNextSuggestions.size();
-            suggestionIndex++) {
-          Logger.d(
-              TAG,
-              "* getNextSuggestions #%d :''%s'",
-              suggestionIndex,
-              mNextSuggestions.get(suggestionIndex));
-        }
+            "* getNextSuggestions #%d :''%s'",
+            suggestionIndex,
+            mNextSuggestions.get(suggestionIndex));
       }
-
-      if (mIsAllUpperCase) {
-        for (int suggestionIndex = 0;
-            suggestionIndex < mNextSuggestions.size();
-            suggestionIndex++) {
-          mNextSuggestions.set(
-              suggestionIndex,
-              mNextSuggestions.get(suggestionIndex).toString().toUpperCase(mLocale));
-        }
-      }
-    } else {
-      Logger.d(TAG, "getNextSuggestions for '%s' is invalid.", previousWord);
     }
+
+    if (mIsAllUpperCase) {
+      for (int suggestionIndex = 0;
+          suggestionIndex < mNextSuggestions.size();
+          suggestionIndex++) {
+        mNextSuggestions.set(
+            suggestionIndex,
+            mNextSuggestions.get(suggestionIndex).toString().toUpperCase(mLocale));
+      }
+    }
+
     return mNextSuggestions;
   }
 

@@ -3,6 +3,7 @@ package com.anysoftkeyboard.dictionaries;
 import android.content.Context;
 import android.util.Log;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import com.anysoftkeyboard.suggestions.presage.PresageNative;
 import java.io.File;
@@ -23,6 +24,7 @@ final class PresagePredictionManager {
   @NonNull private final PresageModelStore mModelStore;
   private ActiveModel mActiveModel;
   private long mHandle;
+  @Nullable private String mLastActivationError;
 
   PresagePredictionManager(@NonNull Context context) {
     this(context, new PresageModelStore(context));
@@ -37,15 +39,21 @@ final class PresagePredictionManager {
     mModelStore = modelStore;
     mActiveModel = null;
     mHandle = 0;
+    mLastActivationError = null;
   }
 
   boolean activate() {
     if (isActive()) return true;
+    mLastActivationError = null;
     if (!ensureConfigPresent()) {
+      if (mLastActivationError == null) {
+        mLastActivationError = "Failed to stage configuration.";
+      }
       return false;
     }
     mHandle = PresageNative.openModel(mConfigFile.getAbsolutePath());
     if (mHandle == 0L) {
+      mLastActivationError = "Presage native bridge unavailable.";
       Log.w(TAG, "Presage bridge unavailable; continuing without predictions.");
       return false;
     }
@@ -64,6 +72,11 @@ final class PresagePredictionManager {
     return mHandle != 0L;
   }
 
+  @Nullable
+  String getLastActivationError() {
+    return mLastActivationError;
+  }
+
   float scoreCandidate(@NonNull String[] contextTokens, @NonNull String candidate) {
     if (!isActive()) return 0f;
     return PresageNative.scoreSequence(mHandle, contextTokens, candidate);
@@ -78,6 +91,7 @@ final class PresagePredictionManager {
   private boolean ensureConfigPresent() {
     final ActiveModel activeModel = mModelStore.ensureActiveModel();
     if (activeModel == null) {
+      mLastActivationError = "No installed Presage model.";
       Log.w(TAG, "No Presage model available; skipping activation.");
       return false;
     }
@@ -97,6 +111,7 @@ final class PresagePredictionManager {
       outputStream.flush();
       return true;
     } catch (IOException exception) {
+      mLastActivationError = "Failed writing Presage configuration.";
       Log.e(TAG, "Failed to stage Presage configuration.", exception);
       if (mConfigFile.exists() && !mConfigFile.delete()) {
         Log.w(TAG, "Failed deleting incomplete Presage configuration.");

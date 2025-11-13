@@ -854,11 +854,15 @@
     <string name="prediction_engine_summary_missing_model">No language model installed. Download one from Language models.</string>
     <string name="prediction_engine_summary_hybrid">Engine in use: %1$s + dictionaries</string>
     <string name="prediction_engine_summary_neural_unavailable">Neural suggestions are not available in this build.</string>
+    <string name="prediction_engine_summary_requires_suggestions">Enable the suggestion bar to use third-party predictions.</string>
     <string name="prediction_engine_missing_model_dialog_title">Language model required</string>
     <string name="prediction_engine_missing_model_dialog_message">Download a language model before enabling Presage suggestions.</string>
     <string name="prediction_engine_missing_model_dialog_action">Open Language models</string>
     <string name="prediction_engine_neural_unavailable_title">Neural engine unavailable</string>
     <string name="prediction_engine_neural_unavailable_message">The neural suggestion engine is not ready yet.</string>
+    <string name="prediction_engine_suggestions_disabled_title">Suggestion bar disabled</string>
+    <string name="prediction_engine_suggestions_disabled_message">Turn on next word suggestions to enable third-party predictions.</string>
+    <string name="prediction_engine_suggestions_disabled_enable_action">OK</string>
     <string name="presage_models_manage_title">Language models</string>
     <string name="presage_models_manage_summary">Download, activate, or remove next-word model bundles.</string>
     <string name="presage_models_manage_summary_active">Active model: %1$s. Tap to manage downloads.</string>

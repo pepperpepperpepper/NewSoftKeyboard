@@ -11,10 +11,10 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.core.util.Pair;
 import androidx.fragment.app.FragmentActivity;
 import androidx.navigation.Navigation;
+import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
-import androidx.preference.ListPreference;
 import com.anysoftkeyboard.dictionaries.DictionaryAddOnAndBuilder;
 import com.anysoftkeyboard.nextword.NextWordDictionary;
 import com.anysoftkeyboard.nextword.NextWordStatistics;
@@ -38,12 +38,15 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
   @Nullable private ListPreference mPredictionEnginePreference;
   @Nullable private Preference mManageModelsPreference;
   @Nullable private String mPredictionEnginePrefKey;
+  @Nullable private String mNextWordModePrefKey;
   @Nullable private PresageModelStore mPresageModelStore;
 
   private final SharedPreferences.OnSharedPreferenceChangeListener mSharedPreferenceChangeListener =
       (sharedPreferences, key) -> {
         if (mPredictionEnginePrefKey != null && mPredictionEnginePrefKey.equals(key)) {
           updatePredictionEnginePreferenceSummary();
+        } else if (mNextWordModePrefKey != null && mNextWordModePrefKey.equals(key)) {
+          updatePredictionEnginePreferenceEnabled();
         }
       };
 
@@ -85,6 +88,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     addPreferencesFromResource(R.xml.prefs_next_word);
     mPresageModelStore = new PresageModelStore(requireContext());
     mPredictionEnginePrefKey = getString(R.string.settings_key_prediction_engine_mode);
+    mNextWordModePrefKey = getString(R.string.settings_key_next_word_dictionary_type);
     Preference enginePreference = findPreference(mPredictionEnginePrefKey);
     if (enginePreference instanceof ListPreference) {
       mPredictionEnginePreference = (ListPreference) enginePreference;
@@ -122,6 +126,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     }
     updatePredictionEnginePreferenceSummary();
     updateManageModelsSummary();
+    updatePredictionEnginePreferenceEnabled();
   }
 
   @Override
@@ -146,6 +151,11 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     final String modeValue = String.valueOf(newValue);
     if (TextUtils.isEmpty(modeValue)) {
       return true;
+    }
+
+    if (!isNextWordSuggestionsEnabled() && requiresPresageEngine(modeValue)) {
+      showSuggestionsDisabledDialog();
+      return false;
     }
 
     if (("ngram".equals(modeValue) || "hybrid".equals(modeValue)) && !hasAnyPresageModels()) {
@@ -213,7 +223,26 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
         break;
     }
 
-    mPredictionEnginePreference.setSummary(summary);
+    if (!isNextWordSuggestionsEnabled()) {
+      mPredictionEnginePreference.setSummary(
+          getString(R.string.prediction_engine_summary_requires_suggestions));
+    } else {
+      mPredictionEnginePreference.setSummary(summary);
+    }
+  }
+
+  private void updatePredictionEnginePreferenceEnabled() {
+    if (mPredictionEnginePreference == null) {
+      return;
+    }
+    final boolean suggestionsEnabled = isNextWordSuggestionsEnabled();
+    mPredictionEnginePreference.setEnabled(suggestionsEnabled);
+    if (!suggestionsEnabled) {
+      // ensure summary reflects disabled state
+      updatePredictionEnginePreferenceSummary("none");
+    } else {
+      updatePredictionEnginePreferenceSummary();
+    }
   }
 
   private void updateManageModelsSummary() {
@@ -239,6 +268,24 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     return !definitions.isEmpty();
   }
 
+  private boolean isNextWordSuggestionsEnabled() {
+    if (mSharedPreferences == null) {
+      mSharedPreferences = getPreferenceManager().getSharedPreferences();
+    }
+    if (mSharedPreferences == null || mNextWordModePrefKey == null) {
+      return true;
+    }
+    final String currentValue =
+        mSharedPreferences.getString(
+            mNextWordModePrefKey,
+            getString(R.string.settings_default_next_words_dictionary_type));
+    return currentValue == null || !"off".equals(currentValue);
+  }
+
+  private boolean requiresPresageEngine(@NonNull String modeValue) {
+    return "ngram".equals(modeValue) || "hybrid".equals(modeValue);
+  }
+
   @Nullable
   private String resolveActiveModelLabel() {
     if (mPresageModelStore == null) {
@@ -259,6 +306,17 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     }
 
     return definitions.get(0).getLabel();
+  }
+
+  private void showSuggestionsDisabledDialog() {
+    if (!isAdded()) {
+      return;
+    }
+    new AlertDialog.Builder(requireContext())
+        .setTitle(R.string.prediction_engine_suggestions_disabled_title)
+        .setMessage(R.string.prediction_engine_suggestions_disabled_message)
+        .setPositiveButton(R.string.prediction_engine_suggestions_disabled_enable_action, null)
+        .show();
   }
 
   private void showMissingModelDialog() {
