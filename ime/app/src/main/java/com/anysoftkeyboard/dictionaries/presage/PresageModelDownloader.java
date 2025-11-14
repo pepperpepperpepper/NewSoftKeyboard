@@ -79,10 +79,7 @@ public final class PresageModelDownloader {
 
       unzip(tempZip, stagingDir);
 
-      final File manifestFile = new File(stagingDir, MANIFEST_FILENAME);
-      if (!manifestFile.exists()) {
-        throw new IOException("Downloaded bundle missing manifest.json");
-      }
+      final File manifestFile = locateManifest(stagingDir);
 
       final PresageModelDefinition manifestDefinition =
           PresageModelDefinition.fromJson(readJson(manifestFile));
@@ -168,6 +165,62 @@ public final class PresageModelDownloader {
     if (!file.exists() || file.length() == 0L) {
       throw new IOException("Extracted bundle missing required file " + filename);
     }
+  }
+
+  private File locateManifest(@NonNull File stagingDir) throws IOException {
+    File manifestFile = new File(stagingDir, MANIFEST_FILENAME);
+    if (manifestFile.exists()) {
+      return manifestFile;
+    }
+    promoteNestedDirectoryIfNeeded(stagingDir);
+    manifestFile = new File(stagingDir, MANIFEST_FILENAME);
+    if (manifestFile.exists()) {
+      return manifestFile;
+    }
+    throw new IOException("Downloaded bundle missing manifest.json");
+  }
+
+  private void promoteNestedDirectoryIfNeeded(@NonNull File stagingDir) throws IOException {
+    final File[] children = stagingDir.listFiles();
+    if (children == null || children.length == 0) {
+      return;
+    }
+
+    File candidateDir = null;
+    for (File child : children) {
+      if (child.getName().equalsIgnoreCase("__MACOSX")) {
+        deleteRecursively(child);
+        continue;
+      }
+      if (child.isDirectory()) {
+        if (candidateDir != null) {
+          return;
+        }
+        candidateDir = child;
+      } else {
+        // Files already present alongside the manifest; no flattening needed.
+        return;
+      }
+    }
+
+    if (candidateDir == null) {
+      return;
+    }
+
+    final File candidateManifest = new File(candidateDir, MANIFEST_FILENAME);
+    if (!candidateManifest.exists()) {
+      return;
+    }
+
+    final File[] nestedChildren = candidateDir.listFiles();
+    if (nestedChildren != null) {
+      for (File nestedChild : nestedChildren) {
+        final File destination = new File(stagingDir, nestedChild.getName());
+        deleteRecursively(destination);
+        moveOrCopy(nestedChild, destination);
+      }
+    }
+    deleteRecursively(candidateDir);
   }
 
   private void moveOrCopy(@NonNull File source, @NonNull File destination) throws IOException {

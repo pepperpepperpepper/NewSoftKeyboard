@@ -1,5 +1,6 @@
 package com.anysoftkeyboard.dictionaries;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -7,7 +8,12 @@ import android.util.Log;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.anysoftkeyboard.base.utils.Logger;
+import com.anysoftkeyboard.dictionaries.presage.PresageModelCatalog;
+import com.anysoftkeyboard.dictionaries.presage.PresageModelCatalog.CatalogEntry;
+import com.anysoftkeyboard.dictionaries.presage.PresageModelDownloader;
+import com.anysoftkeyboard.dictionaries.presage.PresageModelStore;
 import java.util.Arrays;
+import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -17,6 +23,7 @@ public class PresagePredictionManagerTest {
   @Test
   public void testPredictNextWithInstalledModel() {
     final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+    ensureModelInstalled(context);
     final PresagePredictionManager manager = new PresagePredictionManager(context);
 
     final boolean activated = manager.activate();
@@ -42,6 +49,7 @@ public class PresagePredictionManagerTest {
   @Test
   public void testSuggestionsProviderAppendPresage() throws Exception {
     final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+    ensureModelInstalled(context);
     final SuggestionsProvider provider = new SuggestionsProvider(context);
 
     // Enable prediction engine and next-word flow via reflection.
@@ -109,6 +117,7 @@ public class PresagePredictionManagerTest {
   @Test
   public void testSuggestionsProviderGetNextWordsUsesPresage() throws Exception {
     final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+    ensureModelInstalled(context);
     final SuggestionsProvider provider = new SuggestionsProvider(context);
 
     enablePresageNextWord(provider);
@@ -147,6 +156,23 @@ public class PresagePredictionManagerTest {
         "getNextWords returned values=" + holder);
 
     assertTrue("Expected Presage-backed suggestions", !holder.isEmpty());
+  }
+
+  private void ensureModelInstalled(Context context) {
+    final PresageModelStore store = new PresageModelStore(context);
+    final PresageModelStore.ActiveModel activeModel = store.ensureActiveModel();
+    if (activeModel != null) {
+      return;
+    }
+    try {
+      final PresageModelCatalog catalog = new PresageModelCatalog(context);
+      final List<CatalogEntry> entries = catalog.fetchCatalog();
+      assertFalse("No Presage models available in catalog", entries.isEmpty());
+      final PresageModelDownloader downloader = new PresageModelDownloader(context, store);
+      downloader.downloadAndInstall(entries.get(0));
+    } catch (Exception exception) {
+      throw new AssertionError("Failed downloading Presage model", exception);
+    }
   }
 
   private static void enablePresageNextWord(SuggestionsProvider provider) throws Exception {

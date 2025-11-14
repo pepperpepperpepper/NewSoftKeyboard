@@ -30,6 +30,7 @@ public class PresageModelDownloaderTest {
   private static final String MODEL_ID = "test-presage-model";
   private static final String ARPA_FILENAME = MODEL_ID + ".arpa";
   private static final String VOCAB_FILENAME = MODEL_ID + ".vocab";
+  private static final String MANIFEST_FILENAME = "manifest.json";
 
   private Context mContext;
   private PresageModelStore mModelStore;
@@ -121,6 +122,40 @@ public class PresageModelDownloaderTest {
     }
   }
 
+  @Test
+  public void testBundleWithNestedRootDirectoryIsFlattened() throws Exception {
+    final byte[] arpaContent = "arpa".getBytes(StandardCharsets.UTF_8);
+    final byte[] vocabContent = "vocab".getBytes(StandardCharsets.UTF_8);
+
+    final PresageModelDefinition definition = buildDefinition(arpaContent, vocabContent);
+    final byte[] archiveBytes =
+        createBundleWithNestedRoot(definition, arpaContent, vocabContent, MODEL_ID + "-nested");
+    final String archiveSha = computeSha256Hex(archiveBytes);
+
+    final PresageModelCatalog.CatalogEntry entry =
+        new PresageModelCatalog.CatalogEntry(
+            definition,
+            "https://example.com/" + MODEL_ID + "-nested.zip",
+            archiveSha,
+            archiveBytes.length,
+            1,
+            true);
+
+    final PresageModelDownloader downloader =
+        new PresageModelDownloader(
+            mContext,
+            mModelStore,
+            url -> new ByteArrayInputStream(archiveBytes));
+
+    downloader.downloadAndInstall(entry);
+
+    final File modelDir = getModelDirectory(MODEL_ID);
+    assertTrue(new File(modelDir, ARPA_FILENAME).exists());
+    assertTrue(new File(modelDir, VOCAB_FILENAME).exists());
+    assertTrue(new File(modelDir, MANIFEST_FILENAME).exists());
+    assertTrue(!new File(modelDir, MODEL_ID + "-nested").exists());
+  }
+
   private PresageModelDefinition buildDefinition(byte[] arpaContent, byte[] vocabContent)
       throws JSONException {
     return PresageModelDefinition.builder(MODEL_ID)
@@ -147,6 +182,34 @@ public class PresageModelDownloaderTest {
       zipOutputStream.closeEntry();
 
       zipOutputStream.putNextEntry(new ZipEntry(VOCAB_FILENAME));
+      zipOutputStream.write(vocabContent);
+      zipOutputStream.closeEntry();
+    }
+    return byteStream.toByteArray();
+  }
+
+  private byte[] createBundleWithNestedRoot(
+      PresageModelDefinition definition,
+      byte[] arpaContent,
+      byte[] vocabContent,
+      String rootDirectory)
+      throws IOException, JSONException {
+    final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(byteStream)) {
+      final String prefix = rootDirectory.endsWith("/") ? rootDirectory : rootDirectory + "/";
+
+      zipOutputStream.putNextEntry(new ZipEntry(prefix + MANIFEST_FILENAME));
+      final OutputStreamWriter writer =
+          new OutputStreamWriter(zipOutputStream, StandardCharsets.UTF_8);
+      writer.write(definition.toJson().toString());
+      writer.flush();
+      zipOutputStream.closeEntry();
+
+      zipOutputStream.putNextEntry(new ZipEntry(prefix + ARPA_FILENAME));
+      zipOutputStream.write(arpaContent);
+      zipOutputStream.closeEntry();
+
+      zipOutputStream.putNextEntry(new ZipEntry(prefix + VOCAB_FILENAME));
       zipOutputStream.write(vocabContent);
       zipOutputStream.closeEntry();
     }
