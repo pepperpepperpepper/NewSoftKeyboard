@@ -88,7 +88,9 @@ public class PresageModelDownloaderTest {
     assertEquals(computeSha256Hex(arpaContent), arpaRequirement.getSha256());
     assertEquals(computeSha256Hex(vocabContent), vocabRequirement.getSha256());
 
-    assertEquals(MODEL_ID, mModelStore.getSelectedModelId());
+    assertEquals(
+        MODEL_ID,
+        mModelStore.getSelectedModelId(PresageModelDefinition.EngineType.NGRAM));
     assertTrue(!mModelStore.listAvailableModels().isEmpty());
   }
 

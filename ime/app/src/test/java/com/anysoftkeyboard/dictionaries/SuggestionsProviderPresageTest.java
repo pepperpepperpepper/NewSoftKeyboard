@@ -95,7 +95,8 @@ public class SuggestionsProviderPresageTest {
 
     final SharedPreferences selectionPrefs =
         context.getSharedPreferences("presage_model_selection", Context.MODE_PRIVATE);
-    assertEquals("test-model", selectionPrefs.getString("selected_model_id", ""));
+    assertEquals(
+        "test-model", selectionPrefs.getString("selected_model_id_presage_ngram", ""));
   }
 
   @Implements(PresageNative.class)

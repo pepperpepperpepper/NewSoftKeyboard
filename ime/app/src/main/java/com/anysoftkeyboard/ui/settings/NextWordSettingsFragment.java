@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.text.format.DateUtils;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -39,6 +40,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
   @Nullable private Preference mManageModelsPreference;
   @Nullable private String mPredictionEnginePrefKey;
   @Nullable private String mNextWordModePrefKey;
+  @Nullable private String mNeuralFailurePrefKey;
   @Nullable private PresageModelStore mPresageModelStore;
 
   private final SharedPreferences.OnSharedPreferenceChangeListener mSharedPreferenceChangeListener =
@@ -47,6 +49,9 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
           updatePredictionEnginePreferenceSummary();
         } else if (mNextWordModePrefKey != null && mNextWordModePrefKey.equals(key)) {
           updatePredictionEnginePreferenceEnabled();
+        } else if (mNeuralFailurePrefKey != null && mNeuralFailurePrefKey.equals(key)) {
+          updatePredictionEnginePreferenceSummary();
+          updateManageModelsSummary();
         }
       };
 
@@ -89,6 +94,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     mPresageModelStore = new PresageModelStore(requireContext());
     mPredictionEnginePrefKey = getString(R.string.settings_key_prediction_engine_mode);
     mNextWordModePrefKey = getString(R.string.settings_key_next_word_dictionary_type);
+    mNeuralFailurePrefKey = getString(R.string.settings_key_prediction_engine_last_neural_error);
     Preference enginePreference = findPreference(mPredictionEnginePrefKey);
     if (enginePreference instanceof ListPreference) {
       mPredictionEnginePreference = (ListPreference) enginePreference;
@@ -158,14 +164,19 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
       return false;
     }
 
-    if (("ngram".equals(modeValue) || "hybrid".equals(modeValue)) && !hasAnyPresageModels()) {
-      showMissingModelDialog();
+    if (("ngram".equals(modeValue) || "hybrid".equals(modeValue))
+        && !hasModelsForEngine(PresageModelDefinition.EngineType.NGRAM)) {
+      showMissingModelDialog(PresageModelDefinition.EngineType.NGRAM);
       return false;
     }
 
     if ("neural".equals(modeValue)) {
-      showNeuralUnavailableDialog();
-      return false;
+      if (!hasModelsForEngine(PresageModelDefinition.EngineType.NEURAL)) {
+        showMissingModelDialog(PresageModelDefinition.EngineType.NEURAL);
+        return false;
+      }
+      updatePredictionEnginePreferenceSummary(modeValue);
+      return true;
     }
 
     updatePredictionEnginePreferenceSummary(modeValue);
@@ -198,37 +209,56 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
       mode = getString(R.string.settings_default_prediction_engine_mode);
     }
 
+    final boolean suggestionsEnabled = isNextWordSuggestionsEnabled();
+    if (!suggestionsEnabled) {
+      mPredictionEnginePreference.setSummary(
+          getString(R.string.prediction_engine_summary_requires_suggestions));
+      return;
+    }
+
+    final NeuralFailureStatus failureStatus = getLastNeuralFailureStatus();
+    if (failureStatus != null) {
+      mPredictionEnginePreference.setSummary(buildNeuralFailureSummary(failureStatus, mode));
+      return;
+    }
+
     final String summary;
     switch (mode) {
       case "ngram":
-        final String ngramLabel = resolveActiveModelLabel();
+        final String ngramLabel =
+            resolveActiveModelLabel(PresageModelDefinition.EngineType.NGRAM);
         summary =
             ngramLabel != null
                 ? getString(R.string.prediction_engine_mode_summary, ngramLabel)
                 : getString(R.string.prediction_engine_summary_missing_model);
         break;
       case "hybrid":
-        final String hybridLabel = resolveActiveModelLabel();
+        final String hybridLabel =
+            resolveActiveModelLabel(PresageModelDefinition.EngineType.NGRAM);
+        final String neuralHybridLabel =
+            resolveActiveModelLabel(PresageModelDefinition.EngineType.NEURAL);
         summary =
-            hybridLabel != null
-                ? getString(R.string.prediction_engine_summary_hybrid, hybridLabel)
+            hybridLabel != null && neuralHybridLabel != null
+                ? getString(
+                    R.string.prediction_engine_summary_hybrid_dual,
+                    hybridLabel,
+                    neuralHybridLabel)
                 : getString(R.string.prediction_engine_summary_missing_model);
         break;
       case "neural":
-        summary = getString(R.string.prediction_engine_summary_neural_unavailable);
+        final String neuralLabel =
+            resolveActiveModelLabel(PresageModelDefinition.EngineType.NEURAL);
+        summary =
+            neuralLabel != null
+                ? getString(R.string.prediction_engine_summary_neural, neuralLabel)
+                : getString(R.string.prediction_engine_summary_missing_model);
         break;
       case "none":
       default:
         summary = getString(R.string.prediction_engine_summary_disabled);
         break;
     }
-
-    if (!isNextWordSuggestionsEnabled()) {
-      mPredictionEnginePreference.setSummary(
-          getString(R.string.prediction_engine_summary_requires_suggestions));
-    } else {
-      mPredictionEnginePreference.setSummary(summary);
-    }
+    mPredictionEnginePreference.setSummary(summary);
   }
 
   private void updatePredictionEnginePreferenceEnabled() {
@@ -245,27 +275,135 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     }
   }
 
+  private CharSequence buildNeuralFailureSummary(
+      @NonNull NeuralFailureStatus status, @NonNull String currentMode) {
+    final CharSequence reason = buildNeuralFailureReason(status);
+    if ("neural".equals(currentMode) || "hybrid".equals(currentMode)) {
+      return getString(R.string.prediction_engine_summary_neural_failure, reason);
+    }
+    return getString(
+        R.string.prediction_engine_summary_neural_failure_fallback,
+        reason,
+        resolveModeLabel(currentMode));
+  }
+
+  private CharSequence buildNeuralFailureReason(@NonNull NeuralFailureStatus status) {
+    if (status.timestamp > 0L) {
+      final CharSequence relativeTime =
+          DateUtils.getRelativeTimeSpanString(
+              status.timestamp,
+              System.currentTimeMillis(),
+              DateUtils.MINUTE_IN_MILLIS,
+              DateUtils.FORMAT_ABBREV_RELATIVE);
+      return getString(
+          R.string.prediction_engine_neural_failure_reason_relative, relativeTime, status.message);
+    }
+    return status.message;
+  }
+
+  @Nullable
+  private NeuralFailureStatus getLastNeuralFailureStatus() {
+    if (!isAdded()) {
+      return null;
+    }
+    final String storedValue =
+        AnyApplication.prefs(requireContext())
+            .getString(
+                R.string.settings_key_prediction_engine_last_neural_error,
+                R.string.settings_default_prediction_engine_last_neural_error)
+            .get();
+    if (TextUtils.isEmpty(storedValue)) {
+      return null;
+    }
+    long timestamp = 0L;
+    String message = storedValue;
+    final int delimiterIndex = storedValue.indexOf('|');
+    if (delimiterIndex >= 0) {
+      final String timestampPart = storedValue.substring(0, delimiterIndex);
+      if (!TextUtils.isEmpty(timestampPart)) {
+        try {
+          timestamp = Long.parseLong(timestampPart);
+        } catch (NumberFormatException ignored) {
+          timestamp = 0L;
+        }
+      }
+      message = storedValue.substring(Math.min(delimiterIndex + 1, storedValue.length()));
+    }
+    if (TextUtils.isEmpty(message)) {
+      message = getString(R.string.prediction_engine_error_unknown);
+    }
+    return new NeuralFailureStatus(timestamp, message);
+  }
+
+  @NonNull
+  private CharSequence resolveModeLabel(@NonNull String mode) {
+    switch (mode) {
+      case "ngram":
+        return getString(R.string.prediction_engine_mode_ngram);
+      case "neural":
+        return getString(R.string.prediction_engine_mode_neural);
+      case "hybrid":
+        return getString(R.string.prediction_engine_mode_hybrid);
+      case "none":
+      default:
+        return getString(R.string.prediction_engine_mode_none);
+    }
+  }
+
+  private static final class NeuralFailureStatus {
+    final long timestamp;
+    @NonNull final String message;
+
+    NeuralFailureStatus(long timestamp, @NonNull String message) {
+      this.timestamp = timestamp;
+      this.message = message;
+    }
+  }
+
   private void updateManageModelsSummary() {
     if (mManageModelsPreference == null || !isAdded()) {
       return;
     }
 
-    final String activeLabel = resolveActiveModelLabel();
-    if (activeLabel != null) {
-      mManageModelsPreference.setSummary(
-          getString(R.string.presage_models_manage_summary_active, activeLabel));
+    final String ngramLabel = resolveActiveModelLabel(PresageModelDefinition.EngineType.NGRAM);
+    final String neuralLabel = resolveActiveModelLabel(PresageModelDefinition.EngineType.NEURAL);
+    final String baseSummary;
+    if (TextUtils.isEmpty(ngramLabel) && TextUtils.isEmpty(neuralLabel)) {
+      baseSummary = getString(R.string.presage_models_manage_summary_empty);
     } else {
+      final String displayNgram =
+          TextUtils.isEmpty(ngramLabel)
+              ? getString(R.string.presage_models_manage_summary_unavailable)
+              : ngramLabel;
+      final String displayNeural =
+          TextUtils.isEmpty(neuralLabel)
+              ? getString(R.string.presage_models_manage_summary_unavailable)
+              : neuralLabel;
+      baseSummary =
+          getString(
+              R.string.presage_models_manage_summary_active_multi, displayNgram, displayNeural);
+    }
+    final NeuralFailureStatus failureStatus = getLastNeuralFailureStatus();
+    if (failureStatus != null) {
+      final CharSequence reason = buildNeuralFailureReason(failureStatus);
       mManageModelsPreference.setSummary(
-          getString(R.string.presage_models_manage_summary_empty));
+          getString(R.string.presage_models_manage_summary_with_error, baseSummary, reason));
+    } else {
+      mManageModelsPreference.setSummary(baseSummary);
     }
   }
 
-  private boolean hasAnyPresageModels() {
+  private boolean hasModelsForEngine(@NonNull PresageModelDefinition.EngineType engineType) {
     if (mPresageModelStore == null) {
       return false;
     }
     final List<PresageModelDefinition> definitions = mPresageModelStore.listAvailableModels();
-    return !definitions.isEmpty();
+    for (PresageModelDefinition definition : definitions) {
+      if (definition.getEngineType() == engineType) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private boolean isNextWordSuggestionsEnabled() {
@@ -287,7 +425,8 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
   }
 
   @Nullable
-  private String resolveActiveModelLabel() {
+  private String resolveActiveModelLabel(
+      @NonNull PresageModelDefinition.EngineType engineType) {
     if (mPresageModelStore == null) {
       return null;
     }
@@ -296,16 +435,26 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
       return null;
     }
 
-    final String selectedId = mPresageModelStore.getSelectedModelId();
-    if (!TextUtils.isEmpty(selectedId)) {
-      for (PresageModelDefinition definition : definitions) {
-        if (selectedId.equals(definition.getId())) {
-          return definition.getLabel();
-        }
+    final String selectedId = mPresageModelStore.getSelectedModelId(engineType);
+    String fallback = null;
+    for (PresageModelDefinition definition : definitions) {
+      if (definition.getEngineType() != engineType) {
+        continue;
+      }
+      if (fallback == null) {
+        fallback = definition.getLabel();
+      }
+      if (!TextUtils.isEmpty(selectedId) && selectedId.equals(definition.getId())) {
+        return definition.getLabel();
       }
     }
 
-    return definitions.get(0).getLabel();
+    return fallback;
+  }
+
+  @Nullable
+  private String resolveActiveModelLabel() {
+    return resolveActiveModelLabel(PresageModelDefinition.EngineType.NGRAM);
   }
 
   private void showSuggestionsDisabledDialog() {
@@ -319,28 +468,26 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
         .show();
   }
 
-  private void showMissingModelDialog() {
+  private void showMissingModelDialog(
+      @NonNull PresageModelDefinition.EngineType missingEngine) {
     if (!isAdded()) {
       return;
     }
+    final int titleRes =
+        missingEngine == PresageModelDefinition.EngineType.NEURAL
+            ? R.string.prediction_engine_missing_model_dialog_title_neural
+            : R.string.prediction_engine_missing_model_dialog_title;
+    final int messageRes =
+        missingEngine == PresageModelDefinition.EngineType.NEURAL
+            ? R.string.prediction_engine_missing_model_dialog_message_neural
+            : R.string.prediction_engine_missing_model_dialog_message;
     new AlertDialog.Builder(requireContext())
-        .setTitle(R.string.prediction_engine_missing_model_dialog_title)
-        .setMessage(R.string.prediction_engine_missing_model_dialog_message)
+        .setTitle(titleRes)
+        .setMessage(messageRes)
         .setPositiveButton(
             R.string.prediction_engine_missing_model_dialog_action,
             (dialog, which) -> navigateToPresageModels())
         .setNegativeButton(android.R.string.cancel, null)
-        .show();
-  }
-
-  private void showNeuralUnavailableDialog() {
-    if (!isAdded()) {
-      return;
-    }
-    new AlertDialog.Builder(requireContext())
-        .setTitle(R.string.prediction_engine_neural_unavailable_title)
-        .setMessage(R.string.prediction_engine_neural_unavailable_message)
-        .setPositiveButton(android.R.string.ok, null)
         .show();
   }
 

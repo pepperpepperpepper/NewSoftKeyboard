@@ -35,4 +35,6 @@
     </string-array>
     <string name="settings_default_prediction_engine_mode">hybrid</string>
     <string name="settings_key_manage_presage_models">settings_key_manage_presage_models</string>
+    <string name="settings_key_prediction_engine_last_neural_error">settings_key_prediction_engine_last_neural_error</string>
+    <string name="settings_default_prediction_engine_last_neural_error"></string>
 </resources>

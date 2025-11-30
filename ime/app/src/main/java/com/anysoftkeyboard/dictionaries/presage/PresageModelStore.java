@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
 import java.util.zip.GZIPInputStream;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -55,47 +56,74 @@ public final class PresageModelStore {
 
   @Nullable
   public ActiveModel ensureActiveModel() {
+    return ensureActiveModel(PresageModelDefinition.EngineType.NGRAM);
+  }
+
+  @Nullable
+  public ActiveModel ensureActiveModel(@NonNull PresageModelDefinition.EngineType engineType) {
     final Map<String, PresageModelDefinition> availableDefinitions = discoverDefinitions();
-    if (availableDefinitions.isEmpty()) {
-      Logger.w(TAG, "No Presage models discovered; predictions unavailable.");
+    final List<PresageModelDefinition> engineDefinitions = new ArrayList<>();
+    for (PresageModelDefinition definition : availableDefinitions.values()) {
+      if (definition.getEngineType() == engineType) {
+        engineDefinitions.add(definition);
+      }
+    }
+    if (engineDefinitions.isEmpty()) {
+      Logger.w(TAG, "No models discovered for engine " + engineType + "; predictions unavailable.");
       return null;
     }
 
-    String selectedId = getSelectedModelId();
-    if (selectedId == null
-        && availableDefinitions.containsKey(PresageModelDefinition.DEFAULT_MODEL_ID)) {
-      selectedId = PresageModelDefinition.DEFAULT_MODEL_ID;
+    String selectedId = getSelectedModelId(engineType);
+    if (selectedId == null && engineType == PresageModelDefinition.EngineType.NGRAM) {
+      for (PresageModelDefinition definition : engineDefinitions) {
+        if (definition.getId().equals(PresageModelDefinition.DEFAULT_MODEL_ID)) {
+          selectedId = definition.getId();
+          break;
+        }
+      }
     }
 
-    PresageModelDefinition definition = availableDefinitions.get(selectedId);
-    if (definition == null) {
-      definition = availableDefinitions.get(PresageModelDefinition.DEFAULT_MODEL_ID);
+    PresageModelDefinition definition = null;
+    if (selectedId != null) {
+      for (PresageModelDefinition candidate : engineDefinitions) {
+        if (candidate.getId().equals(selectedId)) {
+          definition = candidate;
+          break;
+        }
+      }
     }
+
     if (definition == null) {
-      definition = availableDefinitions.values().iterator().next();
+      definition =
+          engineDefinitions.get(
+              0); // fallback to first available when selected id is missing or invalid.
     }
 
     ActiveModel activeModel = ensureDefinitionInstalled(definition);
     if (activeModel != null) {
-      persistSelectedModelId(definition.getId());
+      persistSelectedModelId(engineType, definition.getId());
       return activeModel;
     }
 
     Logger.w(
         TAG,
-        "Failed to stage Presage model " + definition.getId() + "; attempting fallback model.");
-    for (PresageModelDefinition candidate : availableDefinitions.values()) {
+        "Failed to stage model "
+            + definition.getId()
+            + " for engine "
+            + engineType
+            + "; attempting fallback model.");
+    for (PresageModelDefinition candidate : engineDefinitions) {
       if (candidate == definition) {
         continue;
       }
       activeModel = ensureDefinitionInstalled(candidate);
       if (activeModel != null) {
-        persistSelectedModelId(candidate.getId());
+        persistSelectedModelId(engineType, candidate.getId());
         return activeModel;
       }
     }
 
-    Logger.w(TAG, "No Presage models could be staged; predictions disabled.");
+    Logger.w(TAG, "No models could be staged for engine " + engineType + "; predictions disabled.");
     return null;
   }
 
@@ -104,25 +132,26 @@ public final class PresageModelStore {
     return new ArrayList<>(discoverDefinitions().values());
   }
 
-  public void persistSelectedModelId(@NonNull String modelId) {
+  public void persistSelectedModelId(
+      @NonNull PresageModelDefinition.EngineType engineType, @NonNull String modelId) {
     if (modelId.trim().isEmpty()) {
-      clearSelectedModelId();
+      clearSelectedModelId(engineType);
     } else {
-      mSelectionPreferences.edit().putString(PREF_SELECTED_MODEL_ID, modelId).apply();
+      mSelectionPreferences.edit().putString(selectionPrefKey(engineType), modelId).apply();
     }
   }
 
   @Nullable
-  public String getSelectedModelId() {
-    final String stored = mSelectionPreferences.getString(PREF_SELECTED_MODEL_ID, "");
+  public String getSelectedModelId(@NonNull PresageModelDefinition.EngineType engineType) {
+    final String stored = mSelectionPreferences.getString(selectionPrefKey(engineType), "");
     if (stored == null || stored.trim().isEmpty()) {
       return null;
     }
     return stored;
   }
 
-  public void clearSelectedModelId() {
-    mSelectionPreferences.edit().remove(PREF_SELECTED_MODEL_ID).apply();
+  public void clearSelectedModelId(@NonNull PresageModelDefinition.EngineType engineType) {
+    mSelectionPreferences.edit().remove(selectionPrefKey(engineType)).apply();
   }
 
   public void removeModel(@NonNull String modelId) {
@@ -145,9 +174,11 @@ public final class PresageModelStore {
       }
     }
 
-    final String selectedId = getSelectedModelId();
-    if (selectedId != null && selectedId.equals(modelId)) {
-      clearSelectedModelId();
+    for (PresageModelDefinition.EngineType engineType : PresageModelDefinition.EngineType.values()) {
+      final String selectedId = getSelectedModelId(engineType);
+      if (selectedId != null && selectedId.equals(modelId)) {
+        clearSelectedModelId(engineType);
+      }
     }
   }
 
@@ -156,18 +187,18 @@ public final class PresageModelStore {
     final File modelDirectory = new File(getModelsRootDirectory(), definition.getId());
     ensureDirectory(modelDirectory);
 
-    final File arpaFile = ensureRequirement(modelDirectory, definition, definition.getArpaRequirement());
-    if (arpaFile == null) {
-      return null;
-    }
-    final File vocabFile =
-        ensureRequirement(modelDirectory, definition, definition.getVocabRequirement());
-    if (vocabFile == null) {
-      return null;
+    final LinkedHashMap<String, File> installedFiles = new LinkedHashMap<>();
+    for (Map.Entry<String, PresageModelDefinition.FileRequirement> entry :
+        definition.getAllFileRequirements().entrySet()) {
+      final File file = ensureRequirement(modelDirectory, definition, entry.getValue());
+      if (file == null) {
+        return null;
+      }
+      installedFiles.put(entry.getKey(), file);
     }
 
     writeManifestIfNecessary(modelDirectory, definition);
-    return new ActiveModel(definition, modelDirectory, arpaFile, vocabFile);
+    return new ActiveModel(definition, modelDirectory, installedFiles);
   }
 
   @Nullable
@@ -286,10 +317,6 @@ public final class PresageModelStore {
   private void writeManifestIfNecessary(
       @NonNull File modelDirectory, @NonNull PresageModelDefinition definition) {
     final File manifestFile = new File(modelDirectory, MANIFEST_FILE);
-    if (manifestFile.exists()) {
-      return;
-    }
-
     try (FileOutputStream outputStream = new FileOutputStream(manifestFile)) {
       final JSONObject jsonObject = definition.toJson();
       outputStream.write(jsonObject.toString(2).getBytes());
@@ -453,6 +480,9 @@ public final class PresageModelStore {
   }
 
   private boolean hasBundledAssets(@NonNull PresageModelDefinition definition) {
+    if (definition.getEngineType() != PresageModelDefinition.EngineType.NGRAM) {
+      return false;
+    }
     return assetExists(definition.getArpaRequirement().getAssetPath())
         && assetExists(definition.getVocabRequirement().getAssetPath());
   }
@@ -477,18 +507,15 @@ public final class PresageModelStore {
 
     private final PresageModelDefinition mDefinition;
     private final File mModelDirectory;
-    private final File mArpaFile;
-    private final File mVocabFile;
+    private final LinkedHashMap<String, File> mFiles;
 
     private ActiveModel(
         @NonNull PresageModelDefinition definition,
         @NonNull File modelDirectory,
-        @NonNull File arpaFile,
-        @NonNull File vocabFile) {
+        @NonNull LinkedHashMap<String, File> files) {
       mDefinition = definition;
       mModelDirectory = modelDirectory;
-      mArpaFile = arpaFile;
-      mVocabFile = vocabFile;
+      mFiles = new LinkedHashMap<>(files);
     }
 
     @NonNull
@@ -501,14 +528,39 @@ public final class PresageModelStore {
       return mModelDirectory;
     }
 
+    @Nullable
+    public File getFile(@NonNull String type) {
+      return mFiles.get(type.toLowerCase(Locale.US));
+    }
+
+    @NonNull
+    public File requireFile(@NonNull String type) {
+      final File file = getFile(type);
+      if (file == null) {
+        throw new IllegalStateException(
+            "Missing file type "
+                + type
+                + " for model "
+                + mDefinition.getId()
+                + " (engine "
+                + mDefinition.getEngineType()
+                + ")");
+      }
+      return file;
+    }
+
     @NonNull
     public File getArpaFile() {
-      return mArpaFile;
+      return requireFile("arpa");
     }
 
     @NonNull
     public File getVocabFile() {
-      return mVocabFile;
+      return requireFile("vocab");
     }
+  }
+
+  private String selectionPrefKey(@NonNull PresageModelDefinition.EngineType engineType) {
+    return PREF_SELECTED_MODEL_ID + "_" + engineType.getSerializedValue();
   }
 }

@@ -3,13 +3,19 @@ package com.anysoftkeyboard.dictionaries;
 import static com.anysoftkeyboard.dictionaries.DictionaryBackgroundLoader.NO_OP_LISTENER;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.text.TextUtils;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.content.ContactsDictionary;
 import com.anysoftkeyboard.dictionaries.sqlite.AbbreviationsDictionary;
 import com.anysoftkeyboard.dictionaries.sqlite.AutoDictionary;
+import com.anysoftkeyboard.dictionaries.neural.NeuralPredictionManager;
 import com.anysoftkeyboard.nextword.NextWordSuggestions;
 import com.anysoftkeyboard.prefs.RxSharedPrefs;
 import com.anysoftkeyboard.rx.GenericOnError;
@@ -27,6 +33,9 @@ import java.util.List;
 public class SuggestionsProvider {
 
   private static final String TAG = "SuggestionsProvider";
+  private static final int NEURAL_MIN_CONTEXT_TOKENS = 2;
+  private static final long NEURAL_LATENCY_BUDGET_MS = 25L;
+  private static final char NEURAL_FAILURE_DELIMITER = '|';
 
   private static final EditableDictionary NullDictionary =
       new EditableDictionary("NULL") {
@@ -75,6 +84,7 @@ public class SuggestionsProvider {
       };
 
   @NonNull private final Context mContext;
+  @NonNull private final Handler mMainHandler = new Handler(Looper.getMainLooper());
   @NonNull private final List<String> mInitialSuggestionsList = new ArrayList<>();
 
   @NonNull private CompositeDisposable mDictionaryDisposables = new CompositeDisposable();
@@ -115,9 +125,11 @@ public class SuggestionsProvider {
   }
 
   @NonNull private final PresagePredictionManager mPresagePredictionManager;
+  @NonNull private final NeuralPredictionManager mNeuralPredictionManager;
   @NonNull private PredictionEngineMode mPredictionEngineMode = PredictionEngineMode.HYBRID;
   @NonNull private final ArrayDeque<String> mPresageContext =
       new ArrayDeque<>(PRESAGE_CONTEXT_WINDOW);
+  private long mLastNeuralLatencyMs;
 
   private class ContactsDictionaryLoaderListener implements DictionaryBackgroundLoader.Listener {
 
@@ -145,11 +157,12 @@ public class SuggestionsProvider {
 
   @NonNull private final List<Dictionary> mAbbreviationDictionary = new ArrayList<>();
   private final CompositeDisposable mPrefsDisposables = new CompositeDisposable();
-  private static final int PRESAGE_CONTEXT_WINDOW = 2;
+  private static final int PRESAGE_CONTEXT_WINDOW = 16;
 
   public SuggestionsProvider(@NonNull Context context) {
     mContext = context.getApplicationContext();
     mPresagePredictionManager = new PresagePredictionManager(mContext);
+    mNeuralPredictionManager = new NeuralPredictionManager(mContext);
 
     final RxSharedPrefs rxSharedPrefs = AnyApplication.prefs(mContext);
     mPrefsDisposables.add(
@@ -456,6 +469,7 @@ public class SuggestionsProvider {
     mAutoDictionary = NullDictionary;
     mContactsDictionary = NullDictionary;
     mPresagePredictionManager.deactivate();
+    mNeuralPredictionManager.deactivate();
     mPresageContext.clear();
 
     mDictionaryDisposables.dispose();
@@ -480,23 +494,26 @@ public class SuggestionsProvider {
       case "ngram":
         mPredictionEngineMode = PredictionEngineMode.NGRAM;
         activatePresageIfNeeded();
+        mNeuralPredictionManager.deactivate();
         break;
       case "neural":
         mPredictionEngineMode = PredictionEngineMode.NEURAL;
         mPresagePredictionManager.deactivate();
-        mPresageContext.clear();
+        activateNeuralIfNeeded();
         break;
       case "hybrid":
         mPredictionEngineMode = PredictionEngineMode.HYBRID;
         activatePresageIfNeeded();
+        activateNeuralIfNeeded();
         break;
       default:
         mPredictionEngineMode = PredictionEngineMode.NONE;
         mPresagePredictionManager.deactivate();
+        mNeuralPredictionManager.deactivate();
         mPresageContext.clear();
         break;
     }
-    if (!usesPresageEngine()) {
+    if (mPredictionEngineMode == PredictionEngineMode.NONE) {
       mPresageContext.clear();
     }
     Logger.i(TAG, "Prediction engine set to " + mPredictionEngineMode);
@@ -505,6 +522,15 @@ public class SuggestionsProvider {
   private void activatePresageIfNeeded() {
     if (usesPresageEngine()) {
       mPresagePredictionManager.activate();
+    }
+  }
+
+  private void activateNeuralIfNeeded() {
+    if (mPredictionEngineMode == PredictionEngineMode.NEURAL
+        || mPredictionEngineMode == PredictionEngineMode.HYBRID) {
+      if (!mNeuralPredictionManager.activate()) {
+        handleNeuralActivationFailure();
+      }
     }
   }
 
@@ -531,10 +557,11 @@ public class SuggestionsProvider {
       String currentWord, Collection<CharSequence> suggestionsHolder, int maxSuggestions) {
     if (!mNextWordEnabled) return;
 
-    if (!usesPresageEngine()) {
-      mPresageContext.clear();
-    } else if (!mIncognitoMode) {
+    if (!mIncognitoMode) {
       recordPresageContext(currentWord);
+    }
+    if (mPredictionEngineMode == PredictionEngineMode.NONE || mIncognitoMode) {
+      mPresageContext.clear();
     }
 
     int remainingSuggestions = maxSuggestions;
@@ -546,8 +573,38 @@ public class SuggestionsProvider {
       if (remainingSuggestions <= 0) return;
     }
 
-    final boolean shouldIncludeLegacyNextWords =
-        mPredictionEngineMode != PredictionEngineMode.NGRAM || addedByPresage == 0;
+    int addedByNeural = 0;
+    if (mPredictionEngineMode == PredictionEngineMode.NEURAL
+        || mPredictionEngineMode == PredictionEngineMode.HYBRID) {
+      if (BuildConfig.DEBUG) {
+        final String[] ctx = mPresageContext.toArray(new String[0]);
+        Logger.d(
+            TAG,
+            "Invoking neural next-word with context %s, limit %d",
+            Arrays.toString(ctx),
+            remainingSuggestions);
+      }
+      addedByNeural = appendNeuralSuggestions(suggestionsHolder, remainingSuggestions);
+      remainingSuggestions -= addedByNeural;
+      if (remainingSuggestions <= 0) return;
+    }
+
+    final boolean shouldIncludeLegacyNextWords;
+    switch (mPredictionEngineMode) {
+      case NGRAM:
+        shouldIncludeLegacyNextWords = addedByPresage == 0;
+        break;
+      case NEURAL:
+        shouldIncludeLegacyNextWords = addedByNeural == 0;
+        break;
+      case HYBRID:
+        shouldIncludeLegacyNextWords = (addedByPresage + addedByNeural) == 0;
+        break;
+      case NONE:
+      default:
+        shouldIncludeLegacyNextWords = true;
+        break;
+    }
 
     if (shouldIncludeLegacyNextWords) {
       final int sizeBeforeUser = suggestionsHolder.size();
@@ -606,6 +663,12 @@ public class SuggestionsProvider {
     return usesPresageEngine();
   }
 
+  /** Returns true when the neural predictor should be considered active in the pipeline. */
+  public boolean isNeuralEnabled() {
+    return mPredictionEngineMode == PredictionEngineMode.NEURAL
+        || mPredictionEngineMode == PredictionEngineMode.HYBRID;
+  }
+
   private void recordPresageContext(@NonNull String word) {
     if (TextUtils.isEmpty(word)) return;
     if (mPresageContext.size() == PRESAGE_CONTEXT_WINDOW) {
@@ -633,14 +696,168 @@ public class SuggestionsProvider {
     if (predictions.length == 0) {
       return 0;
     }
+    if (BuildConfig.DEBUG) {
+      Logger.d(
+          TAG,
+          "Presage raw predictions "
+              + Arrays.toString(predictions)
+              + " for context "
+              + Arrays.toString(contextArray));
+    }
     int added = 0;
     for (String prediction : predictions) {
       if (TextUtils.isEmpty(prediction)) continue;
+      if (suggestionsHolder.contains(prediction)) continue;
       suggestionsHolder.add(prediction);
       added++;
       if (added == limit) break;
     }
     return added;
+  }
+
+  private int appendNeuralSuggestions(
+      Collection<CharSequence> suggestionsHolder, int limit) {
+    if (limit <= 0) {
+      return 0;
+    }
+    if (mPresageContext.size() < NEURAL_MIN_CONTEXT_TOKENS) {
+      return 0;
+    }
+    if (mPredictionEngineMode == PredictionEngineMode.HYBRID
+        && mLastNeuralLatencyMs > NEURAL_LATENCY_BUDGET_MS
+        && !suggestionsHolder.isEmpty()) {
+      Logger.d(
+          TAG,
+          "Skipping neural cascade; last inference "
+              + mLastNeuralLatencyMs
+              + "ms exceeded budget.");
+      return 0;
+    }
+    if (!mNeuralPredictionManager.isActive() && !mNeuralPredictionManager.activate()) {
+      handleNeuralActivationFailure();
+      return 0;
+    }
+    final String[] contextArray = mPresageContext.toArray(new String[0]);
+    final long start = SystemClock.elapsedRealtime();
+    final List<String> predictions =
+        mNeuralPredictionManager.predictNextWords(contextArray, Math.min(limit, mMaxNextWordSuggestionsCount));
+    mLastNeuralLatencyMs = SystemClock.elapsedRealtime() - start;
+    if (mLastNeuralLatencyMs > NEURAL_LATENCY_BUDGET_MS) {
+      Logger.i(
+          TAG,
+          "Neural inference latency "
+              + mLastNeuralLatencyMs
+              + "ms for context "
+              + Arrays.toString(contextArray));
+    }
+    if (predictions.isEmpty()) {
+      if (!TextUtils.isEmpty(mNeuralPredictionManager.getLastActivationError())) {
+        handleNeuralActivationFailure();
+      }
+      return 0;
+    }
+    if (BuildConfig.DEBUG) {
+      Logger.d(
+          TAG,
+          "Neural raw predictions "
+              + predictions
+              + " for context "
+              + Arrays.toString(contextArray));
+    }
+    clearNeuralActivationFailureStatus();
+    int added = 0;
+    for (String prediction : predictions) {
+      if (TextUtils.isEmpty(prediction)) {
+        continue;
+      }
+      if (suggestionsHolder.contains(prediction)) {
+        continue;
+      }
+      suggestionsHolder.add(prediction);
+      added++;
+      if (added == limit) {
+        break;
+      }
+    }
+    return added;
+  }
+
+  private void handleNeuralActivationFailure() {
+    final String error = mNeuralPredictionManager.getLastActivationError();
+    persistNeuralActivationFailure(error);
+    Logger.w(TAG, "Neural prediction engine failed to activate: " + error);
+    final String message =
+        mContext.getString(
+            R.string.prediction_engine_neural_activation_failed,
+            TextUtils.isEmpty(error)
+                ? mContext.getString(R.string.prediction_engine_error_unknown)
+                : error);
+    mMainHandler.post(() -> Toast.makeText(mContext, message, Toast.LENGTH_LONG).show());
+
+    if (mPredictionEngineMode == PredictionEngineMode.NEURAL
+        || mPredictionEngineMode == PredictionEngineMode.HYBRID) {
+      final String currentModeValue = modeToPreferenceValue(mPredictionEngineMode);
+      if (!"ngram".equals(currentModeValue)) {
+        updatePredictionEnginePreference("ngram");
+      } else {
+        updatePredictionEnginePreference("none");
+      }
+    }
+  }
+
+  private void updatePredictionEnginePreference(@NonNull String newMode) {
+    AnyApplication.prefs(mContext)
+        .getString(
+            R.string.settings_key_prediction_engine_mode,
+            R.string.settings_default_prediction_engine_mode)
+        .set(newMode);
+  }
+
+  private void persistNeuralActivationFailure(@Nullable String rawError) {
+    final String sanitized =
+        TextUtils.isEmpty(rawError)
+            ? mContext.getString(R.string.prediction_engine_error_unknown)
+            : sanitizeNeuralFailureMessage(rawError);
+    final String value;
+    if (TextUtils.isEmpty(sanitized)) {
+      value = "";
+    } else {
+      value = System.currentTimeMillis() + String.valueOf(NEURAL_FAILURE_DELIMITER) + sanitized;
+    }
+    AnyApplication.prefs(mContext)
+        .getString(
+            R.string.settings_key_prediction_engine_last_neural_error,
+            R.string.settings_default_prediction_engine_last_neural_error)
+        .set(value);
+  }
+
+  private void clearNeuralActivationFailureStatus() {
+    AnyApplication.prefs(mContext)
+        .getString(
+            R.string.settings_key_prediction_engine_last_neural_error,
+            R.string.settings_default_prediction_engine_last_neural_error)
+        .set("");
+  }
+
+  private String sanitizeNeuralFailureMessage(@Nullable String rawError) {
+    if (TextUtils.isEmpty(rawError)) {
+      return "";
+    }
+    return rawError.replace(String.valueOf(NEURAL_FAILURE_DELIMITER), " ").trim();
+  }
+
+  private String modeToPreferenceValue(@NonNull PredictionEngineMode mode) {
+    switch (mode) {
+      case NGRAM:
+        return "ngram";
+      case NEURAL:
+        return "neural";
+      case HYBRID:
+        return "hybrid";
+      case NONE:
+      default:
+        return "none";
+    }
   }
 
   public boolean tryToLearnNewWord(CharSequence newWord, int frequencyDelta) {

@@ -5,15 +5,16 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+import com.anysoftkeyboard.dictionaries.presage.PresageModelStore;
+import com.anysoftkeyboard.dictionaries.presage.PresageModelStore.ActiveModel;
+import com.anysoftkeyboard.dictionaries.presage.PresageModelDefinition;
 import com.anysoftkeyboard.suggestions.presage.PresageNative;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelStore;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelStore.ActiveModel;
 
-final class PresagePredictionManager {
+public final class PresagePredictionManager {
 
   private static final String TAG = "PresagePredictionManager";
   private static final String CONFIG_DIRECTORY = "presage";
@@ -26,12 +27,12 @@ final class PresagePredictionManager {
   private long mHandle;
   @Nullable private String mLastActivationError;
 
-  PresagePredictionManager(@NonNull Context context) {
+  public PresagePredictionManager(@NonNull Context context) {
     this(context, new PresageModelStore(context));
   }
 
   @VisibleForTesting
-  PresagePredictionManager(
+  public PresagePredictionManager(
       @NonNull Context context, @NonNull PresageModelStore modelStore) {
     mContext = context.getApplicationContext();
     final File configDirectory = new File(mContext.getNoBackupFilesDir(), CONFIG_DIRECTORY);
@@ -42,13 +43,9 @@ final class PresagePredictionManager {
     mLastActivationError = null;
   }
 
-  boolean activate() {
+  public boolean activate() {
     if (isActive()) return true;
-    mLastActivationError = null;
-    if (!ensureConfigPresent()) {
-      if (mLastActivationError == null) {
-        mLastActivationError = "Failed to stage configuration.";
-      }
+    if (!stageConfigurationForActiveModel()) {
       return false;
     }
     mHandle = PresageNative.openModel(mConfigFile.getAbsolutePath());
@@ -61,35 +58,53 @@ final class PresagePredictionManager {
     return true;
   }
 
-  void deactivate() {
+  /**
+   * Ensures the configuration XML on disk reflects the currently selected Presage model without
+   * opening the native bridge. Useful for staging configuration during instrumentation or settings
+   * flows where the JNI bridge may be unavailable (or undesirable).
+   */
+  @VisibleForTesting
+  public boolean stageConfigurationForActiveModel() {
+    mLastActivationError = null;
+    if (ensureConfigPresent()) {
+      return true;
+    }
+    if (mLastActivationError == null) {
+      mLastActivationError = "Failed to stage configuration.";
+    }
+    return false;
+  }
+
+  public void deactivate() {
     if (!isActive()) return;
     PresageNative.closeModel(mHandle);
     mHandle = 0;
     mActiveModel = null;
   }
 
-  boolean isActive() {
+  public boolean isActive() {
     return mHandle != 0L;
   }
 
   @Nullable
-  String getLastActivationError() {
+  public String getLastActivationError() {
     return mLastActivationError;
   }
 
-  float scoreCandidate(@NonNull String[] contextTokens, @NonNull String candidate) {
+  public float scoreCandidate(@NonNull String[] contextTokens, @NonNull String candidate) {
     if (!isActive()) return 0f;
     return PresageNative.scoreSequence(mHandle, contextTokens, candidate);
   }
 
   @NonNull
-  String[] predictNext(@NonNull String[] contextTokens, int maxResults) {
+  public String[] predictNext(@NonNull String[] contextTokens, int maxResults) {
     if (!isActive()) return new String[0];
     return PresageNative.predictNext(mHandle, contextTokens, maxResults);
   }
 
   private boolean ensureConfigPresent() {
-    final ActiveModel activeModel = mModelStore.ensureActiveModel();
+    final ActiveModel activeModel =
+        mModelStore.ensureActiveModel(PresageModelDefinition.EngineType.NGRAM);
     if (activeModel == null) {
       mLastActivationError = "No installed Presage model.";
       Log.w(TAG, "No Presage model available; skipping activation.");

@@ -1,6 +1,6 @@
-New Soft Keyboard 13.8.31
-- Emoji search overlay now docks above the keyboard instead of replacing QWERTY, so you can keep typing while browsing results.
-- Fixes an issue where typing would immediately dismiss the emoji search sheet; the search now stays open and updates with each character.
+New Soft Keyboard 13.8.33
+- Added a downloadable TinyLlama 1.1B (INT4) neural bundle alongside the existing DistilGPT-2 option; grab it from Settings → Language → Grammars → Language models and switch the engine to “Neural” or “Hybrid.”
+- Neural predictions now run fully on-device via ONNX Runtime Mobile, bootstrapping `past_key_values` automatically so new models drop in without code changes.
 
 New Soft Keyboard 13.8.7
 - Mike Rozoff Blue theme: sticky Ctrl/Alt/Fn labels now tint to blue (not just the key body) when active, matching the Shift arrow treatment.

@@ -8,8 +8,8 @@ ext.shouldBePublished = true
 ext.override_release_key_alias = 'fdroidrepo'
 ext.closedTestingTrackName = 'alpha'
 ext.openTestingTrackName = 'beta'
-ext.override_version_code = 15082
-ext.override_version_name = '13.8.31'
+ext.override_version_code = 15084
+ext.override_version_name = '13.8.33'
 
 apply from: "${rootDir}/gradle/apk_module.gradle"
 
@@ -138,6 +138,7 @@ dependencies {
     implementation 'androidx.navigation:navigation-dynamic-features-fragment:2.9.3'
 
     implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.19.2'
 
     testImplementation project(path: ':ime:base-test')
     testImplementation 'com.github.triplet.simpleprovider:simpleprovider:1.1.0'

@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelCatalog;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelCatalog.CatalogEntry;
+import com.anysoftkeyboard.dictionaries.presage.PresageModelDefinition;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelDownloader;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelStore;
 import java.util.Arrays;
@@ -158,6 +159,58 @@ public class PresagePredictionManagerTest {
     assertTrue("Expected Presage-backed suggestions", !holder.isEmpty());
   }
 
+  @Test
+  public void testPresageConfigReflectsSelectedModel() throws Exception {
+    final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
+    final PresageModelStore store = new PresageModelStore(context);
+    final PresageModelCatalog catalog = new PresageModelCatalog(context);
+    final List<CatalogEntry> entries = catalog.fetchCatalog();
+    assertFalse("No Presage models available in catalog", entries.isEmpty());
+
+    CatalogEntry targetEntry = null;
+    for (CatalogEntry entry : entries) {
+      if ("varikn_sherlock_3gram".equals(entry.getDefinition().getId())) {
+        targetEntry = entry;
+        break;
+      }
+    }
+
+    if (targetEntry == null) {
+      targetEntry = entries.get(0);
+    }
+
+    final PresageModelDownloader downloader = new PresageModelDownloader(context, store);
+    downloader.downloadAndInstall(targetEntry);
+    store.persistSelectedModelId(
+        targetEntry.getDefinition().getEngineType(), targetEntry.getDefinition().getId());
+
+    final PresagePredictionManager manager = new PresagePredictionManager(context);
+    assertTrue(
+        "Presage failed to stage configuration", manager.stageConfigurationForActiveModel());
+
+    final java.io.File configFile =
+        new java.io.File(
+            context.getNoBackupFilesDir(), "presage" + java.io.File.separator + "presage_ngram.xml");
+    assertTrue("Presage config missing", configFile.exists());
+
+    final String configContents;
+    try (java.io.InputStream inputStream = new java.io.FileInputStream(configFile);
+        java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream()) {
+      final byte[] buffer = new byte[4096];
+      int read;
+      while ((read = inputStream.read(buffer)) != -1) {
+        outputStream.write(buffer, 0, read);
+      }
+      configContents = outputStream.toString("UTF-8");
+    }
+    final String expectedSegment =
+        java.io.File.separator + targetEntry.getDefinition().getId() + java.io.File.separator;
+    assertTrue(
+        "Presage config does not reference selected model",
+        configContents.contains(expectedSegment));
+    manager.deactivate();
+  }
+
   private void ensureModelInstalled(Context context) {
     final PresageModelStore store = new PresageModelStore(context);
     final PresageModelStore.ActiveModel activeModel = store.ensureActiveModel();
@@ -168,8 +221,18 @@ public class PresagePredictionManagerTest {
       final PresageModelCatalog catalog = new PresageModelCatalog(context);
       final List<CatalogEntry> entries = catalog.fetchCatalog();
       assertFalse("No Presage models available in catalog", entries.isEmpty());
+      CatalogEntry targetEntry = null;
+      for (CatalogEntry entry : entries) {
+        if (entry.getDefinition().getEngineType() == PresageModelDefinition.EngineType.NGRAM) {
+          targetEntry = entry;
+          break;
+        }
+      }
+      if (targetEntry == null) {
+        throw new AssertionError("No n-gram Presage models available in catalog");
+      }
       final PresageModelDownloader downloader = new PresageModelDownloader(context, store);
-      downloader.downloadAndInstall(entries.get(0));
+      downloader.downloadAndInstall(targetEntry);
     } catch (Exception exception) {
       throw new AssertionError("Failed downloading Presage model", exception);
     }

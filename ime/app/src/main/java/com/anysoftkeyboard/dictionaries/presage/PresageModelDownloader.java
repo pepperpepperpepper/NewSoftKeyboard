@@ -89,8 +89,9 @@ public final class PresageModelDownloader {
       deleteRecursively(targetDir);
       moveOrCopy(stagingDir, targetDir);
 
-      if (mModelStore.getSelectedModelId() == null) {
-        mModelStore.persistSelectedModelId(manifestDefinition.getId());
+      if (mModelStore.getSelectedModelId(manifestDefinition.getEngineType()) == null) {
+        mModelStore.persistSelectedModelId(
+            manifestDefinition.getEngineType(), manifestDefinition.getId());
       }
 
       return manifestDefinition;
@@ -156,8 +157,10 @@ public final class PresageModelDownloader {
 
   private void validateExtractedFiles(
       @NonNull File stagingDir, @NonNull PresageModelDefinition definition) throws IOException {
-    validateFileExists(stagingDir, definition.getArpaRequirement().getFilename());
-    validateFileExists(stagingDir, definition.getVocabRequirement().getFilename());
+    for (PresageModelDefinition.FileRequirement requirement :
+        definition.getAllFileRequirements().values()) {
+      validateFileExists(stagingDir, requirement.getFilename());
+    }
   }
 
   private void validateFileExists(@NonNull File dir, @NonNull String filename) throws IOException {

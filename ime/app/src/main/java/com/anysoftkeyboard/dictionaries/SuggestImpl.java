@@ -176,9 +176,13 @@ public class SuggestImpl implements Suggest {
 
     final boolean validWord = isValidWord(previousWord);
     final boolean presageEnabled = mSuggestionsProvider.isPresageEnabled();
+    final boolean neuralEnabled = mSuggestionsProvider.isNeuralEnabled();
 
-    if (!validWord && !presageEnabled) {
-      Logger.d(TAG, "getNextSuggestions for '%s' is invalid and no Presage engine is active.", previousWord);
+    if (!validWord && !(presageEnabled || neuralEnabled)) {
+      Logger.d(
+          TAG,
+          "getNextSuggestions for '%s' is invalid and no third-party engine (ngram/neural) is active.",
+          previousWord);
       return mNextSuggestions;
     }
 
@@ -187,11 +191,12 @@ public class SuggestImpl implements Suggest {
     if (BuildConfig.DEBUG) {
       Logger.d(
           TAG,
-          "getNextSuggestions sources for '%s' (capital? %s, valid? %s, presage? %s):",
+          "getNextSuggestions sources for '%s' (capital? %s, valid? %s, presage? %s, neural? %s):",
           previousWord,
           mIsAllUpperCase,
           validWord,
-          presageEnabled);
+          presageEnabled,
+          neuralEnabled);
       for (int suggestionIndex = 0;
           suggestionIndex < mNextSuggestions.size();
           suggestionIndex++) {

@@ -9,6 +9,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import com.anysoftkeyboard.base.utils.Logger;
+import com.anysoftkeyboard.dictionaries.PresagePredictionManager;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelCatalog;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelCatalog.CatalogEntry;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelDefinition;
@@ -87,17 +88,28 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
         definitions,
         (left, right) -> left.getLabel().toLowerCase(Locale.US).compareTo(right.getLabel().toLowerCase(Locale.US)));
 
-    final String selectedId = mModelStore.getSelectedModelId();
+    final java.util.EnumMap<PresageModelDefinition.EngineType, String> selectedIds =
+        new java.util.EnumMap<>(PresageModelDefinition.EngineType.class);
+    for (PresageModelDefinition.EngineType engineType :
+        PresageModelDefinition.EngineType.values()) {
+      selectedIds.put(engineType, mModelStore.getSelectedModelId(engineType));
+    }
     for (PresageModelDefinition definition : definitions) {
       final Preference preference = new Preference(requireContext());
       preference.setKey("installed_" + definition.getId());
       preference.setTitle(definition.getLabel());
       preference.setIconSpaceReserved(false);
+      final String selectedId = selectedIds.get(definition.getEngineType());
       final boolean isSelected = selectedId != null && selectedId.equals(definition.getId());
-      preference.setSummary(
+      final String baseSummary =
           isSelected
               ? getString(R.string.presage_models_installed_selected)
-              : getString(R.string.presage_models_installed_tap_to_activate));
+              : getString(R.string.presage_models_installed_tap_to_activate);
+      preference.setSummary(
+          getString(
+              R.string.presage_models_engine_summary_format,
+              engineLabel(definition.getEngineType()),
+              baseSummary));
       preference.setOnPreferenceClickListener(
           pref -> {
             showInstalledModelOptions(definition, isSelected);
@@ -140,7 +152,11 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
       final String modelId = entry.getDefinition().getId();
       final Preference preference = new Preference(requireContext());
       preference.setKey("catalog_" + modelId);
-      preference.setTitle(entry.getDefinition().getLabel());
+      preference.setTitle(
+          getString(
+              R.string.presage_models_available_title_format,
+              entry.getDefinition().getLabel(),
+              engineLabel(entry.getDefinition().getEngineType())));
       preference.setIconSpaceReserved(false);
 
       final boolean installed = installedIds.contains(modelId);
@@ -211,8 +227,11 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
             (dialog, which) -> {
               final int action = actions.get(which);
               if (action == 0) {
-                mModelStore.persistSelectedModelId(definition.getId());
+                mModelStore.persistSelectedModelId(
+                    definition.getEngineType(), definition.getId());
+                stagePresageConfigurationAsync();
                 refreshInstalledModels();
+                fetchCatalog();
               } else if (action == 1) {
                 mModelStore.removeModel(definition.getId());
                 refreshInstalledModels();
@@ -262,6 +281,7 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
       parts.add(getString(R.string.presage_models_recommended_label));
     }
 
+    parts.add(engineLabel(entry.getDefinition().getEngineType()));
     return TextUtils.join(" • ", parts);
   }
 
@@ -275,5 +295,37 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
     }
     return message;
   }
-}
 
+  private String engineLabel(@NonNull PresageModelDefinition.EngineType engineType) {
+    switch (engineType) {
+      case NEURAL:
+        return getString(R.string.presage_models_engine_neural);
+      case NGRAM:
+      default:
+        return getString(R.string.presage_models_engine_ngram);
+    }
+  }
+
+  private void stagePresageConfigurationAsync() {
+    mDisposables.add(
+        Single.fromCallable(
+                () -> {
+                  final PresagePredictionManager manager =
+                      new PresagePredictionManager(requireContext());
+                  final boolean staged = manager.stageConfigurationForActiveModel();
+                  return staged ? null : manager.getLastActivationError();
+                })
+            .subscribeOn(RxSchedulers.background())
+            .observeOn(RxSchedulers.mainThread())
+            .subscribe(
+                errorMessage -> {
+                  if (errorMessage != null) {
+                    Logger.w(
+                        TAG,
+                        "Failed staging Presage config after model switch: " + errorMessage);
+                  }
+                },
+                throwable ->
+                    Logger.w(TAG, "Failed staging Presage config after model switch", throwable)));
+  }
+}
