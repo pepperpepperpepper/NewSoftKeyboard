@@ -20,6 +20,7 @@ import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
 import com.anysoftkeyboard.debug.TestInputActivity;
+import com.anysoftkeyboard.keyboards.views.CandidateViewTestRegistry;
 import com.anysoftkeyboard.dictionaries.neural.NeuralPredictionManager;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.R;
@@ -90,23 +91,13 @@ public class NextWordSuggestionsUiAutomatorTest {
 
   @Test
   public void composeNonsenseSentenceUsingOnlySuggestions() throws Exception {
-    // Use test-only proxy overlays to tap candidates reliably
-    UiObject2 leftProxy =
-        mDevice.wait(
-            Until.findObject(By.res("wtf.uhoh.newsoftkeyboard:id/test_candidate_left")),
-            READY_TIMEOUT_MS);
-    if (leftProxy == null) {
-      dumpWindowHierarchyForDebug();
-      fail("Test candidate proxy not visible");
-    }
-
-    // Tap only on the left proxy N times, letting the IME pick suggestions.
-    final int taps = 12;
-    for (int i = 0; i < taps; i++) {
-      leftProxy.click();
+    // Build a sentence by invoking the debug hook to pick the first suggestion repeatedly.
+    // Add a space between picks using a keyboard-area tap so the IME stays engaged.
+    final int picks = 12;
+    for (int i = 0; i < picks; i++) {
+      mScenario.onActivity(activity -> CandidateViewTestRegistry.pickByIndex(0));
       SystemClock.sleep(SHORT_WAIT_MS);
-      // Add a space with a tap near the bottom-center of the keyboard surface
-      clickKeyboardRelative(0.50f, 0.90f);
+      clickKeyboardRelative(0.50f, 0.90f); // spacebar zone
       SystemClock.sleep(SHORT_WAIT_MS);
     }
 
