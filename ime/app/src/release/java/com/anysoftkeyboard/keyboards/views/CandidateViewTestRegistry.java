@@ -15,5 +15,16 @@ final class CandidateViewTestRegistry {
     // not supported in release builds
     return false;
   }
-}
 
+  static int getCount() {
+    return 0;
+  }
+
+  static String getSuggestionAt(int index) {
+    return null;
+  }
+
+  static boolean pickIfAvailable(int index) {
+    return false;
+  }
+}

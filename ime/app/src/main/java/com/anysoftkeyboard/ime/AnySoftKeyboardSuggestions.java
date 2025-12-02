@@ -137,6 +137,15 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
     mSuggest = createSuggest();
 
+    if (BuildConfig.TESTING_BUILD) {
+      try {
+        // expose a tiny test-only API to help instrumentation seed context
+        com.anysoftkeyboard.ime.ImeTestApi.setService(this);
+      } catch (Throwable ignore) {
+        // class not present in release builds
+      }
+    }
+
     addDisposable(
         prefs()
             .getBoolean(

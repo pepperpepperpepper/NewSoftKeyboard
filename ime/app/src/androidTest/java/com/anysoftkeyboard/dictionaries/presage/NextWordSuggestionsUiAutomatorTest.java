@@ -41,6 +41,7 @@ public class NextWordSuggestionsUiAutomatorTest {
   private static final String TAG = "NextWordUiAuto";
   private static final long READY_TIMEOUT_MS = 10000L;
   private static final long SHORT_WAIT_MS = 400L;
+  private static final long SUGGESTIONS_TIMEOUT_MS = 8000L;
 
   private UiDevice mDevice;
   private ActivityScenario<TestInputActivity> mScenario;
@@ -62,6 +63,9 @@ public class NextWordSuggestionsUiAutomatorTest {
     SharedPreferences prefs = DirectBootAwareSharedPreferences.create(context);
     prefs
         .edit()
+        .putBoolean(
+            context.getString(R.string.settings_key_show_suggestions),
+            true)
         .putString(
             context.getString(R.string.settings_key_next_word_dictionary_type),
             "words")
@@ -82,14 +86,10 @@ public class NextWordSuggestionsUiAutomatorTest {
     waitForKeyboardVisible();
 
     // Seed a neutral prefix so suggestions start flowing
-    mScenario.onActivity(
-        activity -> {
-          EditText edit = activity.findViewById(R.id.test_edit_text);
-          edit.setText("the ");
-          activity.forceShowKeyboard();
-        });
+    // Seed context via IME commit (debug test hook), then ensure keyboard remains visible
+    mScenario.onActivity(activity -> com.anysoftkeyboard.ime.ImeTestApi.commitText("the "));
     SystemClock.sleep(SHORT_WAIT_MS);
-    clickKeyboardRelative(0.50f, 0.90f);
+    clickKeyboardRelative(0.50f, 0.90f); // spacebar to trigger next-word
     SystemClock.sleep(SHORT_WAIT_MS);
   }
 
@@ -102,14 +102,31 @@ public class NextWordSuggestionsUiAutomatorTest {
 
   @Test
   public void composeNonsenseSentenceUsingOnlySuggestions() throws Exception {
-    // Build a sentence by invoking the debug hook to pick the first suggestion repeatedly.
-    // Add a space between picks using a keyboard-area tap so the IME stays engaged.
+    // Wait until we have at least one suggestion visible
+    waitForNonEmptySuggestions();
+    // Log the first few suggestions for visibility
+    mScenario.onActivity(
+        activity -> {
+          int count = CandidateViewTestRegistry.getCount();
+          String first = CandidateViewTestRegistry.getSuggestionAt(0);
+          Log.d(TAG, "SUG_COUNT=" + count + " FIRST='" + first + "'");
+        });
+
+    // Build a sentence by picking the first suggestion repeatedly, with brief waits in between
     final int picks = 12;
     for (int i = 0; i < picks; i++) {
-      mScenario.onActivity(activity -> CandidateViewTestRegistry.pickByIndex(0));
+      // Attempt to pick only if available; otherwise wait and retry once
+      final int attempt = i;
+      mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
       SystemClock.sleep(SHORT_WAIT_MS);
-      clickKeyboardRelative(0.50f, 0.90f); // spacebar zone
+      // spacebar zone to separate tokens and keep IME active
+      clickKeyboardRelative(0.50f, 0.90f);
+      // give time for next suggestions to compute
       SystemClock.sleep(SHORT_WAIT_MS);
+      if (i % 3 == 2) {
+        // every few tokens ensure suggestions replenished
+        waitForNonEmptySuggestions();
+      }
     }
 
     // Read the editor contents and log the nonsense sentence
@@ -122,6 +139,25 @@ public class NextWordSuggestionsUiAutomatorTest {
     String sentence = textRef.get().trim();
     Log.d(TAG, "NON_SENSE_SENTENCE=" + sentence);
     assertFalse("Expected sentence from suggestions only", sentence.isEmpty());
+  }
+
+  private void waitForNonEmptySuggestions() {
+    final long start = SystemClock.uptimeMillis();
+    int count;
+    do {
+      final int[] c = {0};
+      mScenario.onActivity(activity -> c[0] = CandidateViewTestRegistry.getCount());
+      count = c[0];
+      if (count > 0) return;
+      SystemClock.sleep(200);
+    } while (SystemClock.uptimeMillis() - start < SUGGESTIONS_TIMEOUT_MS);
+    // One last check before giving up
+    final int[] c = {0};
+    mScenario.onActivity(activity -> c[0] = CandidateViewTestRegistry.getCount());
+    if (c[0] == 0) {
+      dumpWindowHierarchyForDebug();
+      Log.w(TAG, "No suggestions visible after timeout");
+    }
   }
 
   private void ensureMixedcaseModelActive(Context context) throws Exception {
@@ -215,6 +251,50 @@ public class NextWordSuggestionsUiAutomatorTest {
     int width = mDevice.getDisplayWidth();
     int height = mDevice.getDisplayHeight();
     return new Rect(0, (int) (height * 0.60f), width, height);
+  }
+
+  private void typeSoft(String text) {
+    for (int i = 0; i < text.length(); i++) {
+      char c = text.charAt(i);
+      switch (c) {
+        case 't':
+          tapKeyTopRow(0.46f); // approximate position of 't'
+          break;
+        case 'h':
+          tapKeyMiddleRow(0.56f); // approximate 'h'
+          break;
+        case 'e':
+          tapKeyTopRow(0.26f); // approximate 'e'
+          break;
+        case ' ':
+          clickKeyboardRelative(0.50f, 0.90f); // spacebar
+          break;
+        default:
+          // fallback: small center tap to keep IME active
+          clickKeyboardRelative(0.5f, 0.7f);
+      }
+      SystemClock.sleep(120);
+    }
+  }
+
+  private void tapKeyTopRow(float relX) {
+    Rect kb = locateKeyboardBounds();
+    // top row roughly at 20% of keyboard height
+    int x = kb.left + Math.round(kb.width() * clamp(relX));
+    int y = kb.top + Math.round(kb.height() * 0.20f);
+    mDevice.click(x, y);
+  }
+
+  private void tapKeyMiddleRow(float relX) {
+    Rect kb = locateKeyboardBounds();
+    // middle row roughly at 50% of keyboard height
+    int x = kb.left + Math.round(kb.width() * clamp(relX));
+    int y = kb.top + Math.round(kb.height() * 0.50f);
+    mDevice.click(x, y);
+  }
+
+  private float clamp(float v) {
+    return Math.min(0.98f, Math.max(0.02f, v));
   }
 
   private Rect fetchImeWindowBounds() {
