@@ -7,5 +7,6 @@ final class ImeTestApi {
   static void setService(AnySoftKeyboardSuggestions svc) {}
 
   static boolean commitText(String text) { return false; }
-}
 
+  static int forceNextWordFromCursor() { return 0; }
+}

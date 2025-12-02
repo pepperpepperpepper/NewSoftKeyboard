@@ -91,6 +91,9 @@ public class NextWordSuggestionsUiAutomatorTest {
     SystemClock.sleep(SHORT_WAIT_MS);
     clickKeyboardRelative(0.50f, 0.90f); // spacebar to trigger next-word
     SystemClock.sleep(SHORT_WAIT_MS);
+    // Ask IME to compute and show next-word suggestions from previous token
+    mScenario.onActivity(activity -> com.anysoftkeyboard.ime.ImeTestApi.forceNextWordFromCursor());
+    SystemClock.sleep(SHORT_WAIT_MS);
   }
 
   @After
@@ -115,18 +118,13 @@ public class NextWordSuggestionsUiAutomatorTest {
     // Build a sentence by picking the first suggestion repeatedly, with brief waits in between
     final int picks = 12;
     for (int i = 0; i < picks; i++) {
-      // Attempt to pick only if available; otherwise wait and retry once
-      final int attempt = i;
+      // Pick first suggestion if available
       mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
       SystemClock.sleep(SHORT_WAIT_MS);
-      // spacebar zone to separate tokens and keep IME active
-      clickKeyboardRelative(0.50f, 0.90f);
-      // give time for next suggestions to compute
+      // Ask IME to compute/show next suggestions for the newly committed token
+      mScenario.onActivity(activity -> com.anysoftkeyboard.ime.ImeTestApi.forceNextWordFromCursor());
       SystemClock.sleep(SHORT_WAIT_MS);
-      if (i % 3 == 2) {
-        // every few tokens ensure suggestions replenished
-        waitForNonEmptySuggestions();
-      }
+      waitForNonEmptySuggestions();
     }
 
     // Read the editor contents and log the nonsense sentence
