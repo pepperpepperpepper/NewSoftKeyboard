@@ -18,6 +18,12 @@ public final class PluginActions {
 
   public static final String METADATA_KEYBOARDS_NEW = "wtf.uhoh.newsoftkeyboard.keyboards";
   public static final String METADATA_DICTIONARIES_NEW = "wtf.uhoh.newsoftkeyboard.dictionaries";
+  public static final String METADATA_EXTENSION_KEYBOARD_NEW =
+      "wtf.uhoh.newsoftkeyboard.plugindata.extensionkeyboard";
+  public static final String METADATA_QUICK_TEXT_NEW =
+      "wtf.uhoh.newsoftkeyboard.plugindata.quicktextkeys";
+  public static final String METADATA_KEYBOARD_THEME_NEW =
+      "wtf.uhoh.newsoftkeyboard.plugindata.keyboardtheme";
 
   // Legacy AnySoftKeyboard action namespace for compatibility
   public static final String ACTION_KEYBOARD_ASK = "com.anysoftkeyboard.plugin.KEYBOARD";
@@ -30,6 +36,12 @@ public final class PluginActions {
   public static final String METADATA_KEYBOARDS_ASK = "com.anysoftkeyboard.plugindata.keyboards";
   public static final String METADATA_DICTIONARIES_ASK =
       "com.anysoftkeyboard.plugindata.dictionaries";
+  public static final String METADATA_EXTENSION_KEYBOARD_ASK =
+      "com.anysoftkeyboard.plugindata.extensionkeyboard";
+  public static final String METADATA_QUICK_TEXT_ASK =
+      "com.anysoftkeyboard.plugindata.quicktextkeys";
+  public static final String METADATA_KEYBOARD_THEME_ASK =
+      "com.anysoftkeyboard.plugindata.keyboardtheme";
 
   public static boolean isKeyboardAction(String action) {
     return ACTION_KEYBOARD_NEW.equals(action) || ACTION_KEYBOARD_ASK.equals(action);
@@ -39,4 +51,3 @@ public final class PluginActions {
     return ACTION_DICTIONARY_NEW.equals(action) || ACTION_DICTIONARY_ASK.equals(action);
   }
 }
-

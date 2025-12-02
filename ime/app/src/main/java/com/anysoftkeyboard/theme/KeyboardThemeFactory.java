@@ -24,6 +24,7 @@ import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.AnyApplication;
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.Observable;
@@ -46,15 +47,17 @@ public class KeyboardThemeFactory extends AddOnsFactory.SingleAddOnsFactory<Keyb
         context,
         DirectBootAwareSharedPreferences.create(context),
         "ASK_KT",
-        "com.anysoftkeyboard.plugin.KEYBOARD_THEME",
-        "com.anysoftkeyboard.plugindata.keyboardtheme",
+        PluginActions.ACTION_THEME_NEW,
+        PluginActions.METADATA_KEYBOARD_THEME_NEW,
         "KeyboardThemes",
         "KeyboardTheme",
         PREF_ID_PREFIX,
         R.xml.keyboard_themes,
         R.string.settings_default_keyboard_theme_key,
         true,
-        BuildConfig.TESTING_BUILD);
+        BuildConfig.TESTING_BUILD,
+        new AddOnsFactory.ReceiverSpec(
+            PluginActions.ACTION_THEME_ASK, PluginActions.METADATA_KEYBOARD_THEME_ASK));
     mFallbackThemeId = mContext.getString(R.string.fallback_keyboard_theme_id);
   }
 

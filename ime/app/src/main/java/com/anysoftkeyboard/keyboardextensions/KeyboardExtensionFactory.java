@@ -28,6 +28,7 @@ import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import java.util.Locale;
@@ -58,15 +59,18 @@ public class KeyboardExtensionFactory extends AddOnsFactory.SingleAddOnsFactory<
         context,
         DirectBootAwareSharedPreferences.create(context),
         "ASK_EKF",
-        "com.anysoftkeyboard.plugin.EXTENSION_KEYBOARD",
-        "com.anysoftkeyboard.plugindata.extensionkeyboard",
+        PluginActions.ACTION_EXTENSION_KEYBOARD_NEW,
+        PluginActions.METADATA_EXTENSION_KEYBOARD_NEW,
         "ExtensionKeyboards",
         "ExtensionKeyboard",
         prefIdPrefix,
         R.xml.extension_keyboards,
         defaultAddOnId,
         true,
-        BuildConfig.TESTING_BUILD);
+        BuildConfig.TESTING_BUILD,
+        new AddOnsFactory.ReceiverSpec(
+            PluginActions.ACTION_EXTENSION_KEYBOARD_ASK,
+            PluginActions.METADATA_EXTENSION_KEYBOARD_ASK));
     mExtensionType = extensionType;
   }
 

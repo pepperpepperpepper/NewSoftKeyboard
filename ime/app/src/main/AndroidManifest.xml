@@ -145,13 +145,22 @@
         </intent>
         <!-- extension-keyboard (rows) -->
         <intent>
+            <action android:name="wtf.uhoh.newsoftkeyboard.EXTENSION_KEYBOARD" />
+        </intent>
+        <intent>
             <action android:name="com.anysoftkeyboard.plugin.EXTENSION_KEYBOARD" />
         </intent>
         <!-- themes -->
         <intent>
+            <action android:name="wtf.uhoh.newsoftkeyboard.KEYBOARD_THEME" />
+        </intent>
+        <intent>
             <action android:name="com.anysoftkeyboard.plugin.KEYBOARD_THEME" />
         </intent>
         <!-- quick-text (emoji) -->
+        <intent>
+            <action android:name="wtf.uhoh.newsoftkeyboard.QUICK_TEXT_KEY" />
+        </intent>
         <intent>
             <action android:name="com.anysoftkeyboard.plugin.QUICK_TEXT_KEY" />
         </intent>

@@ -8,6 +8,9 @@ import com.anysoftkeyboard.addons.AddOnsFactory;
 import com.anysoftkeyboard.addons.AddOnsFactory.ReceiverSpec;
 import com.anysoftkeyboard.dictionaries.ExternalDictionaryFactory;
 import com.anysoftkeyboard.keyboards.KeyboardFactory;
+import com.anysoftkeyboard.keyboardextensions.KeyboardExtensionFactory;
+import com.anysoftkeyboard.quicktextkeys.QuickTextKeyFactory;
+import com.anysoftkeyboard.theme.KeyboardThemeFactory;
 import java.lang.reflect.Field;
 import java.util.List;
 import org.junit.Test;
@@ -53,5 +56,53 @@ public class PluginActionsWiringTest {
             new ReceiverSpec(
                 PluginActions.ACTION_DICTIONARY_ASK, PluginActions.METADATA_DICTIONARIES_ASK)));
   }
-}
 
+  @Test
+  public void extensionKeyboardFactoryContainsBothNamespaces() throws Exception {
+    KeyboardExtensionFactory factory =
+        new KeyboardExtensionFactory(
+            getApplicationContext(),
+            com.menny.android.anysoftkeyboard.R.string.settings_default_ext_kbd_bottom_row_key,
+            KeyboardExtensionFactory.BOTTOM_ROW_PREF_ID_PREFIX,
+            com.anysoftkeyboard.keyboardextensions.KeyboardExtension.TYPE_BOTTOM);
+    List<ReceiverSpec> specs = getReceiverSpecs(factory);
+    assertTrue(
+        specs.contains(
+            new ReceiverSpec(
+                PluginActions.ACTION_EXTENSION_KEYBOARD_NEW,
+                PluginActions.METADATA_EXTENSION_KEYBOARD_NEW)));
+    assertTrue(
+        specs.contains(
+            new ReceiverSpec(
+                PluginActions.ACTION_EXTENSION_KEYBOARD_ASK,
+                PluginActions.METADATA_EXTENSION_KEYBOARD_ASK)));
+  }
+
+  @Test
+  public void quickTextFactoryContainsBothNamespaces() throws Exception {
+    QuickTextKeyFactory factory = new QuickTextKeyFactory(getApplicationContext());
+    List<ReceiverSpec> specs = getReceiverSpecs(factory);
+    assertTrue(
+        specs.contains(
+            new ReceiverSpec(
+                PluginActions.ACTION_QUICK_TEXT_NEW, PluginActions.METADATA_QUICK_TEXT_NEW)));
+    assertTrue(
+        specs.contains(
+            new ReceiverSpec(
+                PluginActions.ACTION_QUICK_TEXT_ASK, PluginActions.METADATA_QUICK_TEXT_ASK)));
+  }
+
+  @Test
+  public void themeFactoryContainsBothNamespaces() throws Exception {
+    KeyboardThemeFactory factory = new KeyboardThemeFactory(getApplicationContext());
+    List<ReceiverSpec> specs = getReceiverSpecs(factory);
+    assertTrue(
+        specs.contains(
+            new ReceiverSpec(
+                PluginActions.ACTION_THEME_NEW, PluginActions.METADATA_KEYBOARD_THEME_NEW)));
+    assertTrue(
+        specs.contains(
+            new ReceiverSpec(
+                PluginActions.ACTION_THEME_ASK, PluginActions.METADATA_KEYBOARD_THEME_ASK)));
+  }
+}

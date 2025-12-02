@@ -24,6 +24,7 @@ import com.anysoftkeyboard.addons.AddOnsFactory;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 import java.util.Locale;
 
 public class QuickTextKeyFactory extends AddOnsFactory.MultipleAddOnsFactory<QuickTextKey> {
@@ -43,15 +44,17 @@ public class QuickTextKeyFactory extends AddOnsFactory.MultipleAddOnsFactory<Qui
         context,
         DirectBootAwareSharedPreferences.create(context),
         "ASK_QKF",
-        "com.anysoftkeyboard.plugin.QUICK_TEXT_KEY",
-        "com.anysoftkeyboard.plugindata.quicktextkeys",
+        PluginActions.ACTION_QUICK_TEXT_NEW,
+        PluginActions.METADATA_QUICK_TEXT_NEW,
         "QuickTextKeys",
         "QuickTextKey",
         PREF_ID_PREFIX,
         R.xml.quick_text_keys,
         R.string.settings_default_quick_text_key_id,
         true,
-        BuildConfig.TESTING_BUILD);
+        BuildConfig.TESTING_BUILD,
+        new AddOnsFactory.ReceiverSpec(
+            PluginActions.ACTION_QUICK_TEXT_ASK, PluginActions.METADATA_QUICK_TEXT_ASK));
   }
 
   @Override

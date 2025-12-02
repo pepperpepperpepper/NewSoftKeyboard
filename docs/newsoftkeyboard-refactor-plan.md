@@ -33,19 +33,21 @@ Milestones
 1. Documentation and constants centralization (this change):
    - Add `PluginActions` facade with both namespaces.
    - Update discovery code to consume facade (follow‑ups).
+   - Status: DONE for Keyboard/Dictionaries, DONE for Themes/Quick‑text/Extension rows.
 2. Build flavors (optional):
    - Define `nsq` vs `askCompat` product flavors to tune labels/resources without touching runtime APIs.
 3. Engine boundary (interfaces only):
    - Introduce `PredictionEngine` and `PredictionSession` interfaces in a new `engine-core` package (no module split yet).
+   - Status: DONE (adapters present for Presage/Neural; SuggestionsProvider consumes seam).
 4. Module extraction:
    - Split `engine-presage` and `engine-neural` if desired; keep public API identical.
 5. Plugin surface hardening:
    - Add CTS‑style tests that install a sample keyboard/theme/dictionary add‑on APK and verify discovery works under both action namespaces.
 
 Migration Checklist
-- [ ] Replace scattered action strings with `PluginActions`.
+- [x] Replace scattered action strings with `PluginActions` (Keyboards, Dictionaries, Themes, Quick‑text, Extension rows).
 - [ ] Keep both authorities for FileProvider and prefs where needed.
-- [ ] Verify add‑on discovery via `KeyboardFactory` and `ExternalDictionaryFactory` under both actions.
+- [x] Verify add‑on discovery via `KeyboardFactory` and `ExternalDictionaryFactory` under both actions.
 - [ ] Add release notes and README branding updates.
 
 Testing
@@ -54,4 +56,3 @@ Testing
 
 Risks & Rollback
 - Changing actions at call sites is safe; factories already support both. Rollback by reverting to string literals.
-
