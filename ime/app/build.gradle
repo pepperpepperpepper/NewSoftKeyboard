@@ -202,3 +202,89 @@ android {
         }
     }
 }
+
+// --- Test helper tasks for release instrumentation (re-sign + install + run) ---
+afterEvaluate { proj ->
+    // Resolve apksigner from the installed Android SDK
+    def sdkDir = System.getenv('ANDROID_HOME') ?: System.getenv('ANDROID_SDK_ROOT')
+    def apksigner = null
+    if (sdkDir != null) {
+        def candidates = fileTree(dir: new File(sdkDir, 'build-tools'), includes: ['**/apksigner']).files
+        if (!candidates.isEmpty()) {
+            apksigner = candidates.sort().last().absolutePath
+        }
+    }
+
+    tasks.register('resignApksForReleaseTest') { t ->
+        t.group = 'verification'
+        t.description = 'Re-signs release APK and androidTest APK with a common ephemeral keystore.'
+        t.dependsOn('assembleRelease', 'assembleAndroidTest')
+        t.doLast {
+            if (apksigner == null) throw new GradleException('apksigner not found. Ensure ANDROID_HOME/ANDROID_SDK_ROOT is set and build-tools installed.')
+
+            def buildDirPath = project.layout.buildDirectory.get().asFile
+            def relApk = new File(buildDirPath, 'outputs/apk/release/app-release.apk')
+            def testApk = new File(buildDirPath, 'outputs/apk/androidTest/debug/app-debug-androidTest.apk')
+            if (!relApk.exists()) throw new GradleException("Release APK not found at ${relApk}")
+            if (!testApk.exists()) throw new GradleException("androidTest APK not found at ${testApk}")
+
+            def outDir = new File(buildDirPath, 'outputs/apk/tests-signed')
+            outDir.mkdirs()
+            def relOut = new File(outDir, 'app-release-testsigned.apk')
+            def testOut = new File(outDir, 'app-androidTest-testsigned.apk')
+            project.copy { from relApk; into outDir; rename { 'app-release-testsigned.apk' } }
+            project.copy { from testApk; into outDir; rename { 'app-androidTest-testsigned.apk' } }
+
+            // Create ephemeral keystore
+            def ksDir = new File(buildDirPath, 'tmp/tests-sign')
+            ksDir.mkdirs()
+            def ksFile = new File(ksDir, 'ephemeral-testsign.jks')
+            if (!ksFile.exists()) {
+                project.exec { commandLine 'keytool', '-genkeypair', '-v', '-keystore', ksFile.absolutePath,
+                    '-storepass', 'password', '-keypass', 'password', '-alias', 'tempkey', '-keyalg', 'RSA', '-keysize', '4096', '-validity', '10000',
+                    '-dname', 'CN=NSK Test,O=NewSoftKeyboard,C=US' }
+            }
+
+            // Sign both APKs with the same keystore
+            project.exec { commandLine apksigner, 'sign', '--ks', ksFile.absolutePath, '--ks-key-alias', 'tempkey', '--ks-pass', 'pass:password', '--key-pass', 'pass:password', '--out', relOut.absolutePath, relOut.absolutePath }
+            project.exec { commandLine apksigner, 'sign', '--ks', ksFile.absolutePath, '--ks-key-alias', 'tempkey', '--ks-pass', 'pass:password', '--key-pass', 'pass:password', '--out', testOut.absolutePath, testOut.absolutePath }
+
+            println "Signed APKs:\n  ${relOut}\n  ${testOut}"
+        }
+    }
+
+    tasks.register('installReleaseAndTestApks') { t ->
+        t.group = 'verification'
+        t.description = 'Installs testsigned release + androidTest APKs on connected device.'
+        t.dependsOn('resignApksForReleaseTest')
+        t.doLast {
+            def dev = System.getenv('GENYMOTION_DEV') ?: 'localhost:42865'
+            def buildDirPath = project.layout.buildDirectory.get().asFile
+            def outDir = new File(buildDirPath, 'outputs/apk/tests-signed')
+            def relOut = new File(outDir, 'app-release-testsigned.apk')
+            def testOut = new File(outDir, 'app-androidTest-testsigned.apk')
+            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'uninstall', 'wtf.uhoh.newsoftkeyboard' }
+            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'uninstall', 'wtf.uhoh.newsoftkeyboard.test' }
+            project.exec { commandLine 'adb', '-s', dev, 'install', '-t', relOut.absolutePath }
+            project.exec { commandLine 'adb', '-s', dev, 'install', '-t', testOut.absolutePath }
+            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'shell', 'ime', 'enable', 'wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard' }
+            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'shell', 'ime', 'set', 'wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard' }
+        }
+    }
+
+    tasks.register('runReleaseUiTapTest') { t ->
+        t.group = 'verification'
+        t.description = 'Runs the UI tap test against the testsigned release app on Genymotion.'
+        t.dependsOn('installReleaseAndTestApks')
+        t.doLast {
+            def dev = System.getenv('GENYMOTION_DEV') ?: 'localhost:42865'
+            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'logcat', '-c' }
+            project.exec {
+                commandLine 'adb', '-s', dev, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
+                        'com.anysoftkeyboard.dictionaries.presage.NextWordSuggestionsUiAutomatorTest#composeNonsenseSentenceUsingOnlySuggestions',
+                        'wtf.uhoh.newsoftkeyboard.test/androidx.test.runner.AndroidJUnitRunner'
+            }
+            println '\nTip: adb -s ' + dev + ' logcat -d | grep NON_SENSE_SENTENCE='
+        }
+    }
+}
