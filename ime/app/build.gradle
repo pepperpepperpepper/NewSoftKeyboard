@@ -25,7 +25,7 @@ android {
 
         multiDexEnabled true
         ndk {
-            abiFilters 'arm64-v8a'
+            abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
         }
     }
 
@@ -34,7 +34,7 @@ android {
             minifyEnabled true
             proguardFiles 'proguard-android-optimize.txt', 'proguard-rules.txt', 'proguard-anysoftkeyboard.txt', 'proguard-dont-obs.txt'
             ndk {
-                abiFilters 'arm64-v8a'
+                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
             }
         }
 
@@ -105,11 +105,11 @@ android {
         it.res.srcDirs += 'src/debug/res'
     }
     namespace 'com.menny.android.anysoftkeyboard'
-    // Run instrumentation against the release variant so tests are
-    // signed with the same key as the target app, allowing
-    // instrumentation on Genymotion without signature mismatch.
+    // Run instrumentation against the release variant by default.
+    // Allow override via TEST_BUILD_TYPE env var (e.g., 'debug') to simplify local testing.
     defaultConfig {
-        testBuildType 'release'
+        def desiredTestBuildType = System.getenv('TEST_BUILD_TYPE')
+        testBuildType desiredTestBuildType != null && desiredTestBuildType.trim() ? desiredTestBuildType : 'release'
     }
 }
 
@@ -215,18 +215,65 @@ afterEvaluate { proj ->
         }
     }
 
+    // Always rebuild the androidTest APK when these helpers run
+    try {
+        tasks.named('assembleAndroidTest') { task ->
+            task.outputs.upToDateWhen { false }
+        }
+    } catch (Throwable ignored) { /* task might not exist yet for some configurations */ }
+
     tasks.register('resignApksForReleaseTest') { t ->
         t.group = 'verification'
         t.description = 'Re-signs release APK and androidTest APK with a common ephemeral keystore.'
-        t.dependsOn('assembleRelease', 'assembleAndroidTest')
+        // We explicitly source the release APK from outputs/apk/ime_release.apk.
+        // Build only the needed test variant to avoid compiling all flavors.
+        def testType = (System.getenv('TEST_BUILD_TYPE') ?: 'release').trim()
+        def cap = testType.isEmpty() ? 'Release' : (testType.substring(0,1).toUpperCase() + testType.substring(1))
+        def variantTaskName = "assembleNsk" + cap + "AndroidTest"
+        if (tasks.findByName(variantTaskName) != null) {
+            t.dependsOn(variantTaskName)
+        } else {
+            // fallback to generic assembleAndroidTest
+            t.dependsOn('assembleAndroidTest')
+        }
+        if (testType.equalsIgnoreCase('debug') && tasks.findByName('assembleDebug') != null) {
+            t.dependsOn('assembleDebug')
+        }
         t.doLast {
             if (apksigner == null) throw new GradleException('apksigner not found. Ensure ANDROID_HOME/ANDROID_SDK_ROOT is set and build-tools installed.')
 
             def buildDirPath = project.layout.buildDirectory.get().asFile
-            def relApk = new File(buildDirPath, 'outputs/apk/release/app-release.apk')
-            def testApk = new File(buildDirPath, 'outputs/apk/androidTest/debug/app-debug-androidTest.apk')
-            if (!relApk.exists()) throw new GradleException("Release APK not found at ${relApk}")
-            if (!testApk.exists()) throw new GradleException("androidTest APK not found at ${testApk}")
+            File relApk
+            if (testType.equalsIgnoreCase('debug')) {
+                // Prefer freshly built nsk debug APK
+                def dbgCandidates = project.fileTree(dir: new File(buildDirPath, 'outputs/apk'), include: ['**/*debug*.apk']).files
+                        .findAll { it.name.endsWith('.apk') && !it.name.contains('androidTest') }
+                if (!dbgCandidates.isEmpty()) {
+                    relApk = dbgCandidates.find { it.parentFile.absolutePath.contains('/nsk/') } ?: dbgCandidates.max { it.length() }
+                    println "Using freshly built debug APK: ${relApk}"
+                } else {
+                    def explicitDbg = new File(project.rootProject.projectDir, 'outputs/apk/ime_debug.apk')
+                    if (!explicitDbg.exists()) throw new GradleException('No debug APKs found and no explicit outputs/apk/ime_debug.apk')
+                    relApk = explicitDbg
+                    println "Using explicit debug APK: ${relApk}"
+                }
+            } else {
+                // Release path: prefer explicit prebuilt if present, otherwise locate built release
+                def explicitRelApk = new File(project.rootProject.projectDir, 'outputs/apk/ime_release.apk')
+                if (explicitRelApk.exists()) {
+                    relApk = explicitRelApk
+                    println "Using explicit release APK: ${relApk}"
+                } else {
+                    def relCandidates = project.fileTree(dir: new File(buildDirPath, 'outputs/apk'), include: ['**/*release*.apk']).files
+                            .findAll { !it.name.contains('androidTest') && !it.absolutePath.contains('baselineProfiles') }
+                    if (relCandidates.isEmpty()) throw new GradleException('No release APKs found under outputs/apk/** and no explicit outputs/apk/ime_release.apk')
+                    relApk = relCandidates.find { it.parentFile.absolutePath.contains('/nsk/') } ?: relCandidates.max { it.length() }
+                }
+            }
+
+            def testCandidates = project.fileTree(dir: new File(buildDirPath, 'outputs/apk'), include: ['**/*androidTest*.apk']).files
+            if (testCandidates.isEmpty()) throw new GradleException('No androidTest APKs found under outputs/apk/**')
+            def testApk = testCandidates.find { it.parentFile.absolutePath.contains('/nsk/') } ?: testCandidates.max { it.length() }
 
             def outDir = new File(buildDirPath, 'outputs/apk/tests-signed')
             outDir.mkdirs()

@@ -1,6 +1,6 @@
   - versionName: 13.8.35
     versionCode: 15086
-    commit: 522230964ca4480dfaf7647de1b47a3d59f184f0
+    commit: 4c1a3716234cc339ab3c313d7ad9737d1d228756
     subdir: ime/app
     sudo:
       - apt-get update || apt-get update
@@ -8,7 +8,7 @@
       - update-alternatives --auto java
     gradle:
       - yes
-    output: build/outputs/apk/release/app-release.apk
+    output: build/outputs/apk/nsk/release/app-nsk-release-unsigned.apk
     prebuild:
       - JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64 1785903SDK1785903/tools/bin/sdkmanager 'build-tools;31.0.0' 'build-tools;30.0.3' 'platforms;android-31' > /dev/null
       - cp 1785903SDK1785903/build-tools/31.0.0/lib/d8.jar 1785903SDK1785903/build-tools/31.0.0/lib/dx.jar
