@@ -24,19 +24,17 @@
 
 #include "core/profile.h"
 
-#include <cassert>
 #include <iostream>
 #include <sstream>
 
 Profile::Profile(const std::string& profile_file)
 {
-    xmlProfileDoc = new tinyxml2::XMLDocument();
-    assert(xmlProfileDoc);
+    xmlProfileDoc = new TiXmlDocument();
+    assert( xmlProfileDoc );
 
     xml_filename = profile_file;
 
-    xml_profile_read_ok =
-        xmlProfileDoc->LoadFile(xml_filename.c_str()) == tinyxml2::XML_SUCCESS;
+    xml_profile_read_ok = xmlProfileDoc->LoadFile (xml_filename.c_str());
 }
 
 Profile::~Profile()
@@ -54,7 +52,7 @@ void Profile::read_into_configuration(Configuration* config)
     init_configuration(config, xmlProfileDoc);
 }
 
-void Profile::init_configuration(Configuration* config, tinyxml2::XMLDocument* root)
+void Profile::init_configuration(Configuration* config, TiXmlDocument* root)
 {
     std::vector<std::string> variable;
 
@@ -62,7 +60,7 @@ void Profile::init_configuration(Configuration* config, tinyxml2::XMLDocument* r
 }
 
 void Profile::visit_node(Configuration* configuration,
-			 tinyxml2::XMLNode* node,
+			 TiXmlNode* node,
 			 std::vector<std::string> variable)
 {
     if (node) {
@@ -73,12 +71,12 @@ void Profile::visit_node(Configuration* configuration,
 
 	// then check this element contains a
 	// configuration variable
-	tinyxml2::XMLElement* element = node->ToElement();
+	TiXmlElement* element = node->ToElement();
 	if (element) {
 	    // append element name to variable to
 	    // build fully qualified variable name
 	    // before visit children
-	    variable.push_back(element->Name());
+	    variable.push_back(element->Value());
 
 	    // if element contains text, we have a value for our
 	    // config variable, so add it to our configuration
@@ -98,22 +96,21 @@ void Profile::visit_node(Configuration* configuration,
 bool Profile::write_to_file () const
 {
     //std::cerr << "Saving profile to file: " << xml_filename << std::endl;
-    return xmlProfileDoc->SaveFile(xml_filename.c_str()) == tinyxml2::XML_SUCCESS;
+    return xmlProfileDoc->SaveFile(xml_filename.c_str());
 }
 
 void Profile::read_from_configuration (Configuration* configuration)
 {
-    tinyxml2::XMLNode* node = 0;
+    TiXmlNode* node = 0;
 
     // insert initial mandatory declaration if not present
-    tinyxml2::XMLNode* decl = 0;
-    for (tinyxml2::XMLNode* child = xmlProfileDoc->FirstChild();
+    TiXmlNode* decl = 0;
+    for (TiXmlNode* child = xmlProfileDoc->FirstChild();
 	 child && !decl; child = child->NextSibling() ) {
 	decl = child->ToDeclaration ();
     }
     if (! decl) {
-	node = xmlProfileDoc->InsertEndChild(
-            xmlProfileDoc->NewDeclaration("xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\""));
+	node = xmlProfileDoc->InsertEndChild( TiXmlDeclaration( "1.0", "UTF-8", "no" ) );
 	assert (node);
     }
 
@@ -133,24 +130,29 @@ void Profile::read_from_configuration (Configuration* configuration)
 	for (size_t i = 0; i < variable_name_vector.size(); i++) {
 
 	    // check if component element exists
-	    tinyxml2::XMLElement* existing = node->FirstChildElement (variable_name_vector[i].c_str());
+	    TiXmlElement* existing = node->FirstChildElement (variable_name_vector[i].c_str());
 	    if (existing) {
 		// carry on with existing component
 		node = existing;
 
 	    } else {
 		// create missing component element and carry on with new component
-                tinyxml2::XMLElement* created = xmlProfileDoc->NewElement(variable_name_vector[i].c_str());
-		node = node->InsertEndChild (created);
+		node = node->InsertEndChild (TiXmlElement (variable_name_vector[i].c_str()));
 		assert (node);
 	    }
 	}
 
 	// check if a text node for element exists
-        tinyxml2::XMLElement* element = node->ToElement();
-        if (element) {
-            element->SetText(conf_it->second->get_value().c_str());
-        }
+	TiXmlText* text = 0;
+	for(TiXmlNode* child = node->FirstChild(); child && !text; child = child->NextSibling() ) {
+	    text = child->ToText ();
+	}
+	if (text) {
+	    // text child already exists, so remove it to set new value
+	    node->RemoveChild (text);
+	}
+	node = node->InsertEndChild (TiXmlText (conf_it->second->get_value ().c_str ()));
+	assert (node);
     
     }
 }

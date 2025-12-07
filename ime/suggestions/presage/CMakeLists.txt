@@ -43,7 +43,10 @@ set(PRESAGE_SOURCES
     ${PRESAGE_ROOT}/predictors/predictor.cpp
     ${PRESAGE_ROOT}/predictors/recencyPredictor.cpp
 
-    ${PRESAGE_ROOT}/tinyxml2/tinyxml2.cpp)
+    ${PRESAGE_ROOT}/tinyxml/tinyxml.cpp
+    ${PRESAGE_ROOT}/tinyxml/tinystr.cpp
+    ${PRESAGE_ROOT}/tinyxml/tinyxmlerror.cpp
+    ${PRESAGE_ROOT}/tinyxml/tinyxmlparser.cpp)
 
 add_library(presage_static STATIC ${PRESAGE_SOURCES})
 target_include_directories(presage_static
@@ -54,7 +57,7 @@ target_include_directories(presage_static
         ${PRESAGE_ROOT}/core/tokenizer
         ${PRESAGE_ROOT}/predictors
         ${PRESAGE_ROOT}/predictors/dbconnector
-        ${PRESAGE_ROOT}/tinyxml2
+        ${PRESAGE_ROOT}/tinyxml
         ${CMAKE_CURRENT_SOURCE_DIR}/src/main/jni)
 set_target_properties(presage_static PROPERTIES
     CXX_STANDARD 14
