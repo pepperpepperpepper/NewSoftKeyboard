@@ -9,6 +9,7 @@ What you need
   - or `FDROID_KEYSTORE_PASS` / `FDROID_KEY_ALIAS_PASS`
   - optional alias override: `override_release_key_alias` or `FDROID_KEY_ALIAS` (default: `fdroidrepo`).
 - F-Droid repo credentials/config (your local fdroiddata checkout or S3 bucket creds).
+- On this machine, the canonical env file is at `/home/arch/fdroid/.env`; run `source /home/arch/fdroid/.env` before building/publishing so signing + S3 credentials are available.
 
 Build & stage release APK
 1) Ensure Presage vendor is staged (needed for JNI builds):
@@ -30,8 +31,16 @@ Publish to your F-Droid repo
 2) Place or update the YAML in your fdroiddata `metadata/` directory (or wherever your pipeline reads it).
 3) Run the usual F-Droid index step, e.g.:
    - Local fdroiddata: `fdroid update --clean --create-metadata`
-   - Custom pipeline: your `scripts/update_and_deploy.sh` that syncs to S3/CloudFront.
+   - Custom pipeline (this host): from `/home/arch/fdroid`, run `source .env && ./scripts/update_and_deploy.sh` (auto-syncs to S3 `fdroid-uh-oh-wtf` and invalidates CloudFront `E2RWHYJEODFGYE`).
 4) Invalidate CDN if applicable (e.g., CloudFront distribution `E2RWHYJEODFGYE` used previously).
+
+Automated bump + publish (optional)
+- A helper script at `/home/arch/fdroid/scripts/publish_new_soft_keyboard.sh` will:
+  - bump versionName/code in `ime/app/build.gradle` and release notes,
+  - build signed release, stage APK into the fdroid repo tree,
+  - update metadata version fields, and
+  - call `scripts/update_and_deploy.sh`.
+- Use this only when you intend to publish; it requires the env vars above (source `.env` first).
 
 Smoke checks before publishing
 - Install and sanity-test on Genymotion:
