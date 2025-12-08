@@ -655,12 +655,7 @@
     <string name="wizard_allow_contacts_permission">සම්බන්ධතා මත ටයිප් කිරීමේ යෝජනාවලට ඉඩ දෙන්න</string>
     <string name="turn_off_contacts_dictionary">සම්බන්ධතා ශබ්දකෝෂය අක්‍රිය කරන්න</string>
     <string name="read_more_about_permissions">අවසර…ගැන වැඩිදුර කියවන්න</string>
-    <string name="ask_beta_link_promo">හේයි! අලුත් &lt;i&gt;AnySoftKeyboard&lt;/i&gt; දේවල් ඉක්මනින් අවශ්‍යද? එවිට
-        ඔබ වාසනාවන්තයි! &lt;i&gt;BETA&lt;/i&gt; නාලිකාව දැන් &lt;b&gt;ඔබ&lt;/b&gt;සඳහා ලබා ගත හැකිය!\nපහත සබැඳි
-        හි ලියාපදිංචි වන්න, සහ Google Play&lt;/i&gt; යෙදුම් වෙළඳසැල &lt;i&gt;හරහා යාවත්කාලීන කරන්න!\n\n
-        https://play.google.com/apps/testing/com.menny.android.anysoftkeyboard \n\nසහ
-        දෙනෙක් මහජනතාව වෙත ළඟා වීමට පෙර දෝෂ විනාශ කිරීමට උදවු කිරීම ගැන ස්තුතියි.
-    </string>
+    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">සියුම් පෙළ-තේරීම සබල කර ඇත. වම්/දකුණු ඊතල භාවිතා කරන්න.</string>
     <string name="app_shortcut_keyboards_disabled">යතුරුපුවරු සංචාලනය අබල කර ඇත</string>
     <string name="app_shortcut_keyboards_long_label">භාවිතා කිරීමට යතුරුපුවරු පිරිසැලසුම් තෝරන්න</string>

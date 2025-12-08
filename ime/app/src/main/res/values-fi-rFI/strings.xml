@@ -524,12 +524,7 @@
     <string name="wizard_allow_contacts_permission">Salli yhteystietopohjaiset kirjoitusehdotukset</string>
     <string name="turn_off_contacts_dictionary">Poista yhteystietosanakirja käytöstä</string>
     <string name="read_more_about_permissions">Lue lisää käyttöoikeuksista…</string>
-    <string name="ask_beta_link_promo">Hei! Haluatko uusia <i>AnySoftKeyboard</i> juttuja nopeammin? Sitten
-        olet onnekas! <i>BETA</i>-kanava on  <b>sinun</b> saatavillasi!\nRekisteröidy alla olevasta 
-        linkistä ja päivitä <i>Google Play</i> -sovelluskaupassa!\n\n
-        https://play.google.com/apps/testing/com.menny.android.anysoftkeyboard \n\nJa kiitos
-        kun autat bugien tappamisessa, ennen kuin sovellus julkaistaan laajemmalle yleisölle.
-    </string>
+    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Tarkka tekstin valinta käytössä. Käytä vasen/oikeaa nuolta.</string>
     <string name="app_shortcut_keyboards_long_label">Valitse käytettävät näppäimistöasettelut</string>
     <string name="app_shortcut_keyboards_short_label">Näppäimistöt</string>

@@ -568,7 +568,7 @@
     <string name="wizard_allow_contacts_permission">Разрешить предложения на основе контактов</string>
     <string name="turn_off_contacts_dictionary">Выключить словарь из Контакты</string>
     <string name="read_more_about_permissions">Прочитать больше про разрешения…</string>
-    <string name="ask_beta_link_promo">Эй! Хочешь быстрее получать новые функции <i>AnySoftKeyboard</i>? Тогда тебе повезло! Канал <i>BETA</i> просто создан для <b>ТЕБЯ</b>!\nПросто зарегистрируйся по ссылке ниже и обнови через <i>Google Play Маркет</i>!\n\nhttps://play.google.com/apps/testing/com.menny.android.anysoftkeyboard\n\nИ спасибо за помощь в устранении багов перед переходом нововведений в релиз.</string>
+    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Выделение текста активировано. Используйте стрелки влево/вправо.</string>
     <string name="app_shortcut_keyboards_disabled">Навигация по клавиатурам отключена</string>
     <string name="app_shortcut_keyboards_long_label">Выберите раскладки клавиатуры</string>

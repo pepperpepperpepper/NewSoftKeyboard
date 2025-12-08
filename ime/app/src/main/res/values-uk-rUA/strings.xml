@@ -1,51 +1,51 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools" xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2" tools:ignore="MissingTranslation">
+<?xml version='1.0' encoding='utf-8'?>
+<resources xmlns:ns0="http://schemas.android.com/tools" xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2" ns0:ignore="MissingTranslation">
     <string name="debug_tracing_starting">Трасування почалося!\nПереконайтеся, що ви зупините його в якийсь момент</string>
     <string name="debug_tracing_starting_failed">Не вдалося почати трасування! Перевірте LogCat для деталей.</string>
     <string name="debug_tracing_finished">Трасування завершено!\nФайл трасування
-<xliff:g id="trace_file">%s</xliff:g>
+<ns1:g id="trace_file">%s</ns1:g>
     </string>
     <string name="menu_about_item">Про додаток</string>
     <string name="how_to_pointer_title">Ласкаво просимо в AnySoftKeyboard</string>
-    <string name="change_log_card_version_title_template">\u0020\u0020Останні зміни для v<xliff:g id="name">%s </xliff:g>\u0020\u0020</string>
-    <string name="change_log_entry_header_template_without_name">\u0020\u0020v<xliff:g id="code">%s</xliff:g>\u0020\u0020</string>
-    <string name="change_log_url">Ще:\u0020<xliff:g id="url">%s</xliff:g></string>
+    <string name="change_log_card_version_title_template">\u0020\u0020Останні зміни для v<ns1:g id="name">%s </ns1:g>\u0020\u0020</string>
+    <string name="change_log_entry_header_template_without_name">\u0020\u0020v<ns1:g id="code">%s</ns1:g>\u0020\u0020</string>
+    <string name="change_log_url">Ще:\u0020<ns1:g id="url">%s</ns1:g></string>
     <string name="notification_text_testers">Це бета-версія. Використання з обереженнями!</string>
     <string name="testers_version">Тестові версії!</string>
     <string name="language_root_tile">Мова</string>
     <string name="language_keyboards_settings_tile">Включити клавіатури та мови.</string>
     <string name="language_grammar_settings_tile">Налаштувати поведінку корекції та інші словники.</string>
     <string name="language_tweaks_settings_tile">Додаткові налаштування та інше.</string>
-    <!-- UI root menu -->
+    
     <string name="ui_root_tile">Інтерфейс користувача</string>
     <string name="ui_theme_settings_tile">Оберіть та встановіть теми клавіатури.</string>
     <string name="ui_effects_settings_tile">Ефекти клавіатури й можливості.</string>
-    <!-- welcome -->
+    
     <string name="search_market_for_keyboard_addons">Отримати більше клавіатур в <i>Google Play магазин</i>…</string>
     <string name="search_market_for_quick_key_addons">Отримати більш <i>Швидкий текст</i> додатки в <i>Google Play магазин</i>…</string>
     <string name="keyboard_theme_tweak_group">Твіки</string>
     <string name="delete_button">Видалити</string>
-    <!-- Indicates that a word has been added to the dictionary -->
-    <string name="added_word">Вилучений: \u0020 <xliff:g id="word">%s </xliff:g>
+    
+    <string name="added_word">Вилучений: \u0020 <ns1:g id="word">%s </ns1:g>
     </string>
     <string name="revert_added_word_question">Видалити\?</string>
-    <string name="removed_word">Вилучений: \u0020 <xliff:g id="word">%s </xliff:g>     </string>
+    <string name="removed_word">Вилучений: \u0020 <ns1:g id="word">%s </ns1:g>     </string>
     <string name="hint_add_to_dictionary">\u2190 Натисніть ще раз, щоб зберегти</string>
     <string name="hint_double_tap_to_close">Знову, щоб видалити пропозиції</string>
     <string name="hint_click_for_inline_suggestions">Доступні пропозиції автозаповнення</string>
-    <!-- voice -->
+    
     <string name="voice_input_not_installed_title">Голосове введення не встановлено</string>
     <string name="voice_input_not_installed_text">Google\'s Voiceу не інстальовано на ваш пристрій. \nЦе може бути легко виправлено: встановити зараз з <i>Google Play Store</i>.</string>
     <string name="voice_input_not_installed_action_install">Встановити</string>
     <string name="voice_input_not_installed_action_do_not_install">Ні</string>
     <string name="voice_input_not_voice_pack_in_market">Я не можу знайти введення голосом (com.google.android.voicesearch) в <i>Google Play магазин</i>. На жаль, введення голосом не буде працювати на вашому пристрої.</string>
-    <!-- Options menu -->
+    
     <string name="change_ime">Змінити метод введення</string>
     <string name="override_dictionary">Змінити стандартний словник</string>
-    <!-- Dictionary override strings -->
-    <string name="override_dictionary_title">Перевизначити <xliff:g id="word">%s </xliff:g> словник     </string>
-    <!-- Dictionary override toast messages -->
-    <!-- settings - effects-->
+    
+    <string name="override_dictionary_title">Перевизначити <ns1:g id="word">%s </ns1:g> словник     </string>
+    
+    
     <string name="gesture_settings">Жести</string>
     <string name="effects_group">Ефекти</string>
     <string name="ime_settings">Налаштування клавіатури</string>
@@ -336,7 +336,7 @@
                   зазначеною у перевизначенні стандартного словника</string>
     <string name="allow_suggestions_restart">Пропозиції заміни</string>
     <string name="allow_suggestions_restart_summary">Замінити на пропоноване слово рухом курсора</string>
-    <!-- settings - keyboard group -->
+    
     <string name="keyboards_group">Розкладки</string>
     <string name="symbols_keyboard">123!#()</string>
     <string name="symbols_alt_keyboard">{}\_</string>
@@ -345,14 +345,14 @@
     <string name="symbols_numbers_keyboard">123</string>
     <string name="symbols_time_keyboard">Час</string>
     <string name="keyboard_change_locked">n/a</string>
-    <!-- settings - quick text keys -->
+    
     <string name="quick_text_keys_group">Клавіші швидкого тексту</string>
     <string name="quick_text_keys_order">Порядок Quick Text груп</string>
-    <!-- settings - top generic row -->
+    
     <string name="top_generic_row_group">Загальний верхній ряд</string>
     <string name="top_generic_row_dialog_title">Вибрати набір кнопок</string>
     <string name="top_generic_row_summary">Вибрано для верхнього ряда: %s</string>
-    <!-- settings - bottom generic row -->
+    
     <string name="bottom_generic_row_group">Загальний нижній ряд</string>
     <string name="bottom_generic_row_dialog_title">Вибрати набір кнопок</string>
     <string name="bottom_generic_row_summary">Вибрано для нижнього ряда: %s</string>
@@ -381,7 +381,7 @@
     <string name="yochees_light_keyboard_theme_name">Yochees світла</string>
     <string name="yochees_light_keyboard_theme_description">Світла тема від Algimantas.</string>
     <string name="yochees_dark_keyboard_theme_upper_description">Світла тема Algmantas з великими літерами клавіш.</string>
-    <!-- extension keyboard type -->
+    
     <string name="extension_kbd_top_none">Без верхнього рядка</string>
     <string name="extension_kbd_top_small">Маленькі клавіші</string>
     <string name="extension_kbd_top_regular">Звичайні клавіші</string>
@@ -401,8 +401,8 @@
     <string name="extension_kbd_bottom_row_aosp">Стиль AOSP</string>
     <string name="extension_kbd_bottom_ng">Нова генерація - тестування</string>
     <string name="extension_kbd_extension_numbers_symbols">Цифри і символи</string>
-    <!-- Tutorials -->
-    <!-- Special soft keyboard keys text -->
+    
+    
     <string name="label_go_key">Пуск</string>
     <string name="label_next_key">Наступне</string>
     <string name="label_previous_key">Попереднє</string>
@@ -415,7 +415,7 @@
     <string name="change_lang_regular">ABC</string>
     <string name="change_symbols_regular">123</string>
     <string name="select_keyboard_popup_title">Виберіть клавіатуру</string>
-    <!-- dictionaries -->
+    
     <string name="simley_key_name">Клавіша смайлів</string>
     <string name="short_smiley_key_name">Коротка кнопка смайликів</string>
     <string name="quick_text_kaomoji">Каомодзі</string>
@@ -466,18 +466,18 @@
     <string name="settings_split_state_split_always">Почати ділити</string>
     <string name="settings_split_state_compact_right_always">Почати ущільнення направо</string>
     <string name="settings_split_state_compact_left_always">Почати ущільнення наліво</string>
-    <!-- User dictionary settings -->
+    
     <string name="user_dictionary_select_locale">Мова:</string>
-    <!-- User dictionary settings, The titlebar text of the User dictionary settings screen. -->
+    
     <string name="user_dict_settings_titlebar">Словник користувача</string>
     <string name="user_dict_editor">Редактор слів</string>
-    <!-- abbreviations editor -->
+    
     <string name="abbreviation_dict_settings_titlebar">Абревіатура редактор</string>
     <string name="abbreviation_dict_editor">Абревіатура редактор</string>
-    <string name="abbreviation_dict_word_template"><i><xliff:g id="abbreviation">%s </xliff:g></i> \u0020\u2192\u0020 <i><xliff:g id="target"> %s </xliff:g></i></string>
-    <!-- User dictionary settings. The title of the dialog to add a new word to the user dictionary. -->
-    <!-- User dictionary settings. The title of the dialog to edit an existing word in the user dictionary. -->
-    <!-- User dictionary settings. The text to show when there are no user-defined words in the dictionary -->
+    <string name="abbreviation_dict_word_template"><i><ns1:g id="abbreviation">%s </ns1:g></i> \u0020\u2192\u0020 <i><ns1:g id="target"> %s </ns1:g></i></string>
+    
+    
+    
     <string name="user_dict_settings_empty_text">Ви не маєте слів у словнику користувача. Тепер можна додати перше слово.</string>
     <string name="should_swap_punctuation_and_space_title">Змініть пунктуації і пробіл</string>
     <string name="should_swap_punctuation_and_space_off_summary">Не замінювати пробіл і пунктуацію.</string>
@@ -499,12 +499,12 @@
     <string name="developer_tools">Інструменти розробника</string>
     <string name="click_for_developer_features">Інструменти розробника</string>
     <string name="click_for_developer_features_summary">Різні інструменти для розробників AnySoftKeyboard</string>
-    <string name="failed_to_create_mem_dump">Не вдалося створити файл дампа пам\'яті через: <xliff:g id="message">%s </xliff:g>     </string>
-    <string name="created_mem_dump_file">Створення файлу дампа пам\'яті на: <xliff:g id="file_path">%s </xliff:g>     </string>
+    <string name="failed_to_create_mem_dump">Не вдалося створити файл дампа пам\'яті через: <ns1:g id="message">%s </ns1:g>     </string>
+    <string name="created_mem_dump_file">Створення файлу дампа пам\'яті на: <ns1:g id="file_path">%s </ns1:g>     </string>
     <string name="not_configured_with_click_here">AnySoftKeyboard не є повністю налаштування для використання. Натисніть тут, щоб налаштувати.</string>
     <string name="not_configured_with_just_click_here">Натисніть тут</string>
-    <!--  Strings for possible PreferenceActivity Back/Next buttons -->
-    <!-- Optional button to Skip a PreferenceActivity [CHAR LIMIT=20] -->
+    
+    
     <string name="word_editor_action_add_word">Додати слово</string>
     <string name="word_editor_action_backup_words">Резервне копіювання</string>
     <string name="word_editor_action_restore_words">Відновлення</string>
@@ -539,7 +539,7 @@
     <string name="next_word_dict_settings">Налаштування наступного слова</string>
     <string name="next_word_settings_group">Налаштування</string>
     <string name="next_word_stats_group">Використовувати статистику Наступного слово</string>
-    <string name="next_words_statistics_count">Початкова кількість слів: \u0020 <xliff:g id="first_word">%d </xliff:g> \nСередня кількість наступних слів: \u0020 <xliff:g id="second_word"> %d </xliff:g></string>
+    <string name="next_words_statistics_count">Початкова кількість слів: \u0020 <ns1:g id="first_word">%d </ns1:g> \nСередня кількість наступних слів: \u0020 <ns1:g id="second_word"> %d </ns1:g></string>
     <string name="next_words_statistics_no_usage">Немає використання. Введіть трохи більше.</string>
     <string name="clipboard_is_empty_toast">Буфер обміну пустий, немає нічого, щоб вставити.</string>
     <string name="clipboard_copy_done_toast">Виділений текст скопійовано в буфер обміну.</string>
@@ -551,7 +551,7 @@
     <string name="wizard_allow_contacts_permission">Дозволити пропозиції на основі контактів</string>
     <string name="turn_off_contacts_dictionary">Вимкнути словник Контакти</string>
     <string name="read_more_about_permissions">Прочитати більше про дозволи…</string>
-    <string name="ask_beta_link_promo">Гей! Хочеш швидше отримувати нові функції <i>AnySoftKeyboard</i>? Тоді тобі пощастило! Канал <i>BETA</i> просто створено для <b>ТЕБЕ</b>!\пПросто зареєструйся за посиланням нижче та онови через <i>Google Play Маркет</i>!\n\nhttps://play.google.com/apps/testing/com.menny.android.anysoftkeyboard\n\nІ дякуємо за допомогу в усуненні помилок перед переходом нововведень в реліз.</string>
+    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Виділення тексту активовано. Використовуйте стрілки вліво/вправо.</string>
     <string name="app_shortcut_keyboards_disabled">Навігацію по клавіатурах відключено</string>
     <string name="app_shortcut_keyboards_long_label">Виберіть розкладку клавіатури</string>
