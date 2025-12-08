@@ -145,17 +145,6 @@ if (project.ext.shouldBePublished && !publishingTrack.isEmpty()) {
         throw new IllegalStateException("whatsnew file can not be longer than 500 characters! Currently ${playStoreWhatsNewFile.text.length()}")
     }
 } else {
-    // creating fake Play tasks to support CI all tasks checks
-    tasks.register("generateReleasePlayResources").configure {
-        doLast {
-            println("running fake ${it.path}")
-        }
-    }
-    tasks.register("generateCanaryPlayResources").configure {
-        doLast {
-            println("running fake ${it.path}")
-        }
-    }
 }
 
 apply from: "$rootDir/gradle/versioning_apk.gradle"
