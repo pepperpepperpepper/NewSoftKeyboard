@@ -11,7 +11,6 @@ coverage:
     - "**/build/**"
     - "js/**/index.*"
     - "**/generated/**"
-    - "ime/app/src/canary"
     - "ime/app/src/test"
     - "ime/app/src/main/java/com/anysoftkeyboard/ui/dev"
     - "ime/app/src/main/java/android"
