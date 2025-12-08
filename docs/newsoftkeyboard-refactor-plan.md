@@ -41,7 +41,7 @@
 - DONE: Extracted TouchDispatcher from AnyKeyboardViewBase/PointerTracker.
 - DONE: Host predictNextWords sanity test using mixed-case model (skips when runtime or model missing; default download hook added).
 - TODO: Legacy cleanup (remove unused ASK-only actions/resources/tasks/assets after confirming no references).
-- TODO: Add release notes and README branding updates once the refactor stabilizes.
+- DONE: Release notes and README branding updates.
 
 ## Milestones
 1) Documentation and constants centralization (complete):
@@ -60,7 +60,7 @@
 - [x] Replace scattered action strings with `PluginActions` (Keyboards, Dictionaries, Themes, Quick-text, Extension rows).
 - [ ] Keep both authorities for FileProvider and prefs where needed.
 - [x] Verify add-on discovery via `KeyboardFactory` and `ExternalDictionaryFactory` under both actions.
-- [ ] Add release notes and README branding updates.
+- [x] Add release notes and README branding updates.
 
 ## Testing
 - Unit: addon factories resolve receivers with both specs.

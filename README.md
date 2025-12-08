@@ -1,18 +1,19 @@
-This is a fork of AnySoftKeyboard that uses OpenAI's Whisper technology for the microphone as an option. Enter your API key and go.
+# NewSoftKeyboard
 
-# AnySoftKeyboard&nbsp;[![Latest release](https://img.shields.io/github/release/AnySoftKeyboard/AnySoftKeyboard.svg)](https://github.com/AnySoftKeyboard/AnySoftKeyboard/releases)
+NewSoftKeyboard is a refactored fork of AnySoftKeyboard with:
+- Downloadable next-word engines (Presage n‑gram, ONNX neural) and a catalog-driven model flow.
+- Whisper-based voice input (bring your own API key).
+- Runtime compatibility with existing ASK add-ons (keyboards, dictionaries, themes, quick‑text).
 
-Discussions can be found on&nbsp;[💬&nbsp;GitHub](https://github.com/AnySoftKeyboard/AnySoftKeyboard/discussions)<br/>
-Follow us on <a rel="me" href="https://hachyderm.io/@anysoftkeyboard">Mastodon</a>
-<br/>
-`main` latest build&nbsp;[![checks](https://github.com/AnySoftKeyboard/AnySoftKeyboard/actions/workflows/checks.yml/badge.svg)](https://github.com/AnySoftKeyboard/AnySoftKeyboard/actions/workflows/checks.yml)<br/>
-`main` coverage&nbsp;[![codecov](https://codecov.io/gh/AnySoftKeyboard/AnySoftKeyboard/branch/main/graph/badge.svg)](https://codecov.io/gh/AnySoftKeyboard/AnySoftKeyboard)<br/>
-<br/>
-Android (f/w 4.0.3+, API level 15+) on screen keyboard for multiple languages.
+This repo is the active source of truth for NewSoftKeyboard; legacy ASK badges and store links were removed to avoid confusion.
 
-<a href="https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard&utm_source=global_co&utm_medium=prtnr&utm_content=Mar2515&utm_campaign=PartBadge&pcampaignid=MKT-AC-global-none-all-co-pr-py-PartBadges-Oct1515-1"><img alt="Get it on Google Play" src="https://play.google.com/intl/en_us/badges/images/apps/en-play-badge.png" height="80pt"/></a>&nbsp;&nbsp;<a href="https://f-droid.org/repository/browse/?fdid=com.menny.android.anysoftkeyboard"><img alt="Get it on F-Droid" src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="80pt"/></a>
+Quick links
+- Build and test: see `BUILDING.md`.
+- Refactor roadmap: `docs/newsoftkeyboard-refactor-plan.md`.
+- Neural quality work: `fix_plan.md`.
+- F-Droid packaging notes: `outputs/fdroid/wtf.uhoh.newsoftkeyboard.yaml`.
 
-Sign up to beta-channel [here](https://play.google.com/apps/testing/com.menny.android.anysoftkeyboard). Beta versions are pushed via Google Play Store.
+Supported Android: API 21+ (test matrix targets API 30/34). Older 4.x references have been removed.
 
 ## Features
 
