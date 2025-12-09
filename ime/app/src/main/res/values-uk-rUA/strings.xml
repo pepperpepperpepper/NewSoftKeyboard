@@ -551,7 +551,6 @@
     <string name="wizard_allow_contacts_permission">Дозволити пропозиції на основі контактів</string>
     <string name="turn_off_contacts_dictionary">Вимкнути словник Контакти</string>
     <string name="read_more_about_permissions">Прочитати більше про дозволи…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Виділення тексту активовано. Використовуйте стрілки вліво/вправо.</string>
     <string name="app_shortcut_keyboards_disabled">Навігацію по клавіатурах відключено</string>
     <string name="app_shortcut_keyboards_long_label">Виберіть розкладку клавіатури</string>

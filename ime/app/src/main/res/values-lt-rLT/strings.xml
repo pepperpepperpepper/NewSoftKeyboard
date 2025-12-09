@@ -580,7 +580,6 @@
     <string name="wizard_allow_contacts_permission">Leisti pasiūlymus, paremtus kontaktų informacija</string>
     <string name="turn_off_contacts_dictionary">Išjungti kontaktų žodyną</string>
     <string name="read_more_about_permissions">Skaityti daugiau apie teises…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Įjungtas tikslus teksto pasirinkimas. Naudokite „į kairę“ / „į dešinę“ rodykles.</string>
     <string name="app_shortcut_keyboards_disabled">Klaviatūrų naršymas išjungtas</string>
     <string name="app_shortcut_keyboards_long_label">Išsirinkite klaviatūros išdėstymus</string>

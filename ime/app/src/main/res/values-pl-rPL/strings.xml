@@ -670,7 +670,6 @@ Zmiana
     <string name="wizard_allow_contacts_permission">Zezwalaj na sugerowanie nazw kontaktów</string>
     <string name="turn_off_contacts_dictionary">Wyłącz słownik kontaktów</string>
     <string name="read_more_about_permissions">Przeczytaj więcej o uprawnieniach…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Włącz drobny wybór tekstu. Użyj strzałek w lewo/prawo.</string>
     <string name="app_shortcut_keyboards_disabled">Nawigacja klawiatur wyłączona</string>
     <string name="app_shortcut_keyboards_long_label">Wybierz układy klawiatury, których chcesz używać</string>

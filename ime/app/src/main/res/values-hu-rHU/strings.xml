@@ -644,7 +644,6 @@
     <string name="wizard_allow_contacts_permission">Engedélyezze a névjegy-alapú gépelési javaslatokat</string>
     <string name="turn_off_contacts_dictionary">A névjegyszótár kikapcsolása</string>
     <string name="read_more_about_permissions">További információ az engedélyekről…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Pontos szövegkijelölés a balra/jobbra nyilakkal.</string>
     <string name="app_shortcut_keyboards_disabled">Billentyűzetek navigálása letiltva</string>
     <string name="app_shortcut_keyboards_long_label">Válassza ki használatra a billentyűzetkiosztást</string>

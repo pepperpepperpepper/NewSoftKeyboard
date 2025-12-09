@@ -270,7 +270,6 @@
     <string name="clipboard_copy_done_toast">Textul selectat a fost copiat în clipboard.</string>
     <string name="clipboard_paste_entries_title">Alege textul pentru lipire</string>
     <string name="notification_read_contacts_title">Pot să citesc contactele?</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="app_shortcut_keyboards_short_label">Tastaturi</string>
     <string name="app_shortcut_themes_short_label">Teme</string>
     <string name="app_shortcut_gestures_short_label">Gesturi</string>

@@ -601,7 +601,6 @@
     <string name="wizard_allow_contacts_permission">Permet els contactes en escriure noms</string>
     <string name="turn_off_contacts_dictionary">Inhabilita el diccionari amb els contactes</string>
     <string name="read_more_about_permissions">Llegiu més sobre els permisos…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Selecció precisa de text activada. Empreu les fletxes esquerra/dreta.</string>
     <string name="app_shortcut_keyboards_disabled">Navegació amb fletxes inhabilitada</string>
     <string name="app_shortcut_keyboards_long_label">Trieu la disposició de teclat que voleu utilitzar</string>

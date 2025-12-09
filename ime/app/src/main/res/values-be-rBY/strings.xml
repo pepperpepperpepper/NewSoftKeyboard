@@ -581,7 +581,6 @@
     <string name="wizard_allow_contacts_permission">Дазволіць прапановы на падставе кантактаў</string>
     <string name="turn_off_contacts_dictionary">Выключыць слоўнік кантактаў</string>
     <string name="read_more_about_permissions">Даведацца больш пра дазволы…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Актываваная функцыя дакладнага выбару тэксту. Выкарыстоўвайце стрэлкі ўлева/права.</string>
     <string name="app_shortcut_keyboards_disabled">Навігацыя клавіятур акдлючаная</string>
     <string name="app_shortcut_keyboards_long_label">Выберыце раскладку клавіятуры для выкарыстання</string>

@@ -577,7 +577,6 @@
     <string name="wizard_allow_contacts_permission">Permettre les suggestions basées sur les contacts</string>
     <string name="turn_off_contacts_dictionary">Désactiver le dictionnaire des contacts</string>
     <string name="read_more_about_permissions">En savoir plus sur les autorisations…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Sélection des petites lignes. Utiliser les flèches gauche/droite.</string>
     <string name="app_shortcut_keyboards_disabled">Navigation des claviers désactivée</string>
     <string name="app_shortcut_keyboards_long_label">Choisir les dispositions de clavier à utiliser</string>

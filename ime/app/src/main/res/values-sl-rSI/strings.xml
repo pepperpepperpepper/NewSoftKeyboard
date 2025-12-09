@@ -464,7 +464,6 @@
     <string name="wizard_allow_contacts_permission">Dovoli predloge osnovane na stikih</string>
     <string name="turn_off_contacts_dictionary">Izklopi slovar stikov</string>
     <string name="read_more_about_permissions">Več o dovoljenjih …</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Podrobna izbira besedila omogočena. Uporabite puščico levo/desno.</string>
     <string name="app_shortcut_keyboards_disabled">Krmarjenje po tipkovnicah onemogočeno</string>
     <string name="app_shortcut_keyboards_long_label">Izberite razporeditve tipkovnic, ki jih želite uporabiti</string>

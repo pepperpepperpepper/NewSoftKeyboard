@@ -472,7 +472,6 @@
     <string name="wizard_allow_contacts_permission">Payagan ang mga nakabaseng kontaks sa mga mungkahing nakatype</string>
     <string name="turn_off_contacts_dictionary">Patayin ang mga kontak sa diksyunaryu</string>
     <string name="read_more_about_permissions">Basahin pa ang tungkol sa mga permiso…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Mabuting-teksto-seleksyon ay pinagana. Gamitin ay kaliwa/kanan na mga arrows.</string>
     <string name="app_shortcut_keyboards_disabled">Nabigasyon ng kayboard ay naka disabled</string>
     <string name="app_shortcut_keyboards_long_label">Pumili ng keyboard para sa mga layout na ginagamit</string>

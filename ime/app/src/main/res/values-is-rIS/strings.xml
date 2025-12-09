@@ -656,7 +656,6 @@
     <string name="wizard_allow_contacts_permission">Leyfa tillögur byggðar á tengiliðum</string>
     <string name="turn_off_contacts_dictionary">Slökkva á orðasafni tengiliða</string>
     <string name="read_more_about_permissions">Lestu meira um heimildir…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Fínlegt val texta er virkt. Notaðu vinstri/hægri örvarnar.</string>
     <string name="app_shortcut_keyboards_disabled">Flakkstýring lyklaborðs er óvirk</string>
     <string name="app_shortcut_keyboards_long_label">Veldu lyklaborðsframsetningu til að nota</string>

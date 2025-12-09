@@ -585,7 +585,6 @@ woordenlijst
     <string name="wizard_allow_contacts_permission">Sta op contacten gebaseerde suggesties toe</string>
     <string name="turn_off_contacts_dictionary">Schakel woordenlijst van contact uit</string>
     <string name="read_more_about_permissions">Lees meer over rechten…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Nauwkeurige tekstselectie ingeschakeld. Gebruik pijltjes links/rechts.</string>
     <string name="app_shortcut_keyboards_disabled">Toetsenbordennavigatie uitgeschakeld</string>
     <string name="app_shortcut_keyboards_long_label">Kies toetsenboordindeling om te gebruiken</string>

@@ -684,7 +684,6 @@
     <string name="wizard_allow_contacts_permission">ნომრების წიგნაკიდან შემოთავაზების ნებართვა</string>
     <string name="turn_off_contacts_dictionary">ნომრების ლექსიკონის გამორთვა</string>
     <string name="read_more_about_permissions">იხილეთ ვრცლად ნებართვებზე…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">ტექსტის უკეთ მონიშვნა ჩართულია. გამოიყენეთ მარჯვენა/მარცხენა ისრები.</string>
     <string name="app_shortcut_keyboards_disabled">კლავიატურების ცვლა გამორთულია</string>
     <string name="app_shortcut_keyboards_long_label">კლავიატურის განლაგების შერჩევა</string>

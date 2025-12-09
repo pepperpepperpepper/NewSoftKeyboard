@@ -664,7 +664,6 @@
     <string name="wizard_allow_contacts_permission">Tillad kontaktbaserede indtastningsforslag</string>
     <string name="turn_off_contacts_dictionary">Slå kontaktordbog fra</string>
     <string name="read_more_about_permissions">Læs mere om tilladelser…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Fin-tekstvalg aktiveret. Brug venstre/højre pile.</string>
     <string name="app_shortcut_keyboards_disabled">Tataturnavigation deaktiveret</string>
     <string name="app_shortcut_keyboards_long_label">Vælg tastaturlayout der skal bruges</string>

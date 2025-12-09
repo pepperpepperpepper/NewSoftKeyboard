@@ -576,7 +576,6 @@ bulamıyorum. Bu özellik cihazınızda çalışamaz, üzgünüz.</string>
     <string name="wizard_allow_contacts_permission">Kişiler\ tabanlı yazım önerilerine izin ver</string>
     <string name="turn_off_contacts_dictionary">Kişi Sözlüğünü kapat</string>
     <string name="read_more_about_permissions">Izinler hakkında daha çok bilgi…</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Ince-ayar kelime seçimi etkinleştirildi. Sol/sağ yön tuşlarını kullanın.</string>
     <string name="app_shortcut_keyboards_disabled">Klavyeler arası gezinti devre dışı</string>
     <string name="app_shortcut_keyboards_long_label">Kullanılacak klavye düzenlerini seç</string>

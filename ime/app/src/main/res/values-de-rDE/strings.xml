@@ -571,7 +571,6 @@
     <string name="wizard_allow_contacts_permission">Kontaktbasierte Tippvorschläge zulassen</string>
     <string name="turn_off_contacts_dictionary">Kontaktwörterbuch ausschalten</string>
     <string name="read_more_about_permissions">Lies mehr über Berechtigungen …</string>
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Feintextauswahl aktiviert. Benutze die links/rechts Pfeile.</string>
     <string name="app_shortcut_keyboards_disabled">Tastaturennavigation deaktiviert</string>
     <string name="app_shortcut_keyboards_long_label">Wähle die zu verwendenden Tastaturlayouts</string>

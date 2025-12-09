@@ -906,7 +906,6 @@
     <string name="turn_off_contacts_dictionary">Turn off Contacts Dictionary</string>
     <string name="read_more_about_permissions">Read more about permissions…</string>
     <!-- Legacy beta CTA retained for resource compatibility; NewSoftKeyboard does not use a beta channel. -->
-    <string name="ask_beta_link_promo">NewSoftKeyboard ships via F-Droid or direct installs; no beta signup is required.</string>
     <string name="clipboard_fine_select_enabled_toast">Fine-text-selection enabled. Use left/right arrows.</string>
 
     <string name="app_shortcut_keyboards_disabled">Keyboards navigation disabled</string>
