@@ -1,12 +1,12 @@
-Any Soft Keyboard is an open-source, on-screen keyboard with multiple languages support with emphasis on privacy.
-This is one of the most customizable keyboards available.
+NewSoftKeyboard is an open-source, on-screen keyboard with multi-language support and an emphasis on privacy.
+This fork stays compatible with AnySoftKeyboard add-ons (keyboards, dictionaries, themes) while carrying its own branding.
 
-To activate: Launch <i>'AnySoftKeyboard Settings'</i> App, and follow the instructions.
+To activate: Launch <i>'NewSoftKeyboard Settings'</i> and follow the instructions.
 
 Main features:
-* Multi languages keyboard support via external packages.
+* Multi-language keyboard support via external packages.
 * Completion dictionaries for multiple languages.
-* Also completes your typed words from you contacts names (Android 2.0+)!
+* Also completes your typed words from your contacts' names (Android 2.0+)!
 * And, learns your typing behavior to provide next-word prediction.
 * Multi-Touch support (as in, pressing SHIFT along with other characters).
 * Extension keyboard (swipe your finger all the way up out of the keyboard).
@@ -17,7 +17,7 @@ Main features:
 ** Swipe left or right to switch layouts.
 ** Swipe up to shift.
 ** Swipe down to close the keyboard.
-* Theme support (comes with a few built-in skins, and more available in Play Store).
+* Theme support (comes with a few built-in skins, and more via add-ons).
 * Night Mode: Quiet, Dark keyboard at night time (enable in the Settings app).
 * Power-Saving Mode: No vibrations, sound, suggestions and a dark theme (enable in the Settings app).
 * Build-in user dictionary words editor.
@@ -28,4 +28,4 @@ Main features:
 ** Arrows
 * And many more features!
 
-Support at: https://github.com/AnySoftKeyboard
+Support at: https://github.com/pepperpepperpepper/NewSoftKeyboard
