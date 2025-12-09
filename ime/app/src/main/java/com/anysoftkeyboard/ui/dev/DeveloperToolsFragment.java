@@ -120,7 +120,7 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
     switch (optionId) {
       case TRACING_ENABLED_DIALOG:
         builder
-            .setIcon(R.drawable.notification_icon_beta_version)
+            .setIcon(R.drawable.ic_launcher)
             .setTitle("How to use Tracing")
             .setMessage(
                 "Tracing is now enabled, but not started!"
@@ -137,7 +137,7 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
         break;
       case TRACING_STARTED_DIALOG:
         builder
-            .setIcon(R.drawable.notification_icon_beta_version)
+            .setIcon(R.drawable.ic_launcher)
             .setTitle("How to stop Tracing")
             .setMessage(
                 "Tracing is now disabled, but not ended!"

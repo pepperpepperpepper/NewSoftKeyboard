@@ -91,4 +91,4 @@ After this is merged, the pack will be automatically released by our CI/CD pipel
 - `alpha` releases are closed-testing, meaning that you will need to ask to be added to the list of testers.
   - To support `alpha` releases, add `ext.closedTestingTrackName = 'alpha'` to the build file.
 - `beta` releases are open-testing, meaning anyone can join them.
-  - To support `beta` releases, add `ext.openTestingTrackName = 'beta'` to the build file.
+- The project no longer uses Play Store beta tracks; leave `openTestingTrackName` unset.
