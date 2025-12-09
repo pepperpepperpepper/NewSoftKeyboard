@@ -56,14 +56,7 @@ public class PresageModelDownloaderTest {
     final byte[] archiveBytes = createBundle(definition, arpaContent, vocabContent);
     final String archiveSha = computeSha256Hex(archiveBytes);
 
-    final PresageModelCatalog.CatalogEntry entry =
-        new PresageModelCatalog.CatalogEntry(
-            definition,
-            "https://example.com/" + MODEL_ID + ".zip",
-            archiveSha,
-            archiveBytes.length,
-            1,
-            true);
+    final String bundleUrl = "https://example.com/" + MODEL_ID + ".zip";
 
     final PresageModelDownloader downloader =
         new PresageModelDownloader(
@@ -71,7 +64,8 @@ public class PresageModelDownloaderTest {
             mModelStore,
             url -> new ByteArrayInputStream(archiveBytes));
 
-    final PresageModelDefinition installedDefinition = downloader.downloadAndInstall(entry);
+    final PresageModelDefinition installedDefinition =
+        downloader.downloadAndInstall(definition, bundleUrl, archiveSha);
 
     assertEquals(MODEL_ID, installedDefinition.getId());
 
@@ -101,14 +95,8 @@ public class PresageModelDownloaderTest {
     final PresageModelDefinition definition = buildDefinition(arpaContent, vocabContent);
     final byte[] archiveBytes = createBundle(definition, arpaContent, vocabContent);
 
-    final PresageModelCatalog.CatalogEntry entry =
-        new PresageModelCatalog.CatalogEntry(
-            definition,
-            "https://example.com/fake.zip",
-            "deadbeef",
-            archiveBytes.length,
-            1,
-            false);
+    final String bundleUrl = "https://example.com/fake.zip";
+    final String badSha = "deadbeef";
 
     final PresageModelDownloader downloader =
         new PresageModelDownloader(
@@ -117,7 +105,7 @@ public class PresageModelDownloaderTest {
             url -> new ByteArrayInputStream(archiveBytes));
 
     try {
-      downloader.downloadAndInstall(entry);
+      downloader.downloadAndInstall(definition, bundleUrl, badSha);
       fail("Expected checksum mismatch to throw");
     } catch (IOException expected) {
       assertTrue(expected.getMessage().contains("Checksum mismatch"));
@@ -134,14 +122,7 @@ public class PresageModelDownloaderTest {
         createBundleWithNestedRoot(definition, arpaContent, vocabContent, MODEL_ID + "-nested");
     final String archiveSha = computeSha256Hex(archiveBytes);
 
-    final PresageModelCatalog.CatalogEntry entry =
-        new PresageModelCatalog.CatalogEntry(
-            definition,
-            "https://example.com/" + MODEL_ID + "-nested.zip",
-            archiveSha,
-            archiveBytes.length,
-            1,
-            true);
+    final String bundleUrl = "https://example.com/" + MODEL_ID + "-nested.zip";
 
     final PresageModelDownloader downloader =
         new PresageModelDownloader(
@@ -149,7 +130,7 @@ public class PresageModelDownloaderTest {
             mModelStore,
             url -> new ByteArrayInputStream(archiveBytes));
 
-    downloader.downloadAndInstall(entry);
+    downloader.downloadAndInstall(definition, bundleUrl, archiveSha);
 
     final File modelDir = getModelDirectory(MODEL_ID);
     assertTrue(new File(modelDir, ARPA_FILENAME).exists());

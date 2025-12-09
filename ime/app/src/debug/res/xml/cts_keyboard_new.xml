@@ -3,7 +3,7 @@
         id="test_keyboard_new"
         name="Test Keyboard New"
         description="Test keyboard (NSK namespace)"
-        layoutResId="@xml/keys_qwerty"
+        layoutResId="@xml/cts_keys_qwerty"
         index="2000"
         defaultEnabled="false" />
 </Keyboards>
