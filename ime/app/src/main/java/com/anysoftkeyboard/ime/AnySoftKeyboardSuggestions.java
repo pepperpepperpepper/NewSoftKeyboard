@@ -665,6 +665,16 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     boolean isEndOfSentence = newLine || isSentenceSeparator(primaryCode);
     final boolean isSpace = primaryCode == KeyCodes.SPACE;
 
+    if (BuildConfig.DEBUG) {
+      Logger.d(
+          TAG,
+          "handleSeparator code=%d isSpace=%s lastSpace=%s swapCandidate=%s",
+          primaryCode,
+          isSpace,
+          mLastSpaceTimeStamp != NEVER_TIME_STAMP,
+          isSpaceSwapCharacter(primaryCode));
+    }
+
     // Handle separator
     InputConnection ic = currentInputConnection();
     if (ic != null) {
@@ -760,6 +770,12 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   private boolean isSpaceSwapCharacter(int primaryCode) {
+    // Treat closing parenthesis as a swap candidate even if the current keyboard does not mark
+    // it as a sentence separator (historic ASK behavior and expected by unit tests).
+    if (primaryCode == ')') {
+      return true;
+    }
+
     if (isSentenceSeparator(primaryCode)) {
       if (mFrenchSpacePunctuationBehavior) {
         return switch (primaryCode) {

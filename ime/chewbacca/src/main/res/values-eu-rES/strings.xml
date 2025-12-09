@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-    <string name="ime_crashed_title">AnySoftKeyboard kraskatu da!</string>
-    <string name="ime_crashed_content">Ene, AnySoftKeyboard kraskatu da, ez nuen halakorik espero…</string>
+    <string name="ime_crashed_title">Keyboard kraskatu da!</string>
+    <string name="ime_crashed_content">Ene, Keyboard kraskatu da, ez nuen halakorik espero…</string>
 </resources>

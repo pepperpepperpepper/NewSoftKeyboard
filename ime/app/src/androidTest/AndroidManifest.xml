@@ -1,0 +1,22 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Test-only add-on receiver to verify discovery under both NSK and ASK namespaces. -->
+        <receiver
+            android:name=".addons.cts.TestKeyboardReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="wtf.uhoh.newsoftkeyboard.KEYBOARD" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.anysoftkeyboard.plugin.KEYBOARD" />
+            </intent-filter>
+            <meta-data
+                android:name="wtf.uhoh.newsoftkeyboard.keyboards"
+                android:resource="@xml/test_keyboard_addon" />
+            <meta-data
+                android:name="com.anysoftkeyboard.plugindata.keyboards"
+                android:resource="@xml/test_keyboard_addon" />
+        </receiver>
+    </application>
+</manifest>

@@ -1187,6 +1187,9 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   @Override
   public void onKey(
       int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI) {
+    // Ensure editor state tracker is in sync before applying wrap/separator logic.
+    getCursorPosition();
+
     final InputConnection ic = currentInputConnection();
     if (ic != null) ic.beginBatchEdit();
     boolean handledByOverlay =

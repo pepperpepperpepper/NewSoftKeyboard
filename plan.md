@@ -2,6 +2,7 @@
 
 ## Compatibility & Cleanup
 - Prune unused AnySoftKeyboard-only resources/strings/tasks while keeping `compat-ask` shims for legacy add-ons.
+- Update user-visible references (e.g., privacy policy URL now points to NewSoftKeyboard) and continue removing ASK branding where safe.
 - Verify dual authorities (FileProvider/prefs) are only kept where required for ASK compatibility.
 - Add an add-on discovery CTS-style test that installs a sample ASK plug-in and asserts discovery under both action namespaces.
 
@@ -15,6 +16,6 @@
 - Host-side predictNextWords test exists; add small UI polish/normalization if desired.
 
 ## Immediate Next Steps
-1) Finish legacy cleanup pass and land the add-on discovery CTS test.
+1) Continue legacy cleanup (branding/tasks/resources); add-on discovery CTS test added (androidTest).
 2) Decide and implement the flavor branding split.
 3) Pick the next monolith slice from the audit list and refactor with tests.

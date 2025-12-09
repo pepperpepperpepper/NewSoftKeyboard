@@ -611,7 +611,7 @@
     <string name="setup_wizard_step_one_title">Aktivér New Soft Keyboard</string>
     <string name="setup_wizard_step_one_details">I dette trin skal du aktivere <i>
         New Soft Keyboard</i>. Tjek venligst <i>\'New Soft Keyboard\'</i> i dine <i>Sprog&amp;Input-
-        indstillinger</i>. Dette vil give ASK mulighed for at køre på din enhed.
+        indstillinger</i>. Dette giver tastaturet mulighed for at køre på din enhed.
     </string>
     <string name="setup_wizard_step_one_action">Gå til dine <i>Sprog&amp;Input-indstillinger</i>…
     </string>
