@@ -7,7 +7,7 @@
     </string>
     <string name="debug_tracing_finished">Urmărirea terminată!\nUrmărirea fişierului este\u0020<ns1:g id="trace_file">%s</ns1:g></string>
     <string name="menu_about_item">Despre</string>
-    <string name="how_to_pointer_title">Bine aţi venit la AnySoftKeyboard</string>
+    <string name="how_to_pointer_title">Bine aţi venit la New Soft Keyboard</string>
     <string name="change_log_card_version_title_template">\u0020\u0020Ultimele modificări pentru v<ns1:g id="name">%s</ns1:g>\u0020\u0020
     </string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020v<ns1:g id="code">%s</ns1:g>\u0020\u0020</string>
@@ -256,10 +256,10 @@
     <string name="enter_abbreviation_hint">Abreviere</string>
     <string name="enter_abbreviation_target_hint">Frază completă</string>
     <string name="about_additional_software_licenses">Licențe software suplimentare</string>
-    <string name="setup_wizard_step_one_title">Activează AnySoftKeyboard</string>
-    <string name="setup_wizard_step_two_title">Comută la AnySoftKeyboard</string>
+    <string name="setup_wizard_step_one_title">Activează New Soft Keyboard</string>
+    <string name="setup_wizard_step_two_title">Comută la New Soft Keyboard</string>
     <string name="setup_wizard_step_two_action">Schimbă tastaturile active</string>
-    <string name="setup_wizard_step_three_details">Mulțumesc pentru alegerea <i>AnySoftKeyboard</i>.
+    <string name="setup_wizard_step_three_details">Mulțumesc pentru alegerea <i>New Soft Keyboard</i>.
     </string>
     <string name="setup_wizard_step_three_action_languages">Configurează limbile…</string>
     <string name="setup_wizard_step_three_action_themes">Selectează tema…</string>

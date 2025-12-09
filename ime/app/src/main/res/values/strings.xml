@@ -1008,7 +1008,7 @@
 
     <string name="app_share_title">Hello from New Soft Keyboard</string>
     <string name="app_share_menu_title">Share New Soft Keyboard using</string>
-    <string name="app_share_text">Check out New Soft Keyboard, an open-source, privacy-focused fork of AnySoftKeyboard.\nGet it from:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
+    <string name="app_share_text">Check out New Soft Keyboard, an open-source, privacy-focused fork of New Soft Keyboard.\nGet it from:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
 
     <string name="click_me_for_easter_egg_info">click me for a surprise</string>
     
