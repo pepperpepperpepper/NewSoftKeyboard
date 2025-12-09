@@ -151,7 +151,7 @@ public class MainFragmentTest extends RobolectricFragmentTestCase<MainFragment> 
 
     Fragment aboutFragment = getCurrentFragment();
     Assert.assertNotNull(aboutFragment);
-    Assert.assertTrue(aboutFragment instanceof AboutAnySoftKeyboardFragment);
+    Assert.assertTrue(aboutFragment instanceof AboutNewSoftKeyboardFragment);
   }
 
   @Test

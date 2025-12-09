@@ -15,17 +15,17 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.robolectric.Shadows;
 
-public class AboutAnySoftKeyboardFragmentTest
-    extends RobolectricFragmentTestCase<AboutAnySoftKeyboardFragment> {
+public class AboutNewSoftKeyboardFragmentTest
+    extends RobolectricFragmentTestCase<AboutNewSoftKeyboardFragment> {
 
   @Override
   protected int getStartFragmentNavigationId() {
-    return R.id.aboutAnySoftKeyboardFragment;
+    return R.id.aboutNewSoftKeyboardFragment;
   }
 
   @Test
   public void testWebSiteClick() {
-    AboutAnySoftKeyboardFragment fragment = startFragment();
+    AboutNewSoftKeyboardFragment fragment = startFragment();
     TextView link = fragment.getView().findViewById(R.id.about_web_site_link);
     Assert.assertNotNull(link);
 
@@ -44,7 +44,7 @@ public class AboutAnySoftKeyboardFragmentTest
 
   @Test
   public void testShareApp() {
-    AboutAnySoftKeyboardFragment fragment = startFragment();
+    AboutNewSoftKeyboardFragment fragment = startFragment();
     View icon = fragment.getView().findViewById(R.id.share_app_details);
     Assert.assertNotNull(icon);
 
@@ -63,7 +63,7 @@ public class AboutAnySoftKeyboardFragmentTest
 
   @Test
   public void testRateApp() {
-    AboutAnySoftKeyboardFragment fragment = startFragment();
+    AboutNewSoftKeyboardFragment fragment = startFragment();
     View icon = fragment.getView().findViewById(R.id.rate_app_in_store);
     Assert.assertNotNull(icon);
 
@@ -83,7 +83,7 @@ public class AboutAnySoftKeyboardFragmentTest
 
   @Test
   public void testPrivacyPolicyClick() {
-    AboutAnySoftKeyboardFragment fragment = startFragment();
+    AboutNewSoftKeyboardFragment fragment = startFragment();
     TextView link = fragment.getView().findViewById(R.id.about_privacy_link);
     Assert.assertNotNull(link);
 
@@ -102,7 +102,7 @@ public class AboutAnySoftKeyboardFragmentTest
 
   @Test
   public void testAdditionalLicenses() {
-    AboutAnySoftKeyboardFragment fragment = startFragment();
+    AboutNewSoftKeyboardFragment fragment = startFragment();
     TextView link = fragment.getView().findViewById(R.id.about_legal_stuff_link);
     Assert.assertNotNull(link);
 
@@ -114,12 +114,12 @@ public class AboutAnySoftKeyboardFragmentTest
 
     Assert.assertNotNull(nextFragment);
     Assert.assertTrue(
-        nextFragment instanceof AboutAnySoftKeyboardFragment.AdditionalSoftwareLicensesFragment);
+        nextFragment instanceof AboutNewSoftKeyboardFragment.AdditionalSoftwareLicensesFragment);
   }
 
   @Test
   public void testVersionInfo() {
-    AboutAnySoftKeyboardFragment fragment = startFragment();
+    AboutNewSoftKeyboardFragment fragment = startFragment();
     TextView copyright = fragment.getView().findViewById(R.id.about_copyright);
     int currentYear = new GregorianCalendar().get(Calendar.YEAR);
     String expectedCopyright =

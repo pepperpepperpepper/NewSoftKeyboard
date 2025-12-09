@@ -9,8 +9,8 @@
         android:name="com.anysoftkeyboard.ui.settings.MainFragment"
         android:label="MainFragment" >
         <action
-            android:id="@+id/action_mainFragment_to_aboutAnySoftKeyboardFragment"
-            app:destination="@id/aboutAnySoftKeyboardFragment"
+            android:id="@+id/action_mainFragment_to_aboutNewSoftKeyboardFragment"
+            app:destination="@id/aboutNewSoftKeyboardFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
@@ -156,11 +156,11 @@
             app:popExitAnim="@anim/slide_out_right" />
     </fragment>
     <fragment
-        android:id="@+id/aboutAnySoftKeyboardFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AboutAnySoftKeyboardFragment"
-        android:label="AboutAnySoftKeyboardFragment" >
+        android:id="@+id/aboutNewSoftKeyboardFragment"
+        android:name="com.anysoftkeyboard.ui.settings.AboutNewSoftKeyboardFragment"
+        android:label="AboutNewSoftKeyboardFragment" >
         <action
-            android:id="@+id/action_aboutAnySoftKeyboardFragment_to_additionalSoftwareLicensesFragment"
+            android:id="@+id/action_aboutNewSoftKeyboardFragment_to_additionalSoftwareLicensesFragment"
             app:destination="@id/additionalSoftwareLicensesFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
@@ -181,7 +181,7 @@
     </fragment>
     <fragment
         android:id="@+id/additionalSoftwareLicensesFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AboutAnySoftKeyboardFragment$AdditionalSoftwareLicensesFragment"
+        android:name="com.anysoftkeyboard.ui.settings.AboutNewSoftKeyboardFragment$AdditionalSoftwareLicensesFragment"
         android:label="AdditionalSoftwareLicensesFragment" />
     <fragment
         android:id="@+id/developerToolsFragment"

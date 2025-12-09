@@ -14,7 +14,11 @@ import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import java.util.Calendar;
 
-public class AboutAnySoftKeyboardFragment extends Fragment implements View.OnClickListener {
+/**
+ * About screen branded for NewSoftKeyboard. Behavior mirrors the legacy fragment; only naming and
+ * navigation IDs were updated.
+ */
+public class AboutNewSoftKeyboardFragment extends Fragment implements View.OnClickListener {
 
   @Override
   public View onCreateView(
@@ -45,7 +49,7 @@ public class AboutAnySoftKeyboardFragment extends Fragment implements View.OnCli
   @Override
   public void onStart() {
     super.onStart();
-    getActivity().setTitle(R.string.ime_name);
+    requireActivity().setTitle(R.string.ime_name);
   }
 
   @Override
@@ -54,16 +58,14 @@ public class AboutAnySoftKeyboardFragment extends Fragment implements View.OnCli
       case R.id.about_legal_stuff_link:
         Navigation.findNavController(requireView())
             .navigate(
-                AboutAnySoftKeyboardFragmentDirections
-                    .actionAboutAnySoftKeyboardFragmentToAdditionalSoftwareLicensesFragment());
+                AboutNewSoftKeyboardFragmentDirections
+                    .actionAboutNewSoftKeyboardFragmentToAdditionalSoftwareLicensesFragment());
         break;
       case R.id.about_privacy_link:
-        String privacyUrl = getString(R.string.privacy_policy);
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(privacyUrl)));
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_policy))));
         break;
       case R.id.about_web_site_link:
-        String siteWebPage = getString(R.string.main_site_url);
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(siteWebPage)));
+        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.main_site_url))));
         break;
       case R.id.share_app_details:
         shareAppDetails();
@@ -76,7 +78,7 @@ public class AboutAnySoftKeyboardFragment extends Fragment implements View.OnCli
         break;
       default:
         throw new IllegalArgumentException(
-            "Failed to handle " + v.getId() + " in AboutAnySoftKeyboardFragment");
+            "Failed to handle " + v.getId() + " in AboutNewSoftKeyboardFragment");
     }
   }
 
@@ -98,7 +100,7 @@ public class AboutAnySoftKeyboardFragment extends Fragment implements View.OnCli
     @Override
     public void onStart() {
       super.onStart();
-      getActivity().setTitle(R.string.about_additional_software_licenses);
+      requireActivity().setTitle(R.string.about_additional_software_licenses);
     }
   }
 }

@@ -1,13 +1,13 @@
 # NewSoftKeyboard Remaining Work
 
 ## Compatibility & Cleanup
-- Prune unused AnySoftKeyboard-only resources/strings/tasks while keeping `compat-ask` shims for legacy add-ons.
-- Update user-visible references (e.g., privacy policy URL now points to NewSoftKeyboard) and continue removing ASK branding where safe.
-- Verify dual authorities (FileProvider/prefs) are only kept where required for ASK compatibility.
-- Add an add-on discovery CTS-style test that installs a sample ASK plug-in and asserts discovery under both action namespaces.
+- Prune remaining AnySoftKeyboard-only resources/strings/tasks while keeping `compat-ask` shims for legacy add-ons.
+- User-visible branding largely updated (crash strings, privacy policy, About screen); continue spot fixes if new wording is found.
+- Dual authorities: FileProvider is now split (NSK primary + legacy). Verify prefs/other authorities stay minimal.
+- Add-on discovery CTS-style test **done** (ASK + NSK namespaces covered).
 
 ## Branding
-- Finalize optional product flavors (`nsk` vs `askCompat`) with flavor-specific names/icons/resources; runtime APIs remain unchanged.
+- Product flavors (`nsk`, `askCompat`) already exist; add flavor-specific names/icons/resources if we keep both.
 
 ## Monolith Follow-ups
 - Continue splitting large classes (e.g., remaining `AnySoftKeyboard`/`AnySoftKeyboardSuggestions` pieces, `Dictionary`/`BTreeDictionary`, settings fragments into view/data helpers) with behavior preserved and light tests.
@@ -16,6 +16,6 @@
 - Host-side predictNextWords test exists; add small UI polish/normalization if desired.
 
 ## Immediate Next Steps
-1) Continue legacy cleanup (branding/tasks/resources); add-on discovery CTS test added; FileProvider dual authorities cleaned (NSK primary + legacy).
-2) Decide and implement the flavor branding split.
+1) Continue legacy cleanup (remaining resources/tasks; occasional wording fixes); verify no new ASK-only branding sneaks in.
+2) Decide whether to keep `askCompat` flavor and, if so, add flavor-specific branding assets; otherwise trim it.
 3) Pick the next monolith slice from the audit list and refactor with tests.

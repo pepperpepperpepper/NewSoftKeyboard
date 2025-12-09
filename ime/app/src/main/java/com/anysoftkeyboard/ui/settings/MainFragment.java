@@ -419,7 +419,7 @@ public class MainFragment extends Fragment {
     switch (item.getItemId()) {
       case R.id.about_menu_option:
         Navigation.findNavController(requireView())
-            .navigate(MainFragmentDirections.actionMainFragmentToAboutAnySoftKeyboardFragment());
+            .navigate(MainFragmentDirections.actionMainFragmentToAboutNewSoftKeyboardFragment());
         return true;
       case R.id.tweaks_menu_option:
         Navigation.findNavController(requireView())
