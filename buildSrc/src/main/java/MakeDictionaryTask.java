@@ -14,8 +14,8 @@ import org.gradle.api.tasks.TaskAction;
 public class MakeDictionaryTask extends DefaultTask {
 
   public MakeDictionaryTask() {
-    setGroup("AnySoftKeyboard");
-    setDescription("Creating AnySoftKeyboard binary dictionary");
+    setGroup("NewSoftKeyboard");
+    setDescription("Creating NewSoftKeyboard binary dictionary");
   }
 
   @TaskAction

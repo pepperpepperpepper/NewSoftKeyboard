@@ -23,7 +23,7 @@ def validateLink(url) {
 }
 
 tasks.register("generatePacksYaml") {
-    group "AnySoftKeyboard"
+    group "NewSoftKeyboard"
     description "Writing a YAML list of ${project.name} to PACKS.yml."
 
     doLast {
@@ -78,7 +78,7 @@ tasks.register("generatePacksYaml") {
 }
 
 tasks.register("generatePacksMarkDown") {
-    group "AnySoftKeyboard"
+    group "NewSoftKeyboard"
     description "Writing a MarkDown-friendly list of ${project.name} to PACKS.md."
 
     doLast {

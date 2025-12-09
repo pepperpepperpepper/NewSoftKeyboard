@@ -17,8 +17,8 @@ android {
 }
 
 def generateIconsTask = tasks.register('generateLanguagePackIcons') {
-    it.group "AnySoftKeyboard"
-    it.description 'Creating icons for AnySoftKeyboard language pack library'
+    it.group "NewSoftKeyboard"
+    it.description 'Creating icons for NewSoftKeyboard language pack library'
 }
 
 def dimensArray = [['xxxhdpi', 96, 80], ['xxhdpi', 72, 62], ['xhdpi', 48, 40], ['hdpi', 36, 32], ['mdpi', 24, 22]]

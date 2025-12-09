@@ -6,8 +6,8 @@ if (!imageAssetsFolder.exists()) {
 }
 
 def generateLogoTask = tasks.register('generateStoreLogoIcon', Exec) {
-    it.group "AnySoftKeyboard"
-    it.description 'Creating icons for AnySoftKeyboard add-on APK'
+    it.group "NewSoftKeyboard"
+    it.description 'Creating icons for NewSoftKeyboard add-on APK'
     if (System.getProperty('os.name').toLowerCase(Locale.ROOT).contains('windows')) {
         it.commandLine "cmd", "/c", "${imageAssetsFolder.absolutePath}\\logo-base\\generate.bat", projectDir.absolutePath, buildDir.absolutePath, "${imageAssetsFolder.absolutePath}\\logo-base"
     } else {
