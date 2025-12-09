@@ -295,7 +295,7 @@
     </string>
     <string name="always_hide_language_key_off_summary">يقوم بإظهار مفتاح اللغة إن تم تفعيل عدة نسق للوحات المفاتيح.</string>
     <string name="show_crash_notification">إنشاء تقرير عند تحطم التطبيق</string>
-    <string name="show_crash_notification_on_summary">عندما يتحطم ASK، قم بفتح مربع حوار فيه تقرير</string>
+    <string name="show_crash_notification_on_summary">عندما يتحطم keyboard، قم بفتح مربع حوار فيه تقرير</string>
     <string name="show_crash_notification_off_summary">استيعاب تحطم التطبيق بصمت</string>
     <string name="use_keyrepeat">استخدم مفتاح التكرار</string>
     <string name="use_keyrepeat_on_summary">مفتاح التكرار مفعّل</string>

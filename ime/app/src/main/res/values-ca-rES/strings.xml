@@ -300,7 +300,7 @@
     <string name="always_hide_language_key_on_summary">No es mostrarà mai la tecla d\'idioma. Es canviarà mitjançant els gestos.</string>
     <string name="always_hide_language_key_off_summary">Es mostrarà la tecla d\'idioma només si s\'ha habilitat la disposició múltiple.</string>
     <string name="show_crash_notification">Informe d\'error</string>
-    <string name="show_crash_notification_on_summary">Si l\'ASK falla, obre el diàleg d\'enviament d\'errors</string>
+    <string name="show_crash_notification_on_summary">Si l\'keyboard falla, obre el diàleg d\'enviament d\'errors</string>
     <string name="show_crash_notification_off_summary">No reportis els errors</string>
     <string name="use_keyrepeat">Repetició de tecles</string>
     <string name="use_keyrepeat_on_summary">S\'ha activat la repetició de tecles</string>

@@ -284,7 +284,7 @@
     <string name="always_hide_language_key_on_summary">Ne jamais afficher la touche de langues. Les gestes géreront toujours le changement de disposition.</string>
     <string name="always_hide_language_key_off_summary">Afficher la touche de langues seulement si des dispositions multiples sont activées</string>
     <string name="show_crash_notification">Rapport sur plantage</string>
-    <string name="show_crash_notification_on_summary">Lors d\'un plantage de ASK, ouvrir la boîte de dialogue de rapport sur plantage</string>
+    <string name="show_crash_notification_on_summary">Lors d\'un plantage de keyboard, ouvrir la boîte de dialogue de rapport sur plantage</string>
     <string name="show_crash_notification_off_summary">Ne pas signaler les plantages</string>
     <string name="use_keyrepeat">Utiliser la répétition des touches</string>
     <string name="use_keyrepeat_on_summary">Répétition des touches activée</string>

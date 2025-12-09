@@ -281,7 +281,7 @@
     <string name="always_hide_language_key_on_summary">Nunca se mostrará la tecla de idioma. Los gestos seguirán siendo compatibles con el cambio de distribución.</string>
     <string name="always_hide_language_key_off_summary">Mostrará la tecla de idioma solo si hay múltiples distribuciones habilitadas.</string>
     <string name="show_crash_notification">Informar de errores</string>
-    <string name="show_crash_notification_on_summary">Al producirse un error en AnySoftKeyboard, abra el diálogo de informe de errores</string>
+    <string name="show_crash_notification_on_summary">Al producirse un error en keyboard, abra el diálogo de informe de errores</string>
     <string name="show_crash_notification_off_summary">Absorber los accidentes silenciosamente</string>
     <string name="use_keyrepeat">Usar repetición de tecla</string>
     <string name="use_keyrepeat_on_summary">Repetición de tecla está habilitada</string>

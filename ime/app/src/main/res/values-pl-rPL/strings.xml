@@ -319,7 +319,7 @@ Zmiana
         włączono kilka układów.
     </string>
     <string name="show_crash_notification">Raportowanie awarii</string>
-    <string name="show_crash_notification_on_summary">Otwórz okno raportowania awarii, podczas awarii ASK
+    <string name="show_crash_notification_on_summary">Otwórz okno raportowania awarii, podczas awarii keyboard
     </string>
     <string name="show_crash_notification_off_summary">Po cichu absorbuj awarie</string>
     <string name="use_keyrepeat">Używaj powtarzania klawisza</string>

@@ -223,7 +223,7 @@
     <string name="always_hide_language_key_on_summary">Nikoli ne prikazalo tipko za jezik. Kretnje bodo še vedno podpirale preklapljanje razporeditve.</string>
     <string name="always_hide_language_key_off_summary">Tipka za jezik bo prikazana samo, če je omogočenih več razporeditev.</string>
     <string name="show_crash_notification">Poročaj ob sesutju</string>
-    <string name="show_crash_notification_on_summary">Po sesutju ASK-ja odpri pogovorno okno za poročanje o sesutju</string>
+    <string name="show_crash_notification_on_summary">Po sesutju keyboard-ja odpri pogovorno okno za poročanje o sesutju</string>
     <string name="show_crash_notification_off_summary">Tiho prezri sesutja</string>
     <string name="use_keyrepeat">Uporabi ponavljanje tipk</string>
     <string name="use_keyrepeat_on_summary">Ponavljanje tipk je omogočeno</string>

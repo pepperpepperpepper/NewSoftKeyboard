@@ -293,7 +293,7 @@ woordenlijst
     <string name="always_hide_language_key_on_summary">Verberg de taalsleutel. Gebaren ondersteunen nog steeds indelingwisseling.</string>
     <string name="always_hide_language_key_off_summary">Toon alleen taalsleutel als meerdere indelingen actief zijn.</string>
     <string name="show_crash_notification">Rapporteer over de crash</string>
-    <string name="show_crash_notification_on_summary">Zodra ASK crash, open het crashrapportvenster</string>
+    <string name="show_crash_notification_on_summary">Zodra keyboard crash, open het crashrapportvenster</string>
     <string name="show_crash_notification_off_summary">Crash verzwijgen</string>
     <string name="use_keyrepeat">Gebruik toetsherhaling</string>
     <string name="use_keyrepeat_on_summary">Toetsherhaling is ingeschakeld</string>

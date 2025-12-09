@@ -305,7 +305,7 @@
         billentyűzetkiosztás van beállítva
     </string>
     <string name="show_crash_notification">Hibajelentés</string>
-    <string name="show_crash_notification_on_summary">Az ASK összeomlásakor a hibajelentés párbeszédablak megnyitása</string>
+    <string name="show_crash_notification_on_summary">Az keyboard összeomlásakor a hibajelentés párbeszédablak megnyitása</string>
     <string name="show_crash_notification_off_summary">Hiba esetén nem kérek értesítést</string>
     <string name="use_keyrepeat">Billentyű ismétlés</string>
     <string name="use_keyrepeat_on_summary">Billentyű ismétlés bekapcsolva</string>

@@ -288,7 +288,7 @@
         layouter är aktiverade.
     </string>
     <string name="show_crash_notification">Rapportera vid krasch</string>
-    <string name="show_crash_notification_on_summary">Vid ASK-krasch, öppna kraschrapportsdialog
+    <string name="show_crash_notification_on_summary">Vid keyboard-krasch, öppna kraschrapportsdialog
     </string>
     <string name="show_crash_notification_off_summary">Absorbera krascher tyst</string>
     <string name="use_keyrepeat">Tangentrepetering</string>

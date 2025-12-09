@@ -266,7 +266,7 @@
         множество оформления.
     </string>
     <string name="show_crash_notification">Доклад за срив</string>
-    <string name="show_crash_notification_on_summary">При срив на ASK отваряне на диалоговия прозорец за доклад
+    <string name="show_crash_notification_on_summary">При срив на keyboard отваряне на диалоговия прозорец за доклад
     </string>
     <string name="show_crash_notification_off_summary">Тихо абсорбиране на сривове</string>
     <string name="use_keyrepeat">Използвай повторение на клавиши</string>

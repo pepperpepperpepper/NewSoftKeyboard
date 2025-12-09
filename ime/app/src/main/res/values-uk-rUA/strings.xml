@@ -284,7 +284,7 @@
     <string name="always_hide_language_key_on_summary">Іконка зміни мови не відображатиметься.. Жестами так само можна буде змінити розкладку.</string>
     <string name="always_hide_language_key_off_summary">Іконка зміни мови показуватиметься тільки тоді, коли включено декілька розкладок.</string>
     <string name="show_crash_notification">Звіт про помилку</string>
-    <string name="show_crash_notification_on_summary">Щодо помилок ASK відкрийте звіт про помилку</string>
+    <string name="show_crash_notification_on_summary">Щодо помилок keyboard відкрийте звіт про помилку</string>
     <string name="show_crash_notification_off_summary">Непомітно отримувати помилки</string>
     <string name="use_keyrepeat">Автоповтор</string>
     <string name="use_keyrepeat_on_summary">Автоповтор ввімкнено</string>

@@ -288,7 +288,7 @@
     <string name="always_hide_language_key_on_summary">No ammustres mai sa tecla de sa limba. Sos gestos ant a suportare su matessi sos cambiamentos de ischema.</string>
     <string name="always_hide_language_key_off_summary">At a ammustrare sa tecla de sas limbas petzi si bi sunt ischemas mùltiplos abilitados.</string>
     <string name="show_crash_notification">Sinnala s\'errore</string>
-    <string name="show_crash_notification_on_summary">In casu de serradura de ASK pro neghe de un\'errore aberi sa ventana de sinnalatzione de sos errores</string>
+    <string name="show_crash_notification_on_summary">In casu de serradura de keyboard pro neghe de un\'errore aberi sa ventana de sinnalatzione de sos errores</string>
     <string name="show_crash_notification_off_summary">Non sinnalare sos errores</string>
     <string name="use_keyrepeat">Imprea sa ripetitzione de teclas</string>
     <string name="use_keyrepeat_on_summary">Sa ripetitzione de teclas est abilitada</string>

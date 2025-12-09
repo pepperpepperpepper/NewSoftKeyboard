@@ -286,7 +286,7 @@ bulamıyorum. Bu özellik cihazınızda çalışamaz, üzgünüz.</string>
     <string name="always_hide_language_key_on_summary">Dil tuşu hiçbir zaman gösterilmeyecek. Parmak hareketleri yerleşim değişimini desteklemeye devam edecektir.</string>
     <string name="always_hide_language_key_off_summary">Dil tuşu sadece birden çok yerleşim etkin olduğunda gösterilecek.</string>
     <string name="show_crash_notification">Çökmeleri raporla</string>
-    <string name="show_crash_notification_on_summary">ASK\'ın çökmesi sırasında çökme rapor diyaloğunu aç</string>
+    <string name="show_crash_notification_on_summary">keyboard\'ın çökmesi sırasında çökme rapor diyaloğunu aç</string>
     <string name="show_crash_notification_off_summary">Çökmeleri sessizce absorbe et</string>
     <string name="use_keyrepeat">Tuş tekrarlaması kullan</string>
     <string name="use_keyrepeat_on_summary">Tuş tekrarlaması etkin</string>

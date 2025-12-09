@@ -307,7 +307,7 @@
     <string name="always_hide_language_key_off_summary">Mun aðeins birta tungumálalykilinn ef margar framsetningar eru virkar.
     </string>
     <string name="show_crash_notification">Senda tilkynningar um hrun</string>
-    <string name="show_crash_notification_on_summary">Við hrun á AnySoftKeyboard skal opna hrunskýrsluglugga
+    <string name="show_crash_notification_on_summary">Við hrun á keyboard skal opna hrunskýrsluglugga
     </string>
     <string name="show_crash_notification_off_summary">Meðhöndla hrun hljóðlega</string>
     <string name="use_keyrepeat">Nota lyklaborðsendurtekningar</string>

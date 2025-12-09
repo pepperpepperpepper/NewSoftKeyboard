@@ -291,7 +291,7 @@
     <string name="always_hide_language_key_on_summary">Niekada nebus rodomas kalbos klavišas. Gestai vis tiek palaikys išdėstymo perjungimą.</string>
     <string name="always_hide_language_key_off_summary">Rodys kalbos klavišą tik, jei įjungta keletas išdėstymų.</string>
     <string name="show_crash_notification">Pranešti įvykus incidentui</string>
-    <string name="show_crash_notification_on_summary">Įvykus ASK incidentui, atidaryti incidento pranešimo dialogą</string>
+    <string name="show_crash_notification_on_summary">Įvykus keyboard incidentui, atidaryti incidento pranešimo dialogą</string>
     <string name="show_crash_notification_off_summary">Tyliai kaupti incidentus</string>
     <string name="use_keyrepeat">Naudoti pakartojimą</string>
     <string name="use_keyrepeat_on_summary">Klavišų kartojimas įjungtas</string>

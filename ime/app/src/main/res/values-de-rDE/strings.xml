@@ -283,7 +283,7 @@
     <string name="always_hide_language_key_on_summary">Sprachtaste wird nie angezeigt. Gesten unterstützen noch immer das Wechseln des Layouts.</string>
     <string name="always_hide_language_key_off_summary">Sprachtaste wird nur angezeigt, wenn mehrere Layouts aktiviert sind.</string>
     <string name="show_crash_notification">Bericht bei Absturz</string>
-    <string name="show_crash_notification_on_summary">Wenn ASK abstürzt, öffnet sich der Fehlerberichtsdialog</string>
+    <string name="show_crash_notification_on_summary">Wenn keyboard abstürzt, öffnet sich der Fehlerberichtsdialog</string>
     <string name="show_crash_notification_off_summary">Abstürze im Hintergrund aufzeichnen</string>
     <string name="use_keyrepeat">Verwende Tastenwiederholung</string>
     <string name="use_keyrepeat_on_summary">Tastenwiederholung ist aktiviert</string>

@@ -328,7 +328,7 @@
         განლაგება იქნება ჩართული.
     </string>
     <string name="show_crash_notification">მოხსენება გათიშვისას</string>
-    <string name="show_crash_notification_on_summary">ASK უეცრად თუ გაითიშა, გაიხსნება მოხსენების ფანჯარა
+    <string name="show_crash_notification_on_summary">keyboard უეცრად თუ გაითიშა, გაიხსნება მოხსენების ფანჯარა
     </string>
     <string name="show_crash_notification_off_summary">გათიშვის მოხსენებები შეუმჩნევლად გაქრება</string>
     <string name="use_keyrepeat">ღილაკის გამეორება</string>

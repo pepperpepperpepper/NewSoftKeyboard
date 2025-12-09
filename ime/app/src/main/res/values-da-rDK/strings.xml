@@ -316,7 +316,7 @@
         layouts er aktiveret.
     </string>
     <string name="show_crash_notification">Rapporter ved nedbrud</string>
-    <string name="show_crash_notification_on_summary">Ved ASK-nedbrud, åbn nedbrudsrapportdialog
+    <string name="show_crash_notification_on_summary">Ved keyboard-nedbrud, åbn nedbrudsrapportdialog
     </string>
     <string name="show_crash_notification_off_summary">Absorber nedbrud i stilhed</string>
     <string name="use_keyrepeat">Brug tastgentagelse</string>

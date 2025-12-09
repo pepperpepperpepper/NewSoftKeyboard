@@ -260,7 +260,7 @@
     <string name="always_hide_language_key_on_summary">Nikdy nezobrazí klávesu pro přepínání jazyků. Klávesnice bude stále možné přepínat gesty.</string>
     <string name="always_hide_language_key_off_summary">Zobrazovat klávesu přepínání jazyků jen pokud jich je více.</string>
     <string name="show_crash_notification">Hlášení o pádu</string>
-    <string name="show_crash_notification_on_summary">Po pádu ASK otevřít dialog hlášení o pádu</string>
+    <string name="show_crash_notification_on_summary">Po pádu keyboard otevřít dialog hlášení o pádu</string>
     <string name="show_crash_notification_off_summary">Tiše pohlcovat pády</string>
     <string name="use_keyrepeat">Opakování klávesy</string>
     <string name="use_keyrepeat_on_summary">Opakování klávesy je povoleno</string>

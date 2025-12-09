@@ -397,7 +397,7 @@
     </string>
 
     <string name="show_crash_notification">Report on crash</string>
-    <string name="show_crash_notification_on_summary">Upon ASK crash, open crash report dialog
+    <string name="show_crash_notification_on_summary">Upon keyboard crash, open crash report dialog
     </string>
     <string name="show_crash_notification_off_summary">Silently absorb crashes</string>
 
@@ -1008,7 +1008,7 @@
 
     <string name="app_share_title">Hello from New Soft Keyboard</string>
     <string name="app_share_menu_title">Share New Soft Keyboard using</string>
-    <string name="app_share_text">Check out New Soft Keyboard, an open-source, privacy-focused fork of AnySoftKeyboard.\nGet it from:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/AnySoftKeyboard</string>
+    <string name="app_share_text">Check out New Soft Keyboard, an open-source, privacy-focused fork of AnySoftKeyboard.\nGet it from:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
 
     <string name="click_me_for_easter_egg_info">click me for a surprise</string>
     

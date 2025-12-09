@@ -289,7 +289,7 @@
     <string name="always_hide_language_key_on_summary">Nunca irá mostrar o botão dos idiomas. Mudança de idioma por gestos continuará sendo suportada.</string>
     <string name="always_hide_language_key_off_summary">Irá mostrar o botão idioma somente se houverem múltiplos layouts habilitados.</string>
     <string name="show_crash_notification">Reportar quando houver erro</string>
-    <string name="show_crash_notification_on_summary">Quando ASK fechar inesperadamente, mostrar tela para reportar erro</string>
+    <string name="show_crash_notification_on_summary">Quando keyboard fechar inesperadamente, mostrar tela para reportar erro</string>
     <string name="show_crash_notification_off_summary">Absorver erro silenciosamente</string>
     <string name="use_keyrepeat">Repetir tecla</string>
     <string name="use_keyrepeat_on_summary">Repetição está ativa</string>

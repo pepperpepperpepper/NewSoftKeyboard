@@ -288,7 +288,7 @@
     <string name="always_hide_language_key_on_summary">Ez da inoiz erakutsiko hizkuntzaren tekla. Keinuen bidez aldatuko da disposizioa.</string>
     <string name="always_hide_language_key_off_summary">Hizkuntza-tekla soilik hainbat disposizio gaitzean erakutsiko da.</string>
     <string name="show_crash_notification">Bidali txostena kraskatzean</string>
-    <string name="show_crash_notification_on_summary">ASK kraskatzen bada, ireki kraskatze txostenaren elkarrizketa-koadroa</string>
+    <string name="show_crash_notification_on_summary">keyboard kraskatzen bada, ireki kraskatze txostenaren elkarrizketa-koadroa</string>
     <string name="show_crash_notification_off_summary">Isilik mantendu kraskatzean</string>
     <string name="use_keyrepeat">Erabili teklaren errepikapena</string>
     <string name="use_keyrepeat_on_summary">Teklaren errepikapena gaituta dago</string>

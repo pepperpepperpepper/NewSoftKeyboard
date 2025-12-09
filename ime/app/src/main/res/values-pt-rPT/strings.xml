@@ -309,7 +309,7 @@ no ecrã (pode ser necessário reiniciar)    </string>
         vários esquemas.
     </string>
     <string name="show_crash_notification">Reportar erros</string>
-    <string name="show_crash_notification_on_summary">Num erro ASK, abrir caixa de reporte de erros</string>
+    <string name="show_crash_notification_on_summary">Num erro keyboard, abrir caixa de reporte de erros</string>
     <string name="show_crash_notification_off_summary">Enviar erros silenciosamente</string>
     <string name="use_keyrepeat">Repetição de tecla</string>
     <string name="use_keyrepeat_on_summary">Repetição de tecla ativa</string>

@@ -283,7 +283,7 @@
     <string name="always_hide_language_key_on_summary">Иконка смены языка не будет отображаться.. Жестами все так же можно будет сменить раскладку.</string>
     <string name="always_hide_language_key_off_summary">Иконка смены языка будет показываться только тогда, когда включено несколько раскладок.</string>
     <string name="show_crash_notification">Отчеты об ошибках</string>
-    <string name="show_crash_notification_on_summary">После падения ASK открывать окно отчета об ошибке</string>
+    <string name="show_crash_notification_on_summary">После падения keyboard открывать окно отчета об ошибке</string>
     <string name="show_crash_notification_off_summary">Молча поглощать аварий</string>
     <string name="use_keyrepeat">Повторять клавиши</string>
     <string name="use_keyrepeat_on_summary">Повторение клавиш включено</string>

@@ -322,7 +322,7 @@
         nîskan têne çalak kirin.
     </string>
     <string name="show_crash_notification">Raport li ser qeyranê</string>
-    <string name="show_crash_notification_on_summary">Gava ku hûn ASK hilweşînin, danûstendina raporkirina pevçûnê vekin
+    <string name="show_crash_notification_on_summary">Gava ku hûn keyboard hilweşînin, danûstendina raporkirina pevçûnê vekin
     </string>
     <string name="show_crash_notification_off_summary">Bi bêdengî qezayan dike</string>
     <string name="use_keyrepeat">Dubarekirina mifteyan bi kar bîne</string>

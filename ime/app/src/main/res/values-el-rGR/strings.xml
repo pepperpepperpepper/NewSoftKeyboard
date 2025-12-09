@@ -162,7 +162,7 @@
     <string name="show_settings_app_in_launcher">Ρυθμίσεις εφαρμογής</string>
     <string name="settings_key_show_settings_app_off_summary">Απόκρυψη ρυθμίσεων εφαρμογής (μπορεί να χρειαστεί επανεκκίνηση)</string>
     <string name="show_crash_notification">Αναφορά διακοπής λειτουργίας</string>
-    <string name="show_crash_notification_on_summary">Κατά την διακοπή λειτουργίας ASK, άνοιγμα παραθύρου διαλόγου αναφοράς διακοπής λειτουργίας</string>
+    <string name="show_crash_notification_on_summary">Κατά την διακοπή λειτουργίας keyboard, άνοιγμα παραθύρου διαλόγου αναφοράς διακοπής λειτουργίας</string>
     <string name="show_crash_notification_off_summary">Σιωπηλή απορρόφηση διακοπής λειτουργίας</string>
     <string name="use_keyrepeat">Χρήση πλήκτρου επανάληψης</string>
     <string name="use_keyrepeat_on_summary">Το πλήκτρο επανάληψης είναι ενεργοποιημένο</string>

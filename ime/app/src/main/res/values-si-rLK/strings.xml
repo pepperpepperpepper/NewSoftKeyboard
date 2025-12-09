@@ -317,7 +317,7 @@
         සබල කර ඇත්නම් පමණක් භාෂා යතුර පෙන්වනු ඇත.
     </string>
     <string name="show_crash_notification">බිඳවැටීම පිළිබඳ වාර්තාව</string>
-    <string name="show_crash_notification_on_summary">ASK බිඳ වැටීමෙන් පසු, බිඳ වැටීම් වාර්තා සංවාදය
+    <string name="show_crash_notification_on_summary">keyboard බිඳ වැටීමෙන් පසු, බිඳ වැටීම් වාර්තා සංවාදය
     විවෘත කරන්න    </string>
     <string name="show_crash_notification_off_summary">බිඳවැටීම් නිශ්ශබ්දව අවශෝෂණය කරන්න</string>
     <string name="use_keyrepeat">යතුර නැවත භාවිතා කරන්න</string>

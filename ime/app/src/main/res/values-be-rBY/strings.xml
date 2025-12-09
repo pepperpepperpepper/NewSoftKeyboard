@@ -289,7 +289,7 @@
     <string name="always_hide_language_key_on_summary">Не паказваць клавішу мовы. Пераключэнне клавіятуры жэстамі будзе працаваць і далей.</string>
     <string name="always_hide_language_key_off_summary">Паказваць клавішу мовы, калі актывавана некалькі клавіятур.</string>
     <string name="show_crash_notification">Справаздача пра памылку</string>
-    <string name="show_crash_notification_on_summary">Пасля памылкі ASK, калі ласка, адкрыйце справаздачу пра памылкі</string>
+    <string name="show_crash_notification_on_summary">Пасля памылкі keyboard, калі ласка, адкрыйце справаздачу пра памылкі</string>
     <string name="show_crash_notification_off_summary">Незаўважна атрымліваць памылкі</string>
     <string name="use_keyrepeat">Выкарыстоўваць паўтор клавішаў</string>
     <string name="use_keyrepeat_on_summary">Паўтор клавішаў уключаны</string>

@@ -226,7 +226,7 @@
     <string name="always_hide_language_key_on_summary">Hindi kailanman ipakita ang language-key. Sumusuporta pa rin ang Gestures sa paglipat ng layout.</string>
     <string name="always_hide_language_key_off_summary">Magpapakita ng language key kung may maraming layouts ang naka pinagana.</string>
     <string name="show_crash_notification">Magreport ng crash</string>
-    <string name="show_crash_notification_on_summary">Sa pag ASK crash, buksan ang crash report na dialogo</string>
+    <string name="show_crash_notification_on_summary">Sa pag keyboard crash, buksan ang crash report na dialogo</string>
     <string name="show_crash_notification_off_summary">Tahimik na nagaasorb ng crashes</string>
     <string name="use_keyrepeat">Gamitin ang key uli</string>
     <string name="use_keyrepeat_on_summary">Ang key repeat ay gumagana</string>
