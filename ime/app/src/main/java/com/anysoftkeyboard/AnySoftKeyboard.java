@@ -48,6 +48,7 @@ import com.anysoftkeyboard.dictionaries.ExternalDictionaryFactory;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.ime.AnySoftKeyboardColorizeNavBar;
 import com.anysoftkeyboard.ime.InputViewBinder;
+import com.anysoftkeyboard.ime.InputConnectionRouter;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.CondenseType;
 import com.anysoftkeyboard.keyboards.Keyboard;
@@ -112,6 +113,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   private boolean mAutoCap;
   private boolean mKeyboardAutoCap;
+  private final InputConnectionRouter mInputConnectionRouter =
+      new InputConnectionRouter(this::currentInputConnection);
 
   private static boolean isBackWordDeleteCodePoint(int c) {
     return Character.isLetterOrDigit(c);
@@ -1732,14 +1735,6 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     handleFunction();
   }
 
-  private void sendKeyDown(InputConnection ic, int key) {
-    if (ic != null) ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, key));
-  }
-
-  private void sendKeyUp(InputConnection ic, int key) {
-    if (ic != null) ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, key));
-  }
-
   @Override
   public void onPress(int primaryCode) {
     super.onPress(primaryCode);
@@ -1761,7 +1756,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
       mControlKeyState.onPress();
       handleControl();
       if (primaryCode == KeyCodes.CTRL) {
-        sendKeyDown(ic, 113); // KeyEvent.KEYCODE_CTRL_LEFT (API 11 and up)
+        mInputConnectionRouter.sendKeyDown(113); // KeyEvent.KEYCODE_CTRL_LEFT (API 11 and up)
       }
     } else if (!isStickyModifier(primaryCode)) {
       mControlKeyState.onOtherKeyPressed();
@@ -1770,7 +1765,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     if (primaryCode == KeyCodes.ALT_MODIFIER) {
       mAltKeyState.onPress();
       handleAlt();
-      sendKeyDown(ic, KeyEvent.KEYCODE_ALT_LEFT);
+      mInputConnectionRouter.sendKeyDown(KeyEvent.KEYCODE_ALT_LEFT);
     } else if (!isStickyModifier(primaryCode)) {
       mAltKeyState.onOtherKeyPressed();
     }
@@ -1800,7 +1795,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
     if (normalizedPrimaryCode == KeyCodes.CTRL) {
       if (primaryCode == KeyCodes.CTRL) {
-        sendKeyUp(ic, 113); // KeyEvent.KEYCODE_CTRL_LEFT
+        mInputConnectionRouter.sendKeyUp(113); // KeyEvent.KEYCODE_CTRL_LEFT
       }
       mControlKeyState.onRelease(mMultiTapTimeout, mLongPressTimeout);
     } else if (!isStickyModifier(primaryCode)) {
@@ -1808,7 +1803,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     }
 
     if (primaryCode == KeyCodes.ALT_MODIFIER) {
-      sendKeyUp(ic, KeyEvent.KEYCODE_ALT_LEFT);
+      mInputConnectionRouter.sendKeyUp(KeyEvent.KEYCODE_ALT_LEFT);
       mAltKeyState.onRelease(mMultiTapTimeout, mLongPressTimeout);
       handleAlt();
     } else if (!isStickyModifier(primaryCode)) {

@@ -1,55 +1,52 @@
 package com.anysoftkeyboard.ime;
 
-import android.inputmethodservice.InputMethodService;
+import android.view.KeyEvent;
 import android.view.inputmethod.InputConnection;
-import androidx.annotation.Nullable;
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
- * Thin wrapper around {@link InputMethodService#getCurrentInputConnection()} to centralize future
- * routing/monitoring logic.
+ * Lightweight helper that centralizes safe access to the current InputConnection.
+ *
+ * This keeps null checks and common operations (key events, batch edits) in one place so
+ * AnySoftKeyboard can shrink over time without behavior changes.
  */
-final class InputConnectionRouter {
+public final class InputConnectionRouter {
 
-  private final InputMethodService mService;
+  private final Supplier<InputConnection> connectionProvider;
 
-  InputConnectionRouter(InputMethodService service) {
-    mService = service;
+  public InputConnectionRouter(Supplier<InputConnection> connectionProvider) {
+    this.connectionProvider = connectionProvider;
   }
 
-  @Nullable
-  InputConnection current() {
-    return mService.getCurrentInputConnection();
+  public InputConnection current() {
+    return connectionProvider.get();
   }
 
-  boolean hasConnection() {
-    return current() != null;
-  }
-
-  /**
-   * Applies {@code block} to the active {@link InputConnection} if one exists.
-   *
-   * @return true when a connection was present and the block executed, false otherwise.
-   */
-  boolean withConnection(Consumer<InputConnection> block) {
-    final InputConnection connection = current();
-    if (connection == null) {
-      return false;
+  public void sendKeyDown(int keyCode) {
+    InputConnection ic = current();
+    if (ic != null) {
+      ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyCode));
     }
-    block.accept(connection);
-    return true;
   }
 
-  /**
-   * Returns the mapped value from the active {@link InputConnection}, or {@code fallback} when no
-   * connection is available.
-   */
-  <T> T mapConnection(Function<InputConnection, T> mapper, T fallback) {
-    final InputConnection connection = current();
-    if (connection == null) {
-      return fallback;
+  public void sendKeyUp(int keyCode) {
+    InputConnection ic = current();
+    if (ic != null) {
+      ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyCode));
     }
-    return mapper.apply(connection);
+  }
+
+  public void beginBatchEdit() {
+    InputConnection ic = current();
+    if (ic != null) {
+      ic.beginBatchEdit();
+    }
+  }
+
+  public void endBatchEdit() {
+    InputConnection ic = current();
+    if (ic != null) {
+      ic.endBatchEdit();
+    }
   }
 }
