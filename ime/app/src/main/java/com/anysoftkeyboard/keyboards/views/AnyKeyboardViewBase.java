@@ -107,10 +107,6 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   protected final KeyPressTimingHandler mKeyPressTimingHandler;
   // Timing constants
   private final int mKeyRepeatInterval;
-  /* keys icons */
-  private final SparseArray<DrawableBuilder> mKeysIconBuilders = new SparseArray<>(64);
-  private final SparseArray<Drawable> mKeysIcons = new SparseArray<>(64);
-
   @NonNull
   protected final PointerTracker.SharedPointerTrackersData mSharedPointerTrackersData =
       new PointerTracker.SharedPointerTrackersData();
@@ -126,6 +122,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   private final ProximityCalculator proximityCalculator = new ProximityCalculator();
   private final SwipeConfiguration swipeConfiguration = new SwipeConfiguration();
   private final HintLayoutCalculator hintLayoutCalculator = new HintLayoutCalculator();
+  private final KeyIconResolver keyIconResolver;
   protected final CompositeDisposable mDisposables = new CompositeDisposable();
 
   /** Listener for {@link OnKeyboardActionListener}. */
@@ -195,6 +192,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     mDefaultAddOn = new DefaultAddOn(context, context);
 
     mKeyPressTimingHandler = new KeyPressTimingHandler(this);
+    keyIconResolver = new KeyIconResolver(mThemeOverlayCombiner);
 
     mPaint = new Paint();
     mPaint.setAntiAlias(true);
@@ -271,8 +269,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   public void setKeyboardTheme(@NonNull KeyboardTheme theme) {
     if (theme == mLastSetTheme) return;
 
-    clearKeyIconsCache(true);
-    mKeysIconBuilders.clear();
+    keyIconResolver.clearCache(true);
+    keyIconResolver.clearBuilders();
     textWidthCache.clear();
     mLastSetTheme = theme;
     if (mKeyboard != null) setWillNotDraw(false);
@@ -426,7 +424,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   @CallSuper
   public void setThemeOverlay(OverlayData overlay) {
     mThemeOverlay = overlay;
-    clearKeyIconsCache(true);
+    keyIconResolver.clearCache(true);
     mThemeOverlayCombiner.setOverlayData(overlay);
     final ThemeResourcesHolder themeResources = mThemeOverlayCombiner.getThemeResources();
     setBackground(themeResources.getKeyboardBackground());
@@ -674,15 +672,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
           remoteTypeArray.getResourceId(remoteTypedArrayIndex, 0));
       return false;
     } else {
-      mKeysIconBuilders.put(
+      keyIconResolver.putIconBuilder(
           keyCode, DrawableBuilder.build(theme, remoteTypeArray, remoteTypedArrayIndex));
-      Logger.d(
-          TAG,
-          "DrawableBuilders size is %d, newest key code %d for resId %d (at index %d)",
-          mKeysIconBuilders.size(),
-          keyCode,
-          remoteTypeArray.getResourceId(remoteTypedArrayIndex, 0),
-          remoteTypedArrayIndex);
       return true;
     }
   }
@@ -740,15 +731,6 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     mKeyDetector.setProximityThreshold(
         proximityCalculator.computeProximityThreshold(keyboard, mKeys));
     calculateSwipeDistances();
-  }
-
-  private void clearKeyIconsCache(boolean withOverlay) {
-    for (int i = 0; i < mKeysIcons.size(); i++) {
-      Drawable d = mKeysIcons.valueAt(i);
-      if (withOverlay) mThemeOverlayCombiner.clearFromIcon(d);
-      CompatUtils.unbindDrawable(d);
-    }
-    mKeysIcons.clear();
   }
 
   private void calculateSwipeDistances() {
@@ -1005,7 +987,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
       keyBackground.draw(canvas);
 
       if (TextUtils.isEmpty(label)) {
-        Drawable iconToDraw = getIconToDrawForKey(key, false);
+        Drawable iconToDraw = keyIconResolver.getIconToDrawForKey(key, false);
         if (iconToDraw != null /* && shouldDrawIcon */) {
           // http://developer.android.com/reference/android/graphics/drawable/Drawable.html#getCurrent()
           // http://stackoverflow.com/a/103600/1324235
@@ -1408,33 +1390,12 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   @Nullable
   public Drawable getDrawableForKeyCode(int keyCode) {
-    Drawable icon = mKeysIcons.get(keyCode);
-
-    if (icon == null) {
-      DrawableBuilder builder = mKeysIconBuilders.get(keyCode);
-      if (builder == null) {
-        return null; // no builder assigned to the key-code
-      }
-
-      // building needed icon
-      Logger.d(TAG, "Building icon for key-code %d", keyCode);
-      icon = builder.buildDrawable();
-
-      if (icon != null) {
-        mThemeOverlayCombiner.applyOnIcon(icon);
-        mKeysIcons.put(keyCode, icon);
-        Logger.v(TAG, "Current drawable cache size is %d", mKeysIcons.size());
-      } else {
-        Logger.w(TAG, "Can not find drawable for keyCode %d. Context lost?", keyCode);
-      }
-    }
-
-    return icon;
+    return keyIconResolver.getIconForKeyCode(keyCode);
   }
 
   @Nullable
   private Drawable getIconForKeyCode(int keyCode) {
-    Drawable icon = getDrawableForKeyCode(keyCode);
+    Drawable icon = keyIconResolver.getIconForKeyCode(keyCode);
     // maybe a drawable state is required
     if (icon != null) {
       switch (keyCode) {
@@ -1535,7 +1496,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     // this will ensure that in case the key is marked as NO preview, we will just dismiss the
     // previous popup.
     if (keyIndex != NOT_A_KEY && key != null) {
-      Drawable iconToDraw = getIconToDrawForKey(key, true);
+      Drawable iconToDraw = keyIconResolver.getIconToDrawForKey(key, true);
 
       CharSequence label = tracker.getPreviewText(key);
       if (key instanceof AnyKeyboard.AnyKey anyKey) {
@@ -1773,8 +1734,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     resetInputView();
     // cleaning up memory
     CompatUtils.unbindDrawable(getBackground());
-    clearKeyIconsCache(false);
-    mKeysIconBuilders.clear();
+    keyIconResolver.clearCache(false);
+    keyIconResolver.clearBuilders();
 
     mKeyboardActionListener = null;
     mKeyboard = null;

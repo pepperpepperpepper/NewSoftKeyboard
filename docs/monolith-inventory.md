@@ -46,3 +46,4 @@ Recent extractions:
 - ProximityCalculator computes proximity threshold outside the view.
 - HintLayoutCalculator handles hint icon/text placement math.
 - KeyPreviewManagerFacade wraps preview show/dismiss logic.
+- KeyIconResolver holds icon builders/cache and keycode-based lookup.
