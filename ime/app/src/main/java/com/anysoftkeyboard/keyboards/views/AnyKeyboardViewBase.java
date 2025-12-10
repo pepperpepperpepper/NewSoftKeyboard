@@ -125,6 +125,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   private final TextWidthCache textWidthCache = new TextWidthCache();
   private final ProximityCalculator proximityCalculator = new ProximityCalculator();
   private final SwipeConfiguration swipeConfiguration = new SwipeConfiguration();
+  private final HintLayoutCalculator hintLayoutCalculator = new HintLayoutCalculator();
   protected final CompositeDisposable mDisposables = new CompositeDisposable();
 
   /** Listener for {@link OnKeyboardActionListener}. */
@@ -164,7 +165,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   // Drawing
   private Keyboard.Key[] mKeys;
-  private KeyPreviewsController mKeyPreviewsManager = new NullKeyPreviewsManager();
+  private final KeyPreviewManagerFacade keyPreviewManager = new KeyPreviewManagerFacade();
 
   private int mTextCaseForceOverrideType;
   private int mTextCaseType;
@@ -249,7 +250,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   @CallSuper
   public void disableTouchesTillFingersAreUp() {
     mKeyPressTimingHandler.cancelAllMessages();
-    mKeyPreviewsManager.cancelAllPreviews();
+    keyPreviewManager.dismissAll();
 
     mPointerTrackerRegistry.forEach(
         tracker -> {
@@ -721,7 +722,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
     // Remove any pending messages, except dismissing preview
     mKeyPressTimingHandler.cancelAllMessages();
-    mKeyPreviewsManager.cancelAllPreviews();
+    keyPreviewManager.dismissAll();
     mKeyboard = keyboard;
     mKeyboardName = keyboard.getKeyboardName();
     mKeys = mKeyDetector.setKeyboard(keyboard, keyboard.getShiftKey());
@@ -930,14 +931,9 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     }
 
     // allow preferences to override theme settings for hint text position
-    final int hintAlign =
-        mCustomHintGravity == Gravity.NO_GRAVITY
-            ? mThemeHintLabelAlign
-            : mCustomHintGravity & Gravity.HORIZONTAL_GRAVITY_MASK;
+    final int hintAlign = hintLayoutCalculator.resolveHintAlign(mCustomHintGravity, mThemeHintLabelAlign);
     final int hintVAlign =
-        mCustomHintGravity == Gravity.NO_GRAVITY
-            ? mThemeHintLabelVAlign
-            : mCustomHintGravity & Gravity.VERTICAL_GRAVITY_MASK;
+        hintLayoutCalculator.resolveHintVAlign(mCustomHintGravity, mThemeHintLabelVAlign);
 
     final Drawable keyBackground = themeResourcesHolder.getKeyBackground();
     final Rect clipRegion = mClipRegion;
@@ -1227,34 +1223,15 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
           DrawableCompat.setTint(drawable, themeResourcesHolder.getHintTextColor());
           final int iconWidth = drawable.getIntrinsicWidth();
           final int iconHeight = drawable.getIntrinsicHeight();
-          final int iconLeft;
-          if (hintAlign == Gravity.START) {
-            iconLeft = (int) (mKeyBackgroundPadding.left + 0.5f);
-          } else if (hintAlign == Gravity.CENTER_HORIZONTAL) {
-            iconLeft =
-                (int)
-                    (mKeyBackgroundPadding.left
-                        + (key.width
-                                - mKeyBackgroundPadding.left
-                                - mKeyBackgroundPadding.right
-                                - iconWidth)
-                            / 2f);
-          } else {
-            iconLeft =
-                (int) (key.width - mKeyBackgroundPadding.right - iconWidth - 0.5f);
-          }
-          final int iconTop;
-          if (hintVAlign == Gravity.TOP) {
-            iconTop = (int) (mKeyBackgroundPadding.top + 0.5f);
-          } else {
-            iconTop =
-                (int)
-                    (key.height
-                        - mKeyBackgroundPadding.bottom
-                        - iconHeight
-                        - 0.5f);
-          }
-          drawable.setBounds(iconLeft, iconTop, iconLeft + iconWidth, iconTop + iconHeight);
+          hintLayoutCalculator.placeHintIcon(
+              mKeyBackgroundPadding,
+              key.width,
+              key.height,
+              hintAlign,
+              hintVAlign,
+              iconWidth,
+              iconHeight,
+              drawable);
           drawable.draw(canvas);
         }
         paint.setTextAlign(oldAlign);
@@ -1533,14 +1510,14 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
         PointerTracker tracker = mPointerTrackers.valueAt(trackerIndex);
         tracker.updateKey(NOT_A_KEY);
     }*/
-    mKeyPreviewsManager.cancelAllPreviews();
+    keyPreviewManager.dismissAll();
   }
 
   @Override
   public void hidePreview(int keyIndex, PointerTracker tracker) {
     final Keyboard.Key key = tracker.getKey(keyIndex);
     if (keyIndex != NOT_A_KEY && key != null) {
-      mKeyPreviewsManager.hidePreviewForKey(key);
+      keyPreviewManager.getController().hidePreviewForKey(key);
     }
   }
 
@@ -1560,23 +1537,18 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     if (keyIndex != NOT_A_KEY && key != null) {
       Drawable iconToDraw = getIconToDrawForKey(key, true);
 
-      // Should not draw hint icon in key preview
-      if (iconToDraw != null) {
-        mKeyPreviewsManager.showPreviewForKey(key, iconToDraw, this, mPreviewPopupTheme);
-      } else {
-        CharSequence label = tracker.getPreviewText(key);
+      CharSequence label = tracker.getPreviewText(key);
+      if (key instanceof AnyKeyboard.AnyKey anyKey) {
+        label = KeyLabelAdjuster.adjustLabelForFunctionState(mKeyboard, anyKey, label);
+      }
+      if (TextUtils.isEmpty(label)) {
+        label = guessLabelForKey(key.getPrimaryCode());
         if (key instanceof AnyKeyboard.AnyKey anyKey) {
           label = KeyLabelAdjuster.adjustLabelForFunctionState(mKeyboard, anyKey, label);
         }
-        if (TextUtils.isEmpty(label)) {
-          label = guessLabelForKey(key.getPrimaryCode());
-          if (key instanceof AnyKeyboard.AnyKey anyKey) {
-            label = KeyLabelAdjuster.adjustLabelForFunctionState(mKeyboard, anyKey, label);
-          }
-        }
-
-        mKeyPreviewsManager.showPreviewForKey(key, label, this, mPreviewPopupTheme);
       }
+
+      keyPreviewManager.showPreviewForKey(key, iconToDraw, this, mPreviewPopupTheme, label);
     }
   }
 
@@ -1781,7 +1753,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   @CallSuper
   @Override
   public boolean resetInputView() {
-    mKeyPreviewsManager.cancelAllPreviews();
+    keyPreviewManager.dismissAll();
     mKeyPressTimingHandler.cancelAllMessages();
     mTouchDispatcher.cancelAllPointers();
 
@@ -1790,7 +1762,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   @Override
   public void onStartTemporaryDetach() {
-    mKeyPreviewsManager.cancelAllPreviews();
+    keyPreviewManager.dismissAll();
     mKeyPressTimingHandler.cancelAllMessages();
     super.onStartTemporaryDetach();
   }
@@ -1830,7 +1802,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   public void setKeyPreviewController(@NonNull KeyPreviewsController controller) {
-    mKeyPreviewsManager = controller;
+    keyPreviewManager.setController(controller);
   }
 
   /* package */ void setShowKeyboardNameOnKeyboard(boolean show) {

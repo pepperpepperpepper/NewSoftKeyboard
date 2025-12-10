@@ -44,3 +44,5 @@ Recent extractions:
 - SwipeConfiguration owns swipe thresholds and recomputation per keyboard.
 - KeyLabelAdjuster holds shift/function label logic used by the view.
 - ProximityCalculator computes proximity threshold outside the view.
+- HintLayoutCalculator handles hint icon/text placement math.
+- KeyPreviewManagerFacade wraps preview show/dismiss logic.
