@@ -79,7 +79,6 @@ import com.anysoftkeyboard.utils.EmojiUtils;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
-import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
@@ -231,155 +230,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
     final RxSharedPrefs rxSharedPrefs = AnyApplication.prefs(context);
 
-    mDisposables.add(
-        rxSharedPrefs
-            .getBoolean(
-                R.string.settings_key_show_keyboard_name_text_key,
-                R.bool.settings_default_show_keyboard_name_text_value)
-            .asObservable()
-            .subscribe(
-                value -> mShowKeyboardNameOnKeyboard = value,
-                GenericOnError.onError(
-                    "failed to get" + " settings_default_show_keyboard_name_text_value")));
-    mDisposables.add(
-        rxSharedPrefs
-            .getBoolean(
-                R.string.settings_key_show_hint_text_key,
-                R.bool.settings_default_show_hint_text_value)
-            .asObservable()
-            .subscribe(
-                value -> mShowHintsOnKeyboard = value,
-                GenericOnError.onError("failed to get settings_default_show_hint_text_value")));
-
-    mDisposables.add(
-        Observable.combineLatest(
-                rxSharedPrefs
-                    .getBoolean(
-                        R.string.settings_key_use_custom_hint_align_key,
-                        R.bool.settings_default_use_custom_hint_align_value)
-                    .asObservable(),
-                rxSharedPrefs
-                    .getString(
-                        R.string.settings_key_custom_hint_align_key,
-                        R.string.settings_default_custom_hint_align_value)
-                    .asObservable()
-                    .map(Integer::parseInt),
-                rxSharedPrefs
-                    .getString(
-                        R.string.settings_key_custom_hint_valign_key,
-                        R.string.settings_default_custom_hint_valign_value)
-                    .asObservable()
-                    .map(Integer::parseInt),
-                (enabled, align, verticalAlign) -> {
-                  if (enabled) {
-                    return align | verticalAlign;
-                  } else {
-                    return Gravity.NO_GRAVITY;
-                  }
-                })
-            .subscribe(
-                calculatedGravity -> mCustomHintGravity = calculatedGravity,
-                GenericOnError.onError("failed to get calculate hint-gravity")));
-
-    mDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_swipe_distance_threshold,
-                R.string.settings_default_swipe_distance_threshold)
-            .asObservable()
-            .map(Integer::parseInt)
-            .subscribe(
-                integer -> {
-                  mSwipeXDistanceThreshold = (int) (integer * mDisplayDensity);
-                  calculateSwipeDistances();
-                },
-                GenericOnError.onError("failed to get settings_key_swipe_distance_threshold")));
-    mDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_swipe_velocity_threshold,
-                R.string.settings_default_swipe_velocity_threshold)
-            .asObservable()
-            .map(Integer::parseInt)
-            .subscribe(
-                integer -> mSwipeVelocityThreshold = (int) (integer * mDisplayDensity),
-                GenericOnError.onError(
-                    "failed to get" + " settings_default_swipe_velocity_threshold")));
-    mDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_theme_case_type_override,
-                R.string.settings_default_theme_case_type_override)
-            .asObservable()
-            .subscribe(
-                this::updatePrefSettings,
-                GenericOnError.onError("failed to get settings_key_theme_case_type_override")));
-    mDisposables.add(
-        rxSharedPrefs
-            .getBoolean(
-                R.string.settings_key_workaround_disable_rtl_fix,
-                R.bool.settings_default_workaround_disable_rtl_fix)
-            .asObservable()
-            .subscribe(
-                value -> mAlwaysUseDrawText = value,
-                GenericOnError.onError("failed to get settings_key_workaround_disable_rtl_fix")));
-
-    mDisposables.add(
-        KeyboardSupport.getKeyboardHeightFactor(context)
-            .subscribe(
-                factor -> {
-                  mKeysHeightFactor = factor;
-                  mTextWidthCache.clear();
-                  invalidateAllKeys();
-                },
-                GenericOnError.onError("Failed to getKeyboardHeightFactor")));
-
-    mDisposables.add(
-        rxSharedPrefs
-            .getString(R.string.settings_key_hint_size, R.string.settings_key_hint_size_default)
-            .asObservable()
-            .subscribe(
-                this::updatePrefSettingsHintTextSizeFactor,
-                GenericOnError.onError("failed to get settings_key_hint_size")));
-
-    mDisposables.add(
-        AnimationsLevel.createPrefsObservable(context)
-            .subscribe(
-                mAnimationLevelSubject::onNext, GenericOnError.onError("mAnimationLevelSubject")));
-
-    mDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_long_press_timeout,
-                R.string.settings_default_long_press_timeout)
-            .asObservable()
-            .map(Integer::parseInt)
-            .subscribe(
-                value ->
-                    mSharedPointerTrackersData.delayBeforeKeyRepeatStart =
-                        mSharedPointerTrackersData.longPressKeyTimeout = value,
-                GenericOnError.onError("failed to get settings_key_long_press_timeout")));
-    mDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_long_press_timeout,
-                R.string.settings_default_long_press_timeout)
-            .asObservable()
-            .map(Integer::parseInt)
-            .subscribe(
-                value ->
-                    mSharedPointerTrackersData.delayBeforeKeyRepeatStart =
-                        mSharedPointerTrackersData.longPressKeyTimeout = value,
-                GenericOnError.onError("failed to get settings_key_long_press_timeout")));
-    mDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_multitap_timeout, R.string.settings_default_multitap_timeout)
-            .asObservable()
-            .map(Integer::parseInt)
-            .subscribe(
-                value -> mSharedPointerTrackersData.multiTapKeyTimeout = value,
-                GenericOnError.onError("failed to get settings_key_multitap_timeout")));
+    new KeyboardViewPreferenceBinder().bind(this, rxSharedPrefs, mDisposables);
+    new PointerConfigLoader(rxSharedPrefs, mSharedPointerTrackersData).bind(mDisposables);
   }
 
   protected static boolean isSpaceKey(final AnyKey key) {
@@ -2146,7 +1998,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   @Override
   public void setWatermark(@NonNull List<Drawable> watermark) {}
 
-  private void updatePrefSettings(final String overrideValue) {
+  void applyThemeCaseOverride(final String overrideValue) {
     switch (overrideValue) {
       case "auto" -> mTextCaseForceOverrideType = 0;
       case "lower" -> mTextCaseForceOverrideType = 1;
@@ -2155,7 +2007,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     }
   }
 
-  private void updatePrefSettingsHintTextSizeFactor(final String overrideValue) {
+  void applyHintTextSizeFactor(final String overrideValue) {
     switch (overrideValue) {
       case "none" -> mHintTextSizeMultiplier = 0f;
       case "small" -> mHintTextSizeMultiplier = 0.7f;
@@ -2166,6 +2018,45 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   public void setKeyPreviewController(@NonNull KeyPreviewsController controller) {
     mKeyPreviewsManager = controller;
+  }
+
+  /* package */ void setShowKeyboardNameOnKeyboard(boolean show) {
+    mShowKeyboardNameOnKeyboard = show;
+  }
+
+  /* package */ void setShowHintsOnKeyboard(boolean show) {
+    mShowHintsOnKeyboard = show;
+  }
+
+  /* package */ void setCustomHintGravity(int gravity) {
+    mCustomHintGravity = gravity;
+  }
+
+  /* package */ void setSwipeXDistanceThreshold(int threshold) {
+    mSwipeXDistanceThreshold = threshold;
+    calculateSwipeDistances();
+  }
+
+  /* package */ void setSwipeVelocityThreshold(int threshold) {
+    mSwipeVelocityThreshold = threshold;
+  }
+
+  /* package */ void setAlwaysUseDrawText(boolean alwaysUseDrawText) {
+    mAlwaysUseDrawText = alwaysUseDrawText;
+  }
+
+  /* package */ void setKeysHeightFactor(float factor) {
+    mKeysHeightFactor = factor;
+    mTextWidthCache.clear();
+    invalidateAllKeys();
+  }
+
+  /* package */ void setAnimationLevel(AnimationsLevel level) {
+    mAnimationLevelSubject.onNext(level);
+  }
+
+  /* package */ float getDisplayDensity() {
+    return mDisplayDensity;
   }
 
   private static class TextWidthCacheValue {
