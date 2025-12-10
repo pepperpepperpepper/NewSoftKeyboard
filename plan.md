@@ -2,7 +2,7 @@
 
 ## Compatibility & Cleanup
 - Continue pruning AnySoftKeyboard-only resources/strings/tasks while keeping `compat-ask` shims for legacy add-ons.
-- User-visible branding largely updated (crash strings, privacy policy, About screen); base permission rationales now use NewSoftKeyboard wording. Keep spot-fixing any stragglers as they surface.
+- User-visible branding largely updated (crash strings, privacy policy, About screen); base permission rationales now use NewSoftKeyboard wording. French and Basque setup/power-save/clipboard strings now debranded. Keep spot-fixing any stragglers as they surface.
 - Dual authorities: FileProvider is now split (NSK primary + legacy). Verify prefs/other authorities stay minimal.
 - Add-on discovery CTS-style test **done** (ASK + NSK namespaces covered).
 

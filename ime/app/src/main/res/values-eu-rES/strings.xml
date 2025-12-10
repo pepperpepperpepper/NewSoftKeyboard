@@ -71,7 +71,7 @@
     <string name="night_mode_sound_control">Desgaitu teklak zapaltzearen soinua</string>
     <string name="night_mode_vibration_control">Desgaitu teklak sakatzearen bibrazioa</string>
     <string name="power_save_mode_screen">Bateria aurrezteko ezarpenak</string>
-    <string name="power_save_mode_description">Bateria aurrezteko moduak Anysoft-en energia kontsuma gutxiagotuko du ezaugarri hauek desgaituz:</string>
+    <string name="power_save_mode_description">Bateria aurrezteko moduak NewSoftKeyboard-en energia kontsuma gutxiagotuko du ezaugarri hauek desgaituz:</string>
     <string name="power_save_mode_state_summary">Orain, energia aurrezteko atalasea:\u0020%s</string>
     <string name="power_save_mode_dialog_title">Gaitu bateria aurrezteko modua</string>
     <string name="power_save_mode_types_never">Inoiz ez</string>
@@ -557,7 +557,7 @@
     <string name="setup_wizard_step_three_action_themes">Aukeratu azala…</string>
     <string name="setup_wizard_step_three_action_all_settings">Konfiguratu beste guztia…</string>
     <string name="setup_wizard_step_download_title">Deskargatu hizkuntza fitxategiak</string>
-    <string name="setup_wizard_step_download_details"><i>AnySoftKeiboard</i> teklatuak hamaika hizkuntza onartzen dituela jakieak poztuko zaitu. Besterik gabe deskargatu nahi duzun hizkuntza-paketea eta gozatu edozin hizkuntzatan idazten.</string>
+    <string name="setup_wizard_step_download_details"><i>NewSoftKeyboard</i> teklatuak hamaika hizkuntza onartzen dituela jakieak poztuko zaitu. Besterik gabe deskargatu nahi duzun hizkuntza-paketea eta gozatu edozin hizkuntzatan idazten.</string>
     <string name="setup_wizard_step_download_action">Deskargatu hizkuntza paketea</string>
     <string name="setup_wizard_step_download_skip_action">Saltatu</string>
     <string name="ime_crashed_text">Zoritxarrez arazo bat dago <i>New Soft Keyboard</i> teklatuarekin. Ez larritu, badago <b>zuk</b> egin dezakezun zerbait hau konpontzen laguntzeko: bidali kraskatze-txostena, eta guk ahalegina egingo dugu kraskatze hau konpondu eta zuri teklatu esperientzia zoragarri bat emateko!\n\nBarkatu eragozpenak, garapen taldea.</string>
