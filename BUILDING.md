@@ -13,7 +13,7 @@ This is a lean fork of AnySoftKeyboard. Keep models out of the APK; build fast; 
 - Debug app (default `nsk` flavor): `./gradlew :ime:app:assembleDebug`
 - AndroidTest APK: `./gradlew :ime:app:assembleAndroidTest -x lint`
 - askCompat flavor (legacy add-on compatibility): `./gradlew :ime:app:assembleAskCompatDebug`
-  - Use when validating existing AnySoftKeyboard plug-ins without repackaging.
+  - Use when validating existing AnySoftKeyboard plug-ins without repackaging. Launcher icon background is green to distinguish it from the default build.
 - Unit tests (tokenizer/neural): `./gradlew :engine-neural:test`
 - Release (unsigned if keystore envs missing): `./gradlew :ime:app:assembleRelease`
 

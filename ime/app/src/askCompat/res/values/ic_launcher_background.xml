@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Distinguish askCompat build visually; keeps same foreground icon. -->
+    <color name="ic_launcher_background">#008577</color>
+</resources>
