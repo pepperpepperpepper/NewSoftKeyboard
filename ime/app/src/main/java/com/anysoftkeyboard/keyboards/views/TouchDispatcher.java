@@ -5,6 +5,8 @@ import android.view.MotionEvent;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.base.utils.Logger;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Small façade over touch handling to peel logic out of AnyKeyboardViewBase.
@@ -15,6 +17,7 @@ class TouchDispatcher {
   private static final String TAG = "TouchDispatcher";
 
   private final AnyKeyboardViewBase hostView;
+  private final List<PointerTracker> activePointers = new ArrayList<>();
 
   TouchDispatcher(@NonNull AnyKeyboardViewBase hostView) {
     this.hostView = hostView;
@@ -66,9 +69,50 @@ class TouchDispatcher {
       }
     } else {
       PointerTracker tracker = hostView.getPointerTracker(id);
-      tracker.setImeAction(hostView.getKeyboardActionType());
       hostView.dispatchPointerAction(action, eventTime, x, y, tracker);
     }
     return true;
+  }
+
+  void add(PointerTracker tracker) {
+    if (!activePointers.contains(tracker)) {
+      activePointers.add(tracker);
+    }
+  }
+
+  void remove(PointerTracker tracker) {
+    activePointers.remove(tracker);
+  }
+
+  int lastIndexOf(PointerTracker tracker) {
+    return activePointers.lastIndexOf(tracker);
+  }
+
+  void releaseAllPointersExcept(PointerTracker keep, long eventTime) {
+    // Copy to avoid concurrent modification
+    final List<PointerTracker> snapshot = new ArrayList<>(activePointers);
+    for (PointerTracker tracker : snapshot) {
+      if (tracker == keep) continue;
+      tracker.onUpEvent(tracker.getLastX(), tracker.getLastY(), eventTime);
+      activePointers.remove(tracker);
+    }
+  }
+
+  void releaseAllPointersOlderThan(PointerTracker tracker, long eventTime) {
+    int idx = activePointers.lastIndexOf(tracker);
+    if (idx <= 0) return;
+    final List<PointerTracker> snapshot = new ArrayList<>(activePointers.subList(0, idx));
+    for (PointerTracker t : snapshot) {
+      t.onUpEvent(t.getLastX(), t.getLastY(), eventTime);
+      activePointers.remove(t);
+    }
+  }
+
+  void cancelAllPointers() {
+    final List<PointerTracker> snapshot = new ArrayList<>(activePointers);
+    for (PointerTracker tracker : snapshot) {
+      tracker.onCancelEvent();
+    }
+    activePointers.clear();
   }
 }

@@ -111,7 +111,6 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   protected final PreviewPopupTheme mPreviewPopupTheme = new PreviewPopupTheme();
   protected final KeyPressTimingHandler mKeyPressTimingHandler;
   // TODO: Let the PointerTracker class manage this pointer queue
-  final TouchDispatcher mTouchDispatcher = new TouchDispatcher();
   // Timing constants
   private final int mKeyRepeatInterval;
   /* keys icons */
@@ -123,7 +122,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
       new PointerTracker.SharedPointerTrackersData();
 
   private final SparseArray<PointerTracker> mPointerTrackers = new SparseArray<>();
-  private final TouchDispatcher mTouchDispatcher = new TouchDispatcher(this);
+  protected final TouchDispatcher mTouchDispatcher = new TouchDispatcher(this);
   @NonNull private final KeyDetector mKeyDetector;
 
   /** The dirty region in the keyboard bitmap */

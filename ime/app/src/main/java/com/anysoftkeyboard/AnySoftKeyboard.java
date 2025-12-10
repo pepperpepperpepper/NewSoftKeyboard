@@ -113,8 +113,6 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   private boolean mAutoCap;
   private boolean mKeyboardAutoCap;
-  private final InputConnectionRouter mInputConnectionRouter =
-      new InputConnectionRouter(this::currentInputConnection);
 
   private static boolean isBackWordDeleteCodePoint(int c) {
     return Character.isLetterOrDigit(c);
@@ -1105,9 +1103,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
         if (!mAltKeyState.isLocked()) {
           mAltKeyState.setActiveState(false);
           handleAlt();
-          if (ic != null) {
-            sendKeyUp(ic, KeyEvent.KEYCODE_ALT_LEFT);
-          }
+          mInputConnectionRouter.sendKeyUp(KeyEvent.KEYCODE_ALT_LEFT);
         }
         return;
       }

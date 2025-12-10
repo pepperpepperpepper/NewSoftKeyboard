@@ -61,7 +61,7 @@ public abstract class AnySoftKeyboardBase extends InputMethodService
   private KeyboardViewContainerView mInputViewContainer;
   private InputViewBinder mInputView;
   private InputMethodManager mInputMethodManager;
-  private InputConnectionRouter mInputConnectionRouter;
+  protected InputConnectionRouter mInputConnectionRouter;
 
   protected final EditorStateTracker mEditorStateTracker = new EditorStateTracker();
 
@@ -88,7 +88,7 @@ public abstract class AnySoftKeyboardBase extends InputMethodService
         BuildConfig.VERSION_NAME,
         BuildConfig.VERSION_CODE);
     super.onCreate();
-    mInputConnectionRouter = new InputConnectionRouter(this);
+    mInputConnectionRouter = new InputConnectionRouter(this::currentInputConnection);
     mOrientation = getResources().getConfiguration().orientation;
     if (!BuildConfig.DEBUG && DeveloperUtils.hasTracingRequested(getApplicationContext())) {
       try {
