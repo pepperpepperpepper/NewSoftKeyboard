@@ -10,8 +10,10 @@ This is a lean fork of AnySoftKeyboard. Keep models out of the APK; build fast; 
 - Presage sources: run `scripts/setup_presage.sh` once (or wire into CI prebuild)
 
 ## Common builds
-- Debug app: `./gradlew :ime:app:assembleDebug`
+- Debug app (default `nsk` flavor): `./gradlew :ime:app:assembleDebug`
 - AndroidTest APK: `./gradlew :ime:app:assembleAndroidTest -x lint`
+- askCompat flavor (legacy add-on compatibility): `./gradlew :ime:app:assembleAskCompatDebug`
+  - Use when validating existing AnySoftKeyboard plug-ins without repackaging.
 - Unit tests (tokenizer/neural): `./gradlew :engine-neural:test`
 - Release (unsigned if keystore envs missing): `./gradlew :ime:app:assembleRelease`
 
@@ -24,11 +26,17 @@ Signing (when available):
 
 ## Devices & tests
 - Emulator target: Genymotion at `localhost:42865`; wrap `adb` in `timeout` for reliability.
-- Build + install debug app & tests:
+- Build + install debug app & tests (nsk flavor):
   ```bash
   ./gradlew :ime:app:assembleNskDebug :ime:app:assembleAndroidTest -x lint
   adb -s localhost:42865 install -r -t ime/app/build/outputs/apk/nsk/debug/app-nsk-debug.apk
   adb -s localhost:42865 install -r -t ime/app/build/outputs/apk/androidTest/nsk/debug/app-nsk-debug-androidTest.apk
+  ```
+- Build + install askCompat flavor (legacy add-on checks):
+  ```bash
+  ./gradlew :ime:app:assembleAskCompatDebug :ime:app:assembleAndroidTest -x lint
+  adb -s localhost:42865 install -r -t ime/app/build/outputs/apk/askCompat/debug/app-askcompat-debug.apk
+  adb -s localhost:42865 install -r -t ime/app/build/outputs/apk/androidTest/askCompat/debug/app-askcompat-debug-androidTest.apk
   ```
 - Run neural sentence sanity (neural manager):
   ```bash

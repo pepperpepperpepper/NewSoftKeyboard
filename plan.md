@@ -17,5 +17,5 @@
 
 ## Immediate Next Steps
 1) Continue legacy cleanup (remaining resources/tasks; occasional wording fixes). Market “leave app store” dialog strings are now rebranded across locales; permission rationales were already debranded.
-2) Decide whether to keep `askCompat` flavor and, if so, add flavor-specific branding assets; otherwise trim it.
+2) Keep `askCompat` flavor for seamless legacy add-on compatibility; minimal flavor-specific branding already exists. Add overlays/icons only if we need clearer differentiation.
 3) Pick the next monolith slice from the audit list and refactor with tests.
