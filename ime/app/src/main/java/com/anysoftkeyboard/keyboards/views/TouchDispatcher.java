@@ -18,6 +18,8 @@ class TouchDispatcher {
 
   private final AnyKeyboardViewBase hostView;
   private final List<PointerTracker> activePointers = new ArrayList<>();
+  private boolean touchesAreDisabledTillLastFingerIsUp = false;
+  private long lastTimeHadTwoFingers = 0;
 
   TouchDispatcher(@NonNull AnyKeyboardViewBase hostView) {
     this.hostView = hostView;
@@ -32,12 +34,12 @@ class TouchDispatcher {
     final int action = me.getActionMasked();
     final int pointerCount = me.getPointerCount();
     if (pointerCount > 1) {
-      hostView.markTwoFingers(SystemClock.elapsedRealtime());
+      markTwoFingers(SystemClock.elapsedRealtime());
     }
 
-    if (hostView.areTouchesTemporarilyDisabled()) {
-      if (!hostView.areTouchesDisabled(me)) {
-        hostView.enableTouches();
+    if (areTouchesTemporarilyDisabled()) {
+      if (!areTouchesDisabled(me)) {
+        enableTouches();
         if (action != MotionEvent.ACTION_DOWN) {
           return true; // swallow non-DOWN while re-enabling
         }
@@ -114,5 +116,39 @@ class TouchDispatcher {
       tracker.onCancelEvent();
     }
     activePointers.clear();
+  }
+
+  void disableTouchesTillFingersAreUp() {
+    touchesAreDisabledTillLastFingerIsUp = true;
+  }
+
+  boolean areTouchesTemporarilyDisabled() {
+    return touchesAreDisabledTillLastFingerIsUp;
+  }
+
+  boolean areTouchesDisabled(@Nullable MotionEvent motionEvent) {
+    if (motionEvent != null && touchesAreDisabledTillLastFingerIsUp) {
+      final int action = motionEvent.getActionMasked();
+      if (motionEvent.getPointerCount() == 1
+          && (action == MotionEvent.ACTION_CANCEL
+              || action == MotionEvent.ACTION_DOWN
+              || action == MotionEvent.ACTION_UP)) {
+        touchesAreDisabledTillLastFingerIsUp = false;
+        return action == MotionEvent.ACTION_UP;
+      }
+    }
+    return touchesAreDisabledTillLastFingerIsUp;
+  }
+
+  void enableTouches() {
+    touchesAreDisabledTillLastFingerIsUp = false;
+  }
+
+  void markTwoFingers(long timeMs) {
+    lastTimeHadTwoFingers = timeMs;
+  }
+
+  boolean isAtTwoFingersState(long lingerMs) {
+    return SystemClock.elapsedRealtime() - lastTimeHadTwoFingers < lingerMs;
   }
 }

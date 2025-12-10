@@ -31,9 +31,6 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.NinePatchDrawable;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
 import android.os.SystemClock;
 import android.text.Layout.Alignment;
 import android.text.SpannableString;
@@ -86,7 +83,6 @@ import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
-import java.lang.ref.WeakReference;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -110,7 +106,6 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   protected final PreviewPopupTheme mPreviewPopupTheme = new PreviewPopupTheme();
   protected final KeyPressTimingHandler mKeyPressTimingHandler;
-  // TODO: Let the PointerTracker class manage this pointer queue
   // Timing constants
   private final int mKeyRepeatInterval;
   /* keys icons */
@@ -120,8 +115,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   @NonNull
   protected final PointerTracker.SharedPointerTrackersData mSharedPointerTrackersData =
       new PointerTracker.SharedPointerTrackersData();
-
-  private final SparseArray<PointerTracker> mPointerTrackers = new SparseArray<>();
+  private final PointerTrackerRegistry mPointerTrackerRegistry;
   protected final TouchDispatcher mTouchDispatcher = new TouchDispatcher(this);
   @NonNull private final KeyDetector mKeyDetector;
 
@@ -175,10 +169,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   // Drawing
   private Keyboard.Key[] mKeys;
   private KeyPreviewsController mKeyPreviewsManager = new NullKeyPreviewsManager();
-  private long mLastTimeHadTwoFingers = 0;
 
   private Keyboard.Key mInvalidatedKey;
-  private boolean mTouchesAreDisabledTillLastFingerIsUp = false;
   private int mTextCaseForceOverrideType;
   private int mTextCaseType;
 
@@ -219,6 +211,18 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
     final float slide = res.getDimension(R.dimen.mini_keyboard_slide_allowance);
     mKeyDetector = createKeyDetector(slide);
+    final int hysteresisDistance =
+        res.getDimensionPixelOffset(R.dimen.key_hysteresis_distance);
+    mPointerTrackerRegistry =
+        new PointerTrackerRegistry(
+            id ->
+                new PointerTracker(
+                    id,
+                    mKeyPressTimingHandler,
+                    mKeyDetector,
+                    this,
+                    hysteresisDistance,
+                    mSharedPointerTrackersData));
 
     mKeyRepeatInterval = 50;
 
@@ -383,29 +387,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   public boolean areTouchesDisabled(MotionEvent motionEvent) {
-    if (motionEvent != null && mTouchesAreDisabledTillLastFingerIsUp) {
-      // calculate new value for mTouchesAreDisabledTillLastFingerIsUp
-      // when do we reset the mTouchesAreDisabledTillLastFingerIsUp flag:
-      // Only if we have a single pointer
-      // and:
-      // CANCEL - the single pointer has been cancelled. So no pointers
-      // UP - the single pointer has been lifted. So now we have no pointers down.
-      // DOWN - this is the first action from the single pointer, so we already were in
-      // no-pointers down state.
-      final int action = motionEvent.getActionMasked();
-      if (motionEvent.getPointerCount() == 1
-          && (action == MotionEvent.ACTION_CANCEL
-              || action == MotionEvent.ACTION_DOWN
-              || action == MotionEvent.ACTION_UP)) {
-        mTouchesAreDisabledTillLastFingerIsUp = false;
-        // If the action is UP then we will return the previous value (which is TRUE), since
-        // the motion events are disabled until AFTER
-        // the UP event, so if this event resets the flag, this event should still be
-        // disregarded.
-        return action == MotionEvent.ACTION_UP;
-      }
-    }
-    return mTouchesAreDisabledTillLastFingerIsUp;
+    return mTouchDispatcher.areTouchesDisabled(motionEvent);
   }
 
   @Override
@@ -413,7 +395,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     // this is a hack, I know.
     // I know that this is a swipe ONLY after the second finger is up, so I already lost the
     // two-fingers count in the motion event.
-    return SystemClock.elapsedRealtime() - mLastTimeHadTwoFingers < TWO_FINGERS_LINGER_TIME;
+    return mTouchDispatcher.isAtTwoFingersState(TWO_FINGERS_LINGER_TIME);
   }
 
   @CallSuper
@@ -421,15 +403,13 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     mKeyPressTimingHandler.cancelAllMessages();
     mKeyPreviewsManager.cancelAllPreviews();
 
-    for (int trackerIndex = 0, trackersCount = mPointerTrackers.size();
-        trackerIndex < trackersCount;
-        trackerIndex++) {
-      PointerTracker tracker = mPointerTrackers.valueAt(trackerIndex);
-      dispatchPointerAction(MotionEvent.ACTION_CANCEL, 0, 0, 0, tracker);
-      tracker.setAlreadyProcessed();
-    }
+    mPointerTrackerRegistry.forEach(
+        tracker -> {
+          dispatchPointerAction(MotionEvent.ACTION_CANCEL, 0, 0, 0, tracker);
+          tracker.setAlreadyProcessed();
+        });
 
-    mTouchesAreDisabledTillLastFingerIsUp = true;
+    mTouchDispatcher.disableTouchesTillFingersAreUp();
   }
 
   @Nullable
@@ -875,15 +855,14 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     return mKeyboardActionListener;
   }
 
+  /* package */ int getKeyRepeatInterval() {
+    return mKeyRepeatInterval;
+  }
+
   @Override
   public void setOnKeyboardActionListener(OnKeyboardActionListener listener) {
     mKeyboardActionListener = listener;
-    for (int trackerIndex = 0, trackersCount = mPointerTrackers.size();
-        trackerIndex < trackersCount;
-        trackerIndex++) {
-      PointerTracker tracker = mPointerTrackers.valueAt(trackerIndex);
-      tracker.setOnKeyboardActionListener(listener);
-    }
+    mPointerTrackerRegistry.forEach(tracker -> tracker.setOnKeyboardActionListener(listener));
   }
 
   protected void setKeyboard(@NonNull AnyKeyboard keyboard, float verticalCorrection) {
@@ -899,12 +878,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     mKeyboardName = keyboard.getKeyboardName();
     mKeys = mKeyDetector.setKeyboard(keyboard, keyboard.getShiftKey());
     mKeyDetector.setCorrection(-getPaddingLeft(), -getPaddingTop() + verticalCorrection);
-    for (int trackerIndex = 0, trackersCount = mPointerTrackers.size();
-        trackerIndex < trackersCount;
-        trackerIndex++) {
-      PointerTracker tracker = mPointerTrackers.valueAt(trackerIndex);
-      tracker.setKeyboard(mKeys);
-    }
+    mPointerTrackerRegistry.forEach(tracker -> tracker.setKeyboard(mKeys));
     // setting the icon/text
     setSpecialKeysIconsAndLabels();
 
@@ -2026,40 +2000,26 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   protected PointerTracker getPointerTracker(final int id) {
-    final Keyboard.Key[] keys = mKeys;
-    final OnKeyboardActionListener listener = mKeyboardActionListener;
-
-    if (mPointerTrackers.get(id) == null) {
-      final PointerTracker tracker =
-          new PointerTracker(
-              id,
-              mKeyPressTimingHandler,
-              mKeyDetector,
-              this,
-              getResources().getDimensionPixelOffset(R.dimen.key_hysteresis_distance),
-              mSharedPointerTrackersData);
-      if (keys != null) {
-        tracker.setKeyboard(keys);
-      }
-      if (listener != null) {
-        tracker.setOnKeyboardActionListener(listener);
-      }
-      mPointerTrackers.put(id, tracker);
+    final PointerTracker tracker = mPointerTrackerRegistry.get(id);
+    if (mKeys != null) {
+      tracker.setKeyboard(mKeys);
     }
-
-    return mPointerTrackers.get(id);
+    if (mKeyboardActionListener != null) {
+      tracker.setOnKeyboardActionListener(mKeyboardActionListener);
+    }
+    return tracker;
   }
 
   /* package */ void markTwoFingers(long timeMs) {
-    mLastTimeHadTwoFingers = timeMs;
+    mTouchDispatcher.markTwoFingers(timeMs);
   }
 
   /* package */ boolean areTouchesTemporarilyDisabled() {
-    return mTouchesAreDisabledTillLastFingerIsUp;
+    return mTouchDispatcher.areTouchesTemporarilyDisabled();
   }
 
   /* package */ void enableTouches() {
-    mTouchesAreDisabledTillLastFingerIsUp = false;
+    mTouchDispatcher.enableTouches();
   }
 
   /* package */ boolean isInKeyRepeat() {
@@ -2206,77 +2166,6 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   public void setKeyPreviewController(@NonNull KeyPreviewsController controller) {
     mKeyPreviewsManager = controller;
-  }
-
-  protected static class KeyPressTimingHandler extends Handler {
-
-    private static final int MSG_REPEAT_KEY = 3;
-    private static final int MSG_LONG_PRESS_KEY = 4;
-
-    private final WeakReference<AnyKeyboardViewBase> mKeyboard;
-    private boolean mInKeyRepeat;
-
-    KeyPressTimingHandler(AnyKeyboardViewBase keyboard) {
-      super(Looper.getMainLooper());
-      mKeyboard = new WeakReference<>(keyboard);
-    }
-
-    @Override
-    public void handleMessage(@NonNull Message msg) {
-      AnyKeyboardViewBase keyboard = mKeyboard.get();
-      if (keyboard == null) {
-        return;
-      }
-      final PointerTracker tracker = (PointerTracker) msg.obj;
-      Keyboard.Key keyForLongPress = tracker.getKey(msg.arg1);
-      switch (msg.what) {
-        case MSG_REPEAT_KEY -> {
-          if (keyForLongPress instanceof AnyKey && ((AnyKey) keyForLongPress).longPressCode != 0) {
-            keyboard.onLongPress(
-                keyboard.getKeyboard().getKeyboardAddOn(), keyForLongPress, false, tracker);
-          } else {
-            tracker.repeatKey(msg.arg1);
-          }
-          startKeyRepeatTimer(keyboard.mKeyRepeatInterval, msg.arg1, tracker);
-        }
-        case MSG_LONG_PRESS_KEY -> {
-          if (keyForLongPress != null
-              && keyboard.onLongPress(
-                  keyboard.getKeyboard().getKeyboardAddOn(), keyForLongPress, false, tracker)) {
-            keyboard.mKeyboardActionListener.onLongPressDone(keyForLongPress);
-          }
-        }
-        default -> super.handleMessage(msg);
-      }
-    }
-
-    public void startKeyRepeatTimer(long delay, int keyIndex, PointerTracker tracker) {
-      mInKeyRepeat = true;
-      sendMessageDelayed(obtainMessage(MSG_REPEAT_KEY, keyIndex, 0, tracker), delay);
-    }
-
-    void cancelKeyRepeatTimer() {
-      mInKeyRepeat = false;
-      removeMessages(MSG_REPEAT_KEY);
-    }
-
-    boolean isInKeyRepeat() {
-      return mInKeyRepeat;
-    }
-
-    public void startLongPressTimer(long delay, int keyIndex, PointerTracker tracker) {
-      removeMessages(MSG_LONG_PRESS_KEY);
-      sendMessageDelayed(obtainMessage(MSG_LONG_PRESS_KEY, keyIndex, 0, tracker), delay);
-    }
-
-    public void cancelLongPressTimer() {
-      removeMessages(MSG_LONG_PRESS_KEY);
-    }
-
-  public void cancelAllMessages() {
-    cancelKeyRepeatTimer();
-    cancelLongPressTimer();
-  }
   }
 
   private static class TextWidthCacheValue {

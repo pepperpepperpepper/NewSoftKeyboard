@@ -32,3 +32,9 @@ Tests ≥500 LOC (for awareness): AnySoftKeyboard* tests, SuggestionProviderTest
 6) Settings UI: `MainFragment.java`, `NextWordSettingsFragment.java` (view vs. data helpers).
 
 Keep behavior identical; add light tests per extraction. Preserve ASK compatibility surfaces while refactoring.
+
+Recent extractions:
+- InputConnectionRouter (AnySoftKeyboard*).
+- TouchDispatcher (AnyKeyboardViewBase/PointerTracker) now owns touch gating flags.
+- PointerTrackerRegistry (PointerTracker ownership/iteration).
+- KeyPressTimingHandler extracted from AnyKeyboardViewBase.
