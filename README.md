@@ -4,6 +4,7 @@ NewSoftKeyboard is a refactored fork of AnySoftKeyboard with:
 - Downloadable next-word engines (Presage n‑gram, ONNX neural) and a catalog-driven model flow.
 - Whisper-based voice input (bring your own API key).
 - Runtime compatibility with existing ASK add-ons (keyboards, dictionaries, themes, quick‑text).
+- Add-ons built for AnySoftKeyboard continue to work unchanged: we honor both legacy `com.anysoftkeyboard.*` and NewSoftKeyboard `wtf.uhoh.newsoftkeyboard.*` action/metadata namespaces, and the optional `askCompat` flavor keeps legacy-facing branding for side-by-side installs.
 
 This repo is the active source of truth for NewSoftKeyboard; legacy ASK badges and store links were removed to avoid confusion.
 

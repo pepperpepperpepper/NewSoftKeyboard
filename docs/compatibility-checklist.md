@@ -14,6 +14,7 @@ Use this list when validating NewSoftKeyboard remains compatible with existing A
 - Runtime behavior
   - Add‑on enablement and ordering are preserved across installs/updates.
   - Broadcast receiver `AddOnUICardReceiver` continues to respond to `com.anysoftkeyboard.UI_CARD_UPDATE`.
+  - Packaging/branding changes in NewSoftKeyboard must not require add‑on APK changes; existing ASK packs should work unmodified.
 - Manifests and queries
   - App manifest queries include both NewSoftKeyboard and legacy ASK actions (verified under `ime/app/src/main/AndroidManifest.xml`).
 - Tests
