@@ -10,7 +10,7 @@
 - Product flavors (`nsk`, `askCompat`) already exist; add flavor-specific names/icons/resources if we keep both.
 
 ## Monolith Follow-ups
-- Continue splitting large classes (e.g., remaining `AnySoftKeyboard`/`AnySoftKeyboardSuggestions` pieces, `Dictionary`/`BTreeDictionary`, settings fragments into view/data helpers) with behavior preserved and light tests.
+- Continue splitting large classes (see `docs/monolith-inventory.md` for LOC/top targets): remaining `AnySoftKeyboard`/`AnySoftKeyboardSuggestions`, `AnyKeyboardViewBase`/`PointerTracker`, `Dictionary`/`BTreeDictionary`, settings fragments into view/data helpers. Keep behavior identical; add light tests.
 
 ## Neural/Prediction Quality
 - Host-side predictNextWords test exists; add small UI polish/normalization if desired.
