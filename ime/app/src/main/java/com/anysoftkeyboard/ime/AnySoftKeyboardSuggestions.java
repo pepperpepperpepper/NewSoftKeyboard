@@ -110,6 +110,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private boolean mShowSuggestions = false;
   private boolean mAutoComplete;
 
+  private final InputFieldConfigurator inputFieldConfigurator = new InputFieldConfigurator();
+
   private static void fillSeparatorsSparseArray(
       SparseBooleanArray sparseBooleanArray, char[] chars) {
     sparseBooleanArray.clear();
@@ -262,104 +264,14 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     mCompletionOn = false;
     mCompletions = EMPTY_COMPLETIONS;
     mInputFieldSupportsAutoPick = false;
-    // prediction should be on by default, unless disabled by a specific variation
-    mPredictionOn = true;
 
-    switch (attribute.inputType & EditorInfo.TYPE_MASK_CLASS) {
-      case EditorInfo.TYPE_CLASS_DATETIME:
-        Logger.d(
-            TAG,
-            "Setting INPUT_MODE_DATETIME as keyboard due to a TYPE_CLASS_DATETIME" + " input.");
-        getKeyboardSwitcher()
-            .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_DATETIME, attribute, restarting);
-        mPredictionOn = false;
-        break;
-      case EditorInfo.TYPE_CLASS_NUMBER:
-        Logger.d(TAG, "Setting INPUT_MODE_NUMBERS as keyboard due to a TYPE_CLASS_NUMBER input.");
-        getKeyboardSwitcher()
-            .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_NUMBERS, attribute, restarting);
-        mPredictionOn = false;
-        break;
-      case EditorInfo.TYPE_CLASS_PHONE:
-        Logger.d(TAG, "Setting INPUT_MODE_PHONE as keyboard due to a TYPE_CLASS_PHONE input.");
-        getKeyboardSwitcher()
-            .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_PHONE, attribute, restarting);
-        mPredictionOn = false;
-        break;
-      case EditorInfo.TYPE_CLASS_TEXT:
-        Logger.d(TAG, "A TYPE_CLASS_TEXT input.");
-        final int textVariation = attribute.inputType & EditorInfo.TYPE_MASK_VARIATION;
-        switch (textVariation) {
-          case EditorInfo.TYPE_TEXT_VARIATION_PASSWORD:
-          case EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD:
-          case EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD:
-            Logger.d(TAG, "A password TYPE_CLASS_TEXT input with no prediction");
-            mPredictionOn = false;
-            break;
-          case EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:
-          case EditorInfo.TYPE_TEXT_VARIATION_URI:
-          case EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS:
-            Logger.d(TAG, "An internet input with has prediction but no auto-pick");
-            mInputFieldSupportsAutoPick = false;
-            break;
-          default:
-            mInputFieldSupportsAutoPick = true;
-        }
+    InputFieldConfigurator.Result inputConfig =
+        inputFieldConfigurator.configure(
+            attribute, restarting, getKeyboardSwitcher(), mPrefsAutoSpace, TAG);
 
-        switch (textVariation) {
-          case EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:
-          case EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS:
-            mAutoSpace = false;
-            break;
-          default:
-            mAutoSpace = mPrefsAutoSpace;
-        }
-
-        switch (textVariation) {
-          case EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:
-          case EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS:
-            Logger.d(
-                TAG,
-                "Setting INPUT_MODE_EMAIL as keyboard due to a"
-                    + " TYPE_TEXT_VARIATION_EMAIL_ADDRESS input.");
-            getKeyboardSwitcher()
-                .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_EMAIL, attribute, restarting);
-            break;
-          case EditorInfo.TYPE_TEXT_VARIATION_URI:
-            Logger.d(
-                TAG,
-                "Setting INPUT_MODE_URL as keyboard due to a" + " TYPE_TEXT_VARIATION_URI input.");
-            getKeyboardSwitcher()
-                .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_URL, attribute, restarting);
-            break;
-          case EditorInfo.TYPE_TEXT_VARIATION_SHORT_MESSAGE:
-            Logger.d(
-                TAG,
-                "Setting INPUT_MODE_IM as keyboard due to a"
-                    + " TYPE_TEXT_VARIATION_SHORT_MESSAGE input.");
-            getKeyboardSwitcher()
-                .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_IM, attribute, restarting);
-            break;
-          default:
-            Logger.d(TAG, "Setting INPUT_MODE_TEXT as keyboard due to a default input.");
-            getKeyboardSwitcher()
-                .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_TEXT, attribute, restarting);
-        }
-        break;
-      default:
-        Logger.d(TAG, "Setting INPUT_MODE_TEXT as keyboard due to a default input.");
-        // No class. Probably a console window, or no GUI input connection
-        mAutoSpace = mPrefsAutoSpace;
-        getKeyboardSwitcher()
-            .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_TEXT, attribute, restarting);
-    }
-
-    final int textFlag = attribute.inputType & EditorInfo.TYPE_MASK_FLAGS;
-    if ((textFlag & EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS)
-        == EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS) {
-      Logger.d(TAG, "Input requested NO_SUGGESTIONS.");
-      mPredictionOn = false;
-    }
+    mPredictionOn = inputConfig.predictionOn;
+    mInputFieldSupportsAutoPick = inputConfig.inputFieldSupportsAutoPick;
+    mAutoSpace = inputConfig.autoSpace;
 
     mPredictionOn = mPredictionOn && mShowSuggestions;
 
