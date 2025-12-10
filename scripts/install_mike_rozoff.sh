@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APK_PATH="$ROOT_DIR/ime/app/build/outputs/apk/debug/app-debug.apk"
 
-echo "🛠  Building AnySoftKeyboard debug APK (includes Mike Rozoff layouts)..."
+echo "🛠  Building NewSoftKeyboard debug APK (includes Mike Rozoff layouts)..."
 (
   cd "$ROOT_DIR"
   ./gradlew :ime:app:assembleDebug >/dev/null

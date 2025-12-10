@@ -10,8 +10,8 @@ export async function getContributors(token: string): Promise<Contributor[]> {
   const octokit = getOctokit(token);
   const data = octokit
     .paginate('GET /repos/{owner}/{repo}/contributors?anon=0', {
-      owner: 'AnySoftKeyboard',
-      repo: 'AnySoftKeyboard',
+      owner: 'pepperpepperpepper',
+      repo: 'NewSoftKeyboard',
       per_page: 100,
       headers: {
         'X-GitHub-Api-Version': '2022-11-28',
