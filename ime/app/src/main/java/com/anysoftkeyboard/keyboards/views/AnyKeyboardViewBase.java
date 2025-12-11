@@ -108,8 +108,9 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   protected final PointerTracker.SharedPointerTrackersData mSharedPointerTrackersData =
       new PointerTracker.SharedPointerTrackersData();
   private final PointerTrackerRegistry mPointerTrackerRegistry;
-  protected final TouchDispatcher mTouchDispatcher = new TouchDispatcher(this);
+  protected final TouchDispatcher mTouchDispatcher = new TouchDispatcher(this, TWO_FINGERS_LINGER_TIME);
   private final PointerActionDispatcher pointerActionDispatcher;
+  private final SwipeDistanceCalculator swipeDistanceCalculator;
   @NonNull private final KeyDetector mKeyDetector;
 
   private final InvalidateTracker invalidateTracker = new InvalidateTracker();
@@ -201,6 +202,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     previewThemeConfigurator = new PreviewThemeConfigurator(mPreviewPopupTheme);
     previewPopupPresenter = new PreviewPopupPresenter(this, keyIconResolver, keyPreviewManager, previewThemeConfigurator);
     pointerActionDispatcher = new PointerActionDispatcher(mTouchDispatcher);
+    swipeDistanceCalculator = new SwipeDistanceCalculator(swipeConfiguration);
     actionIconStateSetter = new ActionIconStateSetter(mDrawableStatesProvider);
     specialKeyLabelProvider = new SpecialKeyLabelProvider(context);
 
@@ -714,7 +716,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   private void calculateSwipeDistances() {
-    swipeConfiguration.recomputeForKeyboard(getKeyboard());
+    swipeDistanceCalculator.recomputeForKeyboard(getKeyboard());
   }
 
   /**
@@ -1339,12 +1341,12 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   /* package */ void setSwipeXDistanceThreshold(int threshold) {
-    swipeConfiguration.setSwipeXDistanceThreshold(threshold);
+    swipeDistanceCalculator.setSwipeXDistanceThreshold(threshold);
     calculateSwipeDistances();
   }
 
   /* package */ void setSwipeVelocityThreshold(int threshold) {
-    swipeConfiguration.setSwipeVelocityThreshold(threshold);
+    swipeDistanceCalculator.setSwipeVelocityThreshold(threshold);
   }
 
   /* package */ void setAlwaysUseDrawText(boolean alwaysUseDrawText) {
@@ -1366,18 +1368,18 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   /* package */ int getSwipeVelocityThreshold() {
-    return swipeConfiguration.getSwipeVelocityThreshold();
+    return swipeDistanceCalculator.getSwipeVelocityThreshold();
   }
 
   /* package */ int getSwipeXDistanceThreshold() {
-    return swipeConfiguration.getSwipeXDistanceThreshold();
+    return swipeDistanceCalculator.getSwipeXDistanceThreshold();
   }
 
   /* package */ int getSwipeSpaceXDistanceThreshold() {
-    return swipeConfiguration.getSwipeSpaceXDistanceThreshold();
+    return swipeDistanceCalculator.getSwipeSpaceXDistanceThreshold();
   }
 
   /* package */ int getSwipeYDistanceThreshold() {
-    return swipeConfiguration.getSwipeYDistanceThreshold();
+    return swipeDistanceCalculator.getSwipeYDistanceThreshold();
   }
 }

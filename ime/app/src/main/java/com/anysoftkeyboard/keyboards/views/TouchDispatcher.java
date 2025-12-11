@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.keyboards.views;
 
-import android.os.SystemClock;
 import android.view.MotionEvent;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,10 +18,11 @@ class TouchDispatcher {
   private final AnyKeyboardViewBase hostView;
   private final List<PointerTracker> activePointers = new ArrayList<>();
   private boolean touchesAreDisabledTillLastFingerIsUp = false;
-  private long lastTimeHadTwoFingers = 0;
+  private final TwoFingerStateTracker twoFingerStateTracker;
 
-  TouchDispatcher(@NonNull AnyKeyboardViewBase hostView) {
+  TouchDispatcher(@NonNull AnyKeyboardViewBase hostView, long twoFingerLingerMs) {
     this.hostView = hostView;
+    this.twoFingerStateTracker = new TwoFingerStateTracker(twoFingerLingerMs);
   }
 
   /**
@@ -34,7 +34,7 @@ class TouchDispatcher {
     final int action = me.getActionMasked();
     final int pointerCount = me.getPointerCount();
     if (pointerCount > 1) {
-      markTwoFingers(SystemClock.elapsedRealtime());
+      twoFingerStateTracker.markTwoFingers();
     }
 
     if (areTouchesTemporarilyDisabled()) {
@@ -122,6 +122,10 @@ class TouchDispatcher {
     touchesAreDisabledTillLastFingerIsUp = true;
   }
 
+  void markTwoFingers(long timeMs) {
+    twoFingerStateTracker.markTwoFingers();
+  }
+
   boolean areTouchesTemporarilyDisabled() {
     return touchesAreDisabledTillLastFingerIsUp;
   }
@@ -144,11 +148,7 @@ class TouchDispatcher {
     touchesAreDisabledTillLastFingerIsUp = false;
   }
 
-  void markTwoFingers(long timeMs) {
-    lastTimeHadTwoFingers = timeMs;
-  }
-
   boolean isAtTwoFingersState(long lingerMs) {
-    return SystemClock.elapsedRealtime() - lastTimeHadTwoFingers < lingerMs;
+    return twoFingerStateTracker.isAtTwoFingersState();
   }
 }
