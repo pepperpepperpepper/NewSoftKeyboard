@@ -68,6 +68,7 @@ import com.anysoftkeyboard.ime.LanguageSelectionDialog;
 import com.anysoftkeyboard.ime.StatusIconController;
 import com.anysoftkeyboard.ime.VoiceInputController;
 import com.anysoftkeyboard.ime.VoiceInputController.VoiceInputState;
+import com.anysoftkeyboard.ime.VoiceStatusRenderer;
 import com.anysoftkeyboard.utils.IMEUtil;
 import com.google.android.voiceime.VoiceRecognitionTrigger;
 import com.menny.android.anysoftkeyboard.AnyApplication;
@@ -97,14 +98,10 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private StatusIconController statusIconController;
   private VoiceRecognitionTrigger mVoiceRecognitionTrigger;
   private VoiceInputController voiceInputController;
+  private VoiceStatusRenderer voiceStatusRenderer = new VoiceStatusRenderer();
   private final FullscreenModeDecider fullscreenModeDecider = new FullscreenModeDecider();
   private View mFullScreenExtractView;
   private EditText mFullScreenExtractTextView;
-
-  private VoiceInputState mVoiceInputState = VoiceInputState.IDLE;
-  private boolean mErrorFlashState = false;
-  private android.os.Handler mErrorFlashHandler = new android.os.Handler();
-  private Runnable mErrorFlashRunnable = null;
 
   @Nullable private EmojiSearchOverlay mEmojiSearchOverlay;
 
@@ -403,33 +400,9 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   }
 
   private void updateVoiceKeyState() {
-    android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: Starting method...");
     AnyKeyboard currentKeyboard = getCurrentAlphabetKeyboard();
-    if (currentKeyboard != null) {
-      boolean isRecording = mVoiceRecognitionTrigger.isRecording();
-      android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: currentKeyboard is not null, isRecording: " + isRecording);
-      android.util.Log.d("AnySoftKeyboard", "updateVoiceKeyState called - isRecording: " + isRecording);
-      boolean stateChanged = currentKeyboard.setVoice(isRecording, false);
-      android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: setVoice returned stateChanged: " + stateChanged);
-      android.util.Log.d("AnySoftKeyboard", "setVoice returned stateChanged: " + stateChanged);
-      
-      if (stateChanged) {
-        android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: state changed, invalidating input view...");
-        // Invalidate keyboard view to update voice key appearance
-        if (getInputView() instanceof android.view.View) {
-          android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: getInputView is a View, invalidating...");
-          android.util.Log.d("AnySoftKeyboard", "Invalidating input view");
-          ((android.view.View) getInputView()).invalidate();
-        } else {
-          android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: getInputView is not a View or is null!");
-        }
-      } else {
-        android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: state did not change, no invalidation needed");
-      }
-    } else {
-      android.util.Log.d("VoiceKeyDebug", "updateVoiceKeyState: currentKeyboard is null!");
-      android.util.Log.d("AnySoftKeyboard", "updateVoiceKeyState called - currentKeyboard is null");
-    }
+    voiceStatusRenderer.updateVoiceKeyState(
+        currentKeyboard, mVoiceRecognitionTrigger.isRecording(), asViewOrNull(getInputView()));
   }
 
   /**
@@ -439,103 +412,20 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private void updateSpaceBarRecordingStatus(boolean isRecording) {
     if (isRecording) {
       updateVoiceInputStatus(VoiceInputState.RECORDING);
-    } else {
-      // Only set to IDLE if we're not already in WAITING state
-      // This prevents overriding the WAITING state when recording ends
-      if (mVoiceInputState != VoiceInputState.WAITING) {
-        updateVoiceInputStatus(VoiceInputState.IDLE);
-      }
+    } else if (voiceStatusRenderer.getCurrentState() != VoiceInputState.WAITING) {
+      updateVoiceInputStatus(VoiceInputState.IDLE);
     }
   }
   
   private void updateVoiceInputStatus(VoiceInputState newState) {
-    android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus called - newState: " + newState + ", currentState: " + mVoiceInputState);
-    
-    if (mVoiceInputState == newState) {
-      android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - no change needed, returning early");
-      return; // No change needed
-    }
-    
-    // Cancel any ongoing error flashing
-    if (mErrorFlashRunnable != null) {
-      mErrorFlashHandler.removeCallbacks(mErrorFlashRunnable);
-      mErrorFlashRunnable = null;
-    }
-    
-    mVoiceInputState = newState;
-    
-    AnyKeyboard currentKeyboard = getCurrentAlphabetKeyboard();
-    if (currentKeyboard != null) {
-      // Find the space bar key and update its label
-      for (Keyboard.Key key : currentKeyboard.getKeys()) {
-        if (key.getPrimaryCode() == KeyCodes.SPACE) {
-          android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - Found space bar key!");
-          
-          CharSequence statusText = getStatusTextForState(mVoiceInputState);
-          key.label = statusText;
-          android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - Set space bar to: " + statusText);
-          
-          // If error state, start flashing
-          if (mVoiceInputState == VoiceInputState.ERROR) {
-            startErrorFlashing();
-          }
-          
-          // Invalidate the keyboard view to update the display
-          if (getInputView() instanceof android.view.View) {
-            ((android.view.View) getInputView()).invalidate();
-            android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - Invalidated view");
-          }
-          break; // Found the space bar, no need to continue searching
-        }
-      }
-    } else {
-      android.util.Log.d("VoiceKeyDebug", "updateVoiceInputStatus - currentKeyboard is null!");
-    }
+    voiceStatusRenderer.updateVoiceInputStatus(
+        getCurrentAlphabetKeyboard(), asViewOrNull(getInputView()), newState);
   }
   
+  /** Utility to cast InputViewBinder to View when possible. */
   @Nullable
-  private CharSequence getStatusTextForState(VoiceInputState state) {
-    switch (state) {
-      case RECORDING:
-        return "🎤 Recording";
-      case WAITING:
-        return "⏳ Waiting";
-      case ERROR:
-        return mErrorFlashState ? "❌ Error" : "❌";
-      case IDLE:
-      default:
-        return null; // Allow default keyboard label to render when idle
-    }
-  }
-  
-  private void startErrorFlashing() {
-    mErrorFlashRunnable = new Runnable() {
-      @Override
-      public void run() {
-        if (mVoiceInputState == VoiceInputState.ERROR) {
-          mErrorFlashState = !mErrorFlashState;
-          
-          AnyKeyboard currentKeyboard = getCurrentAlphabetKeyboard();
-          if (currentKeyboard != null) {
-            for (Keyboard.Key key : currentKeyboard.getKeys()) {
-              if (key.getPrimaryCode() == KeyCodes.SPACE) {
-                key.label = getStatusTextForState(mVoiceInputState);
-                if (getInputView() instanceof android.view.View) {
-                  ((android.view.View) getInputView()).invalidate();
-                }
-                break;
-              }
-            }
-          }
-          
-          // Schedule next flash (flash every 500ms)
-          mErrorFlashHandler.postDelayed(this, 500);
-        }
-      }
-    };
-    
-    // Start flashing immediately
-    mErrorFlashHandler.post(mErrorFlashRunnable);
+  private View asViewOrNull(@Nullable InputViewBinder binder) {
+    return binder instanceof View ? (View) binder : null;
   }
 
   private void onFunctionKey(final int primaryCode, final Keyboard.Key key, final boolean fromUI) {
