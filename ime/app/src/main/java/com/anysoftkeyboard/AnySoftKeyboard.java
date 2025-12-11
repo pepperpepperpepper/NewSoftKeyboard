@@ -66,6 +66,7 @@ import com.anysoftkeyboard.ime.PackageBroadcastRegistrar;
 import com.anysoftkeyboard.ime.CondenseModeManager;
 import com.anysoftkeyboard.ime.LanguageSelectionDialog;
 import com.anysoftkeyboard.ime.OptionsMenuLauncher;
+import com.anysoftkeyboard.ime.DictionaryOverrideDialog;
 import com.anysoftkeyboard.ime.StatusIconController;
 import com.anysoftkeyboard.ime.VoiceInputController;
 import com.anysoftkeyboard.ime.VoiceInputController.VoiceInputState;
@@ -1635,75 +1636,31 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   }
 
   private void launchDictionaryOverriding() {
-    final List<DictionaryAddOnAndBuilder> buildersForKeyboard =
-        AnyApplication.getExternalDictionaryFactory(this)
-            .getBuildersForKeyboard(getCurrentAlphabetKeyboard());
-    final List<DictionaryAddOnAndBuilder> allBuildersUnsorted =
-        AnyApplication.getExternalDictionaryFactory(this).getAllAddOns();
-    final CharSequence[] items = new CharSequence[allBuildersUnsorted.size()];
-    final boolean[] checked = new boolean[items.length];
-    final List<DictionaryAddOnAndBuilder> sortedAllBuilders =
-        new ArrayList<>(allBuildersUnsorted.size());
-    // put first in the list the current AlphabetKeyboard builders
-    sortedAllBuilders.addAll(buildersForKeyboard);
-    // and then add the remaining builders
-    for (int builderIndex = 0; builderIndex < allBuildersUnsorted.size(); builderIndex++) {
-      if (!sortedAllBuilders.contains(allBuildersUnsorted.get(builderIndex))) {
-        sortedAllBuilders.add(allBuildersUnsorted.get(builderIndex));
-      }
-    }
-    for (int dictionaryIndex = 0; dictionaryIndex < sortedAllBuilders.size(); dictionaryIndex++) {
-      DictionaryAddOnAndBuilder dictionaryBuilder = sortedAllBuilders.get(dictionaryIndex);
-      String description = dictionaryBuilder.getName();
-      if (!TextUtils.isEmpty(dictionaryBuilder.getDescription())) {
-        description += " (" + dictionaryBuilder.getDescription() + ")";
-      }
-      items[dictionaryIndex] = description;
-      checked[dictionaryIndex] = buildersForKeyboard.contains(dictionaryBuilder);
-    }
-
-    showOptionsDialogWithData(
-        getString(
-            R.string.override_dictionary_title, getCurrentAlphabetKeyboard().getKeyboardName()),
-        R.drawable.ic_settings_language,
-        items,
-        (dialog, which) -> {
-          /*no-op*/
-        },
-        new GeneralDialogController.DialogPresenter() {
+    DictionaryOverrideDialog.show(
+        new DictionaryOverrideDialog.Host() {
           @Override
-          public void beforeDialogShown(@NonNull AlertDialog dialog, @Nullable Object data) {}
+          public AnyKeyboard getCurrentAlphabetKeyboard() {
+            return AnySoftKeyboard.this.getCurrentAlphabetKeyboard();
+          }
 
           @Override
-          public void onSetupDialogRequired(
-              Context context, AlertDialog.Builder builder, int optionId, @Nullable Object data) {
-            builder.setItems(
-                null, null); // clearing previously set items, since we want checked item
-            builder.setMultiChoiceItems(items, checked, (dialogInterface, i, b) -> checked[i] = b);
+          public ExternalDictionaryFactory getExternalDictionaryFactory() {
+            return AnyApplication.getExternalDictionaryFactory(AnySoftKeyboard.this);
+          }
 
-            builder.setNegativeButton(android.R.string.cancel, (di, position) -> di.cancel());
-            builder.setPositiveButton(
-                R.string.label_done_key,
-                (di, position) -> {
-                  List<DictionaryAddOnAndBuilder> newBuildersForKeyboard =
-                      new ArrayList<>(buildersForKeyboard.size());
-                  for (int itemIndex = 0; itemIndex < sortedAllBuilders.size(); itemIndex++) {
-                    if (checked[itemIndex]) {
+          @Override
+          public void showOptionsDialogWithData(
+              CharSequence title,
+              int iconRes,
+              CharSequence[] items,
+              android.content.DialogInterface.OnClickListener listener,
+              GeneralDialogController.DialogPresenter presenter) {
+            AnySoftKeyboard.this.showOptionsDialogWithData(title, iconRes, items, listener, presenter);
+          }
 
-                      newBuildersForKeyboard.add(sortedAllBuilders.get(itemIndex));
-                    }
-                  }
-                  AnyApplication.getExternalDictionaryFactory(AnySoftKeyboard.this)
-                      .setBuildersForKeyboard(getCurrentAlphabetKeyboard(), newBuildersForKeyboard);
-
-                  di.dismiss();
-                });
-            builder.setNeutralButton(
-                R.string.clear_all_dictionary_override,
-                (dialogInterface, i) ->
-                    AnyApplication.getExternalDictionaryFactory(AnySoftKeyboard.this)
-                        .setBuildersForKeyboard(
-                            getCurrentAlphabetKeyboard(), Collections.emptyList()));
+          @Override
+          public Context getContext() {
+            return AnySoftKeyboard.this;
           }
         });
   }
