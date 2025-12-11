@@ -81,12 +81,13 @@ import io.reactivex.subjects.Subject;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class AnyKeyboardViewBase extends View implements InputViewBinder, PointerTracker.UIProxy {
   // Miscellaneous constants
   public static final int NOT_A_KEY = -1;
   static final String TAG = "ASKKbdViewBase";
-  private static final int[] ACTION_KEY_TYPES =
+  static final int[] ACTION_KEY_TYPES =
       new int[] {R.attr.action_done, R.attr.action_search, R.attr.action_go};
   private static final int[] KEY_TYPES =
       new int[] {R.attr.key_type_function, R.attr.key_type_action};
@@ -286,143 +287,10 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     mKeyboardChanged = true;
     invalidateAllKeys();
 
-    final int keyboardThemeStyleResId = getKeyboardStyleResId(theme);
-
-    final int[] remoteKeyboardThemeStyleable =
-        theme
-            .getResourceMapping()
-            .getRemoteStyleableArrayFromLocal(R.styleable.AnyKeyboardViewTheme);
-    final int[] remoteKeyboardIconsThemeStyleable =
-        theme
-            .getResourceMapping()
-            .getRemoteStyleableArrayFromLocal(R.styleable.AnyKeyboardViewIconsTheme);
-
     final int[] padding = new int[] {0, 0, 0, 0};
-
-    int keyTypeFunctionAttrId = R.attr.key_type_function;
-    int keyActionAttrId = R.attr.key_type_action;
-    int keyActionTypeDoneAttrId = R.attr.action_done;
-    int keyActionTypeSearchAttrId = R.attr.action_search;
-    int keyActionTypeGoAttrId = R.attr.action_go;
-
     HashSet<Integer> doneLocalAttributeIds = new HashSet<>();
-    TypedArray a =
-        theme
-            .getPackageContext()
-            .obtainStyledAttributes(keyboardThemeStyleResId, remoteKeyboardThemeStyleable);
-    final int n = a.getIndexCount();
-    for (int i = 0; i < n; i++) {
-      final int remoteIndex = a.getIndex(i);
-      final int localAttrId =
-          theme.getResourceMapping().getLocalAttrId(remoteKeyboardThemeStyleable[remoteIndex]);
-
-      if (setValueFromThemeInternal(a, padding, localAttrId, remoteIndex)) {
-        doneLocalAttributeIds.add(localAttrId);
-        if (localAttrId == R.attr.keyBackground) {
-          // keyTypeFunctionAttrId and keyActionAttrId are remote
-          final int[] keyStateAttributes =
-              theme.getResourceMapping().getRemoteStyleableArrayFromLocal(KEY_TYPES);
-          keyTypeFunctionAttrId = keyStateAttributes[0];
-          keyActionAttrId = keyStateAttributes[1];
-        }
-      }
-    }
-    a.recycle();
-    // taking icons
-    int iconSetStyleRes = getKeyboardIconsStyleResId(theme);
-    if (iconSetStyleRes != 0) {
-      a =
-          theme
-              .getPackageContext()
-              .obtainStyledAttributes(iconSetStyleRes, remoteKeyboardIconsThemeStyleable);
-      final int iconsCount = a.getIndexCount();
-      for (int i = 0; i < iconsCount; i++) {
-        final int remoteIndex = a.getIndex(i);
-        final int localAttrId =
-            theme
-                .getResourceMapping()
-                .getLocalAttrId(remoteKeyboardIconsThemeStyleable[remoteIndex]);
-
-        if (setKeyIconValueFromTheme(theme, a, localAttrId, remoteIndex)) {
-          doneLocalAttributeIds.add(localAttrId);
-          if (localAttrId == R.attr.iconKeyAction) {
-            // keyActionTypeDoneAttrId and keyActionTypeSearchAttrId and
-            // keyActionTypeGoAttrId are remote
-            final int[] keyStateAttributes =
-                theme.getResourceMapping().getRemoteStyleableArrayFromLocal(ACTION_KEY_TYPES);
-            keyActionTypeDoneAttrId = keyStateAttributes[0];
-            keyActionTypeSearchAttrId = keyStateAttributes[1];
-            keyActionTypeGoAttrId = keyStateAttributes[2];
-          }
-        }
-      }
-      a.recycle();
-    }
-    // filling what's missing
-    KeyboardTheme fallbackTheme = getKeyboardThemeFactory(getContext()).getFallbackTheme();
-    final int keyboardFallbackThemeStyleResId = getKeyboardStyleResId(fallbackTheme);
-    a =
-        fallbackTheme
-            .getPackageContext()
-            .obtainStyledAttributes(
-                keyboardFallbackThemeStyleResId, R.styleable.AnyKeyboardViewTheme);
-
-    final int fallbackCount = a.getIndexCount();
-    for (int i = 0; i < fallbackCount; i++) {
-      final int index = a.getIndex(i);
-      final int attrId = R.styleable.AnyKeyboardViewTheme[index];
-      if (doneLocalAttributeIds.contains(attrId)) {
-        continue;
-      }
-      setValueFromThemeInternal(a, padding, attrId, index);
-    }
-    a.recycle();
-    // taking missing icons
-    int fallbackIconSetStyleId = fallbackTheme.getIconsThemeResId();
-    a =
-        fallbackTheme
-            .getPackageContext()
-            .obtainStyledAttributes(fallbackIconSetStyleId, R.styleable.AnyKeyboardViewIconsTheme);
-
-    final int fallbackIconsCount = a.getIndexCount();
-    for (int i = 0; i < fallbackIconsCount; i++) {
-      final int index = a.getIndex(i);
-      final int attrId = R.styleable.AnyKeyboardViewIconsTheme[index];
-      if (doneLocalAttributeIds.contains(attrId)) {
-        continue;
-      }
-      setKeyIconValueFromTheme(fallbackTheme, a, attrId, index);
-    }
-    a.recycle();
-    // creating the key-drawable state provider, as we suppose to have the entire data now
-    mDrawableStatesProvider =
-        new KeyDrawableStateProvider(
-            keyTypeFunctionAttrId,
-            keyActionAttrId,
-            keyActionTypeDoneAttrId,
-            keyActionTypeSearchAttrId,
-            keyActionTypeGoAttrId);
-    actionIconStateSetter = new ActionIconStateSetter(mDrawableStatesProvider);
-
-    // settings.
-    // don't forget that there are THREE padding,
-    // the theme's and the
-    // background image's padding and the
-    // View
-    Drawable keyboardBackground = super.getBackground();
-    if (keyboardBackground != null) {
-      Rect backgroundPadding = new Rect();
-      keyboardBackground.getPadding(backgroundPadding);
-      padding[0] += backgroundPadding.left;
-      padding[1] += backgroundPadding.top;
-      padding[2] += backgroundPadding.right;
-      padding[3] += backgroundPadding.bottom;
-    }
-    setPadding(padding[0], padding[1], padding[2], padding[3]);
-
-    final Resources res = getResources();
-    final int viewWidth = (getWidth() > 0) ? getWidth() : res.getDisplayMetrics().widthPixels;
-    mKeyboardDimens.setKeyboardMaxWidth(viewWidth - padding[0] - padding[2]);
+    ThemeAttributeLoader themeAttributeLoader = new ThemeAttributeLoader(new ThemeHost(doneLocalAttributeIds, padding));
+    themeAttributeLoader.loadThemeAttributes(theme, doneLocalAttributeIds, padding);
     mPaint.setTextSize(mKeyTextSize);
   }
 
@@ -432,13 +300,116 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     mThemeOverlay = overlay;
     keyIconResolver.clearCache(true);
     mThemeOverlayCombiner.setOverlayData(overlay);
-    final ThemeResourcesHolder themeResources = mThemeOverlayCombiner.getThemeResources();
-    setBackground(themeResources.getKeyboardBackground());
+    if (mLastSetTheme != null) {
+      HashSet<Integer> doneAttrs = new HashSet<>();
+      int[] padding = new int[] {0, 0, 0, 0};
+      ThemeAttributeLoader themeAttributeLoader =
+          new ThemeAttributeLoader(new ThemeHost(doneAttrs, padding));
+      themeAttributeLoader.loadThemeAttributes(mLastSetTheme, doneAttrs, padding);
+    }
     invalidateAllKeys();
   }
 
   protected KeyDetector createKeyDetector(final float slide) {
     return new MiniKeyboardKeyDetector(slide);
+  }
+
+  private class ThemeHost implements ThemeAttributeLoader.Host {
+    private final Set<Integer> doneLocalAttributeIds;
+    private final int[] padding;
+
+    ThemeHost(Set<Integer> doneLocalAttributeIds, int[] padding) {
+      this.doneLocalAttributeIds = doneLocalAttributeIds;
+      this.padding = padding;
+    }
+
+    @NonNull
+    @Override
+    public ThemeResourcesHolder getThemeOverlayResources() {
+      return mThemeOverlayCombiner.getThemeResources();
+    }
+
+    @Override
+    public int getKeyboardStyleResId(@NonNull KeyboardTheme theme) {
+      return AnyKeyboardViewBase.this.getKeyboardStyleResId(theme);
+    }
+
+    @Override
+    public int getKeyboardIconsStyleResId(@NonNull KeyboardTheme theme) {
+      return AnyKeyboardViewBase.this.getKeyboardIconsStyleResId(theme);
+    }
+
+    @NonNull
+    @Override
+    public KeyboardTheme getFallbackTheme() {
+      return getKeyboardThemeFactory(getContext()).getFallbackTheme();
+    }
+
+    @NonNull
+    @Override
+    public int[] getActionKeyTypes() {
+      return ACTION_KEY_TYPES;
+    }
+
+    @Override
+    public boolean setValueFromTheme(
+        TypedArray remoteTypedArray, int[] padding, int localAttrId, int remoteTypedArrayIndex) {
+      return AnyKeyboardViewBase.this.setValueFromTheme(
+          remoteTypedArray, padding, localAttrId, remoteTypedArrayIndex);
+    }
+
+    @Override
+    public boolean setKeyIconValueFromTheme(
+        KeyboardTheme theme,
+        TypedArray remoteTypedArray,
+        int localAttrId,
+        int remoteTypedArrayIndex) {
+      return AnyKeyboardViewBase.this.setKeyIconValueFromTheme(
+          theme, remoteTypedArray, localAttrId, remoteTypedArrayIndex);
+    }
+
+    @Override
+    public void setBackground(Drawable background) {
+      AnyKeyboardViewBase.this.setBackground(background);
+    }
+
+    @Override
+    public void setPadding(int left, int top, int right, int bottom) {
+      AnyKeyboardViewBase.this.setPadding(left, top, right, bottom);
+    }
+
+    @Override
+    public int getWidth() {
+      return AnyKeyboardViewBase.this.getWidth();
+    }
+
+    @NonNull
+    @Override
+    public Resources getResources() {
+      return AnyKeyboardViewBase.this.getResources();
+    }
+
+    @Override
+    public void onKeyDrawableProviderReady(
+        int keyTypeFunctionAttrId,
+        int keyActionAttrId,
+        int keyActionTypeDoneAttrId,
+        int keyActionTypeSearchAttrId,
+        int keyActionTypeGoAttrId) {
+      mDrawableStatesProvider =
+          new KeyDrawableStateProvider(
+              keyTypeFunctionAttrId,
+              keyActionAttrId,
+              keyActionTypeDoneAttrId,
+              keyActionTypeSearchAttrId,
+              keyActionTypeGoAttrId);
+      actionIconStateSetter = new ActionIconStateSetter(mDrawableStatesProvider);
+    }
+
+    @Override
+    public void onKeyboardDimensSet(int availableWidth) {
+      mKeyboardDimens.setKeyboardMaxWidth(availableWidth);
+    }
   }
 
   private boolean setValueFromThemeInternal(
