@@ -19,6 +19,10 @@ final class SwipeConfiguration {
     swipeVelocityThreshold = threshold;
   }
 
+  void setSwipeYDistanceThreshold(int threshold) {
+    swipeYDistanceThreshold = threshold;
+  }
+
   void recomputeForKeyboard(@Nullable AnyKeyboard keyboard) {
     if (keyboard == null) {
       swipeYDistanceThreshold = 0;

@@ -1349,6 +1349,10 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     swipeDistanceCalculator.setSwipeVelocityThreshold(threshold);
   }
 
+  /* package */ void setSwipeYDistanceThreshold(int threshold) {
+    swipeDistanceCalculator.setSwipeYDistanceThreshold(threshold);
+  }
+
   /* package */ void setAlwaysUseDrawText(boolean alwaysUseDrawText) {
     mAlwaysUseDrawText = alwaysUseDrawText;
   }

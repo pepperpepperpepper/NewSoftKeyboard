@@ -38,4 +38,8 @@ final class SwipeDistanceCalculator {
   void setSwipeVelocityThreshold(int threshold) {
     swipeConfiguration.setSwipeVelocityThreshold(threshold);
   }
+
+  void setSwipeYDistanceThreshold(int threshold) {
+    swipeConfiguration.setSwipeYDistanceThreshold(threshold);
+  }
 }
