@@ -61,3 +61,10 @@ Recent extractions:
 - CompletionHandler extracted from AnySoftKeyboardSuggestions to encapsulate editor-provided completions.
 - SentenceSeparators helper extracted to manage per-keyboard separator sets.
 - SpaceTimeTracker now owns double-space/swap timing bookkeeping.
+- WordRestartHelper extracted to rebuild composing word after cursor moves.
+- SeparatorOutputHandler extracted to handle double-space period and punctuation/space swapping.
+- StatusIconController owns status-icon visibility outside the service.
+- FullscreenModeDecider isolates fullscreen decision logic.
+- MultiTapEditCoordinator wraps multi-tap batch edit lifecycle.
+- PackageBroadcastRegistrar registers/unregisters package and user-unlock receivers.
+- VoiceInputController encapsulates VoiceRecognitionTrigger callbacks.

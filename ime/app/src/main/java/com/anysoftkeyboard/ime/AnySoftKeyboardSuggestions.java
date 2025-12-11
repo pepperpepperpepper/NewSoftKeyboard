@@ -100,6 +100,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private SuggestionStripController suggestionStripController;
   private final CompletionHandler completionHandler = new CompletionHandler();
   private final WordRestartHelper wordRestartHelper = new WordRestartHelper();
+  private final SeparatorOutputHandler separatorOutputHandler = new SeparatorOutputHandler();
 
   @Nullable
   protected Keyboard.Key getLastUsedKey() {
@@ -592,31 +593,20 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       abortCorrectionAndResetPredictionState(false);
     }
 
-    boolean handledOutputToInputConnection = false;
+    final SeparatorOutputHandler.Result separatorResult =
+        separatorOutputHandler.apply(
+            ic,
+            primaryCode,
+            isSpace,
+            newLine,
+            mIsDoubleSpaceChangesToPeriod,
+            mMultiTapTimeout,
+            spaceTimeTracker,
+            this::isSpaceSwapCharacter);
 
-    if (ic != null) {
-      if (isSpace) {
-        if (mIsDoubleSpaceChangesToPeriod && spaceTimeTracker.isDoubleSpace(mMultiTapTimeout)) {
-          // current text in the input-box should be something like "word "
-          // the user pressed on space again. So we want to change the text in the
-          // input-box
-          // into "word "->"word. "
-          ic.deleteSurroundingText(1, 0);
-          ic.commitText(". ", 1);
-          isEndOfSentence = true;
-          handledOutputToInputConnection = true;
-        }
-      } else if (spaceTimeTracker.hadSpace() /*meaning the previous key was SPACE*/
-          && (mSwapPunctuationAndSpace || newLine)
-          && isSpaceSwapCharacter(primaryCode)) {
-        // current text in the input-box should be something like "word "
-        // the user pressed a punctuation (say ","). So we want to change the text in the
-        // input-box
-        // into "word "->"word, "
-        ic.deleteSurroundingText(1, 0);
-        ic.commitText(new String(new int[] {primaryCode}, 0, 1) + (newLine ? "" : " "), 1);
-        handledOutputToInputConnection = true;
-      }
+    boolean handledOutputToInputConnection = separatorResult.handledOutput;
+    if (separatorResult.endOfSentence) {
+      isEndOfSentence = true;
     }
 
     if (!handledOutputToInputConnection) {
