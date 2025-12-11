@@ -50,6 +50,7 @@ import com.anysoftkeyboard.ime.DictionaryOverrideDialog;
 import com.anysoftkeyboard.ime.EmojiSearchController;
 import com.anysoftkeyboard.ime.FullscreenModeDecider;
 import com.anysoftkeyboard.ime.KeyboardSwitchHandler;
+import com.anysoftkeyboard.ime.NavigationKeyHandler;
 import com.anysoftkeyboard.ime.InputConnectionRouter;
 import com.anysoftkeyboard.ime.InputViewBinder;
 import com.anysoftkeyboard.ime.LanguageSelectionDialog;
@@ -103,6 +104,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private DevStripActionProvider mDevToolsAction;
   private CondenseModeManager condenseModeManager;
   private KeyboardSwitchHandler keyboardSwitchHandler;
+  private NavigationKeyHandler navigationKeyHandler;
   private InputMethodManager mInputMethodManager;
   private StatusIconController statusIconController;
   private VoiceRecognitionTrigger mVoiceRecognitionTrigger;
@@ -186,6 +188,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
             });
 
     keyboardSwitchHandler = new KeyboardSwitchHandler(new KeyboardSwitchHost(), condenseModeManager);
+    navigationKeyHandler = new NavigationKeyHandler(new NavigationHost());
 
     addDisposable(
         prefs()
@@ -447,6 +450,20 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
     final InputConnection ic = currentInputConnection();
 
+    if (navigationKeyHandler.handle(
+        primaryCode,
+        ic,
+        mFunctionKeyState.isActive(),
+        mFunctionKeyState.isLocked(),
+        () -> {
+          if (mFunctionKeyState.isActive() && !mFunctionKeyState.isLocked()) {
+            mFunctionKeyState.setActiveState(false);
+            handleFunction();
+          }
+        })) {
+      return;
+    }
+
     switch (primaryCode) {
       case KeyCodes.DELETE:
         if (ic != null) {
@@ -515,57 +532,6 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
           onPress(primaryCode);
           onRelease(primaryCode);
         }
-        break;
-      case KeyCodes.ARROW_LEFT:
-      case KeyCodes.ARROW_RIGHT: {
-        if (mFunctionKeyState.isActive()) {
-          final int mappedCode =
-              primaryCode == KeyCodes.ARROW_LEFT
-                  ? KeyEvent.KEYCODE_MOVE_HOME
-                  : KeyEvent.KEYCODE_MOVE_END;
-          sendDownUpKeyEvents(mappedCode);
-          if (mFunctionKeyState.isActive() && !mFunctionKeyState.isLocked()) {
-            mFunctionKeyState.setActiveState(false);
-            handleFunction();
-          }
-          break;
-        }
-        final int keyEventKeyCode =
-            primaryCode == KeyCodes.ARROW_LEFT
-                ? KeyEvent.KEYCODE_DPAD_LEFT
-                : KeyEvent.KEYCODE_DPAD_RIGHT;
-        if (!handleSelectionExpending(keyEventKeyCode, ic)) {
-          sendNavigationKeyEvent(keyEventKeyCode);
-        }
-        break;
-      }
-      case KeyCodes.ARROW_UP:
-        if (mFunctionKeyState.isActive()) {
-          sendDownUpKeyEvents(KeyEvent.KEYCODE_PAGE_UP);
-          if (mFunctionKeyState.isActive() && !mFunctionKeyState.isLocked()) {
-            mFunctionKeyState.setActiveState(false);
-            handleFunction();
-          }
-        } else {
-          sendNavigationKeyEvent(KeyEvent.KEYCODE_DPAD_UP);
-        }
-        break;
-      case KeyCodes.ARROW_DOWN:
-        if (mFunctionKeyState.isActive()) {
-          sendDownUpKeyEvents(KeyEvent.KEYCODE_PAGE_DOWN);
-          if (mFunctionKeyState.isActive() && !mFunctionKeyState.isLocked()) {
-            mFunctionKeyState.setActiveState(false);
-            handleFunction();
-          }
-        } else {
-          sendNavigationKeyEvent(KeyEvent.KEYCODE_DPAD_DOWN);
-        }
-        break;
-      case KeyCodes.MOVE_HOME:
-        sendDownUpKeyEvents(KeyEvent.KEYCODE_MOVE_HOME);
-        break;
-      case KeyCodes.MOVE_END:
-        sendDownUpKeyEvents(KeyEvent.KEYCODE_MOVE_END);
         break;
       case KeyCodes.VOICE_INPUT:
         android.util.Log.d("VoiceKeyDebug", "onFunctionKey: VOICE_INPUT key handled!");
@@ -732,6 +698,23 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     public AnyKeyboardView getInputView() {
       InputViewBinder binder = AnySoftKeyboard.this.getInputView();
       return binder instanceof AnyKeyboardView ? (AnyKeyboardView) binder : null;
+    }
+  }
+
+  private class NavigationHost implements NavigationKeyHandler.Host {
+    @Override
+    public boolean handleSelectionExpending(int keyEventCode, @Nullable InputConnection ic) {
+      return AnySoftKeyboard.this.handleSelectionExpending(keyEventCode, ic);
+    }
+
+    @Override
+    public void sendNavigationKeyEvent(int keyEventCode) {
+      AnySoftKeyboard.this.sendNavigationKeyEvent(keyEventCode);
+    }
+
+    @Override
+    public void sendDownUpKeyEvents(int keyCode) {
+      AnySoftKeyboard.this.sendDownUpKeyEvents(keyCode);
     }
   }
 
