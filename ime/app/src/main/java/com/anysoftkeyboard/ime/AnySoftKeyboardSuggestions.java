@@ -1,21 +1,13 @@
 package com.anysoftkeyboard.ime;
 
-import android.animation.Animator;
-import android.animation.AnimatorInflater;
-import android.animation.AnimatorListenerAdapter;
-import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.text.TextUtils;
-import android.util.SparseBooleanArray;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
-import android.widget.ImageView;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -43,7 +35,6 @@ import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.Observable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -65,21 +56,19 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         @Override
         public void onDictionaryLoadingFailed(Dictionary dictionary, Throwable exception) {}
       };
-  private static final CompletionInfo[] EMPTY_COMPLETIONS = new CompletionInfo[0];
   @VisibleForTesting public static final long GET_SUGGESTIONS_DELAY = 5 * ONE_FRAME_DELAY;
 
   @VisibleForTesting
   final KeyboardUIStateHandler mKeyboardHandler = new KeyboardUIStateHandler(this);
 
-  @NonNull private final SparseBooleanArray mSentenceSeparators = new SparseBooleanArray();
+  private final SentenceSeparators sentenceSeparators = new SentenceSeparators();
 
   protected int mWordRevertLength = 0;
   private WordComposer mWord = new WordComposer();
   private WordComposer mPreviousWord = new WordComposer();
   private Suggest mSuggest;
   private CandidateView mCandidateView;
-  @NonNull private CompletionInfo[] mCompletions = EMPTY_COMPLETIONS;
-  private long mLastSpaceTimeStamp = NEVER_TIME_STAMP;
+  private final SpaceTimeTracker spaceTimeTracker = new SpaceTimeTracker();
   @Nullable private Keyboard.Key mLastKey;
   private int mLastPrimaryKey = Integer.MIN_VALUE;
   private long mExpectingSelectionUpdateBy = NEVER_TIME_STAMP;
@@ -89,10 +78,6 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
    * is prediction needed for the current input connection
    */
   private boolean mPredictionOn;
-  /*
-   * is out-side completions needed
-   */
-  private boolean mCompletionOn;
   private boolean mAutoSpace;
   private boolean mInputFieldSupportsAutoPick;
   private boolean mAutoCorrectOn;
@@ -113,26 +98,12 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private final InputFieldConfigurator inputFieldConfigurator = new InputFieldConfigurator();
   private final SelectionUpdateProcessor selectionUpdateProcessor = new SelectionUpdateProcessor();
   private SuggestionStripController suggestionStripController;
-
-  private static void fillSeparatorsSparseArray(
-      SparseBooleanArray sparseBooleanArray, char[] chars) {
-    sparseBooleanArray.clear();
-    for (char separator : chars) sparseBooleanArray.put(separator, true);
-  }
+  private final CompletionHandler completionHandler = new CompletionHandler();
+  private final WordRestartHelper wordRestartHelper = new WordRestartHelper();
 
   @Nullable
   protected Keyboard.Key getLastUsedKey() {
     return mLastKey;
-  }
-
-  @NonNull
-  private static CompletionInfo[] copyCompletionsFromAndroid(
-      @Nullable CompletionInfo[] completions) {
-    if (completions == null) {
-      return new CompletionInfo[0];
-    } else {
-      return Arrays.copyOf(completions, completions.length);
-    }
   }
 
   @Override
@@ -263,8 +234,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     super.onStartInputView(attribute, restarting);
 
     mPredictionOn = false;
-    mCompletionOn = false;
-    mCompletions = EMPTY_COMPLETIONS;
+    completionHandler.reset();
     mInputFieldSupportsAutoPick = false;
 
     InputFieldConfigurator.Result inputConfig =
@@ -366,7 +336,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
           @Override
           public void resetLastSpaceTimeStamp() {
-            mLastSpaceTimeStamp = NEVER_TIME_STAMP;
+            spaceTimeTracker.clear();
           }
 
           @Override
@@ -582,7 +552,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
           "handleSeparator code=%d isSpace=%s lastSpace=%s swapCandidate=%s",
           primaryCode,
           isSpace,
-          mLastSpaceTimeStamp != NEVER_TIME_STAMP,
+          spaceTimeTracker.hadSpace(),
           isSpaceSwapCharacter(primaryCode));
     }
 
@@ -626,8 +596,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
     if (ic != null) {
       if (isSpace) {
-        if (mIsDoubleSpaceChangesToPeriod
-            && (SystemClock.uptimeMillis() - mLastSpaceTimeStamp) < mMultiTapTimeout) {
+        if (mIsDoubleSpaceChangesToPeriod && spaceTimeTracker.isDoubleSpace(mMultiTapTimeout)) {
           // current text in the input-box should be something like "word "
           // the user pressed on space again. So we want to change the text in the
           // input-box
@@ -637,7 +606,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
           isEndOfSentence = true;
           handledOutputToInputConnection = true;
         }
-      } else if (mLastSpaceTimeStamp != NEVER_TIME_STAMP /*meaning the previous key was SPACE*/
+      } else if (spaceTimeTracker.hadSpace() /*meaning the previous key was SPACE*/
           && (mSwapPunctuationAndSpace || newLine)
           && isSpaceSwapCharacter(primaryCode)) {
         // current text in the input-box should be something like "word "
@@ -720,55 +689,40 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     // if the user clicked inside a different word
     // restart required?
     if (canRestartWordSuggestion()) { // 2.1
-      ic.beginBatchEdit(); // don't want any events till I finish handling
-      // this touch
+      ic.beginBatchEdit(); // don't want any events till I finish handling this touch
       abortCorrectionAndResetPredictionState(false);
 
-      // locating the word
-      CharSequence toLeft = "";
-      CharSequence toRight = "";
-      while (true) {
-        CharSequence newToLeft = ic.getTextBeforeCursor(toLeft.length() + 1, 0);
-        if (TextUtils.isEmpty(newToLeft)
-            || isWordSeparator(newToLeft.charAt(0))
-            || newToLeft.length() == toLeft.length()) {
-          break;
-        }
-        toLeft = newToLeft;
-      }
-      while (true) {
-        CharSequence newToRight = ic.getTextAfterCursor(toRight.length() + 1, 0);
-        if (TextUtils.isEmpty(newToRight)
-            || isWordSeparator(newToRight.charAt(newToRight.length() - 1))
-            || newToRight.length() == toRight.length()) {
-          break;
-        }
-        toRight = newToRight;
-      }
-      CharSequence word = toLeft.toString() + toRight.toString();
-      Logger.d(TAG, "Starting new prediction on word '%s'.", word);
-      mWord.reset();
+      wordRestartHelper.restartWordFromCursor(
+          ic,
+          mWord,
+          new WordRestartHelper.Host() {
+            @Override
+            public boolean isWordSeparator(int codePoint) {
+              return AnySoftKeyboardSuggestions.this.isWordSeparator(codePoint);
+            }
 
-      final int[] tempNearByKeys = new int[1];
+            @Override
+            public int getCursorPosition() {
+              return AnySoftKeyboardSuggestions.this.getCursorPosition();
+            }
 
-      int index = 0;
-      while (index < word.length()) {
-        final int c = Character.codePointAt(word, Character.offsetByCodePoints(word, 0, index));
-        if (index == 0) mWord.setFirstCharCapitalized(Character.isUpperCase(c));
+            @Override
+            public void markExpectingSelectionUpdate() {
+              AnySoftKeyboardSuggestions.this.markExpectingSelectionUpdate();
+            }
 
-        tempNearByKeys[0] = c;
-        mWord.add(c, tempNearByKeys);
+            @Override
+            public void performUpdateSuggestions() {
+              AnySoftKeyboardSuggestions.this.performUpdateSuggestions();
+            }
 
-        index += Character.charCount(c);
-      }
-      mWord.setCursorPosition(toLeft.length());
-      final int globalCursorPosition = getCursorPosition();
-      ic.setComposingRegion(
-          globalCursorPosition - toLeft.length(), globalCursorPosition + toRight.length());
+            @Override
+            public String logTag() {
+              return TAG;
+            }
+          });
 
-      markExpectingSelectionUpdate();
       ic.endBatchEdit();
-      performUpdateSuggestions();
     } else {
       Logger.d(TAG, "performRestartWordSuggestion canRestartWordSuggestion == false");
     }
@@ -814,7 +768,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       int pointCode = Character.codePointAt(text, pointCodeIndex);
       pointCodeIndex += Character.charCount(pointCode);
       // this will ensure that double-spaces will not count.
-      mLastSpaceTimeStamp = NEVER_TIME_STAMP;
+      spaceTimeTracker.clear();
       // simulating key press
       onKey(pointCode, key, 0, new int[] {pointCode}, true);
     }
@@ -830,10 +784,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       // It null at the creation of the application.
       final AnyKeyboard currentAlphabetKeyboard = getCurrentAlphabetKeyboard();
       if (currentAlphabetKeyboard != null && isInAlphabetKeyboardMode()) {
-        fillSeparatorsSparseArray(
-            mSentenceSeparators, currentAlphabetKeyboard.getSentenceSeparators());
-        // ensure NEW-LINE is there
-        mSentenceSeparators.put(KeyCodes.ENTER, true);
+        sentenceSeparators.updateFrom(currentAlphabetKeyboard.getSentenceSeparators());
+        sentenceSeparators.add(KeyCodes.ENTER);
 
         List<DictionaryAddOnAndBuilder> buildersForKeyboard =
             AnyApplication.getExternalDictionaryFactory(this)
@@ -859,10 +811,9 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     String sentenceSeparatorsForCurrentKeyboard =
         getKeyboardSwitcher().getCurrentKeyboardSentenceSeparators();
     if (sentenceSeparatorsForCurrentKeyboard == null) {
-      mSentenceSeparators.clear();
+      sentenceSeparators.clear();
     } else {
-      fillSeparatorsSparseArray(
-          mSentenceSeparators, sentenceSeparatorsForCurrentKeyboard.toCharArray());
+      sentenceSeparators.updateFrom(sentenceSeparatorsForCurrentKeyboard.toCharArray());
     }
   }
 
@@ -870,7 +821,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   protected void abortCorrectionAndResetPredictionState(boolean disabledUntilNextInputStart) {
     mSuggest.resetNextWordSentence();
 
-    mLastSpaceTimeStamp = NEVER_TIME_STAMP;
+    spaceTimeTracker.clear();
     mJustAutoAddedWord = false;
     mKeyboardHandler.removeAllSuggestionMessages();
 
@@ -1031,15 +982,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     final WordComposer typedWord = prepareWordComposerForNextWord();
 
     try {
-      if (mCompletionOn && index >= 0 && index < mCompletions.length) {
-        CompletionInfo ci = mCompletions[index];
-        if (ic != null) {
-          ic.commitCompletion(ci);
-        }
-
-        if (mCandidateView != null) {
-          mCandidateView.clear();
-        }
+      if (completionHandler.tryCommitCompletion(index, ic, mCandidateView)) {
         return;
       }
       commitWordToInput(
@@ -1132,9 +1075,9 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
   protected void setSpaceTimeStamp(boolean isSpace) {
     if (isSpace) {
-      mLastSpaceTimeStamp = SystemClock.uptimeMillis();
+      spaceTimeTracker.markSpace();
     } else {
-      mLastSpaceTimeStamp = NEVER_TIME_STAMP;
+      spaceTimeTracker.clear();
     }
   }
 
@@ -1171,7 +1114,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   protected boolean isSentenceSeparator(int code) {
-    return mSentenceSeparators.get(code, false);
+    return sentenceSeparators.isSeparator(code);
   }
 
   protected boolean isWordSeparator(int code) {
@@ -1188,30 +1131,26 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
   @Override
   public void onDisplayCompletions(CompletionInfo[] completions) {
-    if (BuildConfig.DEBUG) {
-      Logger.d(TAG, "Received completions:");
-      for (int i = 0; i < (completions != null ? completions.length : 0); i++) {
-        Logger.d(TAG, "  #" + i + ": " + completions[i]);
-      }
-    }
+    completionHandler.onDisplayCompletions(
+        completions,
+        new CompletionHandler.Host() {
+          @Override
+          public boolean isFullscreenMode() {
+            return AnySoftKeyboardSuggestions.this.isFullscreenMode();
+          }
 
-    // completions should be shown if dictionary requires, or if we are in
-    // full-screen and have outside completions
-    if (mCompletionOn || (isFullscreenMode() && (completions != null))) {
-      mCompletions = copyCompletionsFromAndroid(completions);
-      mCompletionOn = true;
-      if (mCompletions.length == 0) {
-        clearSuggestions();
-      } else {
-        List<CharSequence> stringList = new ArrayList<>();
-        for (CompletionInfo ci : mCompletions) {
-          if (ci != null) stringList.add(ci.getText());
-        }
-        // CharSequence typedWord = mWord.getTypedWord();
-        setSuggestions(stringList, -1);
-        mWord.setPreferredWord(null);
-      }
-    }
+          @Override
+          public void clearSuggestions() {
+            AnySoftKeyboardSuggestions.this.clearSuggestions();
+          }
+
+          @Override
+          public void setSuggestions(
+              List<CharSequence> suggestions, int highlightedIndex) {
+            AnySoftKeyboardSuggestions.this.setSuggestions(suggestions, highlightedIndex);
+            mWord.setPreferredWord(null);
+          }
+        });
   }
 
   private void checkAddToDictionaryWithAutoDictionary(
@@ -1253,92 +1192,4 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     abortCorrectionAndResetPredictionState(false);
   }
 
-  @VisibleForTesting
-  static class CancelSuggestionsAction implements KeyboardViewContainerView.StripActionProvider {
-    @NonNull private final Runnable mCancelPrediction;
-    private Animator mCancelToGoneAnimation;
-    private Animator mCancelToVisibleAnimation;
-    private Animator mCloseTextToVisibleToGoneAnimation;
-    private View mRootView;
-    private View mCloseText;
-    @Nullable private CandidateView mCandidateView;
-
-    CancelSuggestionsAction(@NonNull Runnable cancelPrediction) {
-      mCancelPrediction = cancelPrediction;
-    }
-
-    @Override
-    public @NonNull View inflateActionView(@NonNull ViewGroup parent) {
-      final Context context = parent.getContext();
-      mCancelToGoneAnimation =
-          AnimatorInflater.loadAnimator(context, R.animator.suggestions_cancel_to_gone);
-      mCancelToGoneAnimation.addListener(
-          new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-              super.onAnimationEnd(animation);
-              mRootView.setVisibility(View.GONE);
-            }
-          });
-      mCancelToVisibleAnimation =
-          AnimatorInflater.loadAnimator(context, R.animator.suggestions_cancel_to_visible);
-      mCloseTextToVisibleToGoneAnimation =
-          AnimatorInflater.loadAnimator(
-              context, R.animator.suggestions_cancel_text_to_visible_to_gone);
-      mCloseTextToVisibleToGoneAnimation.addListener(
-          new AnimatorListenerAdapter() {
-            @Override
-            public void onAnimationEnd(Animator animation) {
-              super.onAnimationEnd(animation);
-              mCloseText.setVisibility(View.GONE);
-            }
-          });
-      mRootView =
-          LayoutInflater.from(context).inflate(R.layout.cancel_suggestions_action, parent, false);
-
-      mCloseText = mRootView.findViewById(R.id.close_suggestions_strip_text);
-      ImageView closeIcon = mRootView.findViewById(R.id.close_suggestions_strip_icon);
-      if (mCandidateView != null) {
-        closeIcon.setImageDrawable(mCandidateView.getCloseIcon());
-      }
-      mRootView.setOnClickListener(
-          view -> {
-            if (mCloseText.getVisibility() == View.VISIBLE) {
-              // already shown, so just cancel suggestions.
-              mCancelPrediction.run();
-            } else {
-              mCloseText.setVisibility(View.VISIBLE);
-              mCloseText.setPivotX(mCloseText.getWidth());
-              mCloseText.setPivotY(mCloseText.getHeight() / 2f);
-              mCloseTextToVisibleToGoneAnimation.setTarget(mCloseText);
-              mCloseTextToVisibleToGoneAnimation.start();
-            }
-          });
-
-      return mRootView;
-    }
-
-    @Override
-    public void onRemoved() {
-      mCloseTextToVisibleToGoneAnimation.cancel();
-      mCancelToGoneAnimation.cancel();
-      mCancelToVisibleAnimation.cancel();
-    }
-
-    void setOwningCandidateView(@NonNull CandidateView view) {
-      mCandidateView = view;
-    }
-
-    void setCancelIconVisible(boolean visible) {
-      if (mRootView != null) {
-        final int visibility = visible ? View.VISIBLE : View.GONE;
-        if (mRootView.getVisibility() != visibility) {
-          mRootView.setVisibility(View.VISIBLE); // just to make sure
-          Animator anim = visible ? mCancelToVisibleAnimation : mCancelToGoneAnimation;
-          anim.setTarget(mRootView);
-          anim.start();
-        }
-      }
-    }
-  }
 }

@@ -57,3 +57,7 @@ Recent extractions:
 - KeyIconDrawer draws centered icons and guesses labels when no icon is available.
 - KeyTextColorResolver computes per-key text color with modifier state handling.
 - Render helper list captured in docs/render-helpers.md for future slices.
+- CancelSuggestionsAction extracted from AnySoftKeyboardSuggestions to isolate strip action logic.
+- CompletionHandler extracted from AnySoftKeyboardSuggestions to encapsulate editor-provided completions.
+- SentenceSeparators helper extracted to manage per-keyboard separator sets.
+- SpaceTimeTracker now owns double-space/swap timing bookkeeping.

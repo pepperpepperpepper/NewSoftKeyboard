@@ -8,14 +8,10 @@ import com.anysoftkeyboard.keyboards.views.KeyboardViewContainerView;
  */
 final class SuggestionStripController {
 
-  private final com.anysoftkeyboard.ime.AnySoftKeyboardSuggestions.CancelSuggestionsAction
-      cancelSuggestionsAction;
+  private final CancelSuggestionsAction cancelSuggestionsAction;
   private final CandidateView candidateView;
 
-  SuggestionStripController(
-      com.anysoftkeyboard.ime.AnySoftKeyboardSuggestions.CancelSuggestionsAction
-          cancelSuggestionsAction,
-      CandidateView candidateView) {
+  SuggestionStripController(CancelSuggestionsAction cancelSuggestionsAction, CandidateView candidateView) {
     this.cancelSuggestionsAction = cancelSuggestionsAction;
     this.candidateView = candidateView;
     this.cancelSuggestionsAction.setOwningCandidateView(candidateView);
