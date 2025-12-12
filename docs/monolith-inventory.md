@@ -5,7 +5,7 @@ Generated from `wc -l` over *.java and *.kt. Focus on files ≥500 LOC.
 | LOC | File |
 | ---:| --- |
 | 1383 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
-| 1552 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
+| 1540 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
 | 1471 | ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/Dictionary.java |
 | 1117 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
 | 1296 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
@@ -86,3 +86,4 @@ Recent extractions:
 - ModifierKeyEventHelper moves Fn/Alt combination handling out of AnySoftKeyboard.
 - SelectionEditHelper holds selection wrap/case toggle logic out of AnySoftKeyboard.
 - DeleteActionHelper encapsulates backspace/forward-delete flows from AnySoftKeyboard.
+- SpecialWrapHelper centralizes wrap-character pairs (quote/parens) outside AnySoftKeyboard.

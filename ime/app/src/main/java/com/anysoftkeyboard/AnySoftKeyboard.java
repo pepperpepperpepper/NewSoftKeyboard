@@ -36,12 +36,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AlertDialog;
-import androidx.collection.SparseArrayCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import com.anysoftkeyboard.ModifierKeyEventHelper;
 import com.anysoftkeyboard.DeleteActionHelper;
 import com.anysoftkeyboard.SelectionEditHelper;
+import com.anysoftkeyboard.SpecialWrapHelper;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.DictionaryAddOnAndBuilder;
@@ -102,7 +102,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private final StringBuilder mTextCapitalizerWorkspace = new StringBuilder();
   private boolean mShowKeyboardIconInStatusBar;
 
-  @NonNull private final SparseArrayCompat<int[]> mSpecialWrapCharacters;
+  @NonNull private final SpecialWrapHelper specialWrapHelper = new SpecialWrapHelper();
 
   private DevStripActionProvider mDevToolsAction;
   private CondenseModeManager condenseModeManager;
@@ -176,18 +176,6 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   protected AnySoftKeyboard() {
     super();
-    mSpecialWrapCharacters = new SparseArrayCompat<>();
-    char[] inputArray = "\"'-_*`~()[]{}<>".toCharArray();
-    char[] outputArray = "\"\"''--__**``~~()()[][]{}{}<><>".toCharArray();
-    if (inputArray.length * 2 != outputArray.length) {
-      throw new IllegalArgumentException("outputArray should be twice as large as inputArray");
-    }
-    for (int wrapCharacterIndex = 0; wrapCharacterIndex < inputArray.length; wrapCharacterIndex++) {
-      char wrapCharacter = inputArray[wrapCharacterIndex];
-      int[] outputWrapCharacters =
-          new int[] {outputArray[wrapCharacterIndex * 2], outputArray[1 + wrapCharacterIndex * 2]};
-      mSpecialWrapCharacters.put(wrapCharacter, outputWrapCharacters);
-    }
   }
 
   @Override
@@ -883,8 +871,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
         break;
       default:
         if (getSelectionStartPositionDangerous() != getCursorPosition()
-            && mSpecialWrapCharacters.get(primaryCode) != null) {
-          int[] wrapCharacters = mSpecialWrapCharacters.get(primaryCode);
+            && specialWrapHelper.hasWrapCharacters(primaryCode)) {
+          int[] wrapCharacters = specialWrapHelper.getWrapCharacters(primaryCode);
           wrapSelectionWithCharacters(wrapCharacters[0], wrapCharacters[1]);
         } else if (isWordSeparator(primaryCode)) {
           handleSeparator(primaryCode);

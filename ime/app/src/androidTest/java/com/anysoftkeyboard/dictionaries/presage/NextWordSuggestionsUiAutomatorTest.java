@@ -87,8 +87,6 @@ public class NextWordSuggestionsUiAutomatorTest {
     // Seed context via IME commit (debug test hook), then ensure keyboard remains visible
     mScenario.onActivity(activity -> com.anysoftkeyboard.ime.ImeTestApi.commitText("the "));
     SystemClock.sleep(SHORT_WAIT_MS);
-    clickKeyboardRelative(0.50f, 0.90f); // spacebar to trigger next-word
-    SystemClock.sleep(SHORT_WAIT_MS);
     // Ask IME to compute and show next-word suggestions from previous token
     mScenario.onActivity(activity -> com.anysoftkeyboard.ime.ImeTestApi.forceNextWordFromCursor());
     SystemClock.sleep(SHORT_WAIT_MS);
@@ -162,7 +160,12 @@ public class NextWordSuggestionsUiAutomatorTest {
     int count;
     do {
       final int[] c = {0};
-      mScenario.onActivity(activity -> c[0] = CandidateViewTestRegistry.getCount());
+      mScenario.onActivity(
+          activity -> {
+            // re-trigger suggestion computation each pass to avoid stale empty state
+            com.anysoftkeyboard.ime.ImeTestApi.forceNextWordFromCursor();
+            c[0] = CandidateViewTestRegistry.getCount();
+          });
       count = c[0];
       if (count > 0) return;
       SystemClock.sleep(200);
@@ -173,6 +176,7 @@ public class NextWordSuggestionsUiAutomatorTest {
     if (c[0] == 0) {
       dumpWindowHierarchyForDebug();
       Log.w(TAG, "No suggestions visible after timeout");
+      throw new AssertionError("Suggestions did not appear");
     }
   }
 
