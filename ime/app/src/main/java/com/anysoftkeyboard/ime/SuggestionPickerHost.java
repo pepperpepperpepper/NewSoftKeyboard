@@ -37,7 +37,7 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
 
   @Override
   public Suggest getSuggest() {
-    return host.getSuggest();
+    return host.mSuggest;
   }
 
   @Override
@@ -47,7 +47,7 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
 
   @Override
   public boolean tryCommitCompletion(int index, InputConnection ic, CandidateView candidateView) {
-    return host.getCompletionHandler().tryCommitCompletion(index, ic, candidateView);
+    return host.completionHandler.tryCommitCompletion(index, ic, candidateView);
   }
 
   @Override
@@ -82,6 +82,6 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
 
   @Override
   public boolean isAutoCompleteEnabled() {
-    return host.isAutoCompleteEnabled();
+    return host.mAutoComplete;
   }
 }

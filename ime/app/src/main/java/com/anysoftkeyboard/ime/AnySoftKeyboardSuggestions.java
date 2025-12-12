@@ -65,7 +65,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   protected int mWordRevertLength = 0;
   private WordComposer mWord = new WordComposer();
   private WordComposer mPreviousWord = new WordComposer();
-  private Suggest mSuggest;
+  Suggest mSuggest;
   CandidateView mCandidateView;
   private final SpaceTimeTracker spaceTimeTracker = new SpaceTimeTracker();
   @Nullable private Keyboard.Key mLastKey;
@@ -82,7 +82,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private boolean mAutoCorrectOn;
   private boolean mAllowSuggestionsRestart = true;
   private boolean mShowSuggestions = false;
-  private boolean mAutoComplete;
+  boolean mAutoComplete;
 
   private boolean mJustAutoAddedWord = false;
 
@@ -93,7 +93,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private final InputFieldConfigurator inputFieldConfigurator = new InputFieldConfigurator();
   private final SelectionUpdateProcessor selectionUpdateProcessor = new SelectionUpdateProcessor();
   private SuggestionStripController suggestionStripController;
-  private final CompletionHandler completionHandler = new CompletionHandler();
+  final CompletionHandler completionHandler = new CompletionHandler();
   private final WordRestartHelper wordRestartHelper = new WordRestartHelper();
   private final SeparatorOutputHandler separatorOutputHandler = new SeparatorOutputHandler();
   private final CursorTouchChecker cursorTouchChecker = new CursorTouchChecker();
@@ -825,14 +825,6 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
   CandidateView getCandidateViewForTests() {
     return mCandidateView;
-  }
-
-  CompletionHandler getCompletionHandler() {
-    return completionHandler;
-  }
-
-  boolean isAutoCompleteEnabled() {
-    return mAutoComplete;
   }
 
   @NonNull
