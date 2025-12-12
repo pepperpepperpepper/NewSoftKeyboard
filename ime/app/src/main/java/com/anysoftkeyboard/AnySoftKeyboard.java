@@ -39,6 +39,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.collection.SparseArrayCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
+import com.anysoftkeyboard.ModifierKeyEventHelper;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.DictionaryAddOnAndBuilder;
@@ -765,108 +766,16 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   // convert ASCII codes to Android KeyEvent codes
   // ASCII Codes Table: https://ascii.cl
-  private int getKeyCode(int ascii) {
-    // A to Z
-    if (ascii >= 65 && ascii <= 90) return (KeyEvent.KEYCODE_A + ascii - 65);
-    // a to z
-    if (ascii >= 97 && ascii <= 122) return (KeyEvent.KEYCODE_A + ascii - 97);
-    // 0 to 9
-    if (ascii >= 48 && ascii <= 57) return (KeyEvent.KEYCODE_0 + ascii - 48);
-
-    return 0;
-  }
-
   private boolean handleFunctionCombination(int primaryCode, @Nullable Keyboard.Key key) {
-    int sourceCode = primaryCode;
-    if (key instanceof AnyKeyboard.AnyKey anyKey) {
-      sourceCode = anyKey.getCodeAtIndex(0, false);
-    } else if (key != null) {
-      sourceCode = key.getPrimaryCode();
-    }
-    sourceCode = normalizeFunctionDigit(sourceCode);
-    final int keyEventCode;
-    switch (sourceCode) {
-      case '1':
-        keyEventCode = KeyEvent.KEYCODE_F1;
-        break;
-      case '2':
-        keyEventCode = KeyEvent.KEYCODE_F2;
-        break;
-      case '3':
-        keyEventCode = KeyEvent.KEYCODE_F3;
-        break;
-      case '4':
-        keyEventCode = KeyEvent.KEYCODE_F4;
-        break;
-      case '5':
-        keyEventCode = KeyEvent.KEYCODE_F5;
-        break;
-      case '6':
-        keyEventCode = KeyEvent.KEYCODE_F6;
-        break;
-      case '7':
-        keyEventCode = KeyEvent.KEYCODE_F7;
-        break;
-      case '8':
-        keyEventCode = KeyEvent.KEYCODE_F8;
-        break;
-      case '9':
-        keyEventCode = KeyEvent.KEYCODE_F9;
-        break;
-      case '0':
-        keyEventCode = KeyEvent.KEYCODE_F10;
-        break;
-      default:
-        return false;
-    }
-    sendDownUpKeyEvents(keyEventCode);
-    return true;
-  }
-
-  private static int normalizeFunctionDigit(int code) {
-    return switch (code) {
-      case '!':
-        yield '1';
-      case '@':
-        yield '2';
-      case '#':
-        yield '3';
-      case '$':
-        yield '4';
-      case '%':
-        yield '5';
-      case '^':
-        yield '6';
-      case '&':
-        yield '7';
-      case '*':
-        yield '8';
-      case '(':
-        yield '9';
-      case ')':
-        yield '0';
-      default:
-        yield code;
-    };
+    return ModifierKeyEventHelper.handleFunctionCombination(
+        primaryCode, key, this::sendDownUpKeyEvents);
   }
 
   private boolean handleAltCombination(int primaryCode, @Nullable InputConnection ic) {
-    if (ic == null) return false;
-    int keyEventCode = getKeyCode(primaryCode);
-    if (keyEventCode == 0) {
-      if (primaryCode == KeyCodes.TAB) {
-        keyEventCode = KeyEvent.KEYCODE_TAB;
-      }
-    }
-    if (keyEventCode != 0) {
-      sendKeyEvent(ic, KeyEvent.ACTION_DOWN, keyEventCode, KeyEvent.META_ALT_MASK);
-      sendKeyEvent(ic, KeyEvent.ACTION_UP, keyEventCode, KeyEvent.META_ALT_MASK);
-      return true;
-    }
-    return false;
+    return ModifierKeyEventHelper.handleAltCombination(primaryCode, ic);
   }
 
-  // send key events
+  // send key events with meta state
   private void sendKeyEvent(InputConnection ic, int action, int keyCode, int meta) {
     if (ic == null) return;
     long now = System.currentTimeMillis();
@@ -945,7 +854,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
         } else if (isWordSeparator(primaryCode)) {
           handleSeparator(primaryCode);
         } else if (mControlKeyState.isActive()) {
-          int keyCode = getKeyCode(primaryCode);
+          int keyCode = ModifierKeyEventHelper.asciiToKeyEventCode(primaryCode);
           if (keyCode != 0) {
             // TextView (and hence its subclasses) can handle ^A, ^Z, ^X, ^C and ^V
             // https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-10.0.0_r1/core/java/android/widget/TextView.java#11136

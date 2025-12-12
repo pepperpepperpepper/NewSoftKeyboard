@@ -83,3 +83,4 @@ Recent extractions:
 - SpecialKeyAppearanceUpdater sets enter/mode icons & labels outside AnyKeyboardViewBase.
 - PreviewPopupPresenter owns preview popup show/hide logic.
 - PointerActionDispatcher owns pointer down/up/cancel sequencing.
+- ModifierKeyEventHelper moves Fn/Alt combination handling out of AnySoftKeyboard.
