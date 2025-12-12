@@ -66,7 +66,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private WordComposer mWord = new WordComposer();
   private WordComposer mPreviousWord = new WordComposer();
   private Suggest mSuggest;
-  private CandidateView mCandidateView;
+  CandidateView mCandidateView;
   private final SpaceTimeTracker spaceTimeTracker = new SpaceTimeTracker();
   @Nullable private Keyboard.Key mLastKey;
   private int mLastPrimaryKey = Integer.MIN_VALUE;
@@ -96,6 +96,17 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private final CompletionHandler completionHandler = new CompletionHandler();
   private final WordRestartHelper wordRestartHelper = new WordRestartHelper();
   private final SeparatorOutputHandler separatorOutputHandler = new SeparatorOutputHandler();
+  private final CursorTouchChecker cursorTouchChecker = new CursorTouchChecker();
+  private final SuggestionCommitter suggestionCommitter =
+      new SuggestionCommitter(new SuggestionCommitterHost(this));
+  private final SuggestionPicker suggestionPicker =
+      new SuggestionPicker(new SuggestionPickerHost(this));
+  private final SuggestionsUpdater suggestionsUpdater =
+      new SuggestionsUpdater(
+          mKeyboardHandler,
+          this::performUpdateSuggestions,
+          GET_SUGGESTIONS_DELAY,
+          KeyboardUIStateHandler.MSG_UPDATE_SUGGESTIONS);
   private final SuggestionSettingsController suggestionSettingsController =
       new SuggestionSettingsController();
 
@@ -561,7 +572,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     }
   }
 
-  private WordComposer prepareWordComposerForNextWord() {
+  WordComposer prepareWordComposerForNextWord() {
     if (mWord.isEmpty()) return mWord;
 
     final WordComposer typedWord = mWord;
@@ -800,12 +811,28 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     setSuggestions(Collections.emptyList(), -1);
   }
 
-  protected void setSuggestions(
+  public void setSuggestions(
       @NonNull List<? extends CharSequence> suggestions, int highlightedSuggestionIndex) {
     mCancelSuggestionsAction.setCancelIconVisible(!suggestions.isEmpty());
     if (mCandidateView != null) {
       mCandidateView.setSuggestions(suggestions, highlightedSuggestionIndex);
     }
+  }
+
+  Suggest getSuggestForTests() {
+    return mSuggest;
+  }
+
+  CandidateView getCandidateViewForTests() {
+    return mCandidateView;
+  }
+
+  CompletionHandler getCompletionHandler() {
+    return completionHandler;
+  }
+
+  boolean isAutoCompleteEnabled() {
+    return mAutoComplete;
   }
 
   @NonNull
@@ -848,10 +875,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
   /** posts an update suggestions request to the messages queue. Removes any previous request. */
   protected void postUpdateSuggestions() {
-    mKeyboardHandler.removeMessages(KeyboardUIStateHandler.MSG_UPDATE_SUGGESTIONS);
-    mKeyboardHandler.sendMessageDelayed(
-        mKeyboardHandler.obtainMessage(KeyboardUIStateHandler.MSG_UPDATE_SUGGESTIONS),
-        GET_SUGGESTIONS_DELAY);
+    suggestionsUpdater.postUpdateSuggestions();
   }
 
   protected boolean isPredictionOn() {
@@ -896,55 +920,16 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   public void pickSuggestionManually(
       int index, CharSequence suggestion, boolean withAutoSpaceEnabled) {
     mWordRevertLength = 0; // no reverts
-    final InputConnection ic = mInputConnectionRouter.current();
-    if (ic != null) {
-      ic.beginBatchEdit();
-    }
-
     final WordComposer typedWord = prepareWordComposerForNextWord();
 
-    try {
-      if (completionHandler.tryCommitCompletion(index, ic, mCandidateView)) {
-        return;
-      }
-      commitWordToInput(
-          suggestion,
-          suggestion /*user physically picked a word from the suggestions strip. this is not a fix*/);
-
-      // Follow it with a space
-      if (withAutoSpaceEnabled && (index == 0 || !typedWord.isAtTagsSearchState())) {
-        sendKeyChar((char) KeyCodes.SPACE);
-        setSpaceTimeStamp(true);
-      }
-      // Add the word to the auto dictionary if it's not a known word
-      mJustAutoAddedWord = false;
-
-      if (!typedWord.isAtTagsSearchState()) {
-        if (index == 0) {
-          checkAddToDictionaryWithAutoDictionary(
-              typedWord.getTypedWord(), SuggestImpl.AdditionType.Picked);
-        }
-
-        final boolean showingAddToDictionaryHint =
-            AddToDictionaryDecider.shouldShowAddHint(
-                index,
-                mJustAutoAddedWord,
-                mShowSuggestions,
-                mSuggest,
-                suggestion,
-                getCurrentAlphabetKeyboard().getLocale());
-
-        if (showingAddToDictionaryHint) {
-          if (mCandidateView != null) mCandidateView.showAddToDictionaryHint(suggestion);
-        } else {
-          setSuggestions(mSuggest.getNextSuggestions(suggestion, mWord.isAllUpperCase()), -1);
-        }
-      }
-    } finally {
-      if (ic != null) {
-        ic.endBatchEdit();
-      }
-    }
+    suggestionPicker.pickSuggestionManually(
+        typedWord,
+        withAutoSpaceEnabled,
+        index,
+        suggestion,
+        mShowSuggestions,
+        mJustAutoAddedWord,
+        typedWord.isAtTagsSearchState());
   }
 
   /**
@@ -956,43 +941,12 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   @CallSuper
   protected void commitWordToInput(
       @NonNull CharSequence wordToCommit, @NonNull CharSequence typedWord) {
-    InputConnection ic = mInputConnectionRouter.current();
-    if (ic != null) {
-      final boolean delayedUpdates = isSelectionUpdateDelayed();
-      markExpectingSelectionUpdate();
-      // we DO NOT want to use commitCorrection if we do not know
-      // the exact position in the text-box.
-      if (TextUtils.equals(wordToCommit, typedWord) || delayedUpdates) {
-        ic.commitText(wordToCommit, 1);
-      } else {
-        AnyApplication.getDeviceSpecific()
-            .commitCorrectionToInputConnection(
-                ic, getCursorPosition() - typedWord.length(), typedWord, wordToCommit);
-      }
-    }
-
-    clearSuggestions();
+    suggestionCommitter.commitWordToInput(wordToCommit, typedWord);
   }
 
   private boolean isCursorTouchingWord() {
-    InputConnection ic = mInputConnectionRouter.current();
-    if (ic == null) {
-      return false;
-    }
-
-    CharSequence toLeft = ic.getTextBeforeCursor(1, 0);
-    // It is not exactly clear to me why, but sometimes, although I request
-    // 1 character, I get the entire text
-    if (!TextUtils.isEmpty(toLeft) && !isWordSeparator(toLeft.charAt(0))) {
-      return true;
-    }
-
-    CharSequence toRight = ic.getTextAfterCursor(1, 0);
-    if (!TextUtils.isEmpty(toRight) && !isWordSeparator(toRight.charAt(0))) {
-      return true;
-    }
-
-    return false;
+    return cursorTouchChecker.isCursorTouchingWord(
+        mInputConnectionRouter.current(), this::isWordSeparator);
   }
 
   protected void setSpaceTimeStamp(boolean isSpace) {
@@ -1075,8 +1029,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         });
   }
 
-  private void checkAddToDictionaryWithAutoDictionary(
-      CharSequence newWord, Suggest.AdditionType type) {
+  void checkAddToDictionaryWithAutoDictionary(CharSequence newWord, Suggest.AdditionType type) {
     mJustAutoAddedWord = false;
 
     // unfortunately, has to do it on the main-thread (because we checking mJustAutoAddedWord)
@@ -1114,4 +1067,115 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     abortCorrectionAndResetPredictionState(false);
   }
 
+  private static final class SuggestionCommitterHost implements SuggestionCommitter.Host {
+    private final AnySoftKeyboardSuggestions host;
+
+    SuggestionCommitterHost(AnySoftKeyboardSuggestions host) {
+      this.host = host;
+    }
+
+    @Override
+    public InputConnection currentInputConnection() {
+      return host.mInputConnectionRouter.current();
+    }
+
+    @Override
+    public boolean isSelectionUpdateDelayed() {
+      return host.isSelectionUpdateDelayed();
+    }
+
+    @Override
+    public void markExpectingSelectionUpdate() {
+      host.markExpectingSelectionUpdate();
+    }
+
+    @Override
+    public int getCursorPosition() {
+      return host.getCursorPosition();
+    }
+
+    @Override
+    public void clearSuggestions() {
+      host.clearSuggestions();
+    }
+  }
+
+  private static final class SuggestionPickerHost implements SuggestionPicker.Host {
+    private final AnySoftKeyboardSuggestions host;
+
+    SuggestionPickerHost(AnySoftKeyboardSuggestions host) {
+      this.host = host;
+    }
+
+    @Override
+    public InputConnection currentInputConnection() {
+      return host.mInputConnectionRouter.current();
+    }
+
+    @Override
+    public WordComposer prepareWordComposerForNextWord() {
+      return host.prepareWordComposerForNextWord();
+    }
+
+    @Override
+    public void checkAddToDictionaryWithAutoDictionary(
+        CharSequence newWord, Suggest.AdditionType type) {
+      host.checkAddToDictionaryWithAutoDictionary(newWord, type);
+    }
+
+    @Override
+    public void setSuggestions(List<CharSequence> suggestions, int highlightedIndex) {
+      host.setSuggestions(suggestions, highlightedIndex);
+    }
+
+    @Override
+    public Suggest getSuggest() {
+      return host.mSuggest;
+    }
+
+    @Override
+    public CandidateView getCandidateView() {
+      return host.mCandidateView;
+    }
+
+    @Override
+    public boolean tryCommitCompletion(int index, InputConnection ic, CandidateView candidateView) {
+      return host.completionHandler.tryCommitCompletion(index, ic, candidateView);
+    }
+
+    @Override
+    public AnyKeyboard getCurrentAlphabetKeyboard() {
+      return host.getCurrentAlphabetKeyboard();
+    }
+
+    @Override
+    public void clearSuggestions() {
+      host.clearSuggestions();
+    }
+
+    @Override
+    public void commitWordToInput(CharSequence wordToCommit, CharSequence typedWord) {
+      host.commitWordToInput(wordToCommit, typedWord);
+    }
+
+    @Override
+    public void sendKeyChar(char c) {
+      host.sendKeyChar(c);
+    }
+
+    @Override
+    public void setSpaceTimeStamp(boolean isSpace) {
+      host.setSpaceTimeStamp(isSpace);
+    }
+
+    @Override
+    public boolean isPredictionOn() {
+      return host.isPredictionOn();
+    }
+
+    @Override
+    public boolean isAutoCompleteEnabled() {
+      return host.mAutoComplete;
+    }
+  }
 }

@@ -75,6 +75,10 @@ Recent extractions:
 - NavigationKeyHandler handles DPAD/home/end/page navigation keys (including Fn combos).
 - SuggestionSettingsController centralizes suggestion prefs + correction tuning.
 - AddToDictionaryDecider encapsulates hint gating after manual suggestion picks.
+- CursorTouchChecker encapsulates cursor-neighbor checks for suggestion logic.
+- SuggestionCommitter encapsulates committing picked suggestions to the input connection.
+- SuggestionPicker wraps manual pick flow (auto-space, add-to-dictionary, next suggestions).
+- SuggestionsUpdater encapsulates delayed scheduling of suggestion refreshes.
 - ThemeAttributeLoader owns theme/icon attribute parsing for AnyKeyboardViewBase.
 - SpecialKeyAppearanceUpdater sets enter/mode icons & labels outside AnyKeyboardViewBase.
 - PreviewPopupPresenter owns preview popup show/hide logic.
