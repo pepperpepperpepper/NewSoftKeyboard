@@ -854,24 +854,10 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
         } else if (isWordSeparator(primaryCode)) {
           handleSeparator(primaryCode);
         } else if (mControlKeyState.isActive()) {
-          int keyCode = ModifierKeyEventHelper.asciiToKeyEventCode(primaryCode);
-          if (keyCode != 0) {
-            // TextView (and hence its subclasses) can handle ^A, ^Z, ^X, ^C and ^V
-            // https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-10.0.0_r1/core/java/android/widget/TextView.java#11136
-            // simulate physical keyboard behavior i.e. press and release a key while
-            // keeping Ctrl pressed
-            sendKeyEvent(ic, KeyEvent.ACTION_DOWN, keyCode, KeyEvent.META_CTRL_MASK);
-            sendKeyEvent(ic, KeyEvent.ACTION_UP, keyCode, KeyEvent.META_CTRL_MASK);
-          } else if (primaryCode >= 32 && primaryCode < 127) {
-            // http://en.wikipedia.org/wiki/Control_character#How_control_characters_map_to_keyboards
-            int controlCode = primaryCode & 31;
-            Logger.d(TAG, "CONTROL state: Char was %d and now it is %d", primaryCode, controlCode);
-            if (controlCode == 9) {
-              sendTab();
-            } else {
-              ic.commitText(new String(new int[] {controlCode}, 0, 1), 1);
-            }
-          } else {
+          boolean consumed =
+              ModifierKeyEventHelper.handleControlCombination(
+                  primaryCode, ic, this::sendTab, TAG);
+          if (!consumed) {
             handleCharacter(primaryCode, key, multiTapIndex, nearByKeyCodes);
           }
         } else {

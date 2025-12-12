@@ -5,6 +5,7 @@ import android.view.inputmethod.InputConnection;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.keyboards.Keyboard;
+import com.anysoftkeyboard.base.utils.Logger;
 
 /**
  * Helper for handling modifier-based key combinations (Fn/Alt/Ctrl style) to keep
@@ -83,6 +84,31 @@ public final class ModifierKeyEventHelper {
     if (keyEventCode != 0) {
       sendKeyEvent(ic, KeyEvent.ACTION_DOWN, keyEventCode, KeyEvent.META_ALT_MASK);
       sendKeyEvent(ic, KeyEvent.ACTION_UP, keyEventCode, KeyEvent.META_ALT_MASK);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Handles Ctrl+<key> combinations. Returns true if consumed; false lets the caller
+   * continue with regular character handling.
+   */
+  public static boolean handleControlCombination(
+      int primaryCode, @Nullable InputConnection ic, Runnable sendTab, String logTag) {
+    if (ic == null) return false;
+    int keyEventCode = asciiToKeyEventCode(primaryCode);
+    if (keyEventCode != 0) {
+      sendKeyEvent(ic, KeyEvent.ACTION_DOWN, keyEventCode, KeyEvent.META_CTRL_MASK);
+      sendKeyEvent(ic, KeyEvent.ACTION_UP, keyEventCode, KeyEvent.META_CTRL_MASK);
+      return true;
+    } else if (primaryCode >= 32 && primaryCode < 127) {
+      int controlCode = primaryCode & 31;
+      Logger.d(logTag, "CONTROL state: Char was %d and now it is %d", primaryCode, controlCode);
+      if (controlCode == 9) {
+        sendTab.run();
+      } else {
+        ic.commitText(new String(new int[] {controlCode}, 0, 1), 1);
+      }
       return true;
     }
     return false;
