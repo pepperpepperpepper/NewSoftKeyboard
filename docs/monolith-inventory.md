@@ -74,6 +74,7 @@ Recent extractions:
 - KeyboardSwitchHandler handles keyboard-cycle/split/utility switching logic.
 - NavigationKeyHandler handles DPAD/home/end/page navigation keys (including Fn combos).
 - SuggestionSettingsController centralizes suggestion prefs + correction tuning.
+- AddToDictionaryDecider encapsulates hint gating after manual suggestion picks.
 - ThemeAttributeLoader owns theme/icon attribute parsing for AnyKeyboardViewBase.
 - SpecialKeyAppearanceUpdater sets enter/mode icons & labels outside AnyKeyboardViewBase.
 - PreviewPopupPresenter owns preview popup show/hide logic.

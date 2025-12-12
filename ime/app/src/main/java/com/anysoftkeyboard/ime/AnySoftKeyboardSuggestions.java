@@ -926,13 +926,13 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         }
 
         final boolean showingAddToDictionaryHint =
-            !mJustAutoAddedWord
-                && index == 0
-                && mShowSuggestions
-                && !mSuggest.isValidWord(suggestion) // this is for the case that the word was
-                // auto-added upon picking
-                && !mSuggest.isValidWord(
-                    suggestion.toString().toLowerCase(getCurrentAlphabetKeyboard().getLocale()));
+            AddToDictionaryDecider.shouldShowAddHint(
+                index,
+                mJustAutoAddedWord,
+                mShowSuggestions,
+                mSuggest,
+                suggestion,
+                getCurrentAlphabetKeyboard().getLocale());
 
         if (showingAddToDictionaryHint) {
           if (mCandidateView != null) mCandidateView.showAddToDictionaryHint(suggestion);
