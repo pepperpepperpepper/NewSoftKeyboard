@@ -40,6 +40,7 @@ import androidx.collection.SparseArrayCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
 import com.anysoftkeyboard.ModifierKeyEventHelper;
+import com.anysoftkeyboard.DeleteActionHelper;
 import com.anysoftkeyboard.SelectionEditHelper;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
@@ -116,6 +117,39 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private final FullscreenModeDecider fullscreenModeDecider = new FullscreenModeDecider();
   private View mFullScreenExtractView;
   private EditText mFullScreenExtractTextView;
+
+  private final DeleteActionHelper.Host deleteActionHost =
+      new DeleteActionHelper.Host() {
+        @Override
+        public boolean isPredictionOn() {
+          return AnySoftKeyboard.this.isPredictionOn();
+        }
+
+        @Override
+        public int getCursorPosition() {
+          return AnySoftKeyboard.this.getCursorPosition();
+        }
+
+        @Override
+        public boolean isSelectionUpdateDelayed() {
+          return AnySoftKeyboard.this.isSelectionUpdateDelayed();
+        }
+
+        @Override
+        public void markExpectingSelectionUpdate() {
+          AnySoftKeyboard.this.markExpectingSelectionUpdate();
+        }
+
+        @Override
+        public void postUpdateSuggestions() {
+          AnySoftKeyboard.this.postUpdateSuggestions();
+        }
+
+        @Override
+        public void sendDownUpKeyEvents(int keyCode) {
+          AnySoftKeyboard.this.sendDownUpKeyEvents(keyCode);
+        }
+      };
 
   private EmojiSearchController emojiSearchController;
 
@@ -1110,109 +1144,21 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   }
 
   private void handleDeleteLastCharacter(boolean forMultiTap) {
-    InputConnection ic = currentInputConnection();
-    final WordComposer currentComposedWord = getCurrentComposedWord();
-    final boolean wordManipulation =
-        isPredictionOn()
-            && currentComposedWord.cursorPosition() > 0
-            && !currentComposedWord.isEmpty();
-    if (isSelectionUpdateDelayed() || ic == null) {
-      markExpectingSelectionUpdate();
-      Log.d(TAG, "handleDeleteLastCharacter will just sendDownUpKeyEvents.");
-      if (wordManipulation) currentComposedWord.deleteCodePointAtCurrentPosition();
-      sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-      return;
-    }
-
-    markExpectingSelectionUpdate();
-
     if (shouldRevertOnDelete()) {
       revertLastWord();
-    } else if (wordManipulation) {
-      // NOTE: we can not use ic.deleteSurroundingText here because
-      // it does not work well with composing text.
-      final int charsToDelete = currentComposedWord.deleteCodePointAtCurrentPosition();
-      final int cursorPosition;
-      if (currentComposedWord.cursorPosition() != currentComposedWord.charCount()) {
-        cursorPosition = getCursorPosition();
-      } else {
-        cursorPosition = -1;
-      }
-
-      if (cursorPosition >= 0) {
-        ic.beginBatchEdit();
-      }
-
-      ic.setComposingText(currentComposedWord.getTypedWord(), 1);
-      if (cursorPosition >= 0 && !currentComposedWord.isEmpty()) {
-        ic.setSelection(cursorPosition - charsToDelete, cursorPosition - charsToDelete);
-      }
-
-      if (cursorPosition >= 0) {
-        ic.endBatchEdit();
-      }
-
-      postUpdateSuggestions();
-    } else {
-      if (!forMultiTap) {
-        sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-      } else {
-        // this code tries to delete the text in a different way,
-        // because of multi-tap stuff
-        // using "deleteSurroundingText" will actually get the input
-        // updated faster!
-        // but will not handle "delete all selected text" feature,
-        // hence the "if (!forMultiTap)" above
-        final CharSequence beforeText = ic.getTextBeforeCursor(MAX_CHARS_PER_CODE_POINT, 0);
-        final int textLengthBeforeDelete =
-            TextUtils.isEmpty(beforeText)
-                ? 0
-                : Character.charCount(Character.codePointBefore(beforeText, beforeText.length()));
-        if (textLengthBeforeDelete > 0) {
-          ic.deleteSurroundingText(textLengthBeforeDelete, 0);
-        } else {
-          sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-        }
-      }
+      return;
     }
+    DeleteActionHelper.handleDeleteLastCharacter(
+        deleteActionHost,
+        mInputConnectionRouter,
+        currentInputConnection(),
+        getCurrentComposedWord(),
+        forMultiTap);
   }
 
   private void handleForwardDelete(InputConnection ic) {
-    final WordComposer currentComposedWord = getCurrentComposedWord();
-    final boolean wordManipulation =
-        isPredictionOn()
-            && currentComposedWord.cursorPosition() < currentComposedWord.charCount()
-            && !currentComposedWord.isEmpty();
-
-    if (wordManipulation) {
-      // NOTE: we can not use ic.deleteSurroundingText here because
-      // it does not work well with composing text.
-      currentComposedWord.deleteForward();
-      final int cursorPosition;
-      if (currentComposedWord.cursorPosition() != currentComposedWord.charCount()) {
-        cursorPosition = getCursorPosition();
-      } else {
-        cursorPosition = -1;
-      }
-
-      if (cursorPosition >= 0) {
-        ic.beginBatchEdit();
-      }
-
-      markExpectingSelectionUpdate();
-      ic.setComposingText(currentComposedWord.getTypedWord(), 1);
-      if (cursorPosition >= 0 && !currentComposedWord.isEmpty()) {
-        ic.setSelection(cursorPosition, cursorPosition);
-      }
-
-      if (cursorPosition >= 0) {
-        ic.endBatchEdit();
-      }
-
-      postUpdateSuggestions();
-    } else {
-      sendDownUpKeyEvents(KeyEvent.KEYCODE_FORWARD_DEL);
-    }
+    DeleteActionHelper.handleForwardDelete(
+        deleteActionHost, mInputConnectionRouter, ic, getCurrentComposedWord());
   }
 
   private void handleControl() {
