@@ -49,12 +49,12 @@ final class SelectionUpdateHost implements SelectionUpdateProcessor.Host {
 
   @Override
   public void setWordRevertLength(int length) {
-    host.mWordRevertLength = length;
+    host.setWordRevertLength(length);
   }
 
   @Override
   public int getWordRevertLength() {
-    return host.mWordRevertLength;
+    return host.getWordRevertLength();
   }
 
   @Override

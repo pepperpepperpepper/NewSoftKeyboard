@@ -62,7 +62,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
   private final SentenceSeparators sentenceSeparators = new SentenceSeparators();
 
-  protected int mWordRevertLength = 0;
+  private final AutoCorrectState autoCorrectState = new AutoCorrectState();
   private WordComposer mWord = new WordComposer();
   private WordComposer mPreviousWord = new WordComposer();
   Suggest mSuggest;
@@ -76,7 +76,6 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private final PredictionState predictionState = new PredictionState();
   private final DictionaryLoadGate dictionaryLoadGate = new DictionaryLoadGate();
 
-  private boolean mJustAutoAddedWord = false;
   private boolean mDictionariesForCurrentKeyboardLoaded = false;
 
   @VisibleForTesting
@@ -268,7 +267,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     mLastPrimaryKey = primaryCode;
     super.onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
     if (primaryCode != KeyCodes.DELETE) {
-      mWordRevertLength = 0;
+      autoCorrectState.wordRevertLength = 0;
     }
     mCandidateView.dismissAddToDictionaryHint();
   }
@@ -280,7 +279,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   @Override
   public void onRelease(int primaryCode) {
     // not allowing undo on-text in clipboard paste operations.
-    if (primaryCode == KeyCodes.CLIPBOARD_PASTE) mWordRevertLength = 0;
+    if (primaryCode == KeyCodes.CLIPBOARD_PASTE) autoCorrectState.wordRevertLength = 0;
     if (mLastPrimaryKey == primaryCode && KeyCodes.isOutputKeyCode(primaryCode)) {
       setSpaceTimeStamp(primaryCode == KeyCodes.SPACE);
     }
@@ -314,7 +313,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   protected boolean shouldRevertOnDelete() {
-    return mWordRevertLength > 0;
+    return autoCorrectState.shouldRevertOnDelete();
   }
 
   void clearSpaceTimeTracker() {
@@ -342,6 +341,14 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     return mWord;
   }
 
+  void setWordRevertLength(int length) {
+    autoCorrectState.wordRevertLength = length;
+  }
+
+  int getWordRevertLength() {
+    return autoCorrectState.wordRevertLength;
+  }
+
   protected void handleCharacter(
       final int primaryCode,
       final Keyboard.Key key,
@@ -357,7 +364,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     }
 
     if (mWord.charCount() == 0 && isAlphabet(primaryCode)) {
-      mWordRevertLength = 0;
+      autoCorrectState.wordRevertLength = 0;
       mWord.reset();
     predictionState.autoCorrectOn =
         isPredictionOn() && predictionState.autoComplete && predictionState.inputFieldSupportsAutoPick;
@@ -410,7 +417,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         ic.endBatchEdit();
       }
     }
-    mJustAutoAddedWord = false;
+    autoCorrectState.justAutoAddedWord = false;
   }
 
   // Make sure to call this BEFORE actually making changes, and not after.
@@ -466,7 +473,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
             this::commitWordToInput,
             (word, type) -> checkAddToDictionaryWithAutoDictionary(word, type),
             () -> abortCorrectionAndResetPredictionState(false),
-            len -> mWordRevertLength = len,
+            len -> autoCorrectState.wordRevertLength = len,
             code -> sendKeyChar((char) code));
 
     markExpectingSelectionUpdate();
@@ -608,7 +615,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     ic.commitText(text, 1);
 
     // this will be the revert
-    mWordRevertLength = initialWordComposer.charCount() + text.length();
+    autoCorrectState.wordRevertLength = initialWordComposer.charCount() + text.length();
     mPreviousWord = initialWordComposer;
     markExpectingSelectionUpdate();
     ic.endBatchEdit();
@@ -695,7 +702,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     mSuggest.resetNextWordSentence();
 
     spaceTimeTracker.clear();
-    mJustAutoAddedWord = false;
+    autoCorrectState.justAutoAddedWord = false;
     mKeyboardHandler.removeAllSuggestionMessages();
 
     final InputConnection ic = mInputConnectionRouter.current();
@@ -705,8 +712,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     clearSuggestions();
 
     mWord.reset();
-    mWordRevertLength = 0;
-    mJustAutoAddedWord = false;
+    autoCorrectState.reset();
     if (disabledUntilNextInputStart) {
       Logger.d(TAG, "abortCorrection will abort correct forever");
       final KeyboardViewContainerView inputViewContainer = getInputViewContainer();
@@ -844,7 +850,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   @CallSuper
   public void pickSuggestionManually(
       int index, CharSequence suggestion, boolean withAutoSpaceEnabled) {
-    mWordRevertLength = 0; // no reverts
+    autoCorrectState.wordRevertLength = 0; // no reverts
     final WordComposer typedWord = prepareWordComposerForNextWord();
 
     suggestionPicker.pickSuggestionManually(
@@ -853,7 +859,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         index,
         suggestion,
         predictionState.showSuggestions,
-        mJustAutoAddedWord,
+        autoCorrectState.justAutoAddedWord,
         typedWord.isAtTagsSearchState());
   }
 
@@ -893,10 +899,10 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   public void revertLastWord() {
-    if (mWordRevertLength == 0) {
+    if (autoCorrectState.wordRevertLength == 0) {
       sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
     } else {
-      final int length = mWordRevertLength;
+      final int length = autoCorrectState.wordRevertLength;
       predictionState.autoCorrectOn = false;
       // note: typedWord may be empty
     final InputConnection ic = mInputConnectionRouter.current();
@@ -905,11 +911,11 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       WordComposer temp = mWord;
       mWord = mPreviousWord;
       mPreviousWord = temp;
-      mWordRevertLength = 0;
+      autoCorrectState.wordRevertLength = 0;
       final CharSequence typedWord = mWord.getTypedWord();
       ic.setComposingText(typedWord /* mComposing */, 1);
       performUpdateSuggestions();
-      if (mJustAutoAddedWord) {
+      if (autoCorrectState.justAutoAddedWord) {
         removeFromUserDictionary(typedWord.toString());
       }
     }
@@ -956,12 +962,12 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   void checkAddToDictionaryWithAutoDictionary(CharSequence newWord, Suggest.AdditionType type) {
-    mJustAutoAddedWord = false;
+    autoCorrectState.justAutoAddedWord = false;
 
     // unfortunately, has to do it on the main-thread (because we checking mJustAutoAddedWord)
     if (mSuggest.tryToLearnNewWord(newWord, type)) {
       addWordToDictionary(newWord.toString());
-      mJustAutoAddedWord = true;
+      autoCorrectState.justAutoAddedWord = true;
     }
   }
 
@@ -989,7 +995,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
                 e ->
                     Logger.w(
                         TAG, e, "Failed to remove word '%s' from user-dictionary!", wordToRemove)));
-    mJustAutoAddedWord = false;
+    autoCorrectState.justAutoAddedWord = false;
     abortCorrectionAndResetPredictionState(false);
   }
 
