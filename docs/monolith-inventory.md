@@ -8,7 +8,7 @@ Generated from `wc -l` over *.java and *.kt. Focus on files ≥500 LOC.
 | 1389 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
 | 1296 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
 | 1292 | ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/BaseCharactersTable.java* |
-| 1168 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
+| 1175 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
 | 1047 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java |
 | 1037 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/Keyboard.java |
 |  849 | ime/app/src/main/java/com/anysoftkeyboard/dictionaries/SuggestionsProvider.java |
@@ -69,6 +69,8 @@ Recent extractions:
 - SeparatorOutputHandler extracted to handle double-space period and punctuation/space swapping.
 - SeparatorActionHelper now owns separator handling (auto-pick/commit/swap + output dispatch),
   trimming `AnySoftKeyboardSuggestions`.
+- PredictionState now holds the suggestion/prediction flags; `SuggestionPickerHost`/service route
+  auto-complete checks through it.
 - StatusIconController owns status-icon visibility outside the service.
 - FullscreenModeDecider isolates fullscreen decision logic.
 - MultiTapEditCoordinator wraps multi-tap batch edit lifecycle.

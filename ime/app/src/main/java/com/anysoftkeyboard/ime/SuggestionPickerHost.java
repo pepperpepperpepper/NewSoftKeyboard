@@ -82,6 +82,6 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
 
   @Override
   public boolean isAutoCompleteEnabled() {
-    return host.mAutoComplete;
+    return host.isAutoCompleteEnabled();
   }
 }

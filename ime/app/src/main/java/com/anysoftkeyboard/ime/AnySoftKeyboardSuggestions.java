@@ -73,16 +73,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private long mExpectingSelectionUpdateBy = NEVER_TIME_STAMP;
   private boolean mLastCharacterWasShifted = false;
   private boolean mFrenchSpacePunctuationBehavior;
-  /*
-   * is prediction needed for the current input connection
-   */
-  private boolean mPredictionOn;
-  private boolean mAutoSpace;
-  private boolean mInputFieldSupportsAutoPick;
-  private boolean mAutoCorrectOn;
-  private boolean mAllowSuggestionsRestart = true;
-  private boolean mShowSuggestions = false;
-  boolean mAutoComplete;
+  private final PredictionState predictionState = new PredictionState();
 
   private boolean mJustAutoAddedWord = false;
   private boolean mDictionariesForCurrentKeyboardLoaded = false;
@@ -117,7 +108,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   void setAllowSuggestionsRestart(boolean allow) {
-    mAllowSuggestionsRestart = allow;
+    predictionState.allowSuggestionsRestart = allow;
   }
 
   void applySuggestionSettings(
@@ -126,16 +117,19 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       int commonalityMaxLengthDiff,
       int commonalityMaxDistance,
       boolean trySplitting) {
-    final boolean showChanged = mShowSuggestions != showSuggestions;
-    mShowSuggestions = showSuggestions;
-    if (showChanged && mShowSuggestions) {
+    final boolean showChanged = predictionState.showSuggestions != showSuggestions;
+    predictionState.showSuggestions = showSuggestions;
+    if (showChanged && predictionState.showSuggestions) {
       mDictionariesForCurrentKeyboardLoaded = false;
     }
-    mAutoComplete = autoComplete;
+    predictionState.autoComplete = autoComplete;
     mSuggest.setCorrectionMode(
-        mShowSuggestions, commonalityMaxLengthDiff, commonalityMaxDistance, trySplitting);
+        predictionState.showSuggestions,
+        commonalityMaxLengthDiff,
+        commonalityMaxDistance,
+        trySplitting);
     if (showChanged) {
-      if (mShowSuggestions) {
+      if (predictionState.showSuggestions) {
         setDictionariesForCurrentKeyboard();
       } else {
         closeDictionaries();
@@ -184,20 +178,20 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   public void onStartInputView(final EditorInfo attribute, final boolean restarting) {
     super.onStartInputView(attribute, restarting);
 
-    mPredictionOn = false;
+    predictionState.predictionOn = false;
     mDictionariesForCurrentKeyboardLoaded = false;
     completionHandler.reset();
-    mInputFieldSupportsAutoPick = false;
+    predictionState.inputFieldSupportsAutoPick = false;
 
     InputFieldConfigurator.Result inputConfig =
         inputFieldConfigurator.configure(
             attribute, restarting, getKeyboardSwitcher(), mPrefsAutoSpace, TAG);
 
-    mPredictionOn = inputConfig.predictionOn;
-    mInputFieldSupportsAutoPick = inputConfig.inputFieldSupportsAutoPick;
-    mAutoSpace = inputConfig.autoSpace;
+    predictionState.predictionOn = inputConfig.predictionOn;
+    predictionState.inputFieldSupportsAutoPick = inputConfig.inputFieldSupportsAutoPick;
+    predictionState.autoSpace = inputConfig.autoSpace;
 
-    mPredictionOn = mPredictionOn && mShowSuggestions;
+    predictionState.predictionOn = predictionState.predictionOn && predictionState.showSuggestions;
 
     mCancelSuggestionsAction.setCancelIconVisible(false);
     suggestionStripController.attachToStrip(getInputViewContainer());
@@ -210,7 +204,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   public void onFinishInput() {
     super.onFinishInput();
     mCancelSuggestionsAction.setCancelIconVisible(false);
-    mPredictionOn = false;
+    predictionState.predictionOn = false;
     mKeyboardHandler.sendEmptyMessageDelayed(
         KeyboardUIStateHandler.MSG_CLOSE_DICTIONARIES, CLOSE_DICTIONARIES_DELAY);
     mExpectingSelectionUpdateBy = NEVER_TIME_STAMP;
@@ -418,7 +412,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     if (mWord.charCount() == 0 && isAlphabet(primaryCode)) {
       mWordRevertLength = 0;
       mWord.reset();
-      mAutoCorrectOn = isPredictionOn() && mAutoComplete && mInputFieldSupportsAutoPick;
+    predictionState.autoCorrectOn =
+        isPredictionOn() && predictionState.autoComplete && predictionState.inputFieldSupportsAutoPick;
       if (mShiftKeyState.isActive()) {
         mWord.setFirstCharCapitalized(true);
       }
@@ -684,8 +679,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     // simulating multiple keys
     final WordComposer initialWordComposer = new WordComposer();
     mWord.cloneInto(initialWordComposer);
-    final boolean originalAutoCorrect = mAutoCorrectOn;
-    mAutoCorrectOn = false;
+    final boolean originalAutoCorrect = predictionState.autoCorrectOn;
+    predictionState.autoCorrectOn = false;
     for (int pointCodeIndex = 0; pointCodeIndex < text.length(); ) {
       int pointCode = Character.codePointAt(text, pointCodeIndex);
       pointCodeIndex += Character.charCount(pointCode);
@@ -694,7 +689,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       // simulating key press
       onKey(pointCode, key, 0, new int[] {pointCode}, true);
     }
-    mAutoCorrectOn = originalAutoCorrect;
+    predictionState.autoCorrectOn = originalAutoCorrect;
 
     ic.endBatchEdit();
   }
@@ -704,7 +699,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
     mSuggest.resetNextWordSentence();
 
-    if (mPredictionOn || shouldLoadDictionariesForGestureTyping()) {
+    if (predictionState.predictionOn || shouldLoadDictionariesForGestureTyping()) {
       // It null at the creation of the application.
       final AnyKeyboard currentAlphabetKeyboard = getCurrentAlphabetKeyboard();
       if (currentAlphabetKeyboard != null && isInAlphabetKeyboardMode()) {
@@ -770,7 +765,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       if (inputViewContainer != null) {
         inputViewContainer.removeStripAction(mCancelSuggestionsAction);
       }
-      mPredictionOn = false;
+      predictionState.predictionOn = false;
     }
   }
 
@@ -782,7 +777,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   protected boolean canRestartWordSuggestion() {
     final InputViewBinder inputView = getInputView();
     if (!isPredictionOn()
-        || !mAllowSuggestionsRestart
+        || !predictionState.allowSuggestionsRestart
         || inputView == null
         || !inputView.isShown()) {
       // why?
@@ -798,7 +793,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
           "performRestartWordSuggestion: no need to restart: isPredictionOn=%s,"
               + " mAllowSuggestionsRestart=%s",
           isPredictionOn(),
-          mAllowSuggestionsRestart);
+          predictionState.allowSuggestionsRestart);
       return false;
     } else if (!isCursorTouchingWord()) {
       Logger.d(TAG, "User moved cursor to no-man land. Bye bye.");
@@ -873,7 +868,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   protected boolean isPredictionOn() {
-    return mPredictionOn && mShowSuggestions;
+    return predictionState.isPredictionOn();
   }
 
   protected boolean isCurrentlyPredicting() {
@@ -881,13 +876,17 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   protected boolean isAutoCorrect() {
-    return mAutoCorrectOn && mInputFieldSupportsAutoPick && mPredictionOn;
+    return predictionState.isAutoCorrect();
+  }
+
+  boolean isAutoCompleteEnabled() {
+    return predictionState.autoComplete;
   }
 
   public void performUpdateSuggestions() {
     mKeyboardHandler.removeMessages(KeyboardUIStateHandler.MSG_UPDATE_SUGGESTIONS);
 
-    if (!isPredictionOn() || !mShowSuggestions) {
+    if (!isPredictionOn() || !predictionState.showSuggestions) {
       clearSuggestions();
       return;
     }
@@ -907,7 +906,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   public void pickSuggestionManually(int index, CharSequence suggestion) {
-    pickSuggestionManually(index, suggestion, mAutoSpace);
+    pickSuggestionManually(index, suggestion, predictionState.autoSpace);
   }
 
   @CallSuper
@@ -921,7 +920,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
         withAutoSpaceEnabled,
         index,
         suggestion,
-        mShowSuggestions,
+        predictionState.showSuggestions,
         mJustAutoAddedWord,
         typedWord.isAtTagsSearchState());
   }
@@ -966,7 +965,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
     } else {
       final int length = mWordRevertLength;
-      mAutoCorrectOn = false;
+      predictionState.autoCorrectOn = false;
       // note: typedWord may be empty
     final InputConnection ic = mInputConnectionRouter.current();
       final int globalCursorPosition = getCursorPosition();
@@ -1170,7 +1169,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
     @Override
     public boolean isAutoCompleteEnabled() {
-      return host.mAutoComplete;
+      return host.predictionState.autoComplete;
     }
   }
 }
