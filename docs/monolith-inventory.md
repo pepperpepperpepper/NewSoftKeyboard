@@ -88,6 +88,13 @@ Recent extractions:
 - SuggestionCommitter encapsulates committing picked suggestions to the input connection.
 - SuggestionPicker wraps manual pick flow (auto-space, add-to-dictionary, next suggestions).
 - SuggestionsUpdater encapsulates delayed scheduling of suggestion refreshes.
+- SuggestionRefresher wraps suggestion retrieval/highlighting.
+- DictionaryLoaderHelper loads per-keyboard dictionaries outside AnySoftKeyboardSuggestions.
+- SelectionExpectationTracker tracks selection-update waits instead of storing raw timestamps.
+- UserDictionaryWorker handles async add/remove user-dictionary operations.
+- AddToDictionaryHintController encapsulates post-pick hint/next-suggestions flow.
+- SpaceSwapDecider owns swap-character decision logic (French punctuation rules + legacy paren).
+- TypingSimulator simulates key-by-key typing for injected text.
 - ThemeAttributeLoader owns theme/icon attribute parsing for AnyKeyboardViewBase.
 - SpecialKeyAppearanceUpdater sets enter/mode icons & labels outside AnyKeyboardViewBase.
 - PreviewPopupPresenter owns preview popup show/hide logic.
@@ -103,3 +110,4 @@ Recent extractions:
 - AddOnUICardPresenter handles add-on card rendering loop outside MainFragment.
 - AddOnLinkNavigator handles add-on link routing/navigation outside MainFragment (wired).
 - BackupRestoreLauncher handles backup/restore chooser + execution outside MainFragment (wired).
+- WordRevertHandler encapsulates revert-last-word logic from AnySoftKeyboardSuggestions.

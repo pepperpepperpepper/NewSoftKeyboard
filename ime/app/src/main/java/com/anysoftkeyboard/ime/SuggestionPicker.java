@@ -43,6 +43,8 @@ public final class SuggestionPicker {
     boolean isPredictionOn();
 
     boolean isAutoCompleteEnabled();
+
+    AddToDictionaryHintController addToDictionaryHintController();
   }
 
   private final Host host;
@@ -86,22 +88,15 @@ public final class SuggestionPicker {
               typedWord.getTypedWord(), SuggestImpl.AdditionType.Picked);
         }
 
-        final boolean showAddHint =
-            AddToDictionaryDecider.shouldShowAddHint(
+        host.addToDictionaryHintController()
+            .handlePostPick(
                 index,
-                justAutoAddedWord,
                 showSuggestions,
-                host.getSuggest(),
+                justAutoAddedWord,
+                typedWord.isAtTagsSearchState(),
+                typedWord.isAllUpperCase(),
                 suggestion,
-                host.getCurrentAlphabetKeyboard().getLocale());
-
-        if (showAddHint) {
-          final CandidateView cv = host.getCandidateView();
-          if (cv != null) cv.showAddToDictionaryHint(suggestion);
-        } else {
-          host.setSuggestions(
-              host.getSuggest().getNextSuggestions(suggestion, typedWord.isAllUpperCase()), -1);
-        }
+                typedWord);
       }
     } finally {
       if (ic != null) {

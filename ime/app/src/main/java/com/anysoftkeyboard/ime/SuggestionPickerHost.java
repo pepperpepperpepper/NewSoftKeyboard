@@ -5,8 +5,8 @@ import com.anysoftkeyboard.dictionaries.Suggest;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.views.CandidateView;
-import java.util.List;
 
+/** Host adapter for {@link SuggestionPicker} to keep the service slimmer. */
 final class SuggestionPickerHost implements SuggestionPicker.Host {
   private final AnySoftKeyboardSuggestions host;
 
@@ -25,13 +25,12 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
   }
 
   @Override
-  public void checkAddToDictionaryWithAutoDictionary(
-      CharSequence newWord, Suggest.AdditionType type) {
+  public void checkAddToDictionaryWithAutoDictionary(CharSequence newWord, Suggest.AdditionType type) {
     host.checkAddToDictionaryWithAutoDictionary(newWord, type);
   }
 
   @Override
-  public void setSuggestions(List<CharSequence> suggestions, int highlightedIndex) {
+  public void setSuggestions(java.util.List<CharSequence> suggestions, int highlightedIndex) {
     host.setSuggestions(suggestions, highlightedIndex);
   }
 
@@ -83,5 +82,10 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
   @Override
   public boolean isAutoCompleteEnabled() {
     return host.isAutoCompleteEnabled();
+  }
+
+  @Override
+  public AddToDictionaryHintController addToDictionaryHintController() {
+    return host.addToDictionaryHintController();
   }
 }

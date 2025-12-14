@@ -3,7 +3,6 @@ package com.anysoftkeyboard.ime;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.text.TextUtils;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
@@ -33,7 +32,6 @@ import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.Observable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -70,11 +68,13 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   private final SpaceTimeTracker spaceTimeTracker = new SpaceTimeTracker();
   @Nullable private Keyboard.Key mLastKey;
   private int mLastPrimaryKey = Integer.MIN_VALUE;
-  private long mExpectingSelectionUpdateBy = NEVER_TIME_STAMP;
+  private final SelectionExpectationTracker selectionExpectationTracker =
+      new SelectionExpectationTracker(NEVER_TIME_STAMP);
   private boolean mLastCharacterWasShifted = false;
   private boolean mFrenchSpacePunctuationBehavior;
   private final PredictionState predictionState = new PredictionState();
   private final DictionaryLoadGate dictionaryLoadGate = new DictionaryLoadGate();
+  private final DictionaryLoaderHelper dictionaryLoaderHelper = new DictionaryLoaderHelper();
 
   private boolean mDictionariesForCurrentKeyboardLoaded = false;
 
@@ -94,6 +94,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
       new SuggestionCommitter(new SuggestionCommitterHost(this));
   private final SuggestionPicker suggestionPicker =
       new SuggestionPicker(new SuggestionPickerHost(this));
+  private final SuggestionRefresher suggestionRefresher = new SuggestionRefresher();
+  private final SpaceSwapDecider spaceSwapDecider = new SpaceSwapDecider();
   private final SuggestionsUpdater suggestionsUpdater =
       new SuggestionsUpdater(
           mKeyboardHandler,
@@ -102,6 +104,45 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
           KeyboardUIStateHandler.MSG_UPDATE_SUGGESTIONS);
   private final SuggestionSettingsController suggestionSettingsController =
       new SuggestionSettingsController();
+  private final WordRevertHandler wordRevertHandler = new WordRevertHandler();
+  private final UserDictionaryWorker userDictionaryWorker =
+      new UserDictionaryWorker(
+          new UserDictionaryWorker.Host() {
+            @Override
+            public Suggest suggest() {
+              return mSuggest;
+            }
+
+            @Override
+            public CandidateView candidateView() {
+              return mCandidateView;
+            }
+          });
+  private final AddToDictionaryHintController addToDictionaryHintController =
+      new AddToDictionaryHintController(
+          new AddToDictionaryHintController.Host() {
+            @Override
+            public CandidateView candidateView() {
+              return mCandidateView;
+            }
+
+            @Override
+            public Suggest suggest() {
+              return mSuggest;
+            }
+
+            @Override
+            public AnyKeyboard currentAlphabetKeyboard() {
+              return getCurrentAlphabetKeyboard();
+            }
+
+            @Override
+            public void setSuggestions(
+                List<CharSequence> suggestions, int highlightedIndex) {
+              AnySoftKeyboardSuggestions.this.setSuggestions(suggestions, highlightedIndex);
+            }
+          });
+  private final TypingSimulator typingSimulator = new TypingSimulator();
 
   @Nullable
   protected Keyboard.Key getLastUsedKey() {
@@ -208,7 +249,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
     predictionState.predictionOn = false;
     mKeyboardHandler.sendEmptyMessageDelayed(
         KeyboardUIStateHandler.MSG_CLOSE_DICTIONARIES, CLOSE_DICTIONARIES_DELAY);
-    mExpectingSelectionUpdateBy = NEVER_TIME_STAMP;
+    selectionExpectationTracker.clear();
   }
 
   @Override
@@ -309,7 +350,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
   @Override
   protected boolean isSelectionUpdateDelayed() {
-    return mExpectingSelectionUpdateBy > 0;
+    return selectionExpectationTracker.isExpecting();
   }
 
   protected boolean shouldRevertOnDelete() {
@@ -321,15 +362,15 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   long getExpectingSelectionUpdateBy() {
-    return mExpectingSelectionUpdateBy;
+    return selectionExpectationTracker.getExpectingSelectionUpdateBy();
   }
 
   void clearExpectingSelectionUpdate() {
-    mExpectingSelectionUpdateBy = NEVER_TIME_STAMP;
+    selectionExpectationTracker.clear();
   }
 
   void setExpectingSelectionUpdateBy(long value) {
-    mExpectingSelectionUpdateBy = value;
+    selectionExpectationTracker.setExpectingSelectionUpdateBy(value);
   }
 
   @Override
@@ -423,7 +464,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   // Make sure to call this BEFORE actually making changes, and not after.
   // the event might arrive immediately as changes occur.
   protected void markExpectingSelectionUpdate() {
-    mExpectingSelectionUpdateBy = SystemClock.uptimeMillis() + MAX_TIME_TO_EXPECT_SELECTION_UPDATE;
+    selectionExpectationTracker.markExpectingUntil(
+        SystemClock.uptimeMillis() + MAX_TIME_TO_EXPECT_SELECTION_UPDATE);
   }
 
   protected void handleSeparator(int primaryCode) {
@@ -500,24 +542,8 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   private boolean isSpaceSwapCharacter(int primaryCode) {
-    // Treat closing parenthesis as a swap candidate even if the current keyboard does not mark
-    // it as a sentence separator (historic ASK behavior and expected by unit tests).
-    if (primaryCode == ')') {
-      return true;
-    }
-
-    if (isSentenceSeparator(primaryCode)) {
-      if (mFrenchSpacePunctuationBehavior) {
-        return switch (primaryCode) {
-          case '!', '?', ':', ';' -> false;
-          default -> true;
-        };
-      } else {
-        return true;
-      }
-    } else {
-      return false;
-    }
+    return spaceSwapDecider.isSpaceSwapCharacter(
+        primaryCode, mFrenchSpacePunctuationBehavior, sentenceSeparators);
   }
 
   private int computeCursorPositionAfterChar(
@@ -624,28 +650,46 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   @Override
   public void onTyping(Keyboard.Key key, CharSequence text) {
     Logger.d(TAG, "onTyping: '%s'", text);
-    InputConnection ic = mInputConnectionRouter.current();
-    if (ic == null) {
-      return;
-    }
-    ic.beginBatchEdit();
+    // simulate key-by-key typing so suggestions & word state stay consistent
+    typingSimulator.simulate(
+        text,
+        new TypingSimulator.Host() {
+          @Override
+          public InputConnection currentInputConnection() {
+            return mInputConnectionRouter.current();
+          }
 
-    // simulating multiple keys
-    final WordComposer initialWordComposer = new WordComposer();
-    mWord.cloneInto(initialWordComposer);
-    final boolean originalAutoCorrect = predictionState.autoCorrectOn;
-    predictionState.autoCorrectOn = false;
-    for (int pointCodeIndex = 0; pointCodeIndex < text.length(); ) {
-      int pointCode = Character.codePointAt(text, pointCodeIndex);
-      pointCodeIndex += Character.charCount(pointCode);
-      // this will ensure that double-spaces will not count.
-      spaceTimeTracker.clear();
-      // simulating key press
-      onKey(pointCode, key, 0, new int[] {pointCode}, true);
-    }
-    predictionState.autoCorrectOn = originalAutoCorrect;
+          @Override
+          public Keyboard.Key lastKey() {
+            return key;
+          }
 
-    ic.endBatchEdit();
+          @Override
+          public void onKey(
+              int primaryCode,
+              Keyboard.Key keyboardKey,
+              int multiTapIndex,
+              int[] nearByKeyCodes,
+              boolean fromUI) {
+            AnySoftKeyboardSuggestions.this.onKey(
+                primaryCode, keyboardKey, multiTapIndex, nearByKeyCodes, fromUI);
+          }
+
+          @Override
+          public void clearSpaceTimeTracker() {
+            AnySoftKeyboardSuggestions.this.clearSpaceTimeTracker();
+          }
+
+          @Override
+          public boolean isAutoCorrectOn() {
+            return predictionState.autoCorrectOn;
+          }
+
+          @Override
+          public void setAutoCorrectOn(boolean on) {
+            predictionState.autoCorrectOn = on;
+          }
+        });
   }
 
   protected void setDictionariesForCurrentKeyboard() {
@@ -653,23 +697,17 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
     mSuggest.resetNextWordSentence();
 
-    if (dictionaryLoadGate.shouldLoad(
-        predictionState.predictionOn, shouldLoadDictionariesForGestureTyping())) {
-      // It null at the creation of the application.
-      final AnyKeyboard currentAlphabetKeyboard = getCurrentAlphabetKeyboard();
-      if (currentAlphabetKeyboard != null && isInAlphabetKeyboardMode()) {
-        sentenceSeparators.updateFrom(currentAlphabetKeyboard.getSentenceSeparators());
-        sentenceSeparators.add(KeyCodes.ENTER);
-
-        List<DictionaryAddOnAndBuilder> buildersForKeyboard =
-            AnyApplication.getExternalDictionaryFactory(this)
-                .getBuildersForKeyboard(currentAlphabetKeyboard);
-
-        mSuggest.setupSuggestionsForKeyboard(
-            buildersForKeyboard, getDictionaryLoadedListener(currentAlphabetKeyboard));
-        mDictionariesForCurrentKeyboardLoaded = true;
-      }
-    }
+    mDictionariesForCurrentKeyboardLoaded =
+        dictionaryLoaderHelper.setDictionariesForCurrentKeyboard(
+            this,
+            predictionState,
+            dictionaryLoadGate,
+            shouldLoadDictionariesForGestureTyping(),
+            getCurrentAlphabetKeyboard(),
+            isInAlphabetKeyboardMode(),
+            sentenceSeparators,
+            mSuggest,
+            this::getDictionaryLoadedListener);
   }
 
   @NonNull
@@ -785,19 +823,7 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   protected abstract boolean isAlphabet(int code);
 
   public void addWordToDictionary(String word) {
-    mInputSessionDisposables.add(
-        Observable.just(word)
-            .subscribeOn(RxSchedulers.background())
-            .map(mSuggest::addWordToUserDictionary)
-            .filter(added -> added)
-            .observeOn(RxSchedulers.mainThread())
-            .subscribe(
-                added -> {
-                  if (mCandidateView != null) {
-                    mCandidateView.notifyAboutWordAdded(word);
-                  }
-                },
-                e -> Logger.w(TAG, e, "Failed to add word '%s' to user-dictionary!", word)));
+    userDictionaryWorker.addWordToDictionary(word, mInputSessionDisposables::add);
   }
 
   /** posts an update suggestions request to the messages queue. Removes any previous request. */
@@ -824,23 +850,23 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   public void performUpdateSuggestions() {
     mKeyboardHandler.removeMessages(KeyboardUIStateHandler.MSG_UPDATE_SUGGESTIONS);
 
-    if (!isPredictionOn() || !predictionState.showSuggestions) {
-      clearSuggestions();
-      return;
-    }
+    suggestionRefresher.performUpdateSuggestions(
+        predictionState,
+        mWord,
+        mSuggest,
+        new SuggestionRefresher.Host() {
+          @Override
+          public void clearSuggestions() {
+            AnySoftKeyboardSuggestions.this.clearSuggestions();
+          }
 
-    final List<CharSequence> suggestionsList = mSuggest.getSuggestions(mWord);
-    int highlightedSuggestionIndex = isAutoCorrect() ? mSuggest.getLastValidSuggestionIndex() : -1;
-
-    // Don't auto-correct words with multiple capital letter
-    if (highlightedSuggestionIndex == 1 && mWord.isMostlyCaps()) highlightedSuggestionIndex = -1;
-
-    setSuggestions(suggestionsList, highlightedSuggestionIndex);
-    if (highlightedSuggestionIndex >= 0) {
-      mWord.setPreferredWord(suggestionsList.get(highlightedSuggestionIndex));
-    } else {
-      mWord.setPreferredWord(null);
-    }
+          @Override
+          public void setSuggestions(
+              @NonNull List<? extends CharSequence> suggestions, int highlightedSuggestionIndex) {
+            AnySoftKeyboardSuggestions.this.setSuggestions(
+                suggestions, highlightedSuggestionIndex);
+          }
+        });
   }
 
   public void pickSuggestionManually(int index, CharSequence suggestion) {
@@ -899,26 +925,40 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   public void revertLastWord() {
-    if (autoCorrectState.wordRevertLength == 0) {
-      sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-    } else {
-      final int length = autoCorrectState.wordRevertLength;
-      predictionState.autoCorrectOn = false;
-      // note: typedWord may be empty
-    final InputConnection ic = mInputConnectionRouter.current();
-      final int globalCursorPosition = getCursorPosition();
-      ic.setComposingRegion(globalCursorPosition - length, globalCursorPosition);
-      WordComposer temp = mWord;
-      mWord = mPreviousWord;
-      mPreviousWord = temp;
-      autoCorrectState.wordRevertLength = 0;
-      final CharSequence typedWord = mWord.getTypedWord();
-      ic.setComposingText(typedWord /* mComposing */, 1);
-      performUpdateSuggestions();
-      if (autoCorrectState.justAutoAddedWord) {
-        removeFromUserDictionary(typedWord.toString());
-      }
-    }
+    WordRevertHandler.Result result =
+        wordRevertHandler.revertLastWord(
+            autoCorrectState,
+            predictionState,
+            mWord,
+            mPreviousWord,
+            new WordRevertHandler.Host() {
+              @Override
+              public InputConnection currentInputConnection() {
+                return mInputConnectionRouter.current();
+              }
+
+              @Override
+              public int getCursorPosition() {
+                return AnySoftKeyboardSuggestions.this.getCursorPosition();
+              }
+
+              @Override
+              public void sendDownUpKeyEvents(int keyCode) {
+                AnySoftKeyboardSuggestions.this.sendDownUpKeyEvents(keyCode);
+              }
+
+              @Override
+              public void performUpdateSuggestions() {
+                AnySoftKeyboardSuggestions.this.performUpdateSuggestions();
+              }
+
+              @Override
+              public void removeFromUserDictionary(String word) {
+                AnySoftKeyboardSuggestions.this.removeFromUserDictionary(word);
+              }
+            });
+    mWord = result.currentWord();
+    mPreviousWord = result.previousWord();
   }
 
   protected boolean isSentenceSeparator(int code) {
@@ -977,137 +1017,13 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
   }
 
   public void removeFromUserDictionary(String wordToRemove) {
-    mInputSessionDisposables.add(
-        Observable.just(wordToRemove)
-            .subscribeOn(RxSchedulers.background())
-            .map(
-                word -> {
-                  mSuggest.removeWordFromUserDictionary(word);
-                  return word;
-                })
-            .observeOn(RxSchedulers.mainThread())
-            .subscribe(
-                word -> {
-                  if (mCandidateView != null) {
-                    mCandidateView.notifyAboutRemovedWord(word);
-                  }
-                },
-                e ->
-                    Logger.w(
-                        TAG, e, "Failed to remove word '%s' from user-dictionary!", wordToRemove)));
+    userDictionaryWorker.removeFromUserDictionary(wordToRemove, mInputSessionDisposables::add);
     autoCorrectState.justAutoAddedWord = false;
     abortCorrectionAndResetPredictionState(false);
   }
 
-  private static final class SuggestionCommitterHost implements SuggestionCommitter.Host {
-    private final AnySoftKeyboardSuggestions host;
-
-    SuggestionCommitterHost(AnySoftKeyboardSuggestions host) {
-      this.host = host;
-    }
-
-    @Override
-    public InputConnection currentInputConnection() {
-      return host.mInputConnectionRouter.current();
-    }
-
-    @Override
-    public boolean isSelectionUpdateDelayed() {
-      return host.isSelectionUpdateDelayed();
-    }
-
-    @Override
-    public void markExpectingSelectionUpdate() {
-      host.markExpectingSelectionUpdate();
-    }
-
-    @Override
-    public int getCursorPosition() {
-      return host.getCursorPosition();
-    }
-
-    @Override
-    public void clearSuggestions() {
-      host.clearSuggestions();
-    }
+  AddToDictionaryHintController addToDictionaryHintController() {
+    return addToDictionaryHintController;
   }
 
-  private static final class SuggestionPickerHost implements SuggestionPicker.Host {
-    private final AnySoftKeyboardSuggestions host;
-
-    SuggestionPickerHost(AnySoftKeyboardSuggestions host) {
-      this.host = host;
-    }
-
-    @Override
-    public InputConnection currentInputConnection() {
-      return host.mInputConnectionRouter.current();
-    }
-
-    @Override
-    public WordComposer prepareWordComposerForNextWord() {
-      return host.prepareWordComposerForNextWord();
-    }
-
-    @Override
-    public void checkAddToDictionaryWithAutoDictionary(
-        CharSequence newWord, Suggest.AdditionType type) {
-      host.checkAddToDictionaryWithAutoDictionary(newWord, type);
-    }
-
-    @Override
-    public void setSuggestions(List<CharSequence> suggestions, int highlightedIndex) {
-      host.setSuggestions(suggestions, highlightedIndex);
-    }
-
-    @Override
-    public Suggest getSuggest() {
-      return host.mSuggest;
-    }
-
-    @Override
-    public CandidateView getCandidateView() {
-      return host.mCandidateView;
-    }
-
-    @Override
-    public boolean tryCommitCompletion(int index, InputConnection ic, CandidateView candidateView) {
-      return host.completionHandler.tryCommitCompletion(index, ic, candidateView);
-    }
-
-    @Override
-    public AnyKeyboard getCurrentAlphabetKeyboard() {
-      return host.getCurrentAlphabetKeyboard();
-    }
-
-    @Override
-    public void clearSuggestions() {
-      host.clearSuggestions();
-    }
-
-    @Override
-    public void commitWordToInput(CharSequence wordToCommit, CharSequence typedWord) {
-      host.commitWordToInput(wordToCommit, typedWord);
-    }
-
-    @Override
-    public void sendKeyChar(char c) {
-      host.sendKeyChar(c);
-    }
-
-    @Override
-    public void setSpaceTimeStamp(boolean isSpace) {
-      host.setSpaceTimeStamp(isSpace);
-    }
-
-    @Override
-    public boolean isPredictionOn() {
-      return host.isPredictionOn();
-    }
-
-    @Override
-    public boolean isAutoCompleteEnabled() {
-      return host.predictionState.autoComplete;
-    }
-  }
 }
