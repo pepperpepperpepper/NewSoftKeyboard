@@ -11,6 +11,7 @@
 
 ## Monolith Follow-ups
 - Continue splitting large classes (see `docs/monolith-inventory.md` for LOC/top targets): remaining `AnySoftKeyboard`/`AnySoftKeyboardSuggestions` (more `InputConnection` routing moved to `InputConnectionRouter`; gesture typing and UI handler now use it), `AnyKeyboardViewBase`/`PointerTracker` (PointerTrackerRegistry + TouchDispatcher + KeyPressTimingHandler + PointerConfigLoader own touch/timing state; keep peeling rendering/input apart), `Dictionary`/`BTreeDictionary`, settings fragments into view/data helpers. Keep behavior identical; add light tests.
+- Progress: Next-word usage stats UI moved from `NextWordSettingsFragment` into `NextWordUsageStatsLoader`; neural failure + summary building moved into `NextWordPreferenceSummaries`; clear-data flow moved into `NextWordDataCleaner` (fragment now ~355 LOC). Add-on UI card rendering loop + navigation + backup/restore chooser/execution are now wired through `AddOnUICardViewFactory`/`AddOnUICardPresenter`/`AddOnLinkNavigator` and `BackupRestoreLauncher`; `MainFragment` shrank to ~445 LOC. Separator handling now routed through `SeparatorActionHelper`, shaving `AnySoftKeyboardSuggestions` to ~1168 LOC.
 
 ## Neural/Prediction Quality
 - Host-side predictNextWords test exists; add small UI polish/normalization if desired.
@@ -18,4 +19,4 @@
 ## Immediate Next Steps
 1) Continue legacy cleanup (remaining resources/tasks; occasional wording fixes). Market “leave app store” dialog strings are now rebranded across locales; permission rationales were already debranded.
 2) Keep `askCompat` flavor for seamless legacy add-on compatibility; flavor now uses a distinct (green) launcher background for easy identification. Add more overlays/icons only if further differentiation is needed.
-3) Pick the next monolith slice from the audit list and refactor with tests.
+3) Pick the next monolith slice from the audit list and refactor with tests (remaining top targets: AnySoftKeyboard*, AnyKeyboardViewBase/PointerTracker, Dictionary/BTreeDictionary).

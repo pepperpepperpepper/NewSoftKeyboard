@@ -3,41 +3,32 @@ package com.anysoftkeyboard.ui.settings;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
-import android.content.ContentResolver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.provider.Settings;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
-import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
-import android.text.style.URLSpan;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
-import androidx.core.text.HtmlCompat;
-import androidx.core.widget.TextViewCompat;
-import androidx.core.util.Pair;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.Navigation;
 import androidx.palette.graphics.Palette;
@@ -55,15 +46,11 @@ import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.disposables.Disposables;
-import io.reactivex.functions.Function;
-import java.util.ArrayList;
 import java.util.List;
 import net.evendanan.pixel.GeneralDialogController;
-import net.evendanan.pixel.RxProgressDialog;
 import net.evendanan.pixel.UiUtils;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 
@@ -139,8 +126,6 @@ public class MainFragment extends Fragment {
   }
 
   private void refreshAddOnUICards() {
-    Logger.d(TAG, "refreshAddOnUICards() called");
-
     if (mAddOnUICardsContainer == null || mAddOnUICardManager == null) {
       Logger.w(TAG, "refreshAddOnUICards() - container or manager is null");
       return;
@@ -148,264 +133,15 @@ public class MainFragment extends Fragment {
 
     SpeechToTextSetupCardController.sync(requireContext());
 
-    Logger.d(TAG, "Container exists: " + (mAddOnUICardsContainer != null) + 
-               ", Manager exists: " + (mAddOnUICardManager != null));
-    Logger.d(TAG, "Container visibility before refresh: " + mAddOnUICardsContainer.getVisibility());
-
-    // Clear existing add-on UI cards
-    mAddOnUICardsContainer.removeAllViews();
-
-    // Get all active UI cards
-    List<AddOnUICard> activeCards = mAddOnUICardManager.getActiveUICards();
-    Logger.d(TAG, "Found " + activeCards.size() + " active UI cards");
-    
-    for (int i = 0; i < activeCards.size(); i++) {
-      AddOnUICard card = activeCards.get(i);
-      Logger.d(TAG, "Processing card " + i + ": " + card.getTitle() + " - " + card.getMessage());
-      View cardView = createAddOnUICardView(card);
-      if (cardView != null) {
-        mAddOnUICardsContainer.addView(cardView);
-        Logger.d(TAG, "Added card view to container for " + card.getTitle());
-      } else {
-        Logger.w(TAG, "Failed to create card view for " + card.getTitle());
-      }
-    }
-
-    // Hide the container if no cards to show
-    int newVisibility = activeCards.isEmpty() ? View.GONE : View.VISIBLE;
-    mAddOnUICardsContainer.setVisibility(newVisibility);
-    Logger.d(TAG, "Set container visibility to " + newVisibility + 
-               " (GONE=" + View.GONE + ", VISIBLE=" + View.VISIBLE + ")");
-  }
-
-  private View createAddOnUICardView(AddOnUICard card) {
-    Logger.d(TAG, "createAddOnUICardView() called for: " + card.getTitle());
-    
-    try {
-      // Create a CardView
-      androidx.cardview.widget.CardView cardView = new androidx.cardview.widget.CardView(requireContext());
-      cardView.setLayoutParams(new ViewGroup.LayoutParams(
-          ViewGroup.LayoutParams.MATCH_PARENT,
-          ViewGroup.LayoutParams.WRAP_CONTENT));
-      cardView.setCardBackgroundColor(Color.parseColor("#FFF3E0")); // Light orange background for visibility
-      cardView.setRadius(8f);
-      cardView.setCardElevation(8f); // Higher elevation
-      cardView.setContentPadding(16, 16, 16, 16);
-
-      // Create container for title + message rows
-      LinearLayout contentContainer = new LinearLayout(requireContext());
-      contentContainer.setOrientation(LinearLayout.VERTICAL);
-      contentContainer.setLayoutParams(
-          new ViewGroup.LayoutParams(
-              ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-      cardView.addView(contentContainer);
-
-      // Header/title row
-      TextView titleView = new TextView(requireContext());
-      TextViewCompat.setTextAppearance(titleView, android.R.style.TextAppearance_Medium);
-      titleView.setTextColor(Color.parseColor("#D84315"));
-      titleView.setPadding(8, 8, 8, 8);
-      titleView.setText("🎯 " + card.getTitle());
-      contentContainer.addView(titleView);
-
-      android.util.Log.d(TAG, "UI card raw message: " + card.getMessage());
-      String sanitizedMessage = sanitizeMessage(card.getMessage());
-
-      String[] segments =
-          sanitizedMessage.split("(?i)<br\\s*/?>\\s*<br\\s*/?>");
-      boolean hasSegments = false;
-      for (String segment : segments) {
-        if (TextUtils.isEmpty(segment.trim())) {
-          continue;
-        }
-        hasSegments = true;
-        TextView messageView = new TextView(requireContext());
-        TextViewCompat.setTextAppearance(messageView, android.R.style.TextAppearance_Small);
-        messageView.setTextColor(Color.parseColor("#BF360C"));
-        messageView.setPadding(12, 8, 8, 4);
-
-        Spanned spanned = HtmlCompat.fromHtml(segment, HtmlCompat.FROM_HTML_MODE_COMPACT);
-        SpannableStringBuilder sb = new SpannableStringBuilder(spanned);
-        URLSpan[] urlSpans = sb.getSpans(0, sb.length(), URLSpan.class);
-        boolean hasLinks = false;
-        List<String> linkTargets = new ArrayList<>();
-
-        for (URLSpan urlSpan : urlSpans) {
-          int start = sb.getSpanStart(urlSpan);
-          int end = sb.getSpanEnd(urlSpan);
-          sb.removeSpan(urlSpan);
-
-          URLSpan replacementSpan = createAddOnLinkSpan(urlSpan.getURL());
-          if (replacementSpan != null) {
-            sb.setSpan(replacementSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            hasLinks = true;
-            linkTargets.add(urlSpan.getURL());
-          }
-        }
-
-        if (hasLinks) {
-          messageView.setText(sb, TextView.BufferType.SPANNABLE);
-          messageView.setMovementMethod(LinkMovementMethod.getInstance());
-          messageView.setLinksClickable(true);
-          messageView.setFocusable(true);
-          messageView.setClickable(true);
-          if (linkTargets.size() == 1) {
-            String singleLink = linkTargets.get(0);
-            messageView.setOnClickListener(v -> handleAddOnLink(singleLink));
-          }
-          Logger.d(TAG, "Processed HTML links in card segment: found " + linkTargets.size() + " links");
-        } else {
-          messageView.setText(sb);
-        }
-
-        contentContainer.addView(messageView);
-      }
-
-      if (!hasSegments) {
-        TextView emptyMessage = new TextView(requireContext());
-        TextViewCompat.setTextAppearance(emptyMessage, android.R.style.TextAppearance_Small);
-        emptyMessage.setTextColor(Color.parseColor("#BF360C"));
-        emptyMessage.setPadding(12, 8, 8, 4);
-        emptyMessage.setText(
-            HtmlCompat.fromHtml(
-                sanitizedMessage, HtmlCompat.FROM_HTML_MODE_COMPACT));
-        contentContainer.addView(emptyMessage);
-      }
-
-      // Set click listener if target fragment is specified
-      if (card.getTargetFragment() != null) {
-        Logger.d(TAG, "Card has target fragment: " + card.getTargetFragment());
-        cardView.setOnClickListener(v -> {
-          try {
-            String target = card.getTargetFragment();
-            if (!TextUtils.isEmpty(target)) {
-              Uri potentialUri = Uri.parse(target);
-              String scheme = potentialUri.getScheme();
-              if ("settings".equalsIgnoreCase(scheme)) {
-                openAppSettings();
-                return;
-              } else if ("ask-settings".equalsIgnoreCase(scheme)) {
-                openAskSettings(potentialUri.getHost());
-                return;
-              }
-            }
-
-            if (TextUtils.isDigitsOnly(target)) {
-              Navigation.findNavController(requireView()).navigate(Integer.parseInt(target));
-            } else {
-              Navigation.findNavController(requireView()).navigate(target);
-            }
-          } catch (Exception e) {
-            Logger.w(TAG, "Failed to navigate to target fragment: " + card.getTargetFragment(), e);
-            Toast.makeText(requireContext(), R.string.prefs_providers_operation_failed, Toast.LENGTH_SHORT).show();
-          }
-        });
-        cardView.setClickable(true);
-      } else {
-        Logger.d(TAG, "Card has no target fragment");
-      }
-
-      Logger.d(TAG, "Successfully created card view for: " + card.getTitle());
-      return cardView;
-    } catch (Exception e) {
-      Logger.e(TAG, "Exception creating card view for " + card.getTitle(), e);
-      return null;
-    }
-  }
-
-  @Nullable
-  private URLSpan createAddOnLinkSpan(String rawUrl) {
-    if (TextUtils.isEmpty(rawUrl)) {
-      return null;
-    }
-    return new URLSpan(rawUrl) {
-      @Override
-      public void onClick(@NonNull View widget) {
-        Logger.d(TAG, "Add-on link span tapped: " + rawUrl);
-        handleAddOnLink(rawUrl);
-      }
-    };
-  }
-
-  private void handleAddOnLink(String rawUrl) {
-    try {
-      Uri linkUri = Uri.parse(rawUrl);
-      String scheme = linkUri.getScheme();
-      if ("settings".equalsIgnoreCase(scheme)) {
-        openAppSettings();
-      } else if ("ask-settings".equalsIgnoreCase(scheme)) {
-        openAskSettings(linkUri.getHost());
-      } else {
-        openExternalLink(linkUri);
-      }
-    } catch (Exception e) {
-      Logger.w(TAG, "Failed to handle link span for url: " + rawUrl, e);
-    }
-  }
-
-  private void openAppSettings() {
-    try {
-      Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-      Uri uri = Uri.fromParts("package", requireContext().getPackageName(), null);
-      intent.setData(uri);
-      intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-      startActivity(intent);
-      Logger.d(TAG, "Opened app settings for package: " + requireContext().getPackageName());
-    } catch (ActivityNotFoundException e) {
-      Logger.w(TAG, "Unable to open app settings", e);
-      Toast.makeText(requireContext(), "Unable to open app settings", Toast.LENGTH_SHORT).show();
-    } catch (Exception e) {
-      Logger.e(TAG, "Error opening app settings", e);
-      Toast.makeText(requireContext(), "Error opening app settings", Toast.LENGTH_SHORT).show();
-    }
-  }
-
-  private void openAskSettings(@Nullable String destination) {
-    if (destination == null) {
-      Logger.w(TAG, "ASK settings link missing destination");
-      Toast.makeText(requireContext(), R.string.prefs_providers_operation_failed, Toast.LENGTH_SHORT).show();
-      return;
-    }
-
-    int navTarget;
-    switch (destination) {
-      case "language":
-        navTarget = R.id.action_mainFragment_to_languageSettingsFragment;
-        break;
-      case "speech-to-text":
-        navTarget = R.id.action_mainFragment_to_speechToTextSettingsFragment;
-        break;
-      case "openai-speech":
-        navTarget = R.id.action_mainFragment_to_openAISpeechSettingsFragment;
-        break;
-      default:
-        Logger.w(TAG, "Unknown ASK settings destination: " + destination);
-        Toast.makeText(requireContext(), R.string.prefs_providers_operation_failed, Toast.LENGTH_SHORT).show();
-        return;
-    }
-
-    try {
-      Navigation.findNavController(requireView()).navigate(navTarget);
-      Logger.d(TAG, "Navigated to ASK settings destination: " + destination);
-    } catch (Exception e) {
-      Logger.w(TAG, "Failed to navigate to ASK settings destination: " + destination, e);
-      Toast.makeText(requireContext(), R.string.prefs_providers_operation_failed, Toast.LENGTH_SHORT).show();
-    }
-  }
-
-  private void openExternalLink(@NonNull Uri linkUri) {
-    Intent browserIntent = new Intent(Intent.ACTION_VIEW, linkUri);
-    try {
-      startActivity(browserIntent);
-    } catch (ActivityNotFoundException e) {
-      Logger.w(TAG, "Unable to open external link: " + linkUri, e);
-      Toast.makeText(requireContext(), R.string.prefs_providers_operation_failed, Toast.LENGTH_SHORT).show();
-    }
-  }
-
-  @NonNull
-  private String sanitizeMessage(@NonNull String rawMessage) {
-    return rawMessage.replaceAll("<a\\s+href=([^\"'>\\s]+)>", "<a href=\"$1\">");
+    AddOnUICardPresenter.refresh(
+        mAddOnUICardsContainer,
+        mAddOnUICardManager,
+        card ->
+            AddOnUICardViewFactory.create(
+                requireContext(),
+                card,
+                rawUrl -> AddOnLinkNavigator.handleLink(this, rawUrl),
+                target -> AddOnLinkNavigator.navigateToDestination(this, target)));
   }
 
   @Override
@@ -629,16 +365,13 @@ public class MainFragment extends Fragment {
   private void onBackupRestoreDialogRequired(AlertDialog.Builder builder, int optionId) {
     @StringRes final int actionTitle;
 
-    final String intentAction;
     switch (optionId) {
       case R.id.backup_prefs -> {
         actionTitle = R.string.word_editor_action_backup_words;
-        intentAction = Intent.ACTION_CREATE_DOCUMENT;
         builder.setTitle(R.string.pick_prefs_providers_to_backup);
       }
       case R.id.restore_prefs -> {
         actionTitle = R.string.word_editor_action_restore_words;
-        intentAction = Intent.ACTION_OPEN_DOCUMENT;
         builder.setTitle(R.string.pick_prefs_providers_to_restore);
       }
       default ->
@@ -663,68 +396,9 @@ public class MainFragment extends Fragment {
     builder.setCancelable(true);
     builder.setPositiveButton(
         actionTitle,
-        (dialog, which) -> {
-          // https://developer.android.com/training/data-storage/shared/documents-files#java
-          Intent dataToFileChooser = new Intent();
-          dataToFileChooser.setType("text/xml");
-          dataToFileChooser.addCategory(Intent.CATEGORY_OPENABLE);
-          dataToFileChooser.putExtra(Intent.EXTRA_TITLE, GlobalPrefsBackup.GLOBAL_BACKUP_FILENAME);
-          dataToFileChooser.setAction(intentAction);
-          dataToFileChooser.putExtra("checked", checked);
-          try {
-            startActivityForResult(
-                dataToFileChooser,
-                optionId == R.id.backup_prefs ? BACKUP_REQUEST_ID : RESTORE_REQUEST_ID);
-          } catch (ActivityNotFoundException e) {
-            Logger.e(TAG, "Could not launch the custom path activity");
-            Toast.makeText(
-                    requireContext().getApplicationContext(),
-                    R.string.toast_error_custom_path_backup,
-                    Toast.LENGTH_LONG)
-                .show();
-          }
-        });
-  }
-
-  private Disposable launchBackupRestore(final boolean isBackup, Uri filePath) {
-    final Function<
-            Pair<List<GlobalPrefsBackup.ProviderDetails>, Boolean[]>,
-            ObservableSource<GlobalPrefsBackup.ProviderDetails>>
-        action;
-    if (isBackup) {
-      action =
-          listPair ->
-              GlobalPrefsBackup.backup(
-                  listPair, requireContext().getContentResolver().openOutputStream(filePath));
-    } else {
-      action =
-          listPair ->
-              GlobalPrefsBackup.restore(
-                  listPair, requireContext().getContentResolver().openInputStream(filePath));
-    }
-
-    return RxProgressDialog.create(
-            new Pair<>(supportedProviders, checked),
-            requireActivity(),
-            getText(R.string.take_a_while_progress_message),
-            R.layout.progress_window)
-        .subscribeOn(RxSchedulers.background())
-        .flatMap(action)
-        .observeOn(RxSchedulers.mainThread())
-        .subscribe(
-            providerDetails ->
-                Logger.i(
-                    "MainFragment",
-                    "Finished backing up %s",
-                    providerDetails.provider.providerId()),
-            e -> {
-              Logger.w("MainFragment", e, "Failed to do operation due to %s", e.getMessage());
-              mDialogController.showDialog(
-                  isBackup ? DIALOG_SAVE_FAILED : DIALOG_LOAD_FAILED, e.getMessage());
-            },
-            () ->
-                mDialogController.showDialog(
-                    isBackup ? DIALOG_SAVE_SUCCESS : DIALOG_LOAD_SUCCESS, filePath));
+        (dialog, which) ->
+            BackupRestoreLauncher.startChooser(
+                this, optionId, providersTitles, initialChecked, checked));
   }
 
   // This function is if launched when selecting backup/restore button of the main Fragment
@@ -735,14 +409,21 @@ public class MainFragment extends Fragment {
     if ((requestCode == RESTORE_REQUEST_ID || requestCode == BACKUP_REQUEST_ID)
         && resultCode == Activity.RESULT_OK) {
 
-      ContentResolver resolver = requireContext().getContentResolver();
-      Logger.d(TAG, "Resolver " + resolver.getType(data.getData()));
       try {
-        // https://developer.android.com/training/data-storage/shared/documents-files#java
-        mDisposable.add(launchBackupRestore(requestCode == BACKUP_REQUEST_ID, data.getData()));
+        Uri filePath = data.getData();
+        if (filePath != null) {
+          boolean isBackup = requestCode == BACKUP_REQUEST_ID;
+          mDisposable.add(
+              BackupRestoreLauncher.launch(
+                  this,
+                  mDialogController::showDialog,
+                  isBackup,
+                  filePath,
+                  supportedProviders,
+                  checked));
+        }
       } catch (Exception e) {
-        e.printStackTrace();
-        Logger.d(TAG, "Error when getting filePath on onActivityResult");
+        Logger.d(TAG, "Error when handling backup/restore result", e);
       }
     }
   }

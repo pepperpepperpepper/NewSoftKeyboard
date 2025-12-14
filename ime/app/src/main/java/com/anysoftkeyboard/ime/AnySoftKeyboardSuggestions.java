@@ -492,20 +492,15 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
 
   protected void handleSeparator(int primaryCode) {
     performUpdateSuggestions();
-    // Issue 146: Right to left languages require reversed parenthesis
     if (!getCurrentAlphabetKeyboard().isLeftToRightLanguage()) {
-      if (primaryCode == (int) ')') {
-        primaryCode = (int) '(';
-      } else if (primaryCode == (int) '(') {
-        primaryCode = (int) ')';
-      }
+      if (primaryCode == (int) ')') primaryCode = (int) '(';
+      else if (primaryCode == (int) '(') primaryCode = (int) ')';
     }
-    // will not show next-word suggestion in case of a new line or if the separator is a
-    // sentence separator.
+
     final boolean wasPredicting = isCurrentlyPredicting();
     final boolean newLine = primaryCode == KeyCodes.ENTER;
-    boolean isEndOfSentence = newLine || isSentenceSeparator(primaryCode);
     final boolean isSpace = primaryCode == KeyCodes.SPACE;
+    boolean isEndOfSentence = newLine || isSentenceSeparator(primaryCode);
 
     if (BuildConfig.DEBUG) {
       Logger.d(
@@ -517,75 +512,44 @@ public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboard
           isSpaceSwapCharacter(primaryCode));
     }
 
-    // Handle separator
     InputConnection ic = mInputConnectionRouter.current();
-    if (ic != null) {
-      ic.beginBatchEdit();
-    }
-    final WordComposer typedWord = prepareWordComposerForNextWord();
-    CharSequence wordToOutput = typedWord.getTypedWord();
-    // ACTION does not invoke default picking. See
-    // https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/198
-    if (isAutoCorrect() && !newLine /*we do not auto-pick on ENTER.*/) {
-      if (!TextUtils.equals(wordToOutput, typedWord.getPreferredWord())) {
-        wordToOutput = typedWord.getPreferredWord();
-      }
-    }
-    // this is a special case, when the user presses a separator WHILE
-    // inside the predicted word.
-    // in this case, I will want to just dump the separator.
-    final boolean separatorInsideWord = (typedWord.cursorPosition() < typedWord.charCount());
-    if (wasPredicting && !separatorInsideWord) {
-      commitWordToInput(wordToOutput, typedWord.getTypedWord());
-      if (TextUtils.equals(typedWord.getTypedWord(), wordToOutput)) {
-        // if the word typed was auto-replaced, we should not learn it.
-        // Add the word to the auto dictionary if it's not a known word
-        // this is "typed" if the auto-correction is off, or "picked" if it is on or
-        // momentarily off.
-        checkAddToDictionaryWithAutoDictionary(wordToOutput, SuggestImpl.AdditionType.Typed);
-      }
-      // Picked the suggestion by a space/punctuation character: we will treat it
-      // as "added an auto space".
-      mWordRevertLength = wordToOutput.length() + 1;
-    } else if (separatorInsideWord) {
-      // when putting a separator in the middle of a word, there is no
-      // need to do correction, or keep knowledge
-      abortCorrectionAndResetPredictionState(false);
-    }
+    if (ic != null) ic.beginBatchEdit();
 
-    final SeparatorOutputHandler.Result separatorResult =
-        separatorOutputHandler.apply(
-            ic,
+    final WordComposer typedWord = prepareWordComposerForNextWord();
+    final boolean separatorInsideWord = typedWord.cursorPosition() < typedWord.charCount();
+
+    SeparatorActionHelper.Result result =
+        SeparatorActionHelper.handleSeparator(
             primaryCode,
             isSpace,
             newLine,
+            isEndOfSentence,
+            wasPredicting,
+            separatorInsideWord,
+            isAutoCorrect(),
             mIsDoubleSpaceChangesToPeriod,
             mMultiTapTimeout,
+            typedWord,
+            ic,
+            separatorOutputHandler,
             spaceTimeTracker,
-            this::isSpaceSwapCharacter);
-
-    boolean handledOutputToInputConnection = separatorResult.handledOutput;
-    if (separatorResult.endOfSentence) {
-      isEndOfSentence = true;
-    }
-
-    if (!handledOutputToInputConnection) {
-      for (char c : Character.toChars(primaryCode)) {
-        sendKeyChar(c);
-      }
-    }
+            this::isSpaceSwapCharacter,
+            this::commitWordToInput,
+            (word, type) -> checkAddToDictionaryWithAutoDictionary(word, type),
+            () -> abortCorrectionAndResetPredictionState(false),
+            len -> mWordRevertLength = len,
+            code -> sendKeyChar((char) code));
 
     markExpectingSelectionUpdate();
+    if (ic != null) ic.endBatchEdit();
 
-    if (ic != null) {
-      ic.endBatchEdit();
-    }
-
-    if (isEndOfSentence) {
+    if (result.endOfSentence) {
       mSuggest.resetNextWordSentence();
       clearSuggestions();
     } else {
-      setSuggestions(mSuggest.getNextSuggestions(wordToOutput, typedWord.isAllUpperCase()), -1);
+      setSuggestions(
+          mSuggest.getNextSuggestions(result.wordForNextSuggestions, typedWord.isAllUpperCase()),
+          -1);
     }
   }
 

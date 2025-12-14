@@ -8,20 +8,22 @@ Generated from `wc -l` over *.java and *.kt. Focus on files ≥500 LOC.
 | 1389 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
 | 1296 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
 | 1292 | ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/BaseCharactersTable.java* |
-| 1175 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
+| 1168 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
 | 1047 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java |
 | 1037 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/Keyboard.java |
 |  849 | ime/app/src/main/java/com/anysoftkeyboard/dictionaries/SuggestionsProvider.java |
 |  809 | ime/addons/src/main/java/com/anysoftkeyboard/addons/AddOnsFactory.java |
-|  764 | ime/app/src/main/java/com/anysoftkeyboard/ui/settings/MainFragment.java |
 |  632 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/CandidateView.java |
 |  604 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/PointerTracker.java |
 |  590 | ime/app/src/main/java/com/anysoftkeyboard/dictionaries/SuggestImpl.java |
 |  562 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardWithGestureTyping.java |
-|  555 | ime/app/src/main/java/com/anysoftkeyboard/ui/settings/NextWordSettingsFragment.java |
 |  539 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/ExternalAnyKeyboard.java |
 
 Tests ≥500 LOC (for awareness): AnySoftKeyboard* tests, SuggestionProviderTest, gesture/clipboard/quicktext suites, etc. Full list available via `python tools/loc_monolith.py` (not yet added).
+
+Shrunk below 500 LOC (recent):
+- MainFragment.java: 445 LOC (add-on cards + backup/restore helpers moved out)
+- NextWordSettingsFragment.java: ~355 LOC (usage stats, summaries, clear-data helpers)
 
 ## Suggested Refactor Order
 1) InputConnection/Editor state seam: `AnySoftKeyboard.java`, `AnySoftKeyboardSuggestions.java`.
@@ -65,6 +67,8 @@ Recent extractions:
 - SpaceTimeTracker now owns double-space/swap timing bookkeeping.
 - WordRestartHelper extracted to rebuild composing word after cursor moves.
 - SeparatorOutputHandler extracted to handle double-space period and punctuation/space swapping.
+- SeparatorActionHelper now owns separator handling (auto-pick/commit/swap + output dispatch),
+  trimming `AnySoftKeyboardSuggestions`.
 - StatusIconController owns status-icon visibility outside the service.
 - FullscreenModeDecider isolates fullscreen decision logic.
 - MultiTapEditCoordinator wraps multi-tap batch edit lifecycle.
@@ -84,8 +88,15 @@ Recent extractions:
 - ThemeAttributeLoader owns theme/icon attribute parsing for AnyKeyboardViewBase.
 - SpecialKeyAppearanceUpdater sets enter/mode icons & labels outside AnyKeyboardViewBase.
 - PreviewPopupPresenter owns preview popup show/hide logic.
+- NextWordUsageStatsLoader pulls next-word usage stats UI out of NextWordSettingsFragment.
+- NextWordPreferenceSummaries builds summaries/failure messages for NextWordSettingsFragment.
+- NextWordDataCleaner encapsulates next-word clear-data flow.
 - PointerActionDispatcher owns pointer down/up/cancel sequencing.
 - ModifierKeyEventHelper moves Fn/Alt combination handling out of AnySoftKeyboard.
 - SelectionEditHelper holds selection wrap/case toggle logic out of AnySoftKeyboard.
 - DeleteActionHelper encapsulates backspace/forward-delete flows from AnySoftKeyboard.
 - SpecialWrapHelper centralizes wrap-character pairs (quote/parens) outside AnySoftKeyboard.
+- AddOnUICardViewFactory builds add-on cards outside MainFragment.
+- AddOnUICardPresenter handles add-on card rendering loop outside MainFragment.
+- AddOnLinkNavigator handles add-on link routing/navigation outside MainFragment (wired).
+- BackupRestoreLauncher handles backup/restore chooser + execution outside MainFragment (wired).
