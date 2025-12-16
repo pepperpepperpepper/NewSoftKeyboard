@@ -66,10 +66,11 @@ final class AskGestureEventsListener implements AskOnGestureListener {
           Logger.v(TAG, "Scroll broke the distance barrier");
           mKeyboardView.disableTouchesTillFingersAreUp();
           if (e2.getX() > e1.getX()) {
-            // to right
-            mKeyboardView.mKeyboardActionListener.onSwipeRight(mKeyboardView.isAtTwoFingersState());
+            mKeyboardView.getOnKeyboardActionListener()
+                .onSwipeRight(mKeyboardView.isAtTwoFingersState());
           } else {
-            mKeyboardView.mKeyboardActionListener.onSwipeLeft(mKeyboardView.isAtTwoFingersState());
+            mKeyboardView.getOnKeyboardActionListener()
+                .onSwipeLeft(mKeyboardView.isAtTwoFingersState());
           }
           return true;
         }
@@ -150,28 +151,28 @@ final class AskGestureEventsListener implements AskOnGestureListener {
         && deltaX > swipeXDistance) {
       Logger.d(TAG, "onSwipeRight");
       mKeyboardView.disableTouchesTillFingersAreUp();
-      mKeyboardView.mKeyboardActionListener.onSwipeRight(mKeyboardView.isAtTwoFingersState());
+      mKeyboardView.getOnKeyboardActionListener().onSwipeRight(mKeyboardView.isAtTwoFingersState());
       return true;
     } else if (velocityX < -mKeyboardView.getSwipeVelocityThreshold()
         && isHorizontalFling
         && deltaX < -swipeXDistance) {
       Logger.d(TAG, "onSwipeLeft");
       mKeyboardView.disableTouchesTillFingersAreUp();
-      mKeyboardView.mKeyboardActionListener.onSwipeLeft(mKeyboardView.isAtTwoFingersState());
+      mKeyboardView.getOnKeyboardActionListener().onSwipeLeft(mKeyboardView.isAtTwoFingersState());
       return true;
     } else if (velocityY < -mKeyboardView.getSwipeVelocityThreshold()
         && !isHorizontalFling
         && deltaY < -mKeyboardView.getSwipeYDistanceThreshold()) {
       Logger.d(TAG, "onSwipeUp");
       mKeyboardView.disableTouchesTillFingersAreUp();
-      mKeyboardView.mKeyboardActionListener.onSwipeUp();
+      mKeyboardView.getOnKeyboardActionListener().onSwipeUp();
       return true;
     } else if (velocityY > mKeyboardView.getSwipeVelocityThreshold()
         && !isHorizontalFling
         && deltaY > mKeyboardView.getSwipeYDistanceThreshold()) {
       Logger.d(TAG, "onSwipeDown");
       mKeyboardView.disableTouchesTillFingersAreUp();
-      mKeyboardView.mKeyboardActionListener.onSwipeDown();
+      mKeyboardView.getOnKeyboardActionListener().onSwipeDown();
       return true;
     }
     return false;
@@ -181,7 +182,7 @@ final class AskGestureEventsListener implements AskOnGestureListener {
   public boolean onPinch(float factor) {
     if (factor < 0.65) {
       mKeyboardView.disableTouchesTillFingersAreUp();
-      mKeyboardView.mKeyboardActionListener.onPinch();
+      mKeyboardView.getOnKeyboardActionListener().onPinch();
       return true;
     }
     return false;
@@ -191,7 +192,7 @@ final class AskGestureEventsListener implements AskOnGestureListener {
   public boolean onSeparate(float factor) {
     if (factor > 1.35) {
       mKeyboardView.disableTouchesTillFingersAreUp();
-      mKeyboardView.mKeyboardActionListener.onSeparate();
+      mKeyboardView.getOnKeyboardActionListener().onSeparate();
       return true;
     }
     return false;

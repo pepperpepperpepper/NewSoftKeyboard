@@ -279,7 +279,7 @@ public class AnyKeyboardView extends AnyKeyboardViewWithExtraDraw
       super.onTouchEvent(cancel);
       mGestureDetector.onTouchEvent(cancel);
       cancel.recycle();
-      mKeyboardActionListener.onSwipeDown();
+      getOnKeyboardActionListener().onSwipeDown();
       // Touch handled
       return true;
     }

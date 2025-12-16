@@ -16,19 +16,19 @@
 
 package com.anysoftkeyboard.keyboards.views;
 
-import androidx.annotation.NonNull;
-import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
+import androidx.annotation.Nullable;
+import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.Keyboard;
 
-/** Separates key preview controller wiring from the view. */
-class KeyPreviewControllerBinder {
+/** Simple lookup helper for finding keys by primary code. */
+class KeyLookup {
 
-  private final PreviewPopupPresenter previewPopupPresenter;
-
-  KeyPreviewControllerBinder(PreviewPopupPresenter previewPopupPresenter) {
-    this.previewPopupPresenter = previewPopupPresenter;
-  }
-
-  void setKeyPreviewController(@NonNull KeyPreviewsController controller) {
-    previewPopupPresenter.setKeyPreviewController(controller);
+  @Nullable
+  Keyboard.Key findKeyByPrimaryKeyCode(@Nullable AnyKeyboard keyboard, int keyCode) {
+    if (keyboard == null) return null;
+    for (Keyboard.Key key : keyboard.getKeys()) {
+      if (key.getPrimaryCode() == keyCode) return key;
+    }
+    return null;
   }
 }

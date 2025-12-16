@@ -60,7 +60,7 @@ public class AnyKeyboardViewWithMiniKeyboard extends SizeSensitiveAnyKeyboardVie
   final PopupWindow mMiniKeyboardPopup;
 
   protected final MiniKeyboardActionListener mChildKeyboardActionListener =
-      new MiniKeyboardActionListener(() -> mKeyboardActionListener, this::dismissPopupKeyboard);
+      new MiniKeyboardActionListener(this::getOnKeyboardActionListener, this::dismissPopupKeyboard);
 
   @Nullable private OnPopupShownListener mPopupShownListener;
 

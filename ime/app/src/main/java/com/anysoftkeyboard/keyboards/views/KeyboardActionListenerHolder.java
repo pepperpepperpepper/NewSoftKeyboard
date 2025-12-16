@@ -16,19 +16,18 @@
 
 package com.anysoftkeyboard.keyboards.views;
 
-import androidx.annotation.NonNull;
-import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
+import androidx.annotation.Nullable;
 
-/** Separates key preview controller wiring from the view. */
-class KeyPreviewControllerBinder {
+/** Holds and updates the keyboard action listener, keeping view state smaller. */
+class KeyboardActionListenerHolder {
+  @Nullable private OnKeyboardActionListener listener;
 
-  private final PreviewPopupPresenter previewPopupPresenter;
-
-  KeyPreviewControllerBinder(PreviewPopupPresenter previewPopupPresenter) {
-    this.previewPopupPresenter = previewPopupPresenter;
+  @Nullable
+  OnKeyboardActionListener get() {
+    return listener;
   }
 
-  void setKeyPreviewController(@NonNull KeyPreviewsController controller) {
-    previewPopupPresenter.setKeyPreviewController(controller);
+  void set(@Nullable OnKeyboardActionListener listener) {
+    this.listener = listener;
   }
 }

@@ -16,19 +16,25 @@
 
 package com.anysoftkeyboard.keyboards.views;
 
-import androidx.annotation.NonNull;
-import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
+final class ThemeOverrideApplier {
 
-/** Separates key preview controller wiring from the view. */
-class KeyPreviewControllerBinder {
+  private ThemeOverrideApplier() {}
 
-  private final PreviewPopupPresenter previewPopupPresenter;
-
-  KeyPreviewControllerBinder(PreviewPopupPresenter previewPopupPresenter) {
-    this.previewPopupPresenter = previewPopupPresenter;
+  static int caseOverride(String overrideValue) {
+    return switch (overrideValue) {
+      case "auto" -> 0;
+      case "lower" -> 1;
+      case "upper" -> 2;
+      default -> -1;
+    };
   }
 
-  void setKeyPreviewController(@NonNull KeyPreviewsController controller) {
-    previewPopupPresenter.setKeyPreviewController(controller);
+  static float hintSizeMultiplier(String overrideValue) {
+    return switch (overrideValue) {
+      case "none" -> 0f;
+      case "small" -> 0.7f;
+      case "big" -> 1.3f;
+      default -> 1f;
+    };
   }
 }

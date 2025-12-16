@@ -7,7 +7,7 @@ Generated from `wc -l` over *.java and *.kt. Focus on files ≥500 LOC.
 | 1538 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
 | 1296 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
 | 1292 | ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/BaseCharactersTable.java* |
-| 1174 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
+|  980 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
 |  975 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
 | 1047 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java |
 | 1037 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/Keyboard.java |
@@ -66,6 +66,14 @@ Recent extractions:
 - KeyDrawHelper renders the per-key draw loop outside AnyKeyboardViewBase; renderKeyboard helper wraps pre-draw setup.
 - ClipDecider wraps clip-region bookkeeping for single-key vs full redraw decisions.
 - DrawInvalidationHelper wraps dirty-rect/invalidate tracking; RenderSetup bundles per-frame draw inputs.
+- DrawInputsBuilder builds DrawInputs snapshot outside AnyKeyboardViewBase on draw.
+- ThemeAttributeLoaderRunner centralizes theme attribute application for theme/overlay changes.
+- KeyboardMeasureHelper encapsulates onMeasure sizing math outside AnyKeyboardViewBase.
+- ImeActionTypeResolver resolves IME action type bitmask outside AnyKeyboardViewBase.
+- InvalidateHelper wraps dirty-rect tracking outside AnyKeyboardViewBase.
+- NextKeyboardNameResolver supplies default next-keyboard labels outside AnyKeyboardViewBase.
+- SpecialKeyLookup encapsulates special-key icon/label lookup outside AnyKeyboardViewBase.
+- SpecialKeyManager owns special-key icon/label resolution and apply flow.
 - SpecialKeysApplier encapsulates special key icon/label application.
 - KeyPreviewControllerBinder isolates preview controller wiring.
 - KeyboardNameVisibilityDecider determines when to draw keyboard name and hints.
@@ -115,6 +123,20 @@ Recent extractions:
 - PreviewPopupPresenter owns preview popup show/hide logic.
 - KeyboardThemeHost now bridges theme loading callbacks out of AnyKeyboardViewBase.
 - KeyDrawHelper renders per-key draw loop outside AnyKeyboardViewBase.
+- ThemeHost extracted from AnyKeyboardViewBase to own ThemeAttributeLoader callbacks.
+- LongPressHelper handles long-press tag toast + code dispatch outside AnyKeyboardViewBase.
+- KeyboardSetter now owns keyboard apply/reset logic; AnyKeyboardViewBase delegates setKeyboard to it.
+- KeyboardSetterHostImpl carries the host wiring out of AnyKeyboardViewBase.
+- ThemeOverrideApplier interprets theme case/hint overrides outside AnyKeyboardViewBase.
+- SwipeThresholdApplier owns swipe threshold updates and recomputation triggers.
+- KeyboardNameHintController now owns show-name/show-hints/gravity flags outside AnyKeyboardViewBase.
+- KeyPreviewControllerBinder wires preview controllers without bloating AnyKeyboardViewBase.
+- PointerTrackerAccessor centralizes tracker lookup/wiring.
+- InputResetter encapsulates preview/touch cleanup for reset/detach paths.
+- KeyLookup handles primary-code lookup for special-key appearance.
+- KeyboardActionListenerHolder centralizes listener storage (field removed).
+- KeyboardMeasureHelper encapsulates onMeasure sizing math outside AnyKeyboardViewBase.
+- Removed unused pointer wrappers in AnyKeyboardViewBase to keep surface minimal.
 - NextWordUsageStatsLoader pulls next-word usage stats UI out of NextWordSettingsFragment.
 - NextWordPreferenceSummaries builds summaries/failure messages for NextWordSettingsFragment.
 - NextWordDataCleaner encapsulates next-word clear-data flow.

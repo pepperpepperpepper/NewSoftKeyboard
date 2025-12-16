@@ -16,19 +16,32 @@
 
 package com.anysoftkeyboard.keyboards.views;
 
-import androidx.annotation.NonNull;
-import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
+class KeyboardNameHintController {
+  private boolean showKeyboardName;
+  private boolean showHints;
+  private int customHintGravity;
 
-/** Separates key preview controller wiring from the view. */
-class KeyPreviewControllerBinder {
-
-  private final PreviewPopupPresenter previewPopupPresenter;
-
-  KeyPreviewControllerBinder(PreviewPopupPresenter previewPopupPresenter) {
-    this.previewPopupPresenter = previewPopupPresenter;
+  boolean shouldShowKeyboardName() {
+    return showKeyboardName;
   }
 
-  void setKeyPreviewController(@NonNull KeyPreviewsController controller) {
-    previewPopupPresenter.setKeyPreviewController(controller);
+  boolean shouldShowHints() {
+    return showHints;
+  }
+
+  int customHintGravity() {
+    return customHintGravity;
+  }
+
+  void setShowKeyboardNameOnKeyboard(boolean show) {
+    showKeyboardName = show;
+  }
+
+  void setShowHintsOnKeyboard(boolean show) {
+    showHints = show;
+  }
+
+  void setCustomHintGravity(int gravity) {
+    customHintGravity = gravity;
   }
 }

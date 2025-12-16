@@ -46,7 +46,9 @@ class KeyPressTimingHandler extends Handler {
         if (keyForLongPress != null
             && keyboard.onLongPress(
                 keyboard.getKeyboard().getKeyboardAddOn(), keyForLongPress, false, tracker)) {
-          keyboard.mKeyboardActionListener.onLongPressDone(keyForLongPress);
+          if (keyboard.getOnKeyboardActionListener() != null) {
+            keyboard.getOnKeyboardActionListener().onLongPressDone(keyForLongPress);
+          }
         }
       }
       default -> super.handleMessage(msg);
