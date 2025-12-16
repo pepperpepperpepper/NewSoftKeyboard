@@ -7,7 +7,7 @@ Generated from `wc -l` over *.java and *.kt. Focus on files ≥500 LOC.
 | 1538 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
 | 1296 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
 | 1292 | ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/BaseCharactersTable.java* |
-|  980 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
+|  982 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
 |  975 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
 | 1047 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java |
 | 1037 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/Keyboard.java |
@@ -74,6 +74,7 @@ Recent extractions:
 - NextKeyboardNameResolver supplies default next-keyboard labels outside AnyKeyboardViewBase.
 - SpecialKeyLookup encapsulates special-key icon/label lookup outside AnyKeyboardViewBase.
 - SpecialKeyManager owns special-key icon/label resolution and apply flow.
+- KeyPreviewInteractor wraps preview show/hide/dismiss wiring to shrink the view.
 - SpecialKeysApplier encapsulates special key icon/label application.
 - KeyPreviewControllerBinder isolates preview controller wiring.
 - KeyboardNameVisibilityDecider determines when to draw keyboard name and hints.

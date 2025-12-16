@@ -124,6 +124,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   private final LabelPaintConfigurator labelPaintConfigurator = new LabelPaintConfigurator(textWidthCache);
   private PreviewThemeConfigurator previewThemeConfigurator;
   private PreviewPopupPresenter previewPopupPresenter;
+  private KeyPreviewInteractor keyPreviewInteractor;
   private final DirtyRegionDecider dirtyRegionDecider = new DirtyRegionDecider();
   protected final CompositeDisposable mDisposables = new CompositeDisposable();
   private final LongPressHelper longPressHelper = new LongPressHelper();
@@ -223,6 +224,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     previewThemeConfigurator = new PreviewThemeConfigurator(mPreviewPopupTheme);
     previewPopupPresenter =
         new PreviewPopupPresenter(this, keyIconResolver, keyPreviewManager, previewThemeConfigurator);
+    keyPreviewInteractor = new KeyPreviewInteractor(previewPopupPresenter);
     pointerActionDispatcher = new PointerActionDispatcher(mTouchDispatcher);
     keyPreviewControllerBinder = new KeyPreviewControllerBinder(previewPopupPresenter);
     themeValueApplier = createThemeValueApplier(previewThemeConfigurator);
@@ -739,17 +741,17 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   void dismissAllKeyPreviews() {
-    previewPopupPresenter.dismissAll();
+    keyPreviewInteractor.dismissAll();
   }
 
   @Override
   public void hidePreview(int keyIndex, PointerTracker tracker) {
-    previewPopupPresenter.hidePreview(keyIndex, tracker);
+    keyPreviewInteractor.hidePreview(keyIndex, tracker);
   }
 
   @Override
   public void showPreview(int keyIndex, PointerTracker tracker) {
-    previewPopupPresenter.showPreview(keyIndex, tracker, mKeyboard, this::guessLabelForKey);
+    keyPreviewInteractor.showPreview(keyIndex, tracker, mKeyboard, this::guessLabelForKey);
   }
 
   /**
