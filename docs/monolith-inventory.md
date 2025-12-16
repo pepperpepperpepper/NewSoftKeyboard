@@ -7,7 +7,7 @@ Generated from `wc -l` over *.java and *.kt. Focus on files ≥500 LOC.
 | 1538 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
 | 1296 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
 | 1292 | ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/BaseCharactersTable.java* |
-|  970 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
+|  977 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
 |  980 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
 | 1047 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java |
 | 1037 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/Keyboard.java |
@@ -78,6 +78,7 @@ Recent extractions:
 - KeyShadowStyle holds shadow color/radius/offset to reduce field clutter.
 - KeyBackgroundPadding holds padding Rect to keep the view slimmer.
 - ClipRegionHolder keeps the draw clip Rect out of the view class.
+- ViewStyleState holds dim/vertical-correction floats outside the view fields.
 - SpecialKeysApplier encapsulates special key icon/label application.
 - KeyPreviewControllerBinder isolates preview controller wiring.
 - KeyboardNameVisibilityDecider determines when to draw keyboard name and hints.

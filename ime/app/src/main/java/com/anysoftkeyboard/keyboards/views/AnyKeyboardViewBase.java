@@ -134,8 +134,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   /** Notes if the keyboard just changed, so that we could possibly reallocate the mBuffer. */
   protected boolean mKeyboardChanged;
 
-  protected float mBackgroundDimAmount;
-  protected float mOriginalVerticalCorrection;
+  private final ViewStyleState viewStyleState = new ViewStyleState();
   protected CharSequence mNextAlphabetKeyboardName;
   protected CharSequence mNextSymbolsKeyboardName;
   int mKeyboardActionType = EditorInfo.IME_ACTION_UNSPECIFIED;
@@ -380,8 +379,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
         previewThemeConfigurator,
         mPreviewPopupTheme,
         () -> mKeysHeightFactor,
-        value -> mOriginalVerticalCorrection = value,
-        value -> mBackgroundDimAmount = value,
+        viewStyleState::setOriginalVerticalCorrection,
+        viewStyleState::setBackgroundDimAmount,
         value -> mKeyTextSize = value,
         value -> mLabelTextSize = value,
         value -> mKeyboardNameTextSize = value,
@@ -518,7 +517,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
         nextKeyboardNameResolver.resolveNextAlphabetName(res, mNextAlphabetKeyboardName);
     mNextSymbolsKeyboardName =
         nextKeyboardNameResolver.resolveNextSymbolsName(res, mNextSymbolsKeyboardName);
-    setKeyboard(currentKeyboard, mOriginalVerticalCorrection);
+    setKeyboard(currentKeyboard, viewStyleState.originalVerticalCorrection());
   }
 
   @Override
@@ -950,6 +949,14 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   /* package */ float getDisplayDensity() {
     return mDisplayDensity;
+  }
+
+  protected float getOriginalVerticalCorrection() {
+    return viewStyleState.originalVerticalCorrection();
+  }
+
+  protected float getBackgroundDimAmount() {
+    return viewStyleState.backgroundDimAmount();
   }
 
   /* package */ int getSwipeVelocityThreshold() {

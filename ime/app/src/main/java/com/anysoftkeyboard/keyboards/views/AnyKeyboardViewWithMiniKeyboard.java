@@ -120,7 +120,7 @@ public class AnyKeyboardViewWithMiniKeyboard extends SizeSensitiveAnyKeyboardVie
     if (isSticky) {
       // using the vertical correction this keyboard has, since the input should behave
       // just as the mParent keyboard
-      mMiniKeyboard.setKeyboard(keyboard, mOriginalVerticalCorrection);
+      mMiniKeyboard.setKeyboard(keyboard, getOriginalVerticalCorrection());
     } else {
       // not passing vertical correction, so the popup keyboard will use its own correction
       mMiniKeyboard.setKeyboard(keyboard, mNextAlphabetKeyboardName, mNextSymbolsKeyboardName);
@@ -167,7 +167,7 @@ public class AnyKeyboardViewWithMiniKeyboard extends SizeSensitiveAnyKeyboardVie
 
     // Overlay a dark rectangle to dim the keyboard
     if (mMiniKeyboardPopup.isShowing()) {
-      mPaint.setColor((int) (mBackgroundDimAmount * 0xFF) << 24);
+      mPaint.setColor((int) (getBackgroundDimAmount() * 0xFF) << 24);
       canvas.drawRect(0, 0, getWidth(), getHeight(), mPaint);
     }
   }
