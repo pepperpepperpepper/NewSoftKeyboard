@@ -11,85 +11,85 @@
         android:paddingRight="@dimen/global_content_padding_side"
         android:paddingLeft="@dimen/global_content_padding_side">
         <TextView
-            style="@style/Ask.Legal.Title"
+            style="@style/Nsk.Legal.Title"
             android:text="@string/legal_this_app_uses_android_source_code_title"/>
         <TextView
-            style="@style/Ask.Legal.Text"
+            style="@style/Nsk.Legal.Text"
             android:text="@string/legal_this_app_uses_android_source_code_license"/>
 
 
 
         <View
-            style="@style/Ask.Legal.Divider" />
+            style="@style/Nsk.Legal.Divider" />
 
         <TextView
-            style="@style/Ask.Legal.Title"
+            style="@style/Nsk.Legal.Title"
             android:text="@string/legal_this_app_uses_jsr305_title"/>
         <TextView
-            style="@style/Ask.Legal.Text"
+            style="@style/Nsk.Legal.Text"
             android:text="@string/legal_this_app_uses_jsr305_license"/>
 
 
 
         <View
-            style="@style/Ask.Legal.Divider" />
+            style="@style/Nsk.Legal.Divider" />
 
         <TextView
-            style="@style/Ask.Legal.Title"
+            style="@style/Nsk.Legal.Title"
             android:text="@string/legal_this_app_uses_greek_jni_ime_title"/>
         <TextView
-            style="@style/Ask.Legal.Text"
+            style="@style/Nsk.Legal.Text"
             android:text="@string/legal_this_app_uses_greek_jni_ime_license"/>
 
 
         <View
-            style="@style/Ask.Legal.Divider" />
+            style="@style/Nsk.Legal.Divider" />
 
         <TextView
-            style="@style/Ask.Legal.Title"
+            style="@style/Nsk.Legal.Title"
             android:text="@string/legal_this_app_uses_relinker_title"/>
         <TextView
-            style="@style/Ask.Legal.Text"
+            style="@style/Nsk.Legal.Text"
             android:text="@string/legal_this_app_uses_relinker_license"/>
 
         <View
-            style="@style/Ask.Legal.Divider" />
+            style="@style/Nsk.Legal.Divider" />
 
         <TextView
-            style="@style/Ask.Legal.Title"
+            style="@style/Nsk.Legal.Title"
             android:text="@string/legal_this_app_uses_voiceime_utils_title"/>
         <TextView
-            style="@style/Ask.Legal.Text"
+            style="@style/Nsk.Legal.Text"
             android:text="@string/legal_this_app_uses_voiceime_utils_license"/>
 
         <View
-            style="@style/Ask.Legal.Divider" />
+            style="@style/Nsk.Legal.Divider" />
 
         <TextView
-            style="@style/Ask.Legal.Title"
+            style="@style/Nsk.Legal.Title"
             android:text="@string/legal_this_app_uses_rx_java_title"/>
         <TextView
-            style="@style/Ask.Legal.Text"
+            style="@style/Nsk.Legal.Text"
             android:text="@string/legal_this_app_uses_rx_java_license"/>
 
         <View
-            style="@style/Ask.Legal.Divider" />
+            style="@style/Nsk.Legal.Divider" />
 
         <TextView
-            style="@style/Ask.Legal.Title"
+            style="@style/Nsk.Legal.Title"
             android:text="@string/legal_this_app_uses_rx_android_title"/>
         <TextView
-            style="@style/Ask.Legal.Text"
+            style="@style/Nsk.Legal.Text"
             android:text="@string/legal_this_app_uses_rx_android_license"/>
 
         <View
-            style="@style/Ask.Legal.Divider" />
+            style="@style/Nsk.Legal.Divider" />
 
         <TextView
-            style="@style/Ask.Legal.Title"
+            style="@style/Nsk.Legal.Title"
             android:text="@string/legal_this_app_uses_rx_prefs_title"/>
         <TextView
-            style="@style/Ask.Legal.Text"
+            style="@style/Nsk.Legal.Text"
             android:text="@string/legal_this_app_uses_rx_prefs_license"/>
     </LinearLayout>
 </ScrollView>

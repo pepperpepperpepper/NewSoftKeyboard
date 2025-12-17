@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<QuickTextKeys>
+    <QuickTextKey
+        id="test_quick_text_new"
+        nameResId="@string/test_quick_text_name_new"
+        popupListText="@array/test_quick_text_popup_text"
+        popupListOutput="@array/test_quick_text_popup_output"
+        keyLabel="A"
+        keyOutputText="A"
+        description="@string/test_quick_text_description_new"
+        index="1" />
+</QuickTextKeys>

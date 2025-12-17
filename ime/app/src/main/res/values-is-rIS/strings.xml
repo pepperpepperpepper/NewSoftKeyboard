@@ -735,9 +735,9 @@
     <string name="aosp_dark_theme_description">AOSP-líkt lyklaborðsþema með dökkum litum</string>
     <string name="aosp_light_theme_name">AOSP ljóst þema</string>
     <string name="aosp_light_theme_description">AOSP-líkt lyklaborðsþema með ljósum litum</string>
-    <string name="app_share_title">Halló frá New Soft Keyboard</string>
-    <string name="app_share_menu_title">Deila New Soft Keyboard með</string>
-    <string name="app_share_text">Ég mæli með New Soft Keyboard lyklaborðinu fyrir Android, með opinn grunnkóða, áherslu á persónuvernd, er ókeypis og verulega sérsníðanlegt með mörgum tungumálum.\nNáðu í það frá:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Halló frá NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Deila NewSoftKeyboard með</string>
+    <string name="app_share_text">Ég mæli með NewSoftKeyboard lyklaborðinu fyrir Android, með opinn grunnkóða, áherslu á persónuvernd, er ókeypis og verulega sérsníðanlegt með mörgum tungumálum.\nNáðu í það frá:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">smelltu á mig til að sjá nokkuð skondið</string>
     <string name="delete_all_clipboard_entries">Autt klippispjald</string>
     <string name="tip_swipe_from_backspace_to_clear">Ábending: Þú getur strokið til vinstri af bakk-lykli til að hreinsa orðið!</string>

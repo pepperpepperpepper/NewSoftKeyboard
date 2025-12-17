@@ -57,7 +57,7 @@ import java.util.List;
 @SuppressWarnings("this-escape")
 public class CandidateView extends View implements ThemeableChild {
 
-  private static final String TAG = "ASKCandidateView";
+  private static final String TAG = "NSKCandidateView";
 
   private static final int OUT_OF_BOUNDS_X_CORD = -1;
   private int mTouchX = OUT_OF_BOUNDS_X_CORD;

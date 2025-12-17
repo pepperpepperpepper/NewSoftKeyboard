@@ -64,7 +64,7 @@ import net.evendanan.pixel.UiUtils;
 public class UserDictionaryEditorFragment extends Fragment
     implements EditorWordsAdapter.DictionaryCallbacks {
 
-  static final String TAG = "ASK_UDE";
+  static final String TAG = "NSK_UDE";
   private static final Comparator<LoadedWord> msWordsComparator =
       (lhs, rhs) -> lhs.word.compareTo(rhs.word);
   private Spinner mLanguagesSpinner;

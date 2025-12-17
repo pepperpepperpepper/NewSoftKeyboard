@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.ime;
 
 import android.content.Context;
-import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;

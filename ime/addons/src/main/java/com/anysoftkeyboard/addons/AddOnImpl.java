@@ -31,7 +31,7 @@ import java.util.Locale;
 
 public abstract class AddOnImpl implements AddOn {
 
-  private static final String TAG = "ASKAddOnImpl";
+  private static final String TAG = "NSKAddOnImpl";
   private final String mId;
   private final String mName;
   private final CharSequence mDescription;

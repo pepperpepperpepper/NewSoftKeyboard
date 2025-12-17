@@ -6,7 +6,7 @@
     android:orientation="vertical">
 
     <TextView
-        style="@style/Ask.Text.Large.Bold"
+        style="@style/Nsk.Text.Large.Bold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -16,7 +16,7 @@
     <include layout="@layout/demo_keyboard_include_layout" />
 
     <TextView
-        style="@style/Ask.Text.Normal"
+        style="@style/Nsk.Text.Normal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -24,7 +24,7 @@
         android:text="@string/setup_wizard_step_three_details" />
 
     <TextView
-        style="@style/Ask.Text.SubTitle"
+        style="@style/Nsk.Text.SubTitle"
         android:id="@+id/setup_wizard_you_are_done_subtitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -33,7 +33,7 @@
         android:text="@string/setup_wizard_step_three_details_done" />
 
     <TextView
-        style="@style/Ask.Text.Normal"
+        style="@style/Nsk.Text.Normal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
@@ -42,7 +42,7 @@
 
     <TextView
         android:id="@+id/go_to_languages_action"
-        style="@style/Ask.Text.Link"
+        style="@style/Nsk.Text.Link"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -55,7 +55,7 @@
 
     <TextView
         android:id="@+id/go_to_theme_action"
-        style="@style/Ask.Text.Link"
+        style="@style/Nsk.Text.Link"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -68,7 +68,7 @@
 
     <TextView
         android:id="@+id/go_to_all_settings_action"
-        style="@style/Ask.Text.Link"
+        style="@style/Nsk.Text.Link"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"

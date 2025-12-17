@@ -1,0 +1,52 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:name="wtf.uhoh.newsoftkeyboard.NewSoftKeyboardApplication"
+        tools:replace="android:name">
+        <!-- Remove legacy entry points from the base manifest so the nsk flavor exposes
+             NewSoftKeyboard-qualified components while keeping the legacy classes for
+             internal/compat use. -->
+        <service
+            android:name="com.menny.android.anysoftkeyboard.SoftKeyboard"
+            tools:node="remove" />
+        <activity
+            android:name="com.menny.android.anysoftkeyboard.LauncherSettingsActivity"
+            tools:node="remove" />
+
+        <!-- Replace the legacy service with the NSK-branded entry point for the nsk flavor.
+             All other attributes and metadata stay identical to the base manifest. -->
+        <service
+            android:name="wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService"
+            android:label="@string/ime_name"
+            android:exported="true"
+            android:directBootAware="true"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+        <!-- Replace launcher/settings activity with NSK-branded component for this flavor. -->
+        <activity
+            android:name="wtf.uhoh.newsoftkeyboard.NskLauncherSettingsActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/ime_name"
+            android:launchMode="singleTop"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/Theme.NskApp">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
+        </activity>
+    </application>
+</manifest>

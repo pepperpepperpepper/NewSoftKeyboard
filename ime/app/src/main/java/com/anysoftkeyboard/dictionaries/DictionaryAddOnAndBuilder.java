@@ -31,7 +31,7 @@ public class DictionaryAddOnAndBuilder extends AddOnImpl {
 
   private static final int INVALID_RES_ID = 0;
 
-  private static final String TAG = "ASKDictAddOnBuilder";
+  private static final String TAG = "NSKDictAddOnBuilder";
 
   private final String mLanguage;
   private final String mAssetsFilename;

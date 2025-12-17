@@ -37,7 +37,7 @@
         android:fullBackupOnly="true"
         android:allowBackup="true"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:theme="@style/Theme.AskApp"
+        android:theme="@style/Theme.NskApp"
         tools:ignore="GoogleAppIndexingWarning,UnusedAttribute">
 
         <!-- used to backup the settings and SQL to the cloud -->
@@ -66,7 +66,7 @@
         <!-- ui activities -->
         <!-- settings ui activities -->
         <!-- this is just a proxy activity, it does nothing but direct to the actual setting activity
-        I use this, so I can 'disable' this activity at runtime, and so remove ASK from the launcher's icons -->
+        I use this, so I can 'disable' this activity at runtime, and so remove the keyboard from the launcher's icons -->
         <activity
             android:exported="true"
             android:name="com.menny.android.anysoftkeyboard.LauncherSettingsActivity"
@@ -74,7 +74,7 @@
             android:label="@string/ime_name"
             android:launchMode="singleTop"
             android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/Theme.AskApp">
+            android:theme="@style/Theme.NskApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -89,7 +89,7 @@
             android:label="@string/ime_name"
             android:launchMode="singleTask"
             android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/Theme.AskApp"
+            android:theme="@style/Theme.NskApp"
             android:windowSoftInputMode="adjustPan" />
         <activity
             android:name="com.anysoftkeyboard.ui.settings.setup.SetupWizardActivity"
@@ -97,7 +97,7 @@
             android:label="@string/ime_name"
             android:launchMode="singleTask"
             android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/Theme.AskApp.NoTitle.NoActionBar"
+            android:theme="@style/Theme.NskApp.NoTitle.NoActionBar"
             android:windowSoftInputMode="adjustPan" />
         <!-- ui when a crash happens -->
         <activity
@@ -105,7 +105,7 @@
             android:icon="@mipmap/ic_launcher"
             android:label="@string/ime_name"
             android:roundIcon="@mipmap/ic_launcher_round"
-            android:theme="@style/Theme.AskApp.NoTitle" />
+            android:theme="@style/Theme.NskApp.NoTitle" />
 
         <activity
             android:name="com.anysoftkeyboard.ui.VoiceInputNotInstalledActivity"
@@ -136,12 +136,18 @@
         <intent>
             <action android:name="com.anysoftkeyboard.plugin.KEYBOARD" />
         </intent>
+        <intent>
+            <action android:name="com.menny.android.anysoftkeyboard.KEYBOARD" />
+        </intent>
         <!-- dictionaries -->
         <intent>
             <action android:name="wtf.uhoh.newsoftkeyboard.DICTIONARY" />
         </intent>
         <intent>
             <action android:name="com.anysoftkeyboard.plugin.DICTIONARY" />
+        </intent>
+        <intent>
+            <action android:name="com.menny.android.anysoftkeyboard.DICTIONARY" />
         </intent>
         <!-- extension-keyboard (rows) -->
         <intent>

@@ -643,9 +643,9 @@
     <string name="aosp_dark_theme_description">Вдохновленная AOSP тёмная тема для клавиатуры</string>
     <string name="aosp_light_theme_name">Светлая тема AOSP</string>
     <string name="aosp_light_theme_description">Вдохновленная AOSP светлая тема для клавиатуры</string>
-    <string name="app_share_title">Привет из New Soft Keyboard</string>
-    <string name="app_share_menu_title">Поделился использованием New Soft Keyboard</string>
-    <string name="app_share_text">Позвольте мне порекомендовать вам приватно-ориентированное, бесплатное, легконастраиваемое, многоязычное приложение с открытым исходным кодом для Android New Soft Keyboard.\nЗагрузите его из:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Привет из NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Поделился использованием NewSoftKeyboard</string>
+    <string name="app_share_text">Позвольте мне порекомендовать вам приватно-ориентированное, бесплатное, легконастраиваемое, многоязычное приложение с открытым исходным кодом для Android NewSoftKeyboard.\nЗагрузите его из:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">нажмите сюда, чтобы увидеть сюрприз</string>
     <string name="delete_all_clipboard_entries">Пустой буфер обмена</string>
     <string name="tip_swipe_from_backspace_to_clear">Подсказка: Вы можете провести влево с кнопки Backspaсе, чтобы удалить слово!</string>

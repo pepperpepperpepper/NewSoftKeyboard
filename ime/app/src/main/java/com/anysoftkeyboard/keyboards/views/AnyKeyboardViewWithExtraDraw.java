@@ -21,7 +21,6 @@ import android.graphics.Canvas;
 import android.util.AttributeSet;
 import com.anysoftkeyboard.keyboards.views.extradraw.ExtraDraw;
 import com.anysoftkeyboard.prefs.AnimationsLevel;
-import com.anysoftkeyboard.rx.GenericOnError;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;

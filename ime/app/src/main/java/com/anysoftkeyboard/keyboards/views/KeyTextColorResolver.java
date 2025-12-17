@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import android.content.res.ColorStateList;
-import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
 import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
 

@@ -26,7 +26,7 @@ import androidx.core.util.Consumer;
 import com.anysoftkeyboard.base.utils.Logger;
 
 public class UserUnlockedReceiver extends BroadcastReceiver {
-  private static final String TAG = "ASKUserUnlocked";
+  private static final String TAG = "NSKUserUnlocked";
   private final Consumer<Intent> mOnUnlock;
 
   public UserUnlockedReceiver(Consumer<Intent> onUnlock) {

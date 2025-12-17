@@ -12,7 +12,28 @@ import androidx.databinding.DataBindingUtil
 import com.anysoftkeyboard.addon.base.apk.R
 import com.anysoftkeyboard.addon.base.apk.databinding.ActivityMainBinding
 
-const val ASK_PACKAGE_NAME = "com.menny.android.anysoftkeyboard"
+private data class HostKeyboardApp(
+    val packageName: String,
+    val imeServiceClassName: String,
+)
+
+private val HOST_KEYBOARD_APPS =
+    listOf(
+        HostKeyboardApp(
+            "wtf.uhoh.newsoftkeyboard",
+            "wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService",
+        ),
+        // Side-by-side compatibility build: keeps the legacy SoftKeyboard service class.
+        HostKeyboardApp(
+            "wtf.uhoh.newsoftkeyboard.askcompat",
+            "com.menny.android.anysoftkeyboard.SoftKeyboard",
+        ),
+        // Upstream AnySoftKeyboard (legacy).
+        HostKeyboardApp(
+            "com.menny.android.anysoftkeyboard",
+            "com.menny.android.anysoftkeyboard.SoftKeyboard",
+        ),
+    )
 
 abstract class MainActivityBase(
     @StringRes private val addOnName: Int,
@@ -36,16 +57,17 @@ abstract class MainActivityBase(
     binding.releaseNotes.text =
         getString(R.string.release_notes_template, version, getText(addOnReleaseNotes))
 
-    if (isAnySoftKeyboardInstalled()) {
+    val installedHost = findInstalledHostKeyboardApp()
+    if (installedHost != null) {
       binding.actionDescription.setText(R.string.ask_installed)
       binding.actionButton.setText(R.string.open_ask_main_settings)
       binding.actionButton.setOnClickListener {
         try {
-          packageManager.getLaunchIntentForPackage(ASK_PACKAGE_NAME)?.let { intent ->
+          packageManager.getLaunchIntentForPackage(installedHost.packageName)?.let { intent ->
             it.context.startActivity(intent)
           }
         } catch (ex: Exception) {
-          Log.e("ASK_ADD_ON", "Could not launch Store search!", ex)
+          Log.e("NSK_ADD_ON", "Could not launch host settings!", ex)
         }
       }
     } else {
@@ -58,29 +80,27 @@ abstract class MainActivityBase(
               Uri.Builder()
                   .scheme("market")
                   .authority("search")
-                  .appendQueryParameter("q", ASK_PACKAGE_NAME)
+                  .appendQueryParameter("q", HOST_KEYBOARD_APPS.first().packageName)
                   .build()
           search.setData(uri)
           it.context.startActivity(search)
         } catch (ex: Exception) {
-          Log.e("ASK_ADD_ON", "Could not launch Store search!", ex)
+          Log.e("NSK_ADD_ON", "Could not launch app store search!", ex)
         }
       }
     }
   }
 
-  private fun isAnySoftKeyboardInstalled(): Boolean {
-    // TODO: we need to query for a broadcast-receiver, or something
-    return try {
-      val services =
-          packageManager.getPackageInfo(
-              ASK_PACKAGE_NAME,
-              PackageManager.GET_SERVICES,
-          )
-      services.services?.any { it.name == "com.menny.android.anysoftkeyboard.SoftKeyboard" }
-          ?: false
-    } catch (e: Exception) {
-      false
+  private fun findInstalledHostKeyboardApp(): HostKeyboardApp? {
+    // TODO: ideally query for a broadcast receiver contract; service enumeration is a best-effort.
+    return HOST_KEYBOARD_APPS.firstOrNull { candidate ->
+      try {
+        val services =
+            packageManager.getPackageInfo(candidate.packageName, PackageManager.GET_SERVICES)
+        services.services?.any { it.name == candidate.imeServiceClassName } ?: false
+      } catch (e: Exception) {
+        false
+      }
     }
   }
 }

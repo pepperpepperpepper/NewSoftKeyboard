@@ -6,7 +6,6 @@ import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardView;
-import com.menny.android.anysoftkeyboard.R;
 
 /**
  * Handles keyboard switching and layout mode keys to keep {@link AnySoftKeyboard} smaller.

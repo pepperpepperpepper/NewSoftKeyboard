@@ -22,7 +22,7 @@ import java.util.Queue;
 @SuppressWarnings("this-escape")
 public class KeyPreviewsManager implements KeyPreviewsController {
 
-  private static final String TAG = "ASKKeyPreviewsManager";
+  private static final String TAG = "NSKKeyPreviewsManager";
   private static final KeyPreview NULL_KEY_PREVIEW =
       new KeyPreview() {
         @Override

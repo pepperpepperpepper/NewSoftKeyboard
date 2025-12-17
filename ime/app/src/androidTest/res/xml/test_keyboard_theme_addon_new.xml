@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KeyboardThemes>
+    <KeyboardTheme
+        id="test_theme_new"
+        nameResId="@string/test_theme_name_new"
+        description="@string/test_theme_description_new"
+        themeRes="@style/TestKeyboardTheme"
+        index="1" />
+</KeyboardThemes>

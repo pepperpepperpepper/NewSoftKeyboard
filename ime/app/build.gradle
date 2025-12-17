@@ -308,6 +308,9 @@ afterEvaluate { proj ->
         t.dependsOn('resignApksForReleaseTest')
         t.doLast {
             def dev = System.getenv('GENYMOTION_DEV') ?: 'localhost:42865'
+            // Allow overriding the IME service component; default to NSK-branded service.
+            def imeServiceClass = System.getenv('IME_SERVICE_CLASS') ?: 'wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService'
+            def imeComponent = "wtf.uhoh.newsoftkeyboard/${imeServiceClass}"
             def buildDirPath = project.layout.buildDirectory.get().asFile
             def outDir = new File(buildDirPath, 'outputs/apk/tests-signed')
             def relOut = new File(outDir, 'app-release-testsigned.apk')
@@ -316,8 +319,8 @@ afterEvaluate { proj ->
             project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'uninstall', 'wtf.uhoh.newsoftkeyboard.test' }
             project.exec { commandLine 'adb', '-s', dev, 'install', '-t', relOut.absolutePath }
             project.exec { commandLine 'adb', '-s', dev, 'install', '-t', testOut.absolutePath }
-            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'shell', 'ime', 'enable', 'wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard' }
-            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'shell', 'ime', 'set', 'wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard' }
+            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'shell', 'ime', 'enable', imeComponent }
+            project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'shell', 'ime', 'set', imeComponent }
         }
     }
 

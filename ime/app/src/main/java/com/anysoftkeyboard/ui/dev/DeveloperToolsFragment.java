@@ -70,7 +70,7 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
   public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
     mGeneralDialogController =
-        new GeneralDialogController(getActivity(), R.style.Theme_AskAlertDialog, this::setupDialog);
+        new GeneralDialogController(getActivity(), R.style.Theme_NskAlertDialog, this::setupDialog);
     ((TextView) view.findViewById(R.id.dev_title))
         .setText(DeveloperUtils.getAppDetails(requireContext().getApplicationContext()));
 
@@ -233,7 +233,7 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
 
     shareFile(
         memDump,
-        "AnySoftKeyboard Memory Dump File",
+        "NewSoftKeyboard Memory Dump File",
         "Hi! Here is a memory dump file for "
             + DeveloperUtils.getAppDetails(requireContext().getApplicationContext())
             + Logger.NEW_LINE
@@ -257,7 +257,7 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
   private void onUserClickedShareTracingFile() {
     shareFile(
         DeveloperUtils.getTraceFile(),
-        "AnySoftKeyboard Trace File",
+        "NewSoftKeyboard Trace File",
         "Hi! Here is a tracing file for "
             + DeveloperUtils.getAppDetails(requireContext().getApplicationContext())
             + DeveloperUtils.NEW_LINE
@@ -273,7 +273,7 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
   private void onUserClickedShareLogCat() {
     shareFile(
         null,
-        "AnySoftKeyboard LogCat",
+        "NewSoftKeyboard LogCat",
         "Hi! Here is a LogCat snippet for "
             + DeveloperUtils.getAppDetails(requireContext().getApplicationContext())
             + DeveloperUtils.NEW_LINE

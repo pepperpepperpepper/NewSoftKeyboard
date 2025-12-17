@@ -27,7 +27,7 @@
 
         <TextView
             android:id="@+id/change_log_app_name"
-            style="@style/Ask.Text.Title"
+            style="@style/Nsk.Text.Title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
@@ -38,7 +38,7 @@
             android:text="@string/ime_name" />
 
         <TextView
-            style="@style/Ask.Text.SubTitle"
+            style="@style/Nsk.Text.SubTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/change_log_app_name"

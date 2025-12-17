@@ -7,7 +7,7 @@
     android:background="@drawable/transparent_click_feedback_background">
 
     <TextView
-        style="@style/Ask.Text.SubTitle"
+        style="@style/Nsk.Text.SubTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Dictionaries>
+    <Dictionary
+        description="@string/test_dictionary_description_plugin"
+        dictionaryAssertName="fake_plugin.dict"
+        id="test_dictionary_plugin"
+        locale="zz"
+        nameResId="@string/test_dictionary_name_plugin"
+        type="binary" />
+</Dictionaries>

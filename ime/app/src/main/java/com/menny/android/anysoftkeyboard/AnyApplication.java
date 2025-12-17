@@ -81,7 +81,7 @@ public class AnyApplication extends MultiDexApplication {
       "settings_key_last_app_version_installed";
   static final String PREF_KEYS_LAST_INSTALLED_APP_TIME =
       "settings_key_first_time_current_version_installed";
-  private static final String TAG = "ASKApp";
+  private static final String TAG = "NSKApp";
   private static DeviceSpecific msDeviceSpecific;
   private final CompositeDisposable mCompositeDisposable = new CompositeDisposable();
   private final Subject<Boolean> mNightModeSubject = ReplaySubject.createWithSize(1);
@@ -441,14 +441,14 @@ public class AnyApplication extends MultiDexApplication {
     @Override
     public void accept(Throwable throwable) throws Exception {
       throwable.printStackTrace();
-      Logger.e("ASK_FATAL", throwable, "Fatal RxJava error %s", throwable.getMessage());
+      Logger.e("NSK_FATAL", throwable, "Fatal RxJava error %s", throwable.getMessage());
     }
 
     @Override
     public void uncaughtException(Thread t, Throwable throwable) {
       throwable.printStackTrace();
       Logger.e(
-          "ASK_FATAL",
+          "NSK_FATAL",
           throwable,
           "Fatal Java error '%s' on thread '%s'",
           throwable.getMessage(),

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="test_quick_text_popup_text">
+        <item>alpha</item>
+    </string-array>
+
+    <string-array name="test_quick_text_popup_output">
+        <item>alpha</item>
+    </string-array>
+</resources>

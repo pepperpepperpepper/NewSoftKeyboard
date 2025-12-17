@@ -9,7 +9,7 @@
 
     <TextView
         android:id="@+id/read_more_link"
-        style="@style/Ask.Text.Hint"
+        style="@style/Nsk.Text.Hint"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"

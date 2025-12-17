@@ -10,7 +10,7 @@
     android:weightSum="1">
 
     <EditText
-        style="@style/Ask.Text.Title"
+        style="@style/Nsk.Text.Title"
         android:id="@+id/word_view"
         android:layout_width="0px"
         android:layout_height="wrap_content"

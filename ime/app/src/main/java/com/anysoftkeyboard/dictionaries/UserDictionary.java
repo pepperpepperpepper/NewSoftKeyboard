@@ -28,7 +28,7 @@ import com.menny.android.anysoftkeyboard.R;
 
 public class UserDictionary extends EditableDictionary {
 
-  private static final String TAG = "ASKUserDict";
+  private static final String TAG = "NSKUserDict";
   private final NextWordDictionary mNextWordDictionary;
   private final Context mContext;
   private final String mLocale;

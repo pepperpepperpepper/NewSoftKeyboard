@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="test_keyboard_name">Test Keyboard (CTS)</string>
-    <string name="test_keyboard_description">Test add-on discovered via NSK/ASK actions</string>
+    <string name="test_keyboard_name_new">Test Keyboard (NSK)</string>
+    <string name="test_keyboard_description_new">Test add-on discovered via wtf.uhoh.newsoftkeyboard</string>
+
+    <string name="test_keyboard_name_plugin">Test Keyboard (plugin legacy)</string>
+    <string name="test_keyboard_description_plugin">Test add-on discovered via com.anysoftkeyboard.plugin</string>
+
+    <string name="test_keyboard_name_menny">Test Keyboard (menny legacy)</string>
+    <string name="test_keyboard_description_menny">Test add-on discovered via com.menny.android.anysoftkeyboard</string>
+
+    <string name="test_dictionary_name_new">Test Dictionary (NSK)</string>
+    <string name="test_dictionary_description_new">Test dictionary discovered via wtf.uhoh.newsoftkeyboard</string>
+
+    <string name="test_dictionary_name_plugin">Test Dictionary (plugin legacy)</string>
+    <string name="test_dictionary_description_plugin">Test dictionary discovered via com.anysoftkeyboard.plugin</string>
+
+    <string name="test_dictionary_name_menny">Test Dictionary (menny legacy)</string>
+    <string name="test_dictionary_description_menny">Test dictionary discovered via com.menny.android.anysoftkeyboard</string>
+
+    <string name="test_theme_name_new">Test Theme (NSK)</string>
+    <string name="test_theme_description_new">Test theme discovered via wtf.uhoh.newsoftkeyboard</string>
+    <string name="test_theme_name_plugin">Test Theme (plugin legacy)</string>
+    <string name="test_theme_description_plugin">Test theme discovered via com.anysoftkeyboard.plugin</string>
+
+    <string name="test_quick_text_name_new">Test Quick-Text (NSK)</string>
+    <string name="test_quick_text_description_new">Test quick-text discovered via wtf.uhoh.newsoftkeyboard</string>
+    <string name="test_quick_text_name_plugin">Test Quick-Text (plugin legacy)</string>
+    <string name="test_quick_text_description_plugin">Test quick-text discovered via com.anysoftkeyboard.plugin</string>
 </resources>

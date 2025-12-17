@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Keyboards>
     <Keyboard
-        id="test_keyboard_ns"
-        nameResId="@string/test_keyboard_name"
+        id="test_keyboard_new"
+        nameResId="@string/test_keyboard_name_new"
         layoutResId="@xml/test_keyboard_layout"
         iconResId="@android:drawable/ic_menu_edit"
-        description="@string/test_keyboard_description"
+        description="@string/test_keyboard_description_new"
         index="1" />
 </Keyboards>

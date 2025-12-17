@@ -7,7 +7,7 @@
     android:orientation="vertical">
 
     <TextView
-        style="@style/Ask.Text.Large.Bold"
+        style="@style/Nsk.Text.Large.Bold"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
@@ -24,7 +24,7 @@
 
     <TextView
         android:id="@+id/go_to_language_settings_action"
-        style="@style/Ask.Text.Link"
+        style="@style/Nsk.Text.Link"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -35,7 +35,7 @@
         android:text="@string/setup_wizard_step_one_action" />
 
     <TextView
-        style="@style/Ask.Text.Normal"
+        style="@style/Nsk.Text.Normal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -44,7 +44,7 @@
 
     <TextView
         android:id="@+id/skip_setup_wizard"
-        style="@style/Ask.Text.Link.Small"
+        style="@style/Nsk.Text.Link.Small"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"

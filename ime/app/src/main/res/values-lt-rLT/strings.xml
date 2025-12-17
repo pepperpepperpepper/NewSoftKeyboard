@@ -655,10 +655,9 @@
     <string name="aosp_dark_theme_description">AOSP pavyzdžio tamsių spalvų klaviatūros tema</string>
     <string name="aosp_light_theme_name">AOSP šviesi tema</string>
     <string name="aosp_light_theme_description">AOSP pavyzdžio šviesių spalvų klaviatūros tema</string>
-    <string name="app_share_title">Sveiki iš „New Soft Keyboard“</string>
-    <string name="app_share_menu_title">Bendrinti „New Soft Keyboard“ naudojant</string>
-    <string name="app_share_text">Leiskite man rekomenduoti atviro kodo, privatumo-orientuota, nemokamą, daugumos kalbų „Android“ klaviatūrą
-„New Soft Keyboard“!\nGaukite ją iš:\n„Google Play Parduotuvės“: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\n„F-Droid“: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Sveiki iš „NewSoftKeyboard“</string>
+    <string name="app_share_menu_title">Bendrinti „NewSoftKeyboard“ naudojant</string>
+    <string name="app_share_text">Leiskite man rekomenduoti atviro kodo, privatumo-orientuota, nemokamą, daugumos kalbų „Android“ klaviatūrą „NewSoftKeyboard“!\nGaukite ją iš:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">spausk mane dėl siurprizo</string>
     <string name="delete_all_clipboard_entries">Tuštinti mainų sritį</string>
     <string name="tip_swipe_from_backspace_to_clear">Patarimas: Jūs gali slinkti kairėn nuo atgal mygtuko, kad pašalintumėte žodį!</string>

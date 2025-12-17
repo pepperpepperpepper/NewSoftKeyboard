@@ -545,8 +545,8 @@
     <string name="aosp_dark_theme_description">Tummavärinen, AOSP-inspiroitu näppäimistön teema</string>
     <string name="aosp_light_theme_name">AOSP vaalea teema</string>
     <string name="aosp_light_theme_description">Vaaleavärinen, AOSP-inspiroitu näppäimistön teema</string>
-    <string name="app_share_title">Hei New Soft Keyboardilta</string>
-    <string name="app_share_menu_title">Jaa New Soft Keyboard…</string>
-    <string name="app_share_text">Saanen suositella avoimen lähdekoodin yksityisyyteen keskittynyttä, ilmaista ja muokattavaa monikielistä Android-näppäimistösovellusta New Soft Keyboardia.\nHanki täältä:\nPlay-kauppa: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Hei NewSoftKeyboardilta</string>
+    <string name="app_share_menu_title">Jaa NewSoftKeyboard…</string>
+    <string name="app_share_text">Saanen suositella avoimen lähdekoodin yksityisyyteen keskittynyttä, ilmaista ja muokattavaa monikielistä Android-näppäimistösovellusta NewSoftKeyboardia.\nHanki täältä:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">Klikkaa minua, tiedossa yllätys</string>
 </resources>

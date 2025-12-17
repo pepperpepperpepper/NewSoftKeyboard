@@ -11,7 +11,7 @@
     android:weightSum="1">
 
     <EditText
-        style="@style/Ask.Text.Normal"
+        style="@style/Nsk.Text.Normal"
         android:id="@+id/word_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -32,7 +32,7 @@
         tools:ignore="HardcodedText" />
 
     <EditText
-        style="@style/Ask.Text.Normal"
+        style="@style/Nsk.Text.Normal"
         android:id="@+id/word_target_view"
         android:layout_width="0px"
         android:layout_height="wrap_content"

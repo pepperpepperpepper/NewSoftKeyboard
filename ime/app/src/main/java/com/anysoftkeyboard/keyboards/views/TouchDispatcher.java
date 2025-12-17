@@ -3,7 +3,6 @@ package com.anysoftkeyboard.keyboards.views;
 import android.view.MotionEvent;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.anysoftkeyboard.base.utils.Logger;
 import java.util.ArrayList;
 import java.util.List;
 

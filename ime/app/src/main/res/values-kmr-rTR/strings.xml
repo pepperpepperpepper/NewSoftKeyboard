@@ -755,9 +755,9 @@
     <string name="aosp_dark_theme_description">Tema klavyeya rengên tarî ya AOSP-Inspired</string>
     <string name="aosp_light_theme_name">Tema Ronahiya AOSP</string>
     <string name="aosp_light_theme_description">Tema klavyeya rengên ronahiyê a AOSP</string>
-    <string name="app_share_title">Silav ji New Soft Keyboard</string>
-    <string name="app_share_menu_title">Bikaranîna New Soft Keyboard parve bike</string>
-    <string name="app_share_text">Bila ez pêşniyara çavkaniya vekirî, nepenî-fokus, belaş, pir taybetmendî, pir zimanî Android keyboard app New Soft Keyboard.\nGet it from:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Silav ji NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Bikaranîna NewSoftKeyboard parve bike</string>
+    <string name="app_share_text">Bila ez pêşniyara çavkaniya vekirî, nepenî-fokus, belaş, pir taybetmendî, pir zimanî Android keyboard app NewSoftKeyboard.\nGet it from:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">ji bo surprîzekê bitikîne</string>
     <string name="delete_all_clipboard_entries">Valakirin</string>
     <string name="tip_swipe_from_backspace_to_clear">Serişte: hûn dikarin ji paşperdeya çepê swip bikin da ku peyvê paqij bikin!</string>

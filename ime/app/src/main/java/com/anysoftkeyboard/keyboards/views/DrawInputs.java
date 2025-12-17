@@ -2,9 +2,7 @@ package com.anysoftkeyboard.keyboards.views;
 
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
-import android.view.inputmethod.EditorInfo;
 import com.anysoftkeyboard.keyboards.Keyboard;
-import com.anysoftkeyboard.keyboards.views.KeyDetector;
 import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
 import java.util.Locale;
 

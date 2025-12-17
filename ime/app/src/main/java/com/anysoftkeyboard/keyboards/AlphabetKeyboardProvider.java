@@ -3,7 +3,6 @@ package com.anysoftkeyboard.keyboards;
 import android.view.inputmethod.EditorInfo;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.anysoftkeyboard.addons.AddOn;
 
 /** Builds and caches alphabet keyboards. */
 final class AlphabetKeyboardProvider {

@@ -674,8 +674,8 @@ simplistas    </string>
     <string name="aosp_dark_theme_description">Baseado no AOSP, tema com cores escuras</string>
     <string name="aosp_light_theme_name">Tema claro AOSP</string>
     <string name="aosp_light_theme_description">Baseado no AOSP, tema com cores claras</string>
-    <string name="app_share_title">Bem-vindo ao New Soft Keyboard</string>
-    <string name="app_share_menu_title">Compartilhar New Soft Keyboard via</string>
-    <string name="app_share_text">Deixe-me recomendar um app de teclado - New Soft Keyboard para Android, ele é de software livre, focado na privacidade, gratuito, personalizável, e multilíngue.\nBaixe na:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Bem-vindo ao NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Compartilhar NewSoftKeyboard via</string>
+    <string name="app_share_text">Deixe-me recomendar um app de teclado - NewSoftKeyboard para Android, ele é de software livre, focado na privacidade, gratuito, personalizável, e multilíngue.\nBaixe na:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">clique aqui para uma surpresa</string>
 </resources>

@@ -654,9 +654,9 @@
     <string name="aosp_dark_theme_description">AOSP-n inspiratutako kolore ilunetako teklatu azala</string>
     <string name="aosp_light_theme_name">AOSP azal argia</string>
     <string name="aosp_light_theme_description">AOSP-n inspiratutako kolore argietako teklatu azala</string>
-    <string name="app_share_title">Kaixo New Soft Keyboard-etik</string>
-    <string name="app_share_menu_title">Partekatu anySoftKeyboard honen bidez</string>
-    <string name="app_share_text">Pribatutasuna aintzat duen hizkuntza askotarako Android teklatu aplikazio libre doako eta pertsonalizagarri hau aholkatzen dizut.\nEskuratu hemen:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Kaixo NewSoftKeyboard-etik</string>
+    <string name="app_share_menu_title">Partekatu NewSoftKeyboard honen bidez</string>
+    <string name="app_share_text">Pribatutasuna aintzat duen hizkuntza askotarako Android teklatu aplikazio libre doako eta pertsonalizagarri hau aholkatzen dizut.\nEskuratu hemen:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">sakatu sorpresa baterako</string>
     <string name="delete_all_clipboard_entries">Hustu arbela</string>
     <string name="tip_swipe_from_backspace_to_clear">Aholkua: ezabatzeko tekla ezkerrera arrastatu dezakezu hitz osorik ezabatzeko!</string>

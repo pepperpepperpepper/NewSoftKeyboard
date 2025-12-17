@@ -41,7 +41,7 @@ public final class LanguageSelectionDialog {
     final CharSequence[] items = new CharSequence[keyboards.size() + 1];
     keyboardsIds.toArray(ids);
     keyboards.toArray(items);
-    final String SETTINGS_ID = "ASK_LANG_SETTINGS_ID";
+    final String SETTINGS_ID = "NSK_LANG_SETTINGS_ID";
     ids[ids.length - 1] = SETTINGS_ID;
     items[ids.length - 1] = host.getContext().getText(R.string.setup_wizard_step_three_action_languages);
 

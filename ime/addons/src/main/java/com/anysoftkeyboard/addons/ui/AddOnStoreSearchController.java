@@ -49,7 +49,7 @@ public class AddOnStoreSearchController {
     mContext = context;
     mMarketKeyword = keyword;
     mDialogController =
-        new GeneralDialogController(context, R.style.Theme_AskAlertDialog, this::setupDialog);
+        new GeneralDialogController(context, R.style.Theme_NskAlertDialog, this::setupDialog);
   }
 
   private void setupDialog(

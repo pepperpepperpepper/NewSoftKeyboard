@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import org.mockito.Mockito;
 import org.robolectric.Shadows;
+import wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService;
 
 public class AnyRoboApplication extends AnyApplication {
   private ExternalDictionaryFactory mDictionaryFactory;
@@ -42,10 +43,17 @@ public class AnyRoboApplication extends AnyApplication {
     var pm = getPackageManager();
     var spm = Shadows.shadowOf(pm);
     try {
-      var askService =
-          new ServiceInfo(pm.getServiceInfo(new ComponentName(this, SoftKeyboard.class), 0));
-      askService.name = TestableAnySoftKeyboard.class.getName();
-      spm.addOrUpdateService(askService);
+      ServiceInfo imeService;
+      try {
+        imeService = pm.getServiceInfo(new ComponentName(this, NewSoftKeyboardService.class), 0);
+      } catch (PackageManager.NameNotFoundException ignored) {
+        // askCompat (or older tests) still expose the legacy service name.
+        imeService = pm.getServiceInfo(new ComponentName(this, SoftKeyboard.class), 0);
+      }
+
+      var testableImeService = new ServiceInfo(imeService);
+      testableImeService.name = TestableAnySoftKeyboard.class.getName();
+      spm.addOrUpdateService(testableImeService);
     } catch (PackageManager.NameNotFoundException e) {
       throw new RuntimeException(e);
     }

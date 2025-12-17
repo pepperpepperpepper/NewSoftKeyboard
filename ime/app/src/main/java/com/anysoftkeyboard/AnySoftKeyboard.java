@@ -18,14 +18,11 @@ package com.anysoftkeyboard;
 
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
-import android.os.Build;
 import android.os.IBinder;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.Window;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.InputConnection;
@@ -34,17 +31,9 @@ import android.widget.EditText;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
-import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.ContextCompat;
 import androidx.core.view.ViewCompat;
-import com.anysoftkeyboard.ModifierKeyEventHelper;
-import com.anysoftkeyboard.DeleteActionHelper;
-import com.anysoftkeyboard.SelectionEditHelper;
-import com.anysoftkeyboard.SpecialWrapHelper;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
-import com.anysoftkeyboard.dictionaries.DictionaryAddOnAndBuilder;
 import com.anysoftkeyboard.dictionaries.ExternalDictionaryFactory;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.ime.AnySoftKeyboardColorizeNavBar;
@@ -54,7 +43,6 @@ import com.anysoftkeyboard.ime.EmojiSearchController;
 import com.anysoftkeyboard.ime.FullscreenModeDecider;
 import com.anysoftkeyboard.ime.KeyboardSwitchHandler;
 import com.anysoftkeyboard.ime.NavigationKeyHandler;
-import com.anysoftkeyboard.ime.InputConnectionRouter;
 import com.anysoftkeyboard.ime.InputViewBinder;
 import com.anysoftkeyboard.ime.LanguageSelectionDialog;
 import com.anysoftkeyboard.ime.MultiTapEditCoordinator;
@@ -70,16 +58,13 @@ import com.anysoftkeyboard.ime.VoiceUiHelper;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.CondenseType;
 import com.anysoftkeyboard.keyboards.Keyboard;
-import com.anysoftkeyboard.keyboards.KeyboardAddOnAndBuilder;
 import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
-import com.anysoftkeyboard.keyboards.KeyboardSwitcher.NextKeyboardType;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardView;
 import com.anysoftkeyboard.rx.GenericOnError;
 import com.anysoftkeyboard.ime.WindowAnimationSetter;
 import com.anysoftkeyboard.ui.VoiceInputNotInstalledActivity;
 import com.anysoftkeyboard.ui.dev.DevStripActionProvider;
 import com.anysoftkeyboard.ui.dev.DeveloperUtils;
-import com.anysoftkeyboard.ui.settings.MainSettingsActivity;
 import com.anysoftkeyboard.ime.VoiceInputController.VoiceInputState;
 import com.anysoftkeyboard.utils.IMEUtil;
 import com.google.android.voiceime.VoiceRecognitionTrigger;
@@ -87,12 +72,9 @@ import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import com.anysoftkeyboard.debug.ImeStateTracker;
-import com.anysoftkeyboard.keyboards.views.KeyboardViewContainerView;
-import com.anysoftkeyboard.quicktextkeys.QuickKeyHistoryRecords;
-import com.anysoftkeyboard.quicktextkeys.TagsExtractor;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import wtf.uhoh.newsoftkeyboard.ime.EmojiSearchControllerHost;
+import wtf.uhoh.newsoftkeyboard.ime.KeyboardSwitchHandlerHost;
+import wtf.uhoh.newsoftkeyboard.ime.NavigationKeyHandlerHost;
 import java.util.Locale;
 import net.evendanan.pixel.GeneralDialogController;
 
@@ -206,7 +188,16 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
     addDisposable(WindowAnimationSetter.subscribe(this, getWindow().getWindow()));
 
-    emojiSearchController = new EmojiSearchController(new EmojiSearchHost());
+    emojiSearchController =
+        new EmojiSearchController(
+            new EmojiSearchControllerHost(
+                this::getQuickTextTagsSearcher,
+                this::getQuickKeyHistoryRecords,
+                this::handleCloseRequest,
+                this::showToastMessage,
+                this::getInputViewContainer,
+                this::commitEmojiFromSearch,
+                () -> this));
 
     condenseModeManager =
         new CondenseModeManager(
@@ -215,8 +206,26 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
               hideWindow();
             });
 
-    keyboardSwitchHandler = new KeyboardSwitchHandler(new KeyboardSwitchHost(), condenseModeManager);
-    navigationKeyHandler = new NavigationKeyHandler(new NavigationHost());
+    keyboardSwitchHandler =
+        new KeyboardSwitchHandler(
+            new KeyboardSwitchHandlerHost(
+                this::getKeyboardSwitcher,
+                this::getCurrentKeyboard,
+                this::getCurrentAlphabetKeyboard,
+                this::setKeyboardForView,
+                this::showLanguageSelectionDialog,
+                this::showToastMessage,
+                this::nextKeyboard,
+                this::nextAlterKeyboard,
+                this::getCurrentInputEditorInfo,
+                this::getInputView),
+            condenseModeManager);
+    navigationKeyHandler =
+        new NavigationKeyHandler(
+            new NavigationKeyHandlerHost(
+                this::handleSelectionExpending,
+                this::sendNavigationKeyEvent,
+                this::sendDownUpKeyEvents));
 
     addDisposable(
         prefs()
@@ -663,120 +672,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     emojiSearchController.requestShow();
   }
 
-  private class KeyboardSwitchHost implements KeyboardSwitchHandler.Host {
-
-    @NonNull
-    @Override
-    public KeyboardSwitcher getKeyboardSwitcher() {
-      return AnySoftKeyboard.this.getKeyboardSwitcher();
-    }
-
-    @Nullable
-    @Override
-    public AnyKeyboard getCurrentKeyboard() {
-      return AnySoftKeyboard.this.getCurrentKeyboard();
-    }
-
-    @NonNull
-    @Override
-    public AnyKeyboard getCurrentAlphabetKeyboard() {
-      return AnySoftKeyboard.this.getCurrentAlphabetKeyboard();
-    }
-
-    @Override
-    public void setKeyboardForView(@NonNull AnyKeyboard keyboard) {
-      AnySoftKeyboard.this.setKeyboardForView(keyboard);
-    }
-
-    @Override
-    public void showLanguageSelectionDialog() {
-      AnySoftKeyboard.this.showLanguageSelectionDialog();
-    }
-
-    @Override
-    public void showToastMessage(int resId, boolean important) {
-      AnySoftKeyboard.this.showToastMessage(resId, important);
-    }
-
-    @Override
-    public void nextKeyboard(
-        @Nullable EditorInfo editorInfo, @NonNull KeyboardSwitcher.NextKeyboardType type) {
-      AnySoftKeyboard.this.nextKeyboard(editorInfo != null ? editorInfo : getCurrentInputEditorInfo(), type);
-    }
-
-    @Override
-    public void nextAlterKeyboard(@Nullable EditorInfo editorInfo) {
-      AnySoftKeyboard.this.nextAlterKeyboard(
-          editorInfo != null ? editorInfo : getCurrentInputEditorInfo());
-    }
-
-    @Nullable
-    public AnyKeyboardView getInputView() {
-      InputViewBinder binder = AnySoftKeyboard.this.getInputView();
-      return binder instanceof AnyKeyboardView ? (AnyKeyboardView) binder : null;
-    }
-  }
-
-  private class NavigationHost implements NavigationKeyHandler.Host {
-    @Override
-    public boolean handleSelectionExpending(int keyEventCode, @Nullable InputConnection ic) {
-      return AnySoftKeyboard.this.handleSelectionExpending(keyEventCode, ic);
-    }
-
-    @Override
-    public void sendNavigationKeyEvent(int keyEventCode) {
-      AnySoftKeyboard.this.sendNavigationKeyEvent(keyEventCode);
-    }
-
-    @Override
-    public void sendDownUpKeyEvents(int keyCode) {
-      AnySoftKeyboard.this.sendDownUpKeyEvents(keyCode);
-    }
-  }
-
   private void commitEmojiFromSearch(CharSequence emoji) {
     super.onText(null, emoji);
-  }
-
-  private class EmojiSearchHost implements EmojiSearchController.Host {
-    @Nullable
-    @Override
-    public TagsExtractor getQuickTextTagsSearcher() {
-      return AnySoftKeyboard.this.getQuickTextTagsSearcher();
-    }
-
-    @NonNull
-    @Override
-    public QuickKeyHistoryRecords getQuickKeyHistoryRecords() {
-      return AnySoftKeyboard.this.getQuickKeyHistoryRecords();
-    }
-
-    @Override
-    public boolean handleCloseRequest() {
-      return AnySoftKeyboard.this.handleCloseRequest();
-    }
-
-    @Override
-    public void showToastMessage(@StringRes int resId, boolean important) {
-      AnySoftKeyboard.this.showToastMessage(resId, important);
-    }
-
-    @Nullable
-    @Override
-    public KeyboardViewContainerView getInputViewContainer() {
-      return AnySoftKeyboard.this.getInputViewContainer();
-    }
-
-    @Override
-    public void commitEmojiFromSearch(CharSequence emoji) {
-      AnySoftKeyboard.this.commitEmojiFromSearch(emoji);
-    }
-
-    @NonNull
-    @Override
-    public Context getContext() {
-      return AnySoftKeyboard.this;
-    }
   }
 
   // convert ASCII codes to Android KeyEvent codes

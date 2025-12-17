@@ -47,7 +47,7 @@ public class ResourceBinaryDictionary extends Dictionary {
    */
   private static final int MAX_WORD_LENGTH = 48;
 
-  private static final String TAG = "ASK_ResBinDict";
+  private static final String TAG = "NSK_ResBinDict";
   private static final int MAX_ALTERNATIVES = 16;
   private static final int MAX_WORDS = 18;
   private static final boolean ENABLE_MISSED_CHARACTERS = true;

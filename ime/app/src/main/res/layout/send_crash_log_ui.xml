@@ -11,14 +11,14 @@
     tools:ignore="UnusedAttribute">
 
     <TextView
-        style="@style/Ask.Text.Title"
+        style="@style/Nsk.Text.Title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_horizontal"
         android:text="@string/ime_crashed_title" />
 
     <TextView
-        style="@style/Ask.Text.Small.Error"
+        style="@style/Nsk.Text.Small.Error"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
@@ -31,7 +31,7 @@
         android:background="@color/app_accent" />
 
     <TextView
-        style="@style/Ask.Text.Normal"
+        style="@style/Nsk.Text.Normal"
         android:id="@+id/errorHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

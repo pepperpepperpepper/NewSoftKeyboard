@@ -43,7 +43,7 @@ public class QuickTextKeyFactory extends AddOnsFactory.MultipleAddOnsFactory<Qui
     super(
         context,
         DirectBootAwareSharedPreferences.create(context),
-        "ASK_QKF",
+        "NSK_QKF",
         PluginActions.ACTION_QUICK_TEXT_NEW,
         PluginActions.METADATA_QUICK_TEXT_NEW,
         "QuickTextKeys",

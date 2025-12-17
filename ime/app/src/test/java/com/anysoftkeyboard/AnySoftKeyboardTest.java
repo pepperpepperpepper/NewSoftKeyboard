@@ -4,7 +4,6 @@ import android.graphics.Color;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
-import com.menny.android.anysoftkeyboard.R;
 import com.menny.android.anysoftkeyboard.SoftKeyboard;
 import org.junit.After;
 import org.junit.Assert;

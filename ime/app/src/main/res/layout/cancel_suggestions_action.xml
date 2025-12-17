@@ -10,7 +10,7 @@
 
     <TextView
         android:id="@+id/close_suggestions_strip_text"
-        style="@style/Ask.Text.SuggestionsAction"
+        style="@style/Nsk.Text.SuggestionsAction"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/candidate_strip_height"
         android:layout_gravity="center_vertical"

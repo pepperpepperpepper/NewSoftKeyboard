@@ -53,7 +53,7 @@ public class AnyKeyboardView extends AnyKeyboardViewWithExtraDraw
     implements InputViewBinder, ActionsStripSupportedChild, MainChild {
 
   private static final int DELAY_BEFORE_POPPING_UP_EXTENSION_KBD = 35; // milliseconds
-  private static final String TAG = "ASKKbdView";
+  private static final String TAG = "NSKKbdView";
   private final int mExtensionKeyboardPopupOffset;
   private final Point mFirstTouchPoint = new Point(0, 0);
   private final GestureDetector mGestureDetector;
@@ -92,7 +92,7 @@ public class AnyKeyboardView extends AnyKeyboardViewWithExtraDraw
     mExtraBottomOffset = mMinimumKeyboardBottomPadding;
     mGestureDetector =
         AnyApplication.getDeviceSpecific()
-            .createGestureDetector(getContext(), new AskGestureEventsListener(this));
+            .createGestureDetector(getContext(), new NskGestureEventsListener(this));
     mGestureDetector.setIsLongpressEnabled(false);
 
     mExtensionKeyboardPopupOffset = 0;

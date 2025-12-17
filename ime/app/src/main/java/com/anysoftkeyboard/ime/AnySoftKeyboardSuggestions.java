@@ -2,7 +2,6 @@ package com.anysoftkeyboard.ime;
 
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
-import android.text.TextUtils;
 import android.view.View;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
@@ -12,30 +11,21 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.content.ContextCompat;
-import com.anysoftkeyboard.android.PowerSaving;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.Dictionary;
-import com.anysoftkeyboard.dictionaries.DictionaryAddOnAndBuilder;
 import com.anysoftkeyboard.dictionaries.DictionaryBackgroundLoader;
 import com.anysoftkeyboard.dictionaries.Suggest;
 import com.anysoftkeyboard.dictionaries.SuggestImpl;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
-import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
 import com.anysoftkeyboard.keyboards.views.CandidateView;
 import com.anysoftkeyboard.keyboards.views.KeyboardViewContainerView;
-import com.anysoftkeyboard.rx.RxSchedulers;
-import com.anysoftkeyboard.utils.Triple;
-import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
-import io.reactivex.Observable;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
-import java.util.function.Supplier;
 
 @SuppressWarnings("this-escape")
 public abstract class AnySoftKeyboardSuggestions extends AnySoftKeyboardKeyboardSwitchedListener

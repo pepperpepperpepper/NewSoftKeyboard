@@ -1,67 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.AskAppBase" parent="Theme.AppCompat.DayNight">
+    <!-- Primary (NewSoftKeyboard) theme/style names. -->
+    <style name="Theme.NskAppBase" parent="Theme.AppCompat.DayNight">
         <item name="android:textColorLink">@color/text_color_link</item>
         <item name="colorAccent">@color/app_accent</item>
         <!-- I'm going to use the keyboard's background, so no need for double drawing -->
         <item name="android:imeFullscreenBackground">@null</item>
-        <item name="preferenceTheme">@style/Theme.AskPrefs</item>
+        <item name="preferenceTheme">@style/Theme.NskPrefs</item>
 
         <item name="colorPrimary">@color/app_color_primary</item>
         <item name="colorPrimaryDark">@color/app_color_primary_dark</item>
 
-        <item name="android:textAppearance">@style/Ask.Text.Normal</item>
-        <item name="android:textAppearanceSmall">@style/Ask.Text.Small</item>
-        <item name="android:textAppearanceLarge">@style/Ask.Text.Large</item>
+        <item name="android:textAppearance">@style/Nsk.Text.Normal</item>
+        <item name="android:textAppearanceSmall">@style/Nsk.Text.Small</item>
+        <item name="android:textAppearanceLarge">@style/Nsk.Text.Large</item>
         <item name="android:fitsSystemWindows">true</item>
     </style>
     <!--This theme is used to override stuff in higher API levels-->
-    <style name="Theme.AskApp" parent="Theme.AskAppBase"/>
+    <style name="Theme.NskApp" parent="Theme.NskAppBase"/>
 
-    <style name="Theme.AskPreference" parent="Theme.AskApp">
-        <item name="android:textAppearanceLarge">@style/Ask.Text.Normal.Bold</item>
+    <style name="Theme.NskPreference" parent="Theme.NskApp">
+        <item name="android:textAppearanceLarge">@style/Nsk.Text.Normal.Bold</item>
     </style>
 
-    <style name="Theme.AskPrefs" parent="PreferenceThemeOverlay">
-        <item name="android:theme">@style/Theme.AskPreference</item>
+    <style name="Theme.NskPrefs" parent="PreferenceThemeOverlay">
+        <item name="android:theme">@style/Theme.NskPreference</item>
     </style>
 
-    <style name="Theme.AskAlertDialog" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+    <style name="Theme.NskAlertDialog" parent="Theme.AppCompat.DayNight.Dialog.Alert">
         <item name="android:textColorLink">@color/text_color_link</item>
         <item name="colorAccent">@color/app_accent</item>
 
         <item name="colorPrimary">@color/app_color_primary</item>
         <item name="colorPrimaryDark">@color/app_color_primary_dark</item>
 
-        <item name="android:textAppearance">@style/Ask.Text.Normal</item>
-        <item name="android:textAppearanceSmall">@style/Ask.Text.Small</item>
-        <item name="android:textAppearanceLarge">@style/Ask.Text.Large</item>
+        <item name="android:textAppearance">@style/Nsk.Text.Normal</item>
+        <item name="android:textAppearanceSmall">@style/Nsk.Text.Small</item>
+        <item name="android:textAppearanceLarge">@style/Nsk.Text.Large</item>
     </style>
 
-    <style name="Theme.AskApp.NoTitle" parent="Theme.AskApp">
+    <style name="Theme.NskApp.NoTitle" parent="Theme.NskApp">
         <item name="windowNoTitle">true</item>
     </style>
 
-    <style name="Theme.AskApp.NoTitle.NoActionBar" parent="Theme.AskApp.NoTitle">
+    <style name="Theme.NskApp.NoTitle.NoActionBar" parent="Theme.NskApp.NoTitle">
         <item name="windowActionBar">false</item>
     </style>
 
-    <style name="Theme.AskApp.Popup" parent="Base.Theme.AppCompat.Light.Dialog.FixedSize">
+    <style name="Theme.NskApp.Popup" parent="Base.Theme.AppCompat.Light.Dialog.FixedSize">
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:maxWidth">320dp</item>
         <item name="android:windowBackground">@drawable/window_popup_background</item>
     </style>
 
-    <style name="Ask" />
+    <!-- Legacy (ASK) theme/style names kept as wrappers for compatibility. -->
+    <style name="Theme.AskAppBase" parent="Theme.NskAppBase"/>
+    <style name="Theme.AskApp" parent="Theme.NskApp"/>
+    <style name="Theme.AskPreference" parent="Theme.NskPreference"/>
+    <style name="Theme.AskPrefs" parent="Theme.NskPrefs"/>
+    <style name="Theme.AskAlertDialog" parent="Theme.NskAlertDialog"/>
+    <style name="Theme.AskApp.NoTitle" parent="Theme.NskApp.NoTitle"/>
+    <style name="Theme.AskApp.NoTitle.NoActionBar" parent="Theme.NskApp.NoTitle.NoActionBar"/>
+    <style name="Theme.AskApp.Popup" parent="Theme.NskApp.Popup"/>
 
-    <style name="Ask.Text" parent="TextAppearance.AppCompat">
+    <style name="Nsk" />
+
+    <style name="Nsk.Text" parent="TextAppearance.AppCompat">
         <item name="android:textColor">?android:textColorPrimary</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:layout_gravity">center_vertical</item>
     </style>
 
-    <style name="Ask.Text.SuggestionsAction" parent="Ask.Text">
+    <style name="Nsk.Text.SuggestionsAction" parent="Nsk.Text">
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">#FFF</item>
         <item name="android:shadowColor">#000</item>
@@ -71,86 +82,86 @@
         <item name="android:padding">4dp</item>
     </style>
 
-    <style name="Ask.Text.SuggestionsAction.Simple" parent="Ask.Text.SuggestionsAction">
+    <style name="Nsk.Text.SuggestionsAction.Simple" parent="Nsk.Text.SuggestionsAction">
         <item name="android:shadowRadius">0</item>
         <item name="android:textColor">#CCC</item>
         <item name="android:textStyle">normal</item>
     </style>
 
-    <style name="Ask.Text.SuggestionsAction.Small" parent="Ask.Text.SuggestionsAction">
+    <style name="Nsk.Text.SuggestionsAction.Small" parent="Nsk.Text.SuggestionsAction">
         <item name="android:textStyle">normal</item>
         <item name="android:textSize">@dimen/font_size_small_text</item>
     </style>
 
-    <style name="Ask.Text.Title" parent="Ask.Text">
+    <style name="Nsk.Text.Title" parent="Nsk.Text">
         <item name="android:textSize">@dimen/font_size_title</item>
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="Ask.Text.Large" parent="Ask.Text">
+    <style name="Nsk.Text.Large" parent="Nsk.Text">
         <item name="android:textSize">@dimen/font_size_large</item>
     </style>
 
-    <style name="Ask.Text.Large.Bold" parent="Ask.Text.Large">
+    <style name="Nsk.Text.Large.Bold" parent="Nsk.Text.Large">
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="Ask.Text.SubTitle" parent="Ask.Text">
+    <style name="Nsk.Text.SubTitle" parent="Nsk.Text">
         <item name="android:textColor">?android:textColorSecondary</item>
         <item name="android:textSize">@dimen/font_size_sub_title</item>
     </style>
 
-    <style name="Ask.Text.Normal" parent="Ask.Text">
+    <style name="Nsk.Text.Normal" parent="Nsk.Text">
         <item name="android:textSize">@dimen/font_size_text</item>
     </style>
 
-    <style name="Ask.Text.Link" parent="Ask.Text.Normal">
+    <style name="Nsk.Text.Link" parent="Nsk.Text.Normal">
         <item name="android:textColor">?android:textColorLink</item>
         <item name="android:textSize">@dimen/font_size_sub_title</item>
     </style>
 
-    <style name="Ask.Text.Link.Small" parent="Ask.Text.Normal">
+    <style name="Nsk.Text.Link.Small" parent="Nsk.Text.Normal">
         <item name="android:textColor">?android:textColorLink</item>
         <item name="android:textSize">@dimen/font_size_small_text</item>
     </style>
 
-    <style name="Ask.Text.Hint" parent="Ask.Text">
+    <style name="Nsk.Text.Hint" parent="Nsk.Text">
         <item name="android:textColor">?android:textColorSecondary</item>
         <item name="android:textSize">@dimen/font_size_hint_text</item>
     </style>
 
-    <style name="Ask.Text.Small" parent="Ask.Text">
+    <style name="Nsk.Text.Small" parent="Nsk.Text">
         <item name="android:textSize">@dimen/font_size_small_text</item>
     </style>
 
-    <style name="Ask.Text.Normal.Bold" parent="Ask.Text.Normal">
+    <style name="Nsk.Text.Normal.Bold" parent="Nsk.Text.Normal">
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="Ask.Text.Small.Error" parent="Ask.Text.Small">
+    <style name="Nsk.Text.Small.Error" parent="Nsk.Text.Small">
         <item name="android:textColor">#F46</item>
         <item name="android:textStyle">bold</item>
     </style>
 
-    <style name="Ask.Legal" parent="Ask.Text">
+    <style name="Nsk.Legal" parent="Nsk.Text">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
     </style>
 
-    <style name="Ask.Legal.Title" parent="Ask.Legal">
+    <style name="Nsk.Legal.Title" parent="Nsk.Legal">
         <item name="android:textSize">@dimen/font_size_title</item>
         <item name="android:layout_marginTop">8dp</item>
         <item name="android:layout_marginBottom">8dp</item>
     </style>
 
-    <style name="Ask.Legal.Text" parent="Ask.Legal">
+    <style name="Nsk.Legal.Text" parent="Nsk.Legal">
         <item name="android:textSize">@dimen/font_size_small_text</item>
         <item name="android:layout_marginLeft">8dp</item>
         <item name="android:layout_marginRight">8dp</item>
         <item name="android:autoLink">email|web</item>
     </style>
 
-    <style name="Ask.Legal.Divider" parent="Ask.Legal">
+    <style name="Nsk.Legal.Divider" parent="Nsk.Legal">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
         <item name="android:background">@color/menu_divider</item>
@@ -158,16 +169,40 @@
         <item name="android:layout_marginBottom">8dp</item>
     </style>
 
-    <style name="Ask.SettingsRootLayout">
+    <style name="Nsk.SettingsRootLayout">
         <item name="android:orientation">vertical</item>
         <item name="android:padding">@dimen/global_content_padding_side</item>
     </style>
 
-    <style name="Ask.SettingsTileLayout">
+    <style name="Nsk.SettingsTileLayout">
         <item name="android:layout_marginBottom">8dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_weight">0</item>
     </style>
+
+    <!-- Legacy ASK names for the above reusable styles. -->
+    <style name="Ask" parent="Nsk" />
+    <style name="Ask.Text" parent="Nsk.Text"/>
+    <style name="Ask.Text.SuggestionsAction" parent="Nsk.Text.SuggestionsAction"/>
+    <style name="Ask.Text.SuggestionsAction.Simple" parent="Nsk.Text.SuggestionsAction.Simple"/>
+    <style name="Ask.Text.SuggestionsAction.Small" parent="Nsk.Text.SuggestionsAction.Small"/>
+    <style name="Ask.Text.Title" parent="Nsk.Text.Title"/>
+    <style name="Ask.Text.Large" parent="Nsk.Text.Large"/>
+    <style name="Ask.Text.Large.Bold" parent="Nsk.Text.Large.Bold"/>
+    <style name="Ask.Text.SubTitle" parent="Nsk.Text.SubTitle"/>
+    <style name="Ask.Text.Normal" parent="Nsk.Text.Normal"/>
+    <style name="Ask.Text.Link" parent="Nsk.Text.Link"/>
+    <style name="Ask.Text.Link.Small" parent="Nsk.Text.Link.Small"/>
+    <style name="Ask.Text.Hint" parent="Nsk.Text.Hint"/>
+    <style name="Ask.Text.Small" parent="Nsk.Text.Small"/>
+    <style name="Ask.Text.Normal.Bold" parent="Nsk.Text.Normal.Bold"/>
+    <style name="Ask.Text.Small.Error" parent="Nsk.Text.Small.Error"/>
+    <style name="Ask.Legal" parent="Nsk.Legal"/>
+    <style name="Ask.Legal.Title" parent="Nsk.Legal.Title"/>
+    <style name="Ask.Legal.Text" parent="Nsk.Legal.Text"/>
+    <style name="Ask.Legal.Divider" parent="Nsk.Legal.Divider"/>
+    <style name="Ask.SettingsRootLayout" parent="Nsk.SettingsRootLayout"/>
+    <style name="Ask.SettingsTileLayout" parent="Nsk.SettingsTileLayout"/>
 
 </resources>

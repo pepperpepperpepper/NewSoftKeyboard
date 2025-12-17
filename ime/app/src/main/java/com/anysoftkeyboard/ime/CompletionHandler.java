@@ -2,7 +2,6 @@ package com.anysoftkeyboard.ime;
 
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.InputConnection;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.views.CandidateView;
 import java.util.ArrayList;

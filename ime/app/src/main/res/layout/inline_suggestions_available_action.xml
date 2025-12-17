@@ -12,7 +12,7 @@
 
     <TextView
         android:id="@+id/inline_suggestions_strip_text"
-        style="@style/Ask.Text.SuggestionsAction.Small"
+        style="@style/Nsk.Text.SuggestionsAction.Small"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="start" />

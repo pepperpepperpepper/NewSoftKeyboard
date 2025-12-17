@@ -4,7 +4,7 @@ Generated from `wc -l` over *.java and *.kt. Focus on files ≥500 LOC.
 
 | LOC | File |
 | ---:| --- |
-| 1538 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
+| 1456 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
 | 1296 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
 | 1292 | ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/BaseCharactersTable.java* |
 |  982 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
@@ -26,7 +26,11 @@ Shrunk below 500 LOC (recent):
 - NextWordSettingsFragment.java: ~355 LOC (usage stats, summaries, clear-data helpers)
 
 ## Suggested Refactor Order
-1) InputConnection/Editor state seam: `AnySoftKeyboard.java`, `AnySoftKeyboardSuggestions.java`.
+1) **Top priority**: core IME hosts  
+   - `AnySoftKeyboard.java` (editor/input-connection lifecycle, gesture/voice hooks).  
+   - `AnyKeyboard.java` (key model/state).  
+   Keep behavior stable; extract focused helpers similar to recent slices (e.g., state holders, routers).
+2) InputConnection/Editor state seam: `AnySoftKeyboard.java`, `AnySoftKeyboardSuggestions.java`.
 2) Touch handling: `AnyKeyboardViewBase.java` + `PointerTracker.java` (extract TouchDispatcher).
 3) Suggestion orchestration: `SuggestionsProvider.java` (split engine orchestration vs. normalization already started).
 4) Keyboard model/core: `AnyKeyboard.java`, `Keyboard.java`, `KeyboardSwitcher.java` (pull parsing/layout concerns apart).

@@ -23,7 +23,7 @@ public class AboutNewSoftKeyboardFragment extends Fragment implements View.OnCli
   @Override
   public View onCreateView(
       LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-    return inflater.inflate(R.layout.about_anysoftkeyboard, container, false);
+    return inflater.inflate(R.layout.about_newsoftkeyboard, container, false);
   }
 
   @Override

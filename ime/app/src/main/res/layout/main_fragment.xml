@@ -45,7 +45,7 @@
 
             <TextView
                 android:id="@+id/ask_social_link"
-                style="@style/Ask.Text.Small"
+                style="@style/Nsk.Text.Small"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top|start"
@@ -71,7 +71,7 @@
             android:visibility="gone">
 
             <TextView
-                style="@style/Ask.Text.Normal"
+                style="@style/Nsk.Text.Normal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
@@ -94,7 +94,7 @@
 
             <TextView
                 android:id="@+id/not_configured_click_here"
-                style="@style/Ask.Text.Normal"
+                style="@style/Nsk.Text.Normal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
@@ -118,7 +118,7 @@
             android:visibility="gone">
 
             <TextView
-                style="@style/Ask.Text.Normal"
+                style="@style/Nsk.Text.Normal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"

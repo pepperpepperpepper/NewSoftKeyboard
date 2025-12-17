@@ -766,9 +766,9 @@
     <string name="aosp_dark_theme_description">კლავიატურის იერსახე, AOSP-ის მუქი ფერებით</string>
     <string name="aosp_light_theme_name">AOSP-ის ნათელი იერსახე</string>
     <string name="aosp_light_theme_description">კლავიატურის იერსახე, AOSP-ის ნათელი ფერებით</string>
-    <string name="app_share_title">მოგესალმებათ New Soft Keyboard</string>
-    <string name="app_share_menu_title">გააზიარეთ New Soft Keyboard</string>
-    <string name="app_share_text">მსურს შემოგთავაზოთ ღია წყაროს მქონე, პირადულობის უზრუნველმყოფი,  თავისუფალი, მორგების უამრავი შესაძლებლობით, მრავალენოვანი Android-კლავიატურის აპი New Soft Keyboard.\nგადმოსაწერად იხილეთ:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">მოგესალმებათ NewSoftKeyboard</string>
+    <string name="app_share_menu_title">გააზიარეთ NewSoftKeyboard</string>
+    <string name="app_share_text">მსურს შემოგთავაზოთ ღია წყაროს მქონე, პირადულობის უზრუნველმყოფი,  თავისუფალი, მორგების უამრავი შესაძლებლობით, მრავალენოვანი Android-კლავიატურის აპი NewSoftKeyboard.\nგადმოსაწერად იხილეთ:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">დაწკაპკეთ სასიამოვნო მოულოდნელობისთვის</string>
     <string name="delete_all_clipboard_entries">აღებული ასლის წაშლა</string>
     <string name="tip_swipe_from_backspace_to_clear">რჩევა: უკუშლიდან მარცხნივ გაუსვით სიტყვის მოცილებისთვის!</string>

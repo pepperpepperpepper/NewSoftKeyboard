@@ -48,7 +48,7 @@ import org.xmlpull.v1.XmlPullParserException;
 @SuppressWarnings("this-escape")
 public class ExternalAnyKeyboard extends AnyKeyboard implements HardKeyboardTranslator {
 
-  private static final String TAG = "ASKExtendedAnyKbd";
+  private static final String TAG = "NSKExtendedAnyKbd";
 
   private static final String XML_TRANSLATION_TAG = "PhysicalTranslation";
   private static final String XML_QWERTY_ATTRIBUTE = "QwertyTranslation";
@@ -165,7 +165,7 @@ public class ExternalAnyKeyboard extends AnyKeyboard implements HardKeyboardTran
       Context context, int qwertyTranslationId) {
     HardKeyboardSequenceHandler translator = new HardKeyboardSequenceHandler();
     try (final XmlResourceParser parser = context.getResources().getXml(qwertyTranslationId)) {
-      final String TAG = "ASKHardTranslationParser";
+      final String TAG = "NSKHardTranslationParser";
       try {
         int event;
         boolean inTranslations = false;

@@ -41,7 +41,7 @@ public abstract class AnySoftKeyboardDialogProvider extends AnySoftKeyboardServi
   public void onCreate() {
     super.onCreate();
     mGeneralDialogController =
-        new GeneralDialogController(this, R.style.Theme_AskAlertDialog, new ImeDialogPresenter());
+        new GeneralDialogController(this, R.style.Theme_NskAlertDialog, new ImeDialogPresenter());
   }
 
   protected void showToastMessage(@StringRes int resId, boolean forShortTime) {

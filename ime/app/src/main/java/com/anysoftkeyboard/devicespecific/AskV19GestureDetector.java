@@ -18,11 +18,9 @@ package com.anysoftkeyboard.devicespecific;
 
 import android.content.Context;
 
-public class AskV19GestureDetector extends AskV8GestureDetector {
+/** Legacy wrapper kept for compatibility. Use {@link NskV19GestureDetector} in new code. */
+public class AskV19GestureDetector extends NskV19GestureDetector {
   public AskV19GestureDetector(Context context, AskOnGestureListener listener) {
     super(context, listener);
-    // this behavior is not good for ASK. See
-    // https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/332
-    mScaleGestureDetector.setQuickScaleEnabled(false);
   }
 }

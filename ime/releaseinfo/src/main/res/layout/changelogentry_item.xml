@@ -22,14 +22,14 @@
 
     <TextView
         android:id="@+id/changelog_version_title"
-        style="@style/Ask.Text.Title"
+        style="@style/Nsk.Text.Title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_horizontal" />
 
     <TextView
         android:id="@+id/chang_log_item"
-        style="@style/Ask.Text.Normal"
+        style="@style/Nsk.Text.Normal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:autoLink="web"
@@ -40,7 +40,7 @@
 
     <TextView
         android:id="@+id/change_log__web_link_item"
-        style="@style/Ask.Text.Normal"
+        style="@style/Nsk.Text.Normal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:autoLink="web" />

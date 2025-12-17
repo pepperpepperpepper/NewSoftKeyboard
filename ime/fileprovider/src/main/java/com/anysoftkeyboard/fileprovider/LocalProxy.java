@@ -31,7 +31,7 @@ public class LocalProxy {
       final var mimeType = context.getContentResolver().getType(remoteUri);
       final var ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
       Logger.d(
-          "ASKLocalProxy",
+          "NSKLocalProxy",
           "Got mime-type '%s' and ext '%s' for url '%s'",
           mimeType,
           ext,
@@ -50,7 +50,7 @@ public class LocalProxy {
                   String.format(Locale.ROOT, "%s.%s", remoteUri.getLastPathSegment(), ext));
         }
 
-        Logger.d("ASKLocalProxy", "Starting to copy media from %s to %s", remoteUri, targetFile);
+        Logger.d("NSKLocalProxy", "Starting to copy media from %s to %s", remoteUri, targetFile);
         byte[] buffer = new byte[4096];
         try (OutputStream outputStream =
             new BufferedOutputStream(new FileOutputStream(targetFile))) {
@@ -61,7 +61,7 @@ public class LocalProxy {
         }
 
         Logger.d(
-            "ASKLocalProxy",
+            "NSKLocalProxy",
             "Done copying media from %s to %s. Size: %d",
             remoteUri,
             targetFile,

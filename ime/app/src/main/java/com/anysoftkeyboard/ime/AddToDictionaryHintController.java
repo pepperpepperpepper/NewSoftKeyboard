@@ -2,7 +2,6 @@ package com.anysoftkeyboard.ime;
 
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.dictionaries.Suggest;
-import com.anysoftkeyboard.dictionaries.SuggestImpl;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.views.CandidateView;

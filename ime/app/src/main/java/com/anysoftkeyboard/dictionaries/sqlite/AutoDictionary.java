@@ -29,7 +29,7 @@ import io.reactivex.disposables.Disposable;
  */
 public class AutoDictionary extends SQLiteUserDictionaryBase {
 
-  protected static final String TAG = "ASKAutoDict";
+  protected static final String TAG = "NSKAutoDict";
   private final Disposable mPrefDisposable;
   private int mLearnWordThreshold;
 

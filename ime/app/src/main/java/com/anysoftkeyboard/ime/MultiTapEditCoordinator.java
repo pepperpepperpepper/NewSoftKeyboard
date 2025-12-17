@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.ime;
 
 import android.view.inputmethod.InputConnection;
-import java.util.function.Consumer;
 
 /**
  * Handles the small batch-edit window around multi-tap interactions so the key logic stays focused

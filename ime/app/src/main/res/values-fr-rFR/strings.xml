@@ -652,9 +652,9 @@
     <string name="aosp_dark_theme_description">Thème clavier à couleurs sombres comme AOSP</string>
     <string name="aosp_light_theme_name">Thème clair AOSP</string>
     <string name="aosp_light_theme_description">Thème clavier à couleurs claires comme AOSP</string>
-    <string name="app_share_title">Hello depuis New Soft Keyboard</string>
-    <string name="app_share_menu_title">Partager New Soft Keyboard avec</string>
-    <string name="app_share_text">Recommandé : New Soft Keyboard, un clavier multi-langues hautement personnalisable, respectant la vie privée, gratuit, en sources libres.\nÀ télécharger depuis :\nPlay Store : https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid : https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Hello depuis NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Partager NewSoftKeyboard avec</string>
+    <string name="app_share_text">Recommandé : NewSoftKeyboard, un clavier multi-langues hautement personnalisable, respectant la vie privée, gratuit, en sources libres.\nÀ télécharger depuis :\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">Cliquer pour une surprise</string>
     <string name="delete_all_clipboard_entries">Vider le presse-papiers</string>
     <string name="tip_swipe_from_backspace_to_clear">Astuce : glisser vers la gauche depuis l\'arrière plan pour effacer le mot !</string>

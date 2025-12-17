@@ -267,7 +267,7 @@ public abstract class AnySoftKeyboardInlineSuggestions extends AnySoftKeyboardSu
       return true;
     } catch (RuntimeException exception) {
       Logger.w(
-          "ASK_Autofill",
+          "NSK_Autofill",
           "requestAutofill failed for %s",
           exception.getMessage() == null ? "unknown reason" : exception.getMessage());
       return false;
@@ -287,7 +287,7 @@ public abstract class AnySoftKeyboardInlineSuggestions extends AnySoftKeyboardSu
       @NonNull InlineSuggestion inlineSuggestion) {
     var info = inlineSuggestion.getInfo();
     Logger.i(
-        "ASK_Suggestion",
+        "NSK_Suggestion",
         "Suggestion source '%s', is pinned %s, type '%s', hints '%s'",
         info.getSource(),
         info.isPinned(),

@@ -33,7 +33,7 @@ import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import java.util.Locale;
 
 public class TesterNotification {
-  private static final String TAG = "ASKTester";
+  private static final String TAG = "NSKTester";
   private static final String KEY = "testers_version_version_hash";
 
   public static void showDragonsIfNeeded(

@@ -25,7 +25,7 @@ import com.anysoftkeyboard.base.utils.Logger;
 
 public class PackagesChangedReceiver extends BroadcastReceiver {
 
-  private static final String TAG = "ASKPkgChanged";
+  private static final String TAG = "NSKPkgChanged";
 
   private final Consumer<Intent> mOnPackageChanged;
 

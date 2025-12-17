@@ -3,9 +3,7 @@ package com.anysoftkeyboard.ime;
 import android.view.View;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
-import com.anysoftkeyboard.ime.InputViewBinder;
 import com.anysoftkeyboard.ime.VoiceInputController.VoiceInputState;
-import com.anysoftkeyboard.ime.VoiceStatusRenderer;
 import com.google.android.voiceime.VoiceRecognitionTrigger;
 
 /** Small helper to centralize voice key/status UI updates. */

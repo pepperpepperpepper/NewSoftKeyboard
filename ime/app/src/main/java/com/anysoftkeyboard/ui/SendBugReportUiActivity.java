@@ -33,7 +33,7 @@ import io.reactivex.disposables.Disposables;
 
 public class SendBugReportUiActivity extends FragmentActivity {
 
-  private static final String TAG = "ASKBugSender";
+  private static final String TAG = "NSKBugSender";
 
   private BugReportDetails mCrashReportDetails;
   private Disposable mDisposable = Disposables.empty();

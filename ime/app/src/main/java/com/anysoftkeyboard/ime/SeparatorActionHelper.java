@@ -4,7 +4,6 @@ import android.text.TextUtils;
 import android.view.inputmethod.InputConnection;
 import com.anysoftkeyboard.dictionaries.SuggestImpl;
 import com.anysoftkeyboard.dictionaries.WordComposer;
-import com.anysoftkeyboard.ime.SpaceTimeTracker;
 import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 import java.util.function.IntPredicate;

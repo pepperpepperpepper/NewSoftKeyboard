@@ -725,9 +725,9 @@
     <string name="aosp_dark_theme_description">Az AOSP által inspirált sötét színű téma</string>
     <string name="aosp_light_theme_name">AOSP Világos téma</string>
     <string name="aosp_light_theme_description">AOSP által inspirált, világos színvilágú téma</string>
-    <string name="app_share_title">Üdvözli az New Soft Keyboard</string>
-    <string name="app_share_menu_title">New Soft Keyboard megosztása ezzel</string>
-    <string name="app_share_text">Hadd javasoljuk a nyílt forráskódú, ingyenes, jól testreszabható, többnyelvű Android billentyűzetalkalmazást, az New Soft Keyboard-ot.\nLetöltés:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Üdvözli az NewSoftKeyboard</string>
+    <string name="app_share_menu_title">NewSoftKeyboard megosztása ezzel</string>
+    <string name="app_share_text">Hadd javasoljuk a nyílt forráskódú, ingyenes, jól testreszabható, többnyelvű Android billentyűzetalkalmazást, az NewSoftKeyboard-ot.\nLetöltés:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">Kattintson egy meglepetéshez</string>
     <string name="delete_all_clipboard_entries">Vágólap törlése</string>
     <string name="tip_swipe_from_backspace_to_clear">Tipp: a szóközről balra húzva törölheted a szót!</string>

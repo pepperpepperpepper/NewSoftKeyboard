@@ -30,9 +30,9 @@
     <string name="version_text">Version\u0020<xliff:g id="version_name">%s</xliff:g>,\u0020version-code <xliff:g id="version_number">%d</xliff:g>.</string>
     <string name="quick_text_tab_title_template"><xliff:g id="first_key">%s</xliff:g>\u0020<xliff:g id="name">%s</xliff:g></string>
 
-    <string name="about_copyright_text">Copyright\u0020©\u0020<xliff:g id="year">%d</xliff:g>\u0020Uh-Oh WTF (fork of New Soft Keyboard)</string>
+    <string name="about_copyright_text">Copyright\u0020©\u0020<xliff:g id="year">%d</xliff:g>\u0020Uh-Oh WTF</string>
     <string name="main_site_url">https://fdroid.uh-oh.wtf/</string>
-    <string name="permissions_wiki_site_url">https://github.com/pepperpepperpepper/New Soft Keyboard</string>
+    <string name="permissions_wiki_site_url">https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
 
     <string name="switch_incognito_template">🕵️\u0020<xliff:g id="incognito">%s</xliff:g></string>
 
@@ -46,5 +46,5 @@
 
     <string name="label_subtype_generic">%s</string>
 
-    <string name="developer_strict_mode_change_restart">Restart New Soft Keyboard to take effect!</string>
+    <string name="developer_strict_mode_change_restart">Restart NewSoftKeyboard to take effect!</string>
 </resources>

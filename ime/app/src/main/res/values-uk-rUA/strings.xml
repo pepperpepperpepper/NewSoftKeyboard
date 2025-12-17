@@ -622,5 +622,5 @@
     <string name="aosp_dark_theme_description">AOSP-навіяна тема темних кольорів клавіатури</string>
     <string name="aosp_light_theme_name">AOSP Світла тема</string>
     <string name="aosp_light_theme_description">AOSP-навіяна тема світлих кольорів клавіатури</string>
-    <string name="app_share_title">Вітаємо в New Soft Keyboard</string>
+    <string name="app_share_title">Вітаємо в NewSoftKeyboard</string>
 </resources>

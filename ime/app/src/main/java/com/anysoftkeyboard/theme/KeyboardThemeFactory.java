@@ -46,7 +46,7 @@ public class KeyboardThemeFactory extends AddOnsFactory.SingleAddOnsFactory<Keyb
     super(
         context,
         DirectBootAwareSharedPreferences.create(context),
-        "ASK_KT",
+        "NSK_KT",
         PluginActions.ACTION_THEME_NEW,
         PluginActions.METADATA_KEYBOARD_THEME_NEW,
         "KeyboardThemes",

@@ -683,9 +683,9 @@
     <string name="aosp_dark_theme_description">Teclat de colors foscos inspirat en AOSP</string>
     <string name="aosp_light_theme_name">Tema AOSP clar</string>
     <string name="aosp_light_theme_description">Teclat de colors clars inspirat en AOSP</string>
-    <string name="app_share_title">Hola des de l\'New Soft Keyboard</string>
-    <string name="app_share_menu_title">Comparteix l\'New Soft Keyboard mitjançant</string>
-    <string name="app_share_text">Et recomano l\'New Soft Keyboard; un teclat per a Android de codi lliure i gratuït, multillengua i molt personalitzable, focalitzat en la privadesa.\nGet Disponible al:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Hola des de l\'NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Comparteix l\'NewSoftKeyboard mitjançant</string>
+    <string name="app_share_text">Et recomano l\'NewSoftKeyboard; un teclat per a Android de codi lliure i gratuït, multillengua i molt personalitzable, focalitzat en la privadesa.\nDisponible a:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">Sorprèn-me</string>
     <string name="delete_all_clipboard_entries">Buida el porta-retalls</string>
     <string name="tip_swipe_from_backspace_to_clear">Truc: podeu lliscar la tecla retrocès cap a l\'esquerra per suprimir el mot!</string>

@@ -36,7 +36,7 @@ public abstract class BTreeDictionary extends EditableDictionary {
   }
 
   protected static final int MAX_WORD_LENGTH = 32;
-  protected static final String TAG = "ASKUDict";
+  protected static final String TAG = "NSKUDict";
   private static final int INITIAL_ROOT_CAPACITY =
       26 /*number of letters in the English Alphabet. Why bother with auto-increment, when we can start at roughly the right final size..*/;
   protected final Context mContext;

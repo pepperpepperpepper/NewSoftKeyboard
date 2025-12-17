@@ -14,14 +14,14 @@
 
         <TextView
             android:id="@+id/addon_card_title"
-            style="@style/Ask.Text.SubTitle"
+            style="@style/Nsk.Text.SubTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="?android:textColorPrimary" />
 
         <TextView
             android:id="@+id/addon_card_message"
-            style="@style/Ask.Text.Normal"
+            style="@style/Nsk.Text.Normal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"

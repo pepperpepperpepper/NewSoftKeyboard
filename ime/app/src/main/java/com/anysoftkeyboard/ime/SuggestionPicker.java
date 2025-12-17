@@ -6,9 +6,7 @@ import com.anysoftkeyboard.dictionaries.Suggest;
 import com.anysoftkeyboard.dictionaries.SuggestImpl;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
-import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.CandidateView;
-import java.util.Locale;
 
 /**
  * Encapsulates manual pick handling from the suggestions strip.

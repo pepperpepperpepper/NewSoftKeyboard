@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="TestKeyboardTheme" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:colorBackground">#000000</item>
+    </style>
+</resources>

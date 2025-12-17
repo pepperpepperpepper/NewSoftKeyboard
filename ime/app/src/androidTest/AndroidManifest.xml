@@ -1,22 +1,80 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <application>
-        <!-- Test-only add-on receiver to verify discovery under both NSK and ASK namespaces. -->
+        <!-- Test-only add-on receiver to verify discovery under legacy namespaces used by real add-on packs. -->
         <receiver
-            android:name=".addons.cts.TestKeyboardReceiver"
+            android:name="com.anysoftkeyboard.addons.cts.TestKeyboardReceiver"
             android:exported="true">
+            <!-- NewSoftKeyboard namespace (future-proofing our own add-ons). -->
             <intent-filter>
                 <action android:name="wtf.uhoh.newsoftkeyboard.KEYBOARD" />
             </intent-filter>
+            <meta-data
+                android:name="wtf.uhoh.newsoftkeyboard.keyboards"
+                android:resource="@xml/test_keyboard_addon_new" />
+
             <intent-filter>
                 <action android:name="com.anysoftkeyboard.plugin.KEYBOARD" />
             </intent-filter>
-            <meta-data
-                android:name="wtf.uhoh.newsoftkeyboard.keyboards"
-                android:resource="@xml/test_keyboard_addon" />
+            <intent-filter>
+                <action android:name="com.menny.android.anysoftkeyboard.KEYBOARD" />
+            </intent-filter>
             <meta-data
                 android:name="com.anysoftkeyboard.plugindata.keyboards"
-                android:resource="@xml/test_keyboard_addon" />
+                android:resource="@xml/test_keyboard_addon_plugin" />
+            <meta-data
+                android:name="com.menny.android.anysoftkeyboard.keyboards"
+                android:resource="@xml/test_keyboard_addon_menny" />
+
+            <intent-filter>
+                <action android:name="wtf.uhoh.newsoftkeyboard.DICTIONARY" />
+            </intent-filter>
+            <meta-data
+                android:name="wtf.uhoh.newsoftkeyboard.dictionaries"
+                android:resource="@xml/test_dictionary_addon_new" />
+
+            <intent-filter>
+                <action android:name="com.anysoftkeyboard.plugin.DICTIONARY" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.menny.android.anysoftkeyboard.DICTIONARY" />
+            </intent-filter>
+            <meta-data
+                android:name="com.anysoftkeyboard.plugindata.dictionaries"
+                android:resource="@xml/test_dictionary_addon_plugin" />
+            <meta-data
+                android:name="com.menny.android.anysoftkeyboard.dictionaries"
+                android:resource="@xml/test_dictionary_addon_menny" />
+
+            <!-- Themes -->
+            <intent-filter>
+                <action android:name="wtf.uhoh.newsoftkeyboard.KEYBOARD_THEME" />
+            </intent-filter>
+            <meta-data
+                android:name="wtf.uhoh.newsoftkeyboard.plugindata.keyboardtheme"
+                android:resource="@xml/test_keyboard_theme_addon_new" />
+
+            <intent-filter>
+                <action android:name="com.anysoftkeyboard.plugin.KEYBOARD_THEME" />
+            </intent-filter>
+            <meta-data
+                android:name="com.anysoftkeyboard.plugindata.keyboardtheme"
+                android:resource="@xml/test_keyboard_theme_addon_plugin" />
+
+            <!-- Quick-text -->
+            <intent-filter>
+                <action android:name="wtf.uhoh.newsoftkeyboard.QUICK_TEXT_KEY" />
+            </intent-filter>
+            <meta-data
+                android:name="wtf.uhoh.newsoftkeyboard.plugindata.quicktextkeys"
+                android:resource="@xml/test_quick_text_addon_new" />
+
+            <intent-filter>
+                <action android:name="com.anysoftkeyboard.plugin.QUICK_TEXT_KEY" />
+            </intent-filter>
+            <meta-data
+                android:name="com.anysoftkeyboard.plugindata.quicktextkeys"
+                android:resource="@xml/test_quick_text_addon_plugin" />
         </receiver>
     </application>
 </manifest>

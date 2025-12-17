@@ -18,8 +18,8 @@
     <!-- <color name="overlay_demo_app_twitter_secondary_text">#ffcccccc</color> -->
 
 
-    <style name="Ask.Text.OverlayDemoApp"
-           parent="Ask.Text.Normal">
+    <style name="Nsk.Text.OverlayDemoApp"
+           parent="Nsk.Text.Normal">
         <item name="android:layout_margin">4dp</item>
         <item name="android:padding">8dp</item>
         <item name="android:layout_weight">1</item>
@@ -28,31 +28,43 @@
         <item name="android:layout_width">0px</item>
     </style>
 
-    <style name="Ask.Text.OverlayDemoApp.WhatsApp"
-           parent="Ask.Text.OverlayDemoApp">
+    <style name="Nsk.Text.OverlayDemoApp.WhatsApp"
+           parent="Nsk.Text.OverlayDemoApp">
         <item name="android:background">@drawable/overlay_demo_app_whatsapp</item>
         <item name="android:textColor">@color/overlay_demo_app_whatsapp_primary_text</item>
         <item name="android:text">WhatsApp</item>
     </style>
 
-    <style name="Ask.Text.OverlayDemoApp.GMail"
-           parent="Ask.Text.OverlayDemoApp">
+    <style name="Nsk.Text.OverlayDemoApp.GMail"
+           parent="Nsk.Text.OverlayDemoApp">
         <item name="android:background">@drawable/overlay_demo_app_gmail</item>
         <item name="android:textColor">@color/overlay_demo_app_gmail_primary_text</item>
         <item name="android:text">Gmail</item>
     </style>
 
-    <style name="Ask.Text.OverlayDemoApp.Phone"
-           parent="Ask.Text.OverlayDemoApp">
+    <style name="Nsk.Text.OverlayDemoApp.Phone"
+           parent="Nsk.Text.OverlayDemoApp">
         <item name="android:background">@drawable/overlay_demo_app_phone</item>
         <item name="android:textColor">@color/overlay_demo_app_phone_primary_text</item>
         <item name="android:text">Phone</item>
     </style>
 
-    <style name="Ask.Text.OverlayDemoApp.Twitter"
-           parent="Ask.Text.OverlayDemoApp">
+    <style name="Nsk.Text.OverlayDemoApp.Twitter"
+           parent="Nsk.Text.OverlayDemoApp">
         <item name="android:background">@drawable/overlay_demo_app_twitter</item>
         <item name="android:textColor">@color/overlay_demo_app_twitter_primary_text</item>
         <item name="android:text">Twitter</item>
     </style>
+
+    <!-- Legacy (ASK) wrappers kept for compatibility. -->
+    <style name="Ask.Text.OverlayDemoApp"
+           parent="Nsk.Text.OverlayDemoApp"/>
+    <style name="Ask.Text.OverlayDemoApp.WhatsApp"
+           parent="Nsk.Text.OverlayDemoApp.WhatsApp"/>
+    <style name="Ask.Text.OverlayDemoApp.GMail"
+           parent="Nsk.Text.OverlayDemoApp.GMail"/>
+    <style name="Ask.Text.OverlayDemoApp.Phone"
+           parent="Nsk.Text.OverlayDemoApp.Phone"/>
+    <style name="Ask.Text.OverlayDemoApp.Twitter"
+           parent="Nsk.Text.OverlayDemoApp.Twitter"/>
 </resources>

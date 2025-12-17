@@ -42,7 +42,7 @@ import java.util.Map;
 public class ExternalDictionaryFactory extends AddOnsFactory<DictionaryAddOnAndBuilder> {
 
   private static final String PREFS_KEY_POSTFIX_OVERRIDE_DICTIONARY = "_override_dictionary";
-  private static final String TAG = "ASKExtDictFactory";
+  private static final String TAG = "NSKExtDictFactory";
   private static final String XML_LANGUAGE_ATTRIBUTE = "locale";
   private static final String XML_ASSETS_ATTRIBUTE = "dictionaryAssertName";
   private static final String XML_RESOURCE_ATTRIBUTE = "dictionaryResourceId";
@@ -67,7 +67,10 @@ public class ExternalDictionaryFactory extends AddOnsFactory<DictionaryAddOnAndB
         true,
         BuildConfig.TESTING_BUILD,
         new ReceiverSpec(
-            PluginActions.ACTION_DICTIONARY_ASK, PluginActions.METADATA_DICTIONARIES_ASK));
+            PluginActions.ACTION_DICTIONARY_ASK, PluginActions.METADATA_DICTIONARIES_ASK),
+        new ReceiverSpec(
+            PluginActions.ACTION_DICTIONARY_ASK_MENNY,
+            PluginActions.METADATA_DICTIONARIES_ASK_MENNY));
   }
 
   public static String getDictionaryOverrideKey(AnyKeyboard currentKeyboard) {

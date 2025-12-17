@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.ime;
 
 import android.view.inputmethod.InputConnection;
-import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.Keyboard;
 
 /** Simulates character-by-character typing for injected text (used by onTyping). */

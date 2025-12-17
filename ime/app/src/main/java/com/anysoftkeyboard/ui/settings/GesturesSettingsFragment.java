@@ -40,7 +40,7 @@ public class GesturesSettingsFragment extends PreferenceFragmentCompat {
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     addPreferencesFromResource(R.xml.prefs_gestures_prefs);
     mGeneralDialogController =
-        new GeneralDialogController(getActivity(), R.style.Theme_AskAlertDialog, this::setupDialog);
+        new GeneralDialogController(getActivity(), R.style.Theme_NskAlertDialog, this::setupDialog);
   }
 
   private void setupDialog(

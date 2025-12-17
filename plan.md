@@ -8,6 +8,10 @@
 
 ## Branding
 - Product flavors (`nsk`, `askCompat`) already exist; add flavor-specific names/icons/resources if we keep both.
+- Entry points:
+  - `nsk` uses `wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService` and `wtf.uhoh.newsoftkeyboard.NewSoftKeyboardApplication` in its manifest overlay.
+  - `askCompat` keeps the legacy `com.menny.android.anysoftkeyboard.SoftKeyboard` + `com.menny.android.anysoftkeyboard.AnyApplication` for maximum compatibility.
+  - Release test helper tasks enable the IME via `IME_SERVICE_CLASS` (defaults to `wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService`).
 
 ## Monolith Follow-ups
 - Continue splitting large classes (see `docs/monolith-inventory.md` for LOC/top targets): remaining `AnySoftKeyboard`/`AnySoftKeyboardSuggestions` (more `InputConnection` routing moved to `InputConnectionRouter`; gesture typing and UI handler now use it), `AnyKeyboardViewBase`/`PointerTracker` (PointerTrackerRegistry + TouchDispatcher + KeyPressTimingHandler + PointerConfigLoader own touch/timing state; keep peeling rendering/input apart), `Dictionary`/`BTreeDictionary`, settings fragments into view/data helpers. Keep behavior identical; add light tests.

@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
-import com.anysoftkeyboard.keyboards.views.PreviewPopupPresenter;
 
 /** Thin wrapper around preview presenter to keep AnyKeyboardViewBase slimmer. */
 final class KeyPreviewInteractor {

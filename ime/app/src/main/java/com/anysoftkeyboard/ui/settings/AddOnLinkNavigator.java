@@ -110,7 +110,7 @@ final class AddOnLinkNavigator {
     try {
       Navigation.findNavController(host.requireView()).navigate(navTarget);
     } catch (Exception e) {
-      Logger.w("AddOnLinkNavigator", "Failed to navigate to ASK settings: " + destination, e);
+      Logger.w("AddOnLinkNavigator", "Failed to navigate to settings: " + destination, e);
       Toast.makeText(
               host.requireContext(), R.string.prefs_providers_operation_failed, Toast.LENGTH_SHORT)
           .show();

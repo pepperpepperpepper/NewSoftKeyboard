@@ -15,14 +15,14 @@ public class VersionChangeLogs {
             1,
             13,
             "",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/95"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/95"),
             "Work in progress for 1.13."));
     log.add(
         new VersionChangeLog(
             1,
             12,
             "",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/94"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/94"),
             "Support for Android 15 (API 35).",
             "Improved clipboard support.",
             "Several fixes to the settings app navigation.",
@@ -38,7 +38,7 @@ public class VersionChangeLogs {
             1,
             11,
             "r1",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/93"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/93"),
             "Minimum Android version is 4.0.3 (ICS, API level 15).",
             "Basic support for OS field auto-fill.",
             "Better vibration control for newer OS versions.",
@@ -52,7 +52,7 @@ public class VersionChangeLogs {
             1,
             10,
             "r4",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/92"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/92"),
             "Keep safe! #covid19 \uD83D\uDE37",
             "Updated emoji to version 13.1 - Android 8.1+",
             "So, you just copied some text? Let me suggest pasting it.",
@@ -66,7 +66,7 @@ public class VersionChangeLogs {
             1,
             10,
             "r3",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/91"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/91"),
             "Colorized nav-bar on supported devices.",
             "Gesture-Typing fixes and improvements.",
             "Various fixes around theme setting.",
@@ -78,7 +78,7 @@ public class VersionChangeLogs {
             1,
             10,
             "r2",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/90"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/90"),
             "Support for image/gif insertion. This is an option in the Emoji popup.",
             "Update Emojis to v12.0.",
             "Improvements for Gesture-Typing. Thanks to Philipp Fischbeck.",
@@ -90,7 +90,7 @@ public class VersionChangeLogs {
             1,
             10,
             "r1",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/89"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/89"),
             "Keyboard colors will adapt to used app. Enable this in Themes settings.",
             "Night Mode - if enabled, keyboard and app will use dark theme.",
             "Power Saving mode tweaks.",
@@ -104,7 +104,7 @@ public class VersionChangeLogs {
             1,
             9,
             "r6",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/88"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/88"),
             "➿ Gesture-Typing is here! As BETA. You'll need to enable it in Settings if"
                 + " you want to try it out.",
             "Honoring IME_FLAG_NO_PERSONALIZED_LEARNING and PASSWORD as Incognito - if"
@@ -116,7 +116,7 @@ public class VersionChangeLogs {
             1,
             9,
             "r5",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/87"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/87"),
             "Power-Saving mode improvements - you can pick which features to include in"
                 + " Power-Saving.",
             "Also, we allow switching to dark, simple theme in Power-Saving mode. But"
@@ -131,7 +131,7 @@ public class VersionChangeLogs {
             1,
             9,
             "r4",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/86"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/86"),
             "Power-Saving mode - when battery is low, we will not do animations or"
                 + " dictionary look ups.",
             "A few UI/UX changes.",
@@ -143,7 +143,7 @@ public class VersionChangeLogs {
             1,
             9,
             "r3",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/85"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/85"),
             "You can now set the default skin-tone for emojis #expressYourself. Android" + " 7+.",
             "Clipboard is now synced with outside changes. Long-press PASTE for list.",
             "Various bug fixes.",
@@ -154,7 +154,7 @@ public class VersionChangeLogs {
             1,
             9,
             "r2",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/84"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/84"),
             "Completely rewrote backup and restore mechanism. Now you can backup words,"
                 + " abbr, next-word and all-app settings.",
             "New Kaomoji emoji group.",
@@ -168,7 +168,7 @@ public class VersionChangeLogs {
             1,
             9,
             "r1",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/83"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/83"),
             "New Settings UI bottom navigation.",
             "Also, new Setup Wizard UI.",
             "And many new settings all around.",
@@ -181,7 +181,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r12",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/82"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/82"),
             "Fine-tuned icon to match Android's design.",
             "Updated emojis for Android-O.",
             "Long-pressing SHIFT will lock. Or unlock..",
@@ -194,7 +194,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r11",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/81"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/81"),
             "All languages are equal! You can now reorder keyboards. In keyboard"
                 + " selection page - long press an enabled keyboard and drag it.",
             "Now you can use multiple dictionaries on a given keyboard. Long-press"
@@ -209,9 +209,9 @@ public class VersionChangeLogs {
             1,
             8,
             "r10",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r10"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r10"),
             "Some bug fixes.",
-            "In tweaks: You can now force a locale inside AnySoftKeyboard.",
+            "In tweaks: You can now force a locale inside NewSoftKeyboard.",
             "YABTU",
             "Localization update: BE, DE, CA, EU, FR."));
 
@@ -220,7 +220,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r9",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r9"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r9"),
             "New Initial Setup Wizard. For clearer activation.",
             "Seems like we did not include words with accents in suggestions. We do" + " now!",
             "Better Emoji-Search experience. Type a : to start searching.",
@@ -232,7 +232,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r8",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r8"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r8"),
             "Much improved English dictionary.",
             "More than a few bug fixes.",
             "Localization update: FR, SL, BE and all new EU (Basque)."));
@@ -242,7 +242,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r7.1",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestone/78"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestone/78"),
             "Bringing back missing Alphabet keys from some layouts.",
             "Getting the hint if you say no to contacts."));
 
@@ -251,7 +251,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r7",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r7"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r7"),
             "Language key will now show only if you actually have more than one layout"
                 + " enabled.",
             "For Android 7.1 - you now have Launcher shortcuts.",
@@ -267,7 +267,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r6",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r6"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r6"),
             "Quite a few bug fixes, some related to shift states.",
             "Some English dictionary tuning.",
             "Now showing Greek alphabets in long-press popups.",
@@ -278,7 +278,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r5",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r5"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r5"),
             "Many bug fixes",
             "Now you can \uD83D\uDD0D for emojis! Just start your search with a colon,"
                 + " like this - ':magnifying",
@@ -297,7 +297,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r4",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r4"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r4"),
             "Updated Emoticon emoji listing - presentation is everything \uD83D\uDE0E!",
             "Also, flags \uD83C\uDFC1 were also added to the emoji list.",
             "Merged People and Gestures, and added a bunch \uD83D\uDE4B.",
@@ -309,7 +309,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r3",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r3"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r3"),
             "New Dark-Gray theme.",
             "Bugs squashing, including an under-the-radar RTL issue.",
             "Localization update: SL."));
@@ -319,7 +319,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r2",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r2"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r2"),
             "Better keyboard preview when selecting addons (themes, language, etc.).",
             "Now tells you about clipboard copy.",
             "A few bug fixes here and there.",
@@ -331,7 +331,7 @@ public class VersionChangeLogs {
             1,
             8,
             "r1",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8-r1"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8-r1"),
             "Improvements on the keyboard preview. Now demos typing.",
             "Several crash and bug fixes.",
             "Localization update: FR (100%)."));
@@ -341,7 +341,7 @@ public class VersionChangeLogs {
             1,
             8,
             "",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.8"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.8"),
             "New keyboard preview - now showing EXACTLY how the keyboard should look.",
             "New launcher icon - first iteration. Ya ya, it's not perfect.",
             "Spellchecker fix, and other bug fixes.",
@@ -353,7 +353,7 @@ public class VersionChangeLogs {
             1,
             7,
             "r7",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.7-r7"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.7-r7"),
             "A few more bug fixes.",
             "Localization: FR, NL, NO, RU, UK."));
 
@@ -362,7 +362,7 @@ public class VersionChangeLogs {
             1,
             7,
             "r6",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.7-r6"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.7-r6"),
             "Status-bar icon fix. It is not a setting.",
             "Swipe from Backspace will delete a whole word for'ya.",
             "Update to the English auto-complete dictionary. Way overdue.."));
@@ -372,7 +372,7 @@ public class VersionChangeLogs {
             1,
             7,
             "r5",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.7-r5"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.7-r5"),
             "Punctuation and space swapping magic.",
             "Bug fixes all around."));
 
@@ -381,7 +381,7 @@ public class VersionChangeLogs {
             1,
             7,
             "r4",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.7-r4"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.7-r4"),
             "Fix for a weird bug with manually picked words, plus some crashers."));
 
     log.add(
@@ -389,7 +389,7 @@ public class VersionChangeLogs {
             1,
             7,
             "r3",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.7-r3"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.7-r3"),
             "Even more bugs crashed!",
             "The utility box (swipe up from space-bar) now has SELECT-ALL key. Pro tip:"
                 + " long-press that key and then use left&right arrows to precisely"
@@ -403,7 +403,7 @@ public class VersionChangeLogs {
             1,
             7,
             "r2",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.7-r2"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.7-r2"),
             "Bugs, bugs, bugs. Squashed.",
             "A better way to load auto-complete dictionary.",
             "Localization update: FR, LT, IT, KU."));
@@ -413,7 +413,7 @@ public class VersionChangeLogs {
             1,
             7,
             "r1",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.7-r1"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.7-r1"),
             "Marshmallow Permissions support - now we can annoy you with even more" + " dialogs!",
             "Bugs squashing all around. Thanks for the reports!",
             "Localization update: DE, SL, FR, PT. And awesome note: German, Slovenian"
@@ -425,7 +425,7 @@ public class VersionChangeLogs {
             1,
             7,
             "",
-            Uri.parse("https://github.com/AnySoftKeyboard/AnySoftKeyboard/milestones/1.7"),
+            Uri.parse("https://github.com/pepperpepperpepper/NewSoftKeyboard/milestones/1.7"),
             "Printing-out speed ups. This is very helpful to you 150-words-a-minute" + " wizards.",
             "Physical-Keyboard interaction enhancements. This has Wife-Seal-of-Approval"
                 + " stamp on it.",

@@ -58,7 +58,7 @@ public class KeyboardExtensionFactory extends AddOnsFactory.SingleAddOnsFactory<
     super(
         context,
         DirectBootAwareSharedPreferences.create(context),
-        "ASK_EKF",
+        "NSK_EKF",
         PluginActions.ACTION_EXTENSION_KEYBOARD_NEW,
         PluginActions.METADATA_EXTENSION_KEYBOARD_NEW,
         "ExtensionKeyboards",

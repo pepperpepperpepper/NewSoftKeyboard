@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.AskApp" parent="Theme.AskAppBase">
+    <style name="Theme.NskApp" parent="Theme.NskAppBase">
         <item name="android:windowLayoutInDisplayCutoutMode">always</item>
         <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
     </style>

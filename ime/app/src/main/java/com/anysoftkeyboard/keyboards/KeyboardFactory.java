@@ -29,7 +29,7 @@ import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<KeyboardAddOnAndBuilder> {
-  private static final String TAG = "ASKKeyboardFactory";
+  private static final String TAG = "NSKKeyboardFactory";
 
   private static final String XML_LAYOUT_RES_ID_ATTRIBUTE = "layoutResId";
   private static final String XML_LANDSCAPE_LAYOUT_RES_ID_ATTRIBUTE = "landscapeResId";
@@ -58,7 +58,9 @@ public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<Keyboar
         true,
         BuildConfig.TESTING_BUILD,
         new ReceiverSpec(
-            PluginActions.ACTION_KEYBOARD_ASK, PluginActions.METADATA_KEYBOARDS_ASK));
+            PluginActions.ACTION_KEYBOARD_ASK, PluginActions.METADATA_KEYBOARDS_ASK),
+        new ReceiverSpec(
+            PluginActions.ACTION_KEYBOARD_ASK_MENNY, PluginActions.METADATA_KEYBOARDS_ASK_MENNY));
   }
 
   @Override

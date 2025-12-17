@@ -31,7 +31,7 @@ import java.util.Arrays;
 /** Implements a static, compacted, binary dictionary of standard words. */
 public class BinaryDictionary extends Dictionary {
   private static final int MAX_WORD_LENGTH = 20;
-  private static final String TAG = "ASK_BinaryDictionary";
+  private static final String TAG = "NSK_BinaryDictionary";
   private static final int MAX_ALTERNATIVES = 16;
   private static final int MAX_WORDS = 16;
   private static final boolean ENABLE_MISSED_CHARACTERS = true;

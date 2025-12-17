@@ -3,7 +3,6 @@ package com.anysoftkeyboard.keyboards.views;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
 import com.anysoftkeyboard.keyboards.views.preview.PreviewPopupTheme;

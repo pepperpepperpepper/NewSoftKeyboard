@@ -47,7 +47,7 @@ import java.util.Set;
 public class RxSharedPrefs {
   static final String CONFIGURATION_VERSION = "configurationVersion";
   static final int CONFIGURATION_LEVEL_VALUE = 14;
-  private static final String TAG = "ASK_Cfg";
+  private static final String TAG = "NSK_Cfg";
 
   @VisibleForTesting static final String AUTO_APPLY_PREFS_FILENAME = "STARTUP_PREFS_APPLY.xml";
   private static final String AUTO_APPLIED_PREFS_FILENAME_TEMPLATE_DATETIME_PLACEMENT =

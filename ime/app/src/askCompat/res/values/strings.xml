@@ -2,4 +2,5 @@
 <resources>
     <!-- Flavor-specific branding for the compatibility build -->
     <string name="ime_name">NewSoftKeyboard (Compat)</string>
+    <string name="app_shortcut_target_package" translatable="false">wtf.uhoh.newsoftkeyboard.askcompat</string>
 </resources>

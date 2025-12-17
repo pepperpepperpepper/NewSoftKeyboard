@@ -22,13 +22,13 @@ public final class WindowAnimationSetter {
 
               if (fancyAnimation != 0) {
                 com.anysoftkeyboard.base.utils.Logger.i(
-                    "ASK-WINDOW-ANIM",
+                    "NSK-WINDOW-ANIM",
                     "Found Animation_InputMethodFancy as %d, using it",
                     fancyAnimation);
                 window.setWindowAnimations(fancyAnimation);
               } else {
                 com.anysoftkeyboard.base.utils.Logger.w(
-                    "ASK-WINDOW-ANIM",
+                    "NSK-WINDOW-ANIM",
                     "Could not find Animation_InputMethodFancy, using default animation");
                 window.setWindowAnimations(android.R.style.Animation_InputMethod);
               }

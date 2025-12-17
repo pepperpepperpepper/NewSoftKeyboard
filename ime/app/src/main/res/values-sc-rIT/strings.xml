@@ -656,9 +656,9 @@
     <string name="aosp_dark_theme_description">Tema de sa tastiera cun colores iscuros ispiradu a s\'AOSP</string>
     <string name="aosp_light_theme_name">Tema craru AOSP</string>
     <string name="aosp_light_theme_description">Tema de sa tastiera cun colores craros ispiradu a s\'AOSP</string>
-    <string name="app_share_title">Salude dae New Soft Keyboard</string>
-    <string name="app_share_menu_title">Cumpartzi New Soft Keyboard impreende</string>
-    <string name="app_share_text">Lassa chi ti cunsìgies s\'aplicatzione pro sa tastiera de Android a còdighe abertu, chi rispetat sa ridervadesa tua, de badas, chi si podet personalizare meda e in prus limbas: New Soft Keyboard.\nIscàrriga·la dae:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Salude dae NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Cumpartzi NewSoftKeyboard impreende</string>
+    <string name="app_share_text">Lassa chi ti cunsìgies s\'aplicatzione pro sa tastiera de Android a còdighe abertu, chi rispetat sa ridervadesa tua, de badas, chi si podet personalizare meda e in prus limbas: NewSoftKeyboard.\nIscàrriga·la dae:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">incarca·mi pro una sorpresa</string>
     <string name="delete_all_clipboard_entries">Punta de billete bòida</string>
     <string name="tip_swipe_from_backspace_to_clear">Impòsitu: podes trisinare cara a manca dae sa back-space pro iscantzellare sa paràula!</string>

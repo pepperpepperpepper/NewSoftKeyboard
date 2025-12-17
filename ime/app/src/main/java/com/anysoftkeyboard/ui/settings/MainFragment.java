@@ -24,7 +24,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AlertDialog;
@@ -99,7 +98,7 @@ public class MainFragment extends Fragment {
 
     mDialogController =
         new GeneralDialogController(
-            getActivity(), R.style.Theme_AskAlertDialog, this::onSetupDialogRequired);
+            getActivity(), R.style.Theme_NskAlertDialog, this::onSetupDialogRequired);
     final ViewGroup latestChangeLogCard = view.findViewById(R.id.latest_change_log_card);
     final View latestChangeLogCardContent =
         ChangeLogFragment.LatestChangeLogViewFactory.createLatestChangeLogView(

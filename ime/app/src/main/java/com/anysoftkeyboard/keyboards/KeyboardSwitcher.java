@@ -22,7 +22,6 @@ import static com.anysoftkeyboard.keyboards.Keyboard.KEYBOARD_ROW_MODE_NORMAL;
 import static com.anysoftkeyboard.keyboards.Keyboard.KEYBOARD_ROW_MODE_URL;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.text.TextUtils;
 import android.view.inputmethod.EditorInfo;
 import androidx.annotation.IntDef;
@@ -84,7 +83,7 @@ public class KeyboardSwitcher {
   static final int SYMBOLS_KEYBOARD_PHONE_INDEX = 4;
   static final int SYMBOLS_KEYBOARD_DATETIME_INDEX = 5;
   static final int SYMBOLS_KEYBOARDS_COUNT = 6;
-  private static final String TAG = "ASKKbdSwitcher";
+  private static final String TAG = "NSKKbdSwitcher";
   @NonNull private final KeyboardSwitchedListener mKeyboardSwitchedListener;
   @NonNull private final Context mContext;
   private final KeyboardFactoryProvider keyboardFactoryProvider = new KeyboardFactoryProvider();

@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import android.content.res.TypedArray;
-import com.anysoftkeyboard.keyboards.views.KeyboardDimensFromTheme;
 import com.menny.android.anysoftkeyboard.R;
 
 /** Applies key dimension attributes from theme into KeyboardDimens. */

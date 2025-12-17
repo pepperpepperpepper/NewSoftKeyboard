@@ -75,7 +75,7 @@ public class GestureTrailTheme {
         else if (localAttrId == R.attr.gestureTrailEndStrokeSize)
           endStrokeSize = a.getDimension(remoteIndex, endStrokeSize);
       } catch (Exception e) {
-        Logger.w("ASK_GESTURE_THEME", "Got an exception while reading gesture theme data", e);
+        Logger.w("NSK_GESTURE_THEME", "Got an exception while reading gesture theme data", e);
       }
     }
     a.recycle();

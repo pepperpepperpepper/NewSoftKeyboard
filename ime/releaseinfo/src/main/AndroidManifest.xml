@@ -5,6 +5,6 @@
             android:label="@string/testers_version"
             android:launchMode="singleTop"
             android:noHistory="true"
-            android:theme="@style/Theme.AskApp.Popup" />
+            android:theme="@style/Theme.NskApp.Popup" />
     </application>
 </manifest>

@@ -9,7 +9,7 @@ import com.menny.android.anysoftkeyboard.BuildConfig;
 /** Applies theme icon attributes to the {@link KeyIconResolver}. */
 final class KeyIconAttributeSetter {
 
-  private static final String TAG = "ASKKbdViewBase";
+  private static final String TAG = "NSKKbdViewBase";
 
   private KeyIconAttributeSetter() {}
 

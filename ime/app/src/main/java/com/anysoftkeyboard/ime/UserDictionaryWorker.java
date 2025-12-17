@@ -38,7 +38,7 @@ final class UserDictionaryWorker {
                     candidateView.notifyAboutWordAdded(word);
                   }
                 },
-                e -> Logger.w("ASKUDict", e, "Failed to add word '%s' to user-dictionary!", word)));
+                e -> Logger.w("NSKUDict", e, "Failed to add word '%s' to user-dictionary!", word)));
   }
 
   void removeFromUserDictionary(String wordToRemove, Consumer<Disposable> disposableAdder) {
@@ -60,7 +60,7 @@ final class UserDictionaryWorker {
                 },
                 e ->
                     Logger.w(
-                        "ASKUDict",
+                        "NSKUDict",
                         e,
                         "Failed to remove word '%s' from user-dictionary!",
                         wordToRemove)));

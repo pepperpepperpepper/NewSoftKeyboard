@@ -10,7 +10,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        style="@style/Ask.Text.Title"
+        style="@style/Nsk.Text.Title"
         android:layout_centerHorizontal="true"
         android:ellipsize="marquee"
         android:layout_below="@id/item_keyboard_view_background"
@@ -20,7 +20,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        style="@style/Ask.Text.SubTitle"
+        style="@style/Nsk.Text.SubTitle"
         android:layout_centerHorizontal="true"
         android:layout_below="@id/title"
         android:id="@+id/subtitle"/>

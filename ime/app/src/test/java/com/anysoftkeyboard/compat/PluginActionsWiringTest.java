@@ -40,6 +40,11 @@ public class PluginActionsWiringTest {
         specs.contains(
             new ReceiverSpec(
                 PluginActions.ACTION_KEYBOARD_ASK, PluginActions.METADATA_KEYBOARDS_ASK)));
+    assertTrue(
+        specs.contains(
+            new ReceiverSpec(
+                PluginActions.ACTION_KEYBOARD_ASK_MENNY,
+                PluginActions.METADATA_KEYBOARDS_ASK_MENNY)));
   }
 
   @Test
@@ -55,6 +60,11 @@ public class PluginActionsWiringTest {
         specs.contains(
             new ReceiverSpec(
                 PluginActions.ACTION_DICTIONARY_ASK, PluginActions.METADATA_DICTIONARIES_ASK)));
+    assertTrue(
+        specs.contains(
+            new ReceiverSpec(
+                PluginActions.ACTION_DICTIONARY_ASK_MENNY,
+                PluginActions.METADATA_DICTIONARIES_ASK_MENNY)));
   }
 
   @Test

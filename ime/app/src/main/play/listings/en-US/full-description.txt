@@ -1,5 +1,5 @@
 NewSoftKeyboard is an open-source, on-screen keyboard with multi-language support and an emphasis on privacy.
-This fork stays compatible with AnySoftKeyboard add-ons (keyboards, dictionaries, themes) while carrying its own branding.
+Compatible with existing AnySoftKeyboard add-ons (keyboards, dictionaries, themes) while carrying its own branding.
 
 To activate: Launch <i>'NewSoftKeyboard Settings'</i> and follow the instructions.
 

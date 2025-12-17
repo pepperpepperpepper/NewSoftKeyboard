@@ -4,7 +4,6 @@ import android.view.Gravity;
 import com.anysoftkeyboard.prefs.RxSharedPrefs;
 import com.anysoftkeyboard.rx.GenericOnError;
 import com.anysoftkeyboard.keyboards.KeyboardSupport;
-import com.anysoftkeyboard.theme.KeyboardTheme;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;

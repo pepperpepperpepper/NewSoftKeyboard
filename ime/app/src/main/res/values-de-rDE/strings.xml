@@ -646,9 +646,9 @@
     <string name="aosp_dark_theme_description">AOSP-inspiriertes dunkles Tastaturfarbendesign</string>
     <string name="aosp_light_theme_name">Helles AOSP Design</string>
     <string name="aosp_light_theme_description">AOSP-inspiriertes helles Tastaturfarbendesign</string>
-    <string name="app_share_title">Hallo von New Soft Keyboard</string>
-    <string name="app_share_menu_title">Teile New Soft Keyboard mittels</string>
-    <string name="app_share_text">Lass mich dir die Open-Source, Privatsphäre-fokussierte, kostenlose, höchst anpassbare, mehrsprachige Android Tastatur-App New Soft Keyboard empfehlen.\nHole sie dir vom:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Hallo von NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Teile NewSoftKeyboard mittels</string>
+    <string name="app_share_text">Lass mich dir die Open-Source, Privatsphäre-fokussierte, kostenlose, höchst anpassbare, mehrsprachige Android Tastatur-App NewSoftKeyboard empfehlen.\nHole sie dir von:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">für eine Überraschung klicken</string>
     <string name="delete_all_clipboard_entries">Leere Zwischenablage</string>
     <string name="tip_swipe_from_backspace_to_clear">Tipp: Sie können mit der Rücktaste nach links wischen, um das Wort zu löschen!</string>

@@ -52,7 +52,7 @@ import java.util.List;
 import java.util.Locale;
 
 public abstract class AnyKeyboard extends Keyboard {
-  private static final String TAG = "ASKAnyKeyboard";
+  private static final String TAG = "NSKAnyKeyboard";
   private static final int STICKY_KEY_OFF = 0;
   private static final int STICKY_KEY_ON = 1;
   private static final int STICKY_KEY_LOCKED = 2;

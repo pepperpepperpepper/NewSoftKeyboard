@@ -5,7 +5,6 @@ import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
-import com.anysoftkeyboard.keyboards.views.preview.PreviewPopupTheme;
 
 /** Encapsulates special-key label/icon lookup to keep AnyKeyboardViewBase slimmer. */
 final class SpecialKeyLookup {

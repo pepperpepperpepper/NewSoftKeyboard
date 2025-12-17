@@ -17,48 +17,31 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Align;
-import android.graphics.Paint.FontMetrics;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.NinePatchDrawable;
-import android.os.SystemClock;
-import android.text.SpannableString;
-import android.text.TextUtils;
-import android.text.style.UnderlineSpan;
 import android.util.AttributeSet;
-import android.util.SparseArray;
-import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
-import android.widget.Toast;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
-import androidx.collection.ArrayMap;
-import androidx.core.graphics.drawable.DrawableCompat;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.DefaultAddOn;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.CompatUtils;
-import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.ime.InputViewBinder;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
-import com.anysoftkeyboard.keyboards.GenericKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.KeyboardDimens;
-import com.anysoftkeyboard.keyboards.KeyboardSupport;
 import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
-import com.anysoftkeyboard.keyboards.views.preview.NullKeyPreviewsManager;
 import com.anysoftkeyboard.keyboards.views.preview.PreviewPopupTheme;
 import com.anysoftkeyboard.overlay.OverlayData;
 import com.anysoftkeyboard.overlay.OverlayDataImpl;
@@ -66,23 +49,18 @@ import com.anysoftkeyboard.overlay.ThemeOverlayCombiner;
 import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
 import com.anysoftkeyboard.prefs.AnimationsLevel;
 import com.anysoftkeyboard.prefs.RxSharedPrefs;
-import com.anysoftkeyboard.rx.GenericOnError;
 import com.anysoftkeyboard.theme.KeyboardTheme;
-import com.anysoftkeyboard.utils.EmojiUtils;
 import com.menny.android.anysoftkeyboard.AnyApplication;
-import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.subjects.Subject;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 @SuppressWarnings("this-escape")
 public class AnyKeyboardViewBase extends View implements InputViewBinder, PointerTracker.UIProxy {
   // Miscellaneous constants
   public static final int NOT_A_KEY = -1;
-  static final String TAG = "ASKKbdViewBase";
+  static final String TAG = "NSKKbdViewBase";
   private static final long TWO_FINGERS_LINGER_TIME = 30;
   protected final DefaultAddOn mDefaultAddOn;
 
@@ -895,6 +873,10 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   void applyHintTextSizeFactor(final String overrideValue) {
     keyTextStyleState.setHintTextSizeMultiplier(
         ThemeOverrideApplier.hintSizeMultiplier(overrideValue));
+  }
+
+  /* package */ float getHintTextSizeMultiplier() {
+    return keyTextStyleState.hintTextSizeMultiplier();
   }
 
   public void setKeyPreviewController(@NonNull KeyPreviewsController controller) {

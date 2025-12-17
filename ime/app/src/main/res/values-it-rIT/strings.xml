@@ -644,9 +644,9 @@
     <string name="aosp_dark_theme_description">Tema tastiera con colori scuri ispirato ad AOSP</string>
     <string name="aosp_light_theme_name">Tema chiaro AOSP</string>
     <string name="aosp_light_theme_description">Tema tastiera con colori chiari ispirato ad AOSP</string>
-    <string name="app_share_title">Saluti da New Soft Keyboard</string>
-    <string name="app_share_menu_title">Condividi l\'utilizzo di New Soft Keyboard</string>
-    <string name="app_share_text">Permettetemi di consigliare la tastiera Android open-source, riservata, gratuita, altamente personalizzabile e multilingua New Soft Keyboard.\nScaricala da:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard</string>
+    <string name="app_share_title">Saluti da NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Condividi l\'utilizzo di NewSoftKeyboard</string>
+    <string name="app_share_text">Permettetemi di consigliare la tastiera Android open-source, riservata, gratuita, altamente personalizzabile e multilingua NewSoftKeyboard.\nScaricala da:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">cliccami per una sorpresa</string>
     <string name="delete_all_clipboard_entries">Svuota appunti</string>
     <string name="tip_swipe_from_backspace_to_clear">Suggerimento: puoi swipe-left dal backspace per cancellare la parola!</string>

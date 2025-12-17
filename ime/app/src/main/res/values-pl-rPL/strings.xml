@@ -752,9 +752,9 @@ Zmiana
     <string name="aosp_dark_theme_description">AOSP - Motyw klawiatury inspirowany ciemnymi kolorami</string>
     <string name="aosp_light_theme_name">AOSP jasny motyw</string>
     <string name="aosp_light_theme_description">AOSP - Motyw klawiatury inspirowany jasnymi kolorami</string>
-    <string name="app_share_title">Pozdrowienia od New Soft Keyboard</string>
-    <string name="app_share_menu_title">Udostępnij New Soft Keyboard używając</string>
-    <string name="app_share_text">Pozwól mi polecić aplikację o otwartym kodzie, skoncentrowaną na prywatności, bezpłatną, wysoce konfigurowalną, wielojęzyczną klawiaturę dla systemu Android: New Soft Keyboard.\nPobierz ją z:\nSklep Google Play: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Pozdrowienia od NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Udostępnij NewSoftKeyboard używając</string>
+    <string name="app_share_text">Pozwól mi polecić aplikację o otwartym kodzie, skoncentrowaną na prywatności, bezpłatną, wysoce konfigurowalną, wielojęzyczną klawiaturę dla systemu Android: NewSoftKeyboard.\nPobierz ją z:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">Dotknij, to niespodzianka</string>
     <string name="delete_all_clipboard_entries">Wyczyść schowek</string>
     <string name="tip_swipe_from_backspace_to_clear">Wskazówka: możesz przesunąć palcem w lewo od backspace, aby wyczyścić słowo!</string>

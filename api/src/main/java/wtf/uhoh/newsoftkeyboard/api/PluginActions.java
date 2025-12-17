@@ -43,11 +43,21 @@ public final class PluginActions {
   public static final String METADATA_KEYBOARD_THEME_ASK =
       "com.anysoftkeyboard.plugindata.keyboardtheme";
 
+  // Older legacy namespace used by many published language packs (e.g., F-Droid)
+  public static final String ACTION_KEYBOARD_ASK_MENNY = "com.menny.android.anysoftkeyboard.KEYBOARD";
+  public static final String ACTION_DICTIONARY_ASK_MENNY = "com.menny.android.anysoftkeyboard.DICTIONARY";
+  public static final String METADATA_KEYBOARDS_ASK_MENNY = "com.menny.android.anysoftkeyboard.keyboards";
+  public static final String METADATA_DICTIONARIES_ASK_MENNY = "com.menny.android.anysoftkeyboard.dictionaries";
+
   public static boolean isKeyboardAction(String action) {
-    return ACTION_KEYBOARD_NEW.equals(action) || ACTION_KEYBOARD_ASK.equals(action);
+    return ACTION_KEYBOARD_NEW.equals(action)
+        || ACTION_KEYBOARD_ASK.equals(action)
+        || ACTION_KEYBOARD_ASK_MENNY.equals(action);
   }
 
   public static boolean isDictionaryAction(String action) {
-    return ACTION_DICTIONARY_NEW.equals(action) || ACTION_DICTIONARY_ASK.equals(action);
+    return ACTION_DICTIONARY_NEW.equals(action)
+        || ACTION_DICTIONARY_ASK.equals(action)
+        || ACTION_DICTIONARY_ASK_MENNY.equals(action);
   }
 }

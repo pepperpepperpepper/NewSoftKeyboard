@@ -38,7 +38,7 @@ import java.util.Locale;
  */
 @SuppressWarnings("this-escape")
 public class SuggestImpl implements Suggest {
-  private static final String TAG = "ASKSuggest";
+  private static final String TAG = "NSKSuggest";
   private static final int POSSIBLE_FIX_THRESHOLD_FREQUENCY = Integer.MAX_VALUE / 2;
   private static final int ABBREVIATION_TEXT_FREQUENCY = Integer.MAX_VALUE - 10;
   private static final int AUTO_TEXT_FREQUENCY = Integer.MAX_VALUE - 20;

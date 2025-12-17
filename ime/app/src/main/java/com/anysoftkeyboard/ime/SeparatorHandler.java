@@ -6,7 +6,6 @@ import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.dictionaries.Suggest;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
-import com.anysoftkeyboard.ime.SpaceTimeTracker;
 import java.util.List;
 
 /** Handles separator key logic (space/punctuation/newline) and next-word suggestions. */

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Keyboards>
+    <Keyboard
+        id="test_keyboard_menny"
+        nameResId="@string/test_keyboard_name_menny"
+        layoutResId="@xml/test_keyboard_layout"
+        iconResId="@android:drawable/ic_menu_edit"
+        description="@string/test_keyboard_description_menny"
+        index="1" />
+</Keyboards>

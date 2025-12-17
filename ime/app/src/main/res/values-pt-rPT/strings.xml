@@ -706,9 +706,9 @@ no ecrã (pode ser necessário reiniciar)    </string>
     <string name="aosp_dark_theme_description">Tema do teclado de cores escuras inspirado no Android Open Source Project</string>
     <string name="aosp_light_theme_name">Tema claro AOSP</string>
     <string name="aosp_light_theme_description">Tema do teclado de cores claras inspirado no Android Open Source Project</string>
-    <string name="app_share_title">Bem-vindo(a) ao New Soft Keyboard</string>
-    <string name="app_share_menu_title">Partilhar o New Soft Keyboard utilizando</string>
-    <string name="app_share_text">Recomendo a aplicação de teclado Android New Soft Keyboard de código-fonte aberto, com foco na privacidade, gratuitamente, personalizável e com vários idiomas.\nPode-se descarregar em:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard\nF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Bem-vindo(a) ao NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Partilhar o NewSoftKeyboard utilizando</string>
+    <string name="app_share_text">Recomendo a aplicação de teclado Android NewSoftKeyboard de código-fonte aberto, com foco na privacidade, gratuitamente, personalizável e com vários idiomas.\nPode-se descarregar em:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">clique em mim para ter uma surpresa</string>
     <string name="delete_all_clipboard_entries">Limpar área de transferência</string>
     <string name="tip_swipe_from_backspace_to_clear">Dica: pode-se deslizar com o dedo para a esquerda a partir do botão de apagar para limpar a palavra!</string>

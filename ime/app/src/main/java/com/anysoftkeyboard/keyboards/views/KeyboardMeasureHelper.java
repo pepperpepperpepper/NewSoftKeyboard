@@ -2,7 +2,6 @@ package com.anysoftkeyboard.keyboards.views;
 
 import static android.view.View.MeasureSpec.getSize;
 
-import android.view.View.MeasureSpec;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 
 /**

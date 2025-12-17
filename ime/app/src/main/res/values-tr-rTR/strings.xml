@@ -651,9 +651,9 @@ bulamıyorum. Bu özellik cihazınızda çalışamaz, üzgünüz.</string>
     <string name="aosp_dark_theme_description">AOSP-Esinlenilmiş koyu renkler klavye teması</string>
     <string name="aosp_light_theme_name">AOSP Hafif tema</string>
     <string name="aosp_light_theme_description">AOSP-Esinlenilmiş açık renkler klavye teması</string>
-    <string name="app_share_title">New Soft Keyboard\'dan merhaba</string>
-    <string name="app_share_menu_title">New Soft Keyboard kullanmayı paylaş</string>
-    <string name="app_share_text">Açık-kaynak, mahremiyet-odaklı, özgür, fazlasıyla kişiselleştirilebilen, çok-dilli Android klavye uygulaması New Soft Keyboard\'u tavsiye ediyorum.\nEdinebileceğiniz adresler:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboard&amp;hl=tr\nF-Droid: https://f-droid.org/tr/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">NewSoftKeyboard\'dan merhaba</string>
+    <string name="app_share_menu_title">NewSoftKeyboard kullanmayı paylaş</string>
+    <string name="app_share_text">Açık-kaynak, mahremiyet-odaklı, özgür, fazlasıyla kişiselleştirilebilen, çok-dilli Android klavye uygulaması NewSoftKeyboard\'u tavsiye ediyorum.\nEdinebileceğiniz adresler:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">Bir şaşırtma için bana tıklayın</string>
     <string name="delete_all_clipboard_entries">Panoyu temizle</string>
     <string name="tip_swipe_from_backspace_to_clear">İpucu: Boşluk tuşundan sola doğru kaydırarak kelimeyi silebilirsiniz!</string>

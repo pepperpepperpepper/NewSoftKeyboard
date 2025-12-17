@@ -2,12 +2,11 @@ package com.anysoftkeyboard.ime;
 
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.base.utils.Logger;
-import com.anysoftkeyboard.ime.InputViewBinder;
 
 /** Handles updating the voice key UI state on the current input view. */
 public final class VoiceKeyUiUpdater {
 
-  private static final String TAG = "ASK-VoiceKey";
+  private static final String TAG = "NSK-VoiceKey";
 
   public void applyState(@Nullable InputViewBinder inputView, boolean active, boolean locked) {
     if (inputView == null) return;

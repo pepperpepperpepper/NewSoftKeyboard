@@ -660,9 +660,9 @@ woordenlijst
     <string name="aosp_dark_theme_description">AOSP-geïnspireerd toetsenbordthema met donkere kleuren</string>
     <string name="aosp_light_theme_name">AOSP-lichtthema</string>
     <string name="aosp_light_theme_description">AOSP-geïnspireerd toetsenbordthema met lichte kleuren</string>
-    <string name="app_share_title">Hello van New Soft Keyboard</string>
-    <string name="app_share_menu_title">New Soft Keyboard delen met</string>
-    <string name="app_share_text">Laat me de open-source, privacygerichte, gratis, zeer aanpasbare, meertalige Android-toetsenbord-app New Soft Keyboard aanbevelen.\nHaal het van:\nPlay Store: https://play.google.com/store/apps/details?id=com.menny.android.anysoftkeyboardnF-Droid: https://f-droid.org/en/packages/com.menny.android.anysoftkeyboard/</string>
+    <string name="app_share_title">Hello van NewSoftKeyboard</string>
+    <string name="app_share_menu_title">NewSoftKeyboard delen met</string>
+    <string name="app_share_text">Laat me de open-source, privacygerichte, gratis, zeer aanpasbare, meertalige Android-toetsenbord-app NewSoftKeyboard aanbevelen.\nHaal het van:\nWebsite: https://fdroid.uh-oh.wtf\nSource: https://github.com/pepperpepperpepper/NewSoftKeyboard</string>
     <string name="click_me_for_easter_egg_info">klik op mij voor een verrassing</string>
     <string name="delete_all_clipboard_entries">Leeg klembord</string>
     <string name="tip_swipe_from_backspace_to_clear">Tip: je kunt vanaf de achtergrond naar links vegen om het woord te verwijderen!</string>

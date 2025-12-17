@@ -40,7 +40,7 @@ public class DeviceSpecificV15 implements DeviceSpecific {
 
   @Override
   public GestureDetector createGestureDetector(Context appContext, AskOnGestureListener listener) {
-    return new AskV8GestureDetector(appContext, listener);
+    return new NskV8GestureDetector(appContext, listener);
   }
 
   @Override

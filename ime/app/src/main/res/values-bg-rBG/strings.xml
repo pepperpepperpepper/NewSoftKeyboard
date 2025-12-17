@@ -634,7 +634,7 @@
     <string name="media_insertion_pending_message">Щракнете върху текстовото поле, за да вмъкнете изображение</string>
     <string name="aosp_dark_theme_name">AOSP Тъмна тема</string>
     <string name="aosp_light_theme_name">AOSP Светла тема</string>
-    <string name="app_share_title">Привет от New Soft Keyboard</string>
-    <string name="app_share_menu_title">Споделете New Soft Keyboard с помощта на</string>
+    <string name="app_share_title">Привет от NewSoftKeyboard</string>
+    <string name="app_share_menu_title">Споделете NewSoftKeyboard с помощта на</string>
     <string name="click_me_for_easter_egg_info">щракни ме за изненада</string>
 </resources>

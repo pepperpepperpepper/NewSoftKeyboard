@@ -50,7 +50,7 @@ public abstract class ChewbaccaUncaughtExceptionHandler implements UncaughtExcep
 
   @VisibleForTesting static final String HEADER_BREAK_LINE = "----- FULL REPORT -----";
 
-  private static final String TAG = "ASKChewbacca";
+  private static final String TAG = "NSKChewbacca";
   @NonNull protected final Context mApp;
   @Nullable private final UncaughtExceptionHandler mOsDefaultHandler;
   @NonNull private final NotificationDriver mNotificationDriver;

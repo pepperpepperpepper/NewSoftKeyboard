@@ -19,6 +19,12 @@ import org.robolectric.Shadows
 
 @RunWith(AnySoftKeyboardRobolectricTestRunner::class)
 class MainActivityBaseTest {
+  private companion object {
+    private const val NSK_PACKAGE_NAME = "wtf.uhoh.newsoftkeyboard"
+    private const val NSK_ASK_COMPAT_PACKAGE_NAME = "wtf.uhoh.newsoftkeyboard.askcompat"
+    private const val ASK_LEGACY_PACKAGE_NAME = "com.menny.android.anysoftkeyboard"
+  }
+
   @Test
   fun testActivityShowsAddOnDetails() {
     ActivityScenario.launch(TestMainActivity::class.java).use { scenario ->
@@ -60,7 +66,11 @@ class MainActivityBaseTest {
   @Test
   fun testInstallAnySoftKeyboardFlow() {
     Shadows.shadowOf(RuntimeEnvironment.getApplication().packageManager)
-        .deletePackage(ASK_PACKAGE_NAME)
+        .deletePackage(NSK_PACKAGE_NAME)
+    Shadows.shadowOf(RuntimeEnvironment.getApplication().packageManager)
+        .deletePackage(NSK_ASK_COMPAT_PACKAGE_NAME)
+    Shadows.shadowOf(RuntimeEnvironment.getApplication().packageManager)
+        .deletePackage(ASK_LEGACY_PACKAGE_NAME)
 
     ActivityScenario.launch(TestMainActivity::class.java).use { scenario ->
       scenario.moveToState(Lifecycle.State.RESUMED).onActivity { activity ->
@@ -82,7 +92,7 @@ class MainActivityBaseTest {
               Assert.assertEquals("market", searchIntent.data!!.scheme)
               Assert.assertEquals("search", searchIntent.data!!.authority)
               Assert.assertEquals(
-                  "q=com.menny.android.anysoftkeyboard",
+                  "q=wtf.uhoh.newsoftkeyboard",
                   searchIntent.data!!.query,
               )
             }
@@ -96,16 +106,17 @@ class MainActivityBaseTest {
   fun testAlreadyInstalledAnySoftKeyboardFlow() {
     Shadows.shadowOf(RuntimeEnvironment.getApplication().packageManager).let { pm ->
       PackageInfo().let { info ->
-        info.packageName = ASK_PACKAGE_NAME
+        info.packageName = ASK_LEGACY_PACKAGE_NAME
         pm.installPackage(info)
       }
       pm.addServiceIfNotPresent(
           ComponentName(
-              ASK_PACKAGE_NAME,
-              "${ASK_PACKAGE_NAME}.SoftKeyboard",
+              ASK_LEGACY_PACKAGE_NAME,
+              "${ASK_LEGACY_PACKAGE_NAME}.SoftKeyboard",
           ),
       )
-      ComponentName(ASK_PACKAGE_NAME, "${ASK_PACKAGE_NAME}.MainActivity").let { info ->
+      ComponentName(ASK_LEGACY_PACKAGE_NAME, "${ASK_LEGACY_PACKAGE_NAME}.MainActivity").let { info
+        ->
         pm.addActivityIfNotPresent(info)
         pm.addIntentFilterForActivity(
             info,
@@ -133,7 +144,7 @@ class MainActivityBaseTest {
           Shadows.shadowOf(this).onClickListener.onClick(this)
           Shadows.shadowOf(RuntimeEnvironment.getApplication()).let { app ->
             app.nextStartedActivity.let { launcherIntent ->
-              Assert.assertEquals(ASK_PACKAGE_NAME, launcherIntent.`package`)
+              Assert.assertEquals(ASK_LEGACY_PACKAGE_NAME, launcherIntent.`package`)
             }
           }
         }

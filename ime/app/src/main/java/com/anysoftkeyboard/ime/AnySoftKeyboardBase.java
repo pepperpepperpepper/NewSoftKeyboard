@@ -52,7 +52,7 @@ import java.util.List;
 
 public abstract class AnySoftKeyboardBase extends InputMethodService
     implements OnKeyboardActionListener {
-  protected static final String TAG = "ASK";
+  protected static final String TAG = "NSK";
 
   protected static final long ONE_FRAME_DELAY = 1000L / 60L;
 

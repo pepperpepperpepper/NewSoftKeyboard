@@ -34,13 +34,13 @@ public class DeveloperUtils {
   public static final String NEW_LINE = Logger.NEW_LINE;
 
   private static final String KEY_SDCARD_TRACING_ENABLED = "KEY_SDCARD_TRACING_ENABLED";
-  private static final String ASK_TRACE_FILENAME = "AnySoftKeyboard_tracing.trace";
-  private static final String ASK_MEM_DUMP_FILENAME = "ask_mem_dump.hprof";
+  private static final String NSK_TRACE_FILENAME = "NewSoftKeyboard_tracing.trace";
+  private static final String NSK_MEM_DUMP_FILENAME = "newsoftkeyboard_mem_dump.hprof";
   private static boolean msTracingStarted = false;
 
   public static File createMemoryDump() throws IOException, UnsupportedOperationException {
     File extFolder = Environment.getExternalStorageDirectory();
-    File target = new File(extFolder, ASK_MEM_DUMP_FILENAME);
+    File target = new File(extFolder, NSK_MEM_DUMP_FILENAME);
     if (target.exists() && !target.delete()) throw new IOException("Failed to delete " + target);
     Debug.dumpHprofData(target.getAbsolutePath());
     return target;
@@ -79,7 +79,7 @@ public class DeveloperUtils {
 
   public static File getTraceFile() {
     File extFolder = Environment.getExternalStorageDirectory();
-    return new File(extFolder, ASK_TRACE_FILENAME);
+    return new File(extFolder, NSK_TRACE_FILENAME);
   }
 
   @NonNull
