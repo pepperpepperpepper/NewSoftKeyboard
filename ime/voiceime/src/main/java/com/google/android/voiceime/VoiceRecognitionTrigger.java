@@ -174,7 +174,6 @@ public class VoiceRecognitionTrigger {
   }
 
   public boolean isInstalled() {
-    android.util.Log.d("LongPressDebug", "VoiceRecognitionTrigger.isInstalled() called, returning: " + (mTrigger != null));
     return mTrigger != null;
   }
 

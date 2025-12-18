@@ -84,13 +84,12 @@ public abstract class AnySoftKeyboardKeyboardSwitchedListener extends AnySoftKey
     // Preserve voice key state when switching keyboards
     boolean wasVoiceActive = false;
     boolean wasVoiceLocked = false;
-    
+
     if (mCurrentAlphabetKeyboard != null) {
       wasVoiceActive = mCurrentAlphabetKeyboard.isVoiceActive();
       wasVoiceLocked = mCurrentAlphabetKeyboard.isVoiceLocked();
-      android.util.Log.d("VoiceKeyDebug", "onAlphabetKeyboardSet: Preserving voice state - active: " + wasVoiceActive + ", locked: " + wasVoiceLocked);
     }
-    
+
     mCurrentAlphabetKeyboard = keyboard;
 
     mInAlphabetKeyboardMode = true;
@@ -105,10 +104,9 @@ public abstract class AnySoftKeyboardKeyboardSwitchedListener extends AnySoftKey
             keyboard.getKeyboardId());
 
     setKeyboardForView(keyboard);
-    
+
     // Restore voice key state to the new keyboard
     if (wasVoiceActive) {
-      android.util.Log.d("VoiceKeyDebug", "onAlphabetKeyboardSet: Restoring voice state to new keyboard - active: " + wasVoiceActive + ", locked: " + wasVoiceLocked);
       mCurrentAlphabetKeyboard.setVoice(wasVoiceActive, wasVoiceLocked);
     }
   }
@@ -214,6 +212,10 @@ public abstract class AnySoftKeyboardKeyboardSwitchedListener extends AnySoftKey
     View view = super.onCreateInputView();
 
     mKeyboardSwitcher.setInputView(getInputView());
+    final AnyKeyboard currentKeyboard = getCurrentKeyboard();
+    if (currentKeyboard != null) {
+      setKeyboardForView(currentKeyboard);
+    }
 
     return view;
   }

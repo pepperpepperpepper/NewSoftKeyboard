@@ -23,9 +23,9 @@ import androidx.test.uiautomator.Until;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.debug.ImeStateTracker;
 import com.anysoftkeyboard.debug.TestInputActivity;
-import com.anysoftkeyboard.keyboardextensions.KeyboardExtension;
 import com.anysoftkeyboard.keyboardextensions.KeyboardExtensionFactory;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
+import com.anysoftkeyboard.prefs.RxSharedPrefs;
 import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
@@ -39,6 +39,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
 import org.junit.After;
@@ -57,9 +58,12 @@ public class StickyModifiersInstrumentedTest {
   private static final String DEV_TOP_ROW_ID = "d69990b2-7ad1-4bba-9f27-ec4be715af44";
   private static final String NO_BOTTOM_ROW_ID = "a0a6f41c-0b9c-4ed1-9b6e-6c0c4ecf1b92";
 
+  private static final String ROZOFF_MAIN_ID = "mike-rozoff-main-001";
+
   private UiDevice mDevice;
   private ActivityScenario<TestInputActivity> mScenario;
   private final AtomicReference<int[]> mLastFunctionDrawableState = new AtomicReference<>(null);
+  private String mImeComponent;
 
   @Before
   public void setUp() throws Exception {
@@ -71,18 +75,17 @@ public class StickyModifiersInstrumentedTest {
         .putBoolean("ext_kbd_enabled_2_" + DEV_TOP_ROW_ID, true)
         .putString("settings_key_ext_kbd_bottom_row_key", NO_BOTTOM_ROW_ID)
         .putBoolean("ext_kbd_enabled_1_" + NO_BOTTOM_ROW_ID, true)
+        .putBoolean("auto_caps", false)
         .putBoolean("settings_key_allow_layouts_to_provide_generic_rows", false)
         .apply();
 
     KeyboardExtensionFactory topFactory = AnyApplication.getTopRowFactory(appContext);
-    for (KeyboardExtension extension : topFactory.getAllAddOns()) {
-      topFactory.setAddOnEnabled(extension.getId(), DEV_TOP_ROW_ID.equals(extension.getId()));
-    }
+    topFactory.setAddOnEnabled(DEV_TOP_ROW_ID, true);
     KeyboardExtensionFactory bottomFactory = AnyApplication.getBottomRowFactory(appContext);
-    for (KeyboardExtension extension : bottomFactory.getAllAddOns()) {
-      bottomFactory.setAddOnEnabled(
-          extension.getId(), NO_BOTTOM_ROW_ID.equals(extension.getId()));
-    }
+    bottomFactory.setAddOnEnabled(NO_BOTTOM_ROW_ID, true);
+
+    configureMikeRozoffAsDefault(appContext);
+
     ImeStateTracker.resetVisibility();
     mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
     wakeAndUnlockDevice();
@@ -100,9 +103,27 @@ public class StickyModifiersInstrumentedTest {
     SystemClock.sleep(400);
     focusTestEditor();
     waitForKeyboardSurface();
-    assertKeyboardActive(
-        AnyApplication.getKeyboardFactory(appContext).getEnabledAddOn().getId(),
-        KEYBOARD_READY_TIMEOUT_MS);
+    assertKeyboardActive(ROZOFF_MAIN_ID, KEYBOARD_READY_TIMEOUT_MS);
+  }
+
+  private void configureMikeRozoffAsDefault(Context appContext) {
+    SharedPreferences prefs = DirectBootAwareSharedPreferences.create(appContext);
+    prefs.edit().putBoolean("keyboard_" + ROZOFF_MAIN_ID, true).apply();
+
+    RxSharedPrefs rxPrefs = AnyApplication.prefs(appContext);
+    rxPrefs
+        .getStringSet(R.string.settings_key_persistent_layout_per_package_id_mapping)
+        .set(Collections.singleton(appContext.getPackageName() + " -> " + ROZOFF_MAIN_ID));
+
+    com.anysoftkeyboard.keyboards.KeyboardFactory factory = AnyApplication.getKeyboardFactory(appContext);
+    if (factory.getAddOnById(ROZOFF_MAIN_ID) == null) {
+      fail(
+          "Mike Rozoff add-on is not installed. Install the standalone APK from "
+              + "the mike-rozoff-anysoftkeyboard-addon project before running this test.");
+    }
+    for (com.anysoftkeyboard.keyboards.KeyboardAddOnAndBuilder addOn : factory.getAllAddOns()) {
+      factory.setAddOnEnabled(addOn.getId(), ROZOFF_MAIN_ID.equals(addOn.getId()));
+    }
   }
 
   @After
@@ -147,6 +168,16 @@ public class StickyModifiersInstrumentedTest {
         "Shift or Ctrl inactive after combined press");
 
     clickKey('b');
+    android.util.Log.d(
+        "StickyModifiersTest",
+        "After typing 'b': shift="
+            + isShiftActive()
+            + " ctrl="
+            + isControlActive()
+            + " alt="
+            + isAltActive()
+            + " fn="
+            + isFunctionActive());
     waitForCondition(
         () -> !isShiftActive() && !isControlActive(),
         true,
@@ -181,8 +212,8 @@ public class StickyModifiersInstrumentedTest {
               (ctrlInactiveColor & 0xFFFFFF)));
     }
 
-    setControlState(true);
-    SystemClock.sleep(250);
+    clickKey(KeyCodes.CTRL);
+    waitForCondition(this::isControlActive, true, "Ctrl did not activate");
     int ctrlActiveColor = captureKeyLabelColor(KeyCodes.CTRL, null);
     if (ctrlActiveColor != expectedBlue) {
       fail(
@@ -191,8 +222,8 @@ public class StickyModifiersInstrumentedTest {
               "0x29ABE2", (ctrlActiveColor & 0xFFFFFF)));
     }
 
-    setControlState(false);
-    SystemClock.sleep(250);
+    clickKey(KeyCodes.CTRL);
+    waitForCondition(this::isControlActive, false, "Ctrl did not clear");
     ctrlInactiveColor = captureKeyLabelColor(KeyCodes.CTRL, null);
     if (ctrlInactiveColor != Color.WHITE) {
       fail(
@@ -209,8 +240,8 @@ public class StickyModifiersInstrumentedTest {
               (altInactiveColor & 0xFFFFFF)));
     }
 
-    setAltState(true);
-    SystemClock.sleep(250);
+    clickKey(KeyCodes.ALT_MODIFIER);
+    waitForCondition(this::isAltActive, true, "Alt did not activate");
     int altActiveColor = captureKeyLabelColor(KeyCodes.ALT_MODIFIER, null);
     if (altActiveColor != expectedBlue) {
       fail(
@@ -219,8 +250,8 @@ public class StickyModifiersInstrumentedTest {
               "0x29ABE2", (altActiveColor & 0xFFFFFF)));
     }
 
-    setAltState(false);
-    SystemClock.sleep(250);
+    clickKey(KeyCodes.ALT_MODIFIER);
+    waitForCondition(this::isAltActive, false, "Alt did not clear");
     altInactiveColor = captureKeyLabelColor(KeyCodes.ALT_MODIFIER, null);
     if (altInactiveColor != Color.WHITE) {
       fail(
@@ -237,8 +268,8 @@ public class StickyModifiersInstrumentedTest {
               (inactiveDigitColor & 0xFFFFFF)));
     }
 
-    setFunctionState(true);
-    SystemClock.sleep(250);
+    clickKey(KeyCodes.FUNCTION);
+    waitForCondition(this::isFunctionActive, true, "Function did not activate");
 
     int activeColor = captureFunctionKeyLabelColor();
     if (activeColor != expectedBlue) {
@@ -259,8 +290,9 @@ public class StickyModifiersInstrumentedTest {
               (activeDigitColor & 0xFFFFFF)));
     }
 
-    setFunctionState(false);
-    SystemClock.sleep(250);
+    SystemClock.sleep(800);
+    clickKey(KeyCodes.FUNCTION);
+    waitForCondition(this::isFunctionActive, false, "Function did not clear");
 
     int inactiveColor = captureFunctionKeyLabelColor();
     if (inactiveColor != Color.WHITE) {
@@ -400,6 +432,8 @@ public class StickyModifiersInstrumentedTest {
                       + java.util.Arrays.toString(state)
                       + " functionActive="
                       + anyKeyboard.isFunctionActive()
+                      + " controlActive="
+                      + anyKeyboard.isControlActive()
                       + " keyCode="
                       + primaryCode);
               ColorStateList colors =
@@ -560,10 +594,47 @@ public class StickyModifiersInstrumentedTest {
   }
 
   private void ensureImeEnabledAndSelected() throws IOException {
-    executeShellCommand("ime enable --user 0 wtf.uhoh.newsoftkeyboard/.SoftKeyboard");
-    executeShellCommand("ime set --user 0 wtf.uhoh.newsoftkeyboard/.SoftKeyboard");
+    if (mImeComponent == null) {
+      mImeComponent = resolveImeComponentId();
+    }
+    executeShellCommand("ime enable --user 0 " + mImeComponent);
+    executeShellCommand("ime set --user 0 " + mImeComponent);
+    String enabled =
+        executeShellCommand("settings get secure enabled_input_methods").trim();
+    String expanded = expandComponent(mImeComponent);
+    if (!enabled.contains(mImeComponent) && !enabled.contains(expanded)) {
+      String prefix = enabled.isEmpty() ? "" : enabled + ":";
+      executeShellCommand(
+          "settings put secure enabled_input_methods \"" + prefix + mImeComponent + "\"");
+    }
     executeShellCommand("settings put secure show_ime_with_hard_keyboard 1");
     SystemClock.sleep(500);
+  }
+
+  private String resolveImeComponentId() throws IOException {
+    String list = executeShellCommand("ime list -a -s").trim();
+    String[] lines = list.split("\\n");
+    String fallback = null;
+    for (String line : lines) {
+      String trimmed = line.trim();
+      if (!trimmed.startsWith("wtf.uhoh.newsoftkeyboard/")) continue;
+      if (trimmed.endsWith(".NewSoftKeyboardService")
+          || trimmed.endsWith("/.NewSoftKeyboardService")) {
+        return trimmed;
+      }
+      if (fallback == null) fallback = trimmed;
+    }
+    if (fallback != null) return fallback;
+    throw new IOException("Unable to find NewSoftKeyboard IME in: " + list);
+  }
+
+  private static String expandComponent(String component) {
+    String[] parts = component.split("/", 2);
+    if (parts.length != 2) return component;
+    String pkg = parts[0];
+    String svc = parts[1];
+    if (!svc.startsWith(".")) return component;
+    return pkg + "/" + pkg + svc;
   }
 
   private void waitForKeyboardSurface() {

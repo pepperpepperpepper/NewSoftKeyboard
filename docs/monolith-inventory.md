@@ -4,20 +4,20 @@ Generated from `wc -l` over *.java and *.kt. Focus on files ≥500 LOC.
 
 | LOC | File |
 | ---:| --- |
-| 1456 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
-| 1296 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
 | 1292 | ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/BaseCharactersTable.java* |
-|  982 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
-|  978 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
-| 1047 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java |
-| 1037 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/Keyboard.java |
+| 1028 | ime/app/src/main/java/com/anysoftkeyboard/AnySoftKeyboard.java |
+|  968 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardSuggestions.java |
+|  964 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/Keyboard.java |
+|  964 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/AnyKeyboardViewBase.java |
 |  849 | ime/app/src/main/java/com/anysoftkeyboard/dictionaries/SuggestionsProvider.java |
 |  809 | ime/addons/src/main/java/com/anysoftkeyboard/addons/AddOnsFactory.java |
-|  632 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/CandidateView.java |
-|  604 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/PointerTracker.java |
-|  590 | ime/app/src/main/java/com/anysoftkeyboard/dictionaries/SuggestImpl.java |
-|  562 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardWithGestureTyping.java |
-|  539 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/ExternalAnyKeyboard.java |
+|  729 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java |
+|  557 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/AnyKeyboard.java |
+|  633 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/CandidateView.java |
+|  603 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/PointerTracker.java |
+|  591 | ime/app/src/main/java/com/anysoftkeyboard/dictionaries/SuggestImpl.java |
+|  567 | ime/app/src/main/java/com/anysoftkeyboard/ime/AnySoftKeyboardWithGestureTyping.java |
+|  540 | ime/app/src/main/java/com/anysoftkeyboard/keyboards/ExternalAnyKeyboard.java |
 
 Tests ≥500 LOC (for awareness): AnySoftKeyboard* tests, SuggestionProviderTest, gesture/clipboard/quicktext suites, etc. Full list available via `python tools/loc_monolith.py` (not yet added).
 
@@ -43,6 +43,15 @@ Keep behavior identical; add light tests per extraction. Preserve ASK compatibil
 
 Recent extractions:
 - InputConnectionRouter (AnySoftKeyboard*).
+- AnySoftKeyboardPrefsBinder extracted from AnySoftKeyboard (prefs wiring).
+- FunctionKeyHandler extracted from AnySoftKeyboard (function-key switch dispatch).
+- AnySoftKeyboardFunctionKeyHost implements the host outside AnySoftKeyboard.
+- AnySoftKeyboardDeleteActionHost implements DeleteActionHelper.Host outside AnySoftKeyboard.
+- ModifierKeyStateHandler extracted from AnySoftKeyboard (modifier key press/release state).
+- InputViewLifecycleHandler extracted from AnySoftKeyboard (start/finish input view glue).
+- AnySoftKeyboardLanguageSelectionDialogHost/AnySoftKeyboardDictionaryOverrideDialogHost/AnySoftKeyboardOptionsMenuHost
+  move dialog/launcher host wiring out of AnySoftKeyboard.
+- KeyMembersInitializer extracted from AnyKeyboard (post-load key scanning: functional flags, label defaults, domain/quick-text tweaks, language-key removal).
 - TouchDispatcher (AnyKeyboardViewBase/PointerTracker) now owns touch gating flags.
 - PointerTrackerRegistry (PointerTracker ownership/iteration).
 - KeyPressTimingHandler extracted from AnyKeyboardViewBase.
@@ -71,6 +80,8 @@ Recent extractions:
 - ClipDecider wraps clip-region bookkeeping for single-key vs full redraw decisions.
 - DrawInvalidationHelper wraps dirty-rect/invalidate tracking; RenderSetup bundles per-frame draw inputs.
 - DrawInputsBuilder builds DrawInputs snapshot outside AnyKeyboardViewBase on draw.
+- GenericRowKeyboard moved out of AnyKeyboard to a dedicated file.
+- EnterKey/VoiceKey moved out of AnyKeyboard to dedicated files.
 - ThemeAttributeLoaderRunner centralizes theme attribute application for theme/overlay changes.
 - KeyboardMeasureHelper encapsulates onMeasure sizing math outside AnyKeyboardViewBase.
 - ImeActionTypeResolver resolves IME action type bitmask outside AnyKeyboardViewBase.
@@ -168,3 +179,12 @@ Recent extractions:
 - WordRevertHandler encapsulates revert-last-word logic from AnySoftKeyboardSuggestions.
 - FrenchSpacePunctuationDecider computes FR space/punctuation behavior.
 - DictionaryLoadState tracks per-keyboard dictionary load state.
+- BackWordDeleter extracted from AnySoftKeyboard (back-word delete algorithm).
+- TerminalKeySender extracted from AnySoftKeyboard (tab/escape terminal emulation handling).
+- KeyboardXmlLoader extracted from Keyboard (XML parsing loop).
+- KeyboardModifierStates extracted from AnyKeyboard (sticky modifier state).
+- AnyKeyboardKey extracted from AnyKeyboard (moved AnyKeyboard.AnyKey implementation).
+- GenericRowApplier extracted from AnyKeyboard (top/bottom generic row insertion).
+- KeyEdgeFlagsFixer extracted from AnyKeyboard.
+- RedundantLanguageKeyRemover extracted from AnyKeyboard.
+- KeyboardRowModeResolver extracted from KeyboardSwitcher.

@@ -447,6 +447,8 @@ public abstract class AnySoftKeyboardWithGestureTyping extends AnySoftKeyboardWi
           }
           ic.setComposingText(currentComposedWord.getTypedWord(), 1);
 
+          consumeOneShotShiftAfterGestureCommit(isShifted, isCapsLocked);
+
           mJustPerformedGesture = true;
           mClearLastGestureAction.setVisibility(View.VISIBLE);
 
@@ -466,6 +468,27 @@ public abstract class AnySoftKeyboardWithGestureTyping extends AnySoftKeyboardWi
       currentGestureDetector.clearGesture();
     }
     return false;
+  }
+
+  private void consumeOneShotShiftAfterGestureCommit(boolean gestureWasShifted, boolean capsLocked) {
+    if (!gestureWasShifted || capsLocked) {
+      return;
+    }
+    if (!mShiftKeyState.isActive() || mShiftKeyState.isLocked()) {
+      return;
+    }
+
+    mShiftKeyState.setActiveState(false);
+    final AnyKeyboard currentKeyboard = getCurrentKeyboard();
+    if (currentKeyboard != null) {
+      currentKeyboard.setShifted(false);
+      currentKeyboard.setShiftLocked(false);
+    }
+    final InputViewBinder inputView = getInputView();
+    if (inputView != null) {
+      inputView.setShifted(false);
+      inputView.setShiftLocked(false);
+    }
   }
 
   @NonNull

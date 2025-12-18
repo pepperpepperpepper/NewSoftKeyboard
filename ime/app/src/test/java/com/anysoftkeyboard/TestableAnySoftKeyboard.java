@@ -335,11 +335,13 @@ public class TestableAnySoftKeyboard extends SoftKeyboard {
   protected KeyboardViewContainerView createInputViewContainer() {
     final KeyboardViewContainerView originalInputContainer = super.createInputViewContainer();
     AnyKeyboardView inputView = (AnyKeyboardView) originalInputContainer.getStandardKeyboardView();
+    final int inputViewId = ((View) inputView).getId();
 
     originalInputContainer.removeAllViews();
     mMockCandidateView = Mockito.mock(CandidateView.class);
     setupMockCandidateView();
     mSpiedKeyboardView = Mockito.spy(inputView);
+    ((View) mSpiedKeyboardView).setId(inputViewId);
 
     originalInputContainer.addView(mMockCandidateView);
     originalInputContainer.addView(mSpiedKeyboardView);

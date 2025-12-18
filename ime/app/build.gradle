@@ -106,11 +106,22 @@ android {
         it.res.srcDirs += 'src/debug/res'
     }
     namespace 'com.menny.android.anysoftkeyboard'
-    // Run instrumentation against the release variant by default.
-    // Allow override via TEST_BUILD_TYPE env var (e.g., 'debug') to simplify local testing.
+    // Default to debug androidTest locally (keeps Genymotion smoke stable).
+    // If signing credentials are available, prefer release androidTest (catches R8/shrinker issues).
+    // Always allow override via TEST_BUILD_TYPE env var (e.g., 'debug'/'release').
     defaultConfig {
         def desiredTestBuildType = System.getenv('TEST_BUILD_TYPE')
-        testBuildType desiredTestBuildType != null && desiredTestBuildType.trim() ? desiredTestBuildType : 'release'
+        if (desiredTestBuildType != null && desiredTestBuildType.trim()) {
+            testBuildType desiredTestBuildType.trim()
+        } else {
+            def hasReleaseSigning = [
+                    System.getenv('FDROID_KEYSTORE_PASS'),
+                    System.getenv('KEY_STORE_FILE_PASSWORD'),
+                    System.getenv('FDROID_KEY_ALIAS_PASS'),
+                    System.getenv('KEY_STORE_FILE_DEFAULT_ALIAS_PASSWORD'),
+            ].any { it != null && it.trim() }
+            testBuildType hasReleaseSigning ? 'release' : 'debug'
+        }
     }
 }
 

@@ -16,6 +16,7 @@ import com.anysoftkeyboard.debug.TestInputActivity;
 import com.anysoftkeyboard.keyboards.views.CandidateViewTestRegistry;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.R;
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.After;
 import org.junit.Before;
@@ -25,7 +26,9 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class NextWordSuggestionsViaHookInstrumentedTest {
   private static final String TAG = "NextWordHook";
+  private static final String APP_PACKAGE = "wtf.uhoh.newsoftkeyboard";
   private ActivityScenario<TestInputActivity> mScenario;
+  private String mImeComponent;
 
   @Before
   public void setUp() {
@@ -37,8 +40,7 @@ public class NextWordSuggestionsViaHookInstrumentedTest {
         .putString(ctx.getString(R.string.settings_key_prediction_engine_mode), "neural")
         .apply();
     // Ensure our IME is enabled and selected
-    execShell("ime enable wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard");
-    execShell("ime set wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard");
+    ensureImeEnabledAndSelected();
 
     mScenario = ActivityScenario.launch(TestInputActivity.class);
     // Seed a neutral prefix so suggestions start flowing
@@ -108,6 +110,47 @@ public class NextWordSuggestionsViaHookInstrumentedTest {
       SystemClock.sleep(200);
     } catch (Exception ignored) {
     }
+  }
+
+  private void ensureImeEnabledAndSelected() {
+    try {
+      mImeComponent = resolveImeComponentId();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    String enableOutput = execShell("ime enable --user 0 " + mImeComponent).trim();
+    Log.d(TAG, "ime enable output: " + enableOutput);
+    if (enableOutput.contains("Unknown") || enableOutput.contains("Error")) {
+      throw new RuntimeException("Failed to enable IME. Output: " + enableOutput);
+    }
+
+    String setOutput = execShell("ime set --user 0 " + mImeComponent).trim();
+    Log.d(TAG, "ime set output: " + setOutput);
+
+    String enabled = execShell("settings get secure enabled_input_methods").trim();
+    if (!enabled.contains(mImeComponent)) {
+      String prefix = enabled.isEmpty() ? "" : enabled + ":";
+      execShell("settings put secure enabled_input_methods \"" + prefix + mImeComponent + "\"");
+    }
+    execShell("settings put secure show_ime_with_hard_keyboard 1");
+    SystemClock.sleep(400);
+  }
+
+  private String resolveImeComponentId() throws IOException {
+    String list = execShell("ime list -a -s").trim();
+    String[] lines = list.split("\\n");
+    String fallback = null;
+    for (String line : lines) {
+      String trimmed = line.trim();
+      if (!trimmed.startsWith(APP_PACKAGE + "/")) continue;
+      if (trimmed.endsWith(".NewSoftKeyboardService") || trimmed.endsWith("/.NewSoftKeyboardService")) {
+        return trimmed;
+      }
+      if (fallback == null) fallback = trimmed;
+    }
+    if (fallback != null) return fallback;
+    throw new IOException("Unable to find NewSoftKeyboard IME in: " + list);
   }
 
   private static String execShell(String cmd) {

@@ -37,12 +37,14 @@ import org.junit.runner.RunWith;
 public class NextWordSuggestionsUiAutomatorTest {
 
   private static final String TAG = "NextWordUiAuto";
+  private static final String APP_PACKAGE = "wtf.uhoh.newsoftkeyboard";
   private static final long READY_TIMEOUT_MS = 10000L;
   private static final long SHORT_WAIT_MS = 400L;
   private static final long SUGGESTIONS_TIMEOUT_MS = 8000L;
 
   private UiDevice mDevice;
   private ActivityScenario<TestInputActivity> mScenario;
+  private String mImeComponent;
 
   @Before
   public void setUp() throws Exception {
@@ -52,6 +54,7 @@ public class NextWordSuggestionsUiAutomatorTest {
 
     // Ensure our IME is enabled and selected as default
     ensureImeEnabledAndSelected();
+    assertImeSelected();
 
     // Ensure mixed-case neural model is installed and selected
     Context context = ApplicationProvider.getApplicationContext();
@@ -364,11 +367,71 @@ public class NextWordSuggestionsUiAutomatorTest {
   }
 
   private void ensureImeEnabledAndSelected() throws IOException {
-    executeShellCommand(
-        "ime enable wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard");
-    executeShellCommand(
-        "ime set wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard");
-    SystemClock.sleep(300);
+    mImeComponent = resolveImeComponentId();
+    String enableOutput = executeShellCommand("ime enable --user 0 " + mImeComponent).trim();
+    Log.d(TAG, "ime enable output: " + enableOutput);
+    if (enableOutput.contains("Unknown") || enableOutput.contains("Error")) {
+      throw new IOException("Failed to enable IME. Output: " + enableOutput);
+    }
+
+    String setOutput = executeShellCommand("ime set --user 0 " + mImeComponent).trim();
+    Log.d(TAG, "ime set output: " + setOutput);
+
+    String enabled = executeShellCommand("settings get secure enabled_input_methods").trim();
+    String expanded = expandComponent(mImeComponent);
+    if (!enabled.contains(mImeComponent) && !enabled.contains(expanded)) {
+      String prefix = enabled.isEmpty() ? "" : enabled + ":";
+      executeShellCommand(
+          "settings put secure enabled_input_methods \"" + prefix + mImeComponent + "\"");
+    }
+    executeShellCommand("settings put secure show_ime_with_hard_keyboard 1");
+    SystemClock.sleep(400);
+  }
+
+  private void assertImeSelected() throws IOException {
+    String current = executeShellCommand("settings get secure default_input_method").trim();
+    String expanded = expandComponent(mImeComponent);
+    if (!(current.equals(mImeComponent) || current.equals(expanded))) {
+      Log.e(TAG, "default_input_method=" + current);
+      String enabled =
+          executeShellCommand("settings get secure enabled_input_methods").trim();
+      Log.e(TAG, "enabled_input_methods=" + enabled);
+      String imeListAll = executeShellCommand("ime list -a -s").trim();
+      Log.e(TAG, "ime list -a -s:\n" + imeListAll);
+      throw new AssertionError(
+          "NewSoftKeyboard IME not selected. Expected: " + mImeComponent + " Current: " + current);
+    }
+  }
+
+  private String resolveImeComponentId() throws IOException {
+    String list = executeShellCommand("ime list -a -s").trim();
+    String[] lines = list.split("\\n");
+    String fallback = null;
+    for (String line : lines) {
+      String trimmed = line.trim();
+      if (!trimmed.startsWith(APP_PACKAGE + "/")) continue;
+      // Prefer the nsk flavor service if present.
+      if (trimmed.endsWith(".NewSoftKeyboardService") || trimmed.endsWith("/.NewSoftKeyboardService")) {
+        return trimmed;
+      }
+      // Otherwise prefer legacy naming.
+      if (trimmed.endsWith(".SoftKeyboard") || trimmed.endsWith("/.SoftKeyboard")) {
+        fallback = trimmed;
+      } else if (fallback == null) {
+        fallback = trimmed;
+      }
+    }
+    if (fallback != null) return fallback;
+    throw new IOException("Unable to find NewSoftKeyboard IME in: " + list);
+  }
+
+  private static String expandComponent(String component) {
+    String[] parts = component.split("/", 2);
+    if (parts.length != 2) return component;
+    String pkg = parts[0];
+    String svc = parts[1];
+    if (!svc.startsWith(".")) return component;
+    return pkg + "/" + pkg + svc;
   }
 
   private String executeShellCommand(String command) throws IOException {

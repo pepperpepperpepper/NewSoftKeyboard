@@ -18,50 +18,29 @@ package com.anysoftkeyboard.keyboards;
 
 import android.content.Context;
 import android.content.res.Resources;
-import android.content.res.TypedArray;
 import android.content.res.XmlResourceParser;
-import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
-import android.util.Xml;
 import android.view.inputmethod.EditorInfo;
 import androidx.annotation.CallSuper;
 import androidx.annotation.DrawableRes;
-import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.BTreeDictionary;
 import com.anysoftkeyboard.ime.AnySoftKeyboardBase;
 import com.anysoftkeyboard.keyboardextensions.KeyboardExtension;
-import com.anysoftkeyboard.keyboards.views.KeyDrawableStateProvider;
-import com.anysoftkeyboard.utils.EmojiUtils;
 import com.anysoftkeyboard.utils.Workarounds;
 import com.menny.android.anysoftkeyboard.AnyApplication;
-import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 public abstract class AnyKeyboard extends Keyboard {
   private static final String TAG = "NSKAnyKeyboard";
-  private static final int STICKY_KEY_OFF = 0;
-  private static final int STICKY_KEY_ON = 1;
-  private static final int STICKY_KEY_LOCKED = 2;
   static final int[] EMPTY_INT_ARRAY = new int[0];
-  private int mShiftState = STICKY_KEY_OFF;
-  private int mControlState = STICKY_KEY_OFF;
-  private int mVoiceState = STICKY_KEY_OFF;
-  private int mAltState = STICKY_KEY_OFF;
-  private int mFunctionState = STICKY_KEY_OFF;
+  private final KeyboardModifierStates modifierStates = new KeyboardModifierStates();
   private Key mShiftKey;
   private Key mControlKey;
   private AnyKey mAltKey;
@@ -119,48 +98,15 @@ public abstract class AnyKeyboard extends Keyboard {
     mControlKey = null;
     mAltKey = null;
     mFunctionKey = null;
-    mAltState = STICKY_KEY_OFF;
-    mFunctionState = STICKY_KEY_OFF;
+    modifierStates.resetAltAndFunction();
     super.loadKeyboard(keyboardDimens);
 
     addGenericRows(keyboardDimens, topRowPlugin, bottomRowPlugin);
-    initKeysMembers(mLocalContext, keyboardDimens);
-    fixEdgeFlags();
-  }
-
-  private void fixEdgeFlags() {
-    if (getKeys().isEmpty()) return;
-    // some assumptions:
-    // 1) the first item in the keys list is at the top of the keyboard
-    // 2) the last item is the bottom of the keyboard
-    // 3) the first key in every row must be left
-    // 4) the last key in every row must be right
-    // 5) the keys are ordered from top to bottom, from left to right
-
-    final int topY = getKeys().get(0).y;
-    final int bottomY = getKeys().get(getKeys().size() - 1).y;
-
-    Key previousKey = null;
-    for (Key key : getKeys()) {
-      key.edgeFlags = 0;
-      if (key.y == topY) key.edgeFlags |= EDGE_TOP;
-      if (key.y == bottomY) key.edgeFlags |= EDGE_BOTTOM;
-
-      if (previousKey == null || previousKey.y != key.y) {
-        // new row
-        key.edgeFlags |= EDGE_LEFT;
-        if (previousKey != null) {
-          previousKey.edgeFlags |= EDGE_RIGHT;
-        }
-      }
-
-      previousKey = key;
-    }
-
-    // last key must be edge right
-    if (previousKey != null) {
-      previousKey.edgeFlags |= EDGE_RIGHT;
-    }
+    mRightToLeftLayout =
+        KeyMembersInitializer.initKeysMembers(
+            mLocalContext, mLocalContext, getKeys(), keyboardDimens, mRightToLeftLayout);
+    mKeyboardCondenser = new KeyboardCondenser(mLocalContext, this);
+    KeyEdgeFlagsFixer.fixEdgeFlags(getKeys());
   }
 
   public void onKeyboardViewWidthChanged(int newWidth, int oldWidth) {
@@ -171,125 +117,6 @@ public abstract class AnyKeyboard extends Keyboard {
       key.width = (int) (zoomFactor * key.width);
       key.x = (int) (zoomFactor * key.x);
     }
-  }
-
-  private void initKeysMembers(Context askContext, KeyboardDimens keyboardDimens) {
-    List<Integer> foundLanguageKeyIndices = new ArrayList<>();
-
-    List<Key> keys = getKeys();
-    for (int keyIndex = 0; keyIndex < keys.size(); keyIndex++) {
-      Key key = keys.get(keyIndex);
-      if (key.mCodes.length > 0) {
-        final int primaryCode = key.getPrimaryCode();
-        if (key instanceof AnyKey) {
-          switch (primaryCode) {
-            case KeyCodes.DELETE:
-            case KeyCodes.FORWARD_DELETE:
-            case KeyCodes.MODE_ALPHABET:
-            case KeyCodes.KEYBOARD_MODE_CHANGE:
-            case KeyCodes.KEYBOARD_CYCLE:
-            case KeyCodes.KEYBOARD_CYCLE_INSIDE_MODE:
-            case KeyCodes.KEYBOARD_REVERSE_CYCLE:
-            case KeyCodes.ALT:
-            case KeyCodes.MODE_SYMBOLS:
-            case KeyCodes.QUICK_TEXT:
-            case KeyCodes.DOMAIN:
-            case KeyCodes.CANCEL:
-            case KeyCodes.CTRL:
-            case KeyCodes.SHIFT:
-              ((AnyKey) key).mFunctionalKey = true;
-              break;
-          }
-        }
-
-        // detecting LTR languages
-        if (!mRightToLeftLayout
-            && primaryCode >= 0
-            && Workarounds.isRightToLeftCharacter((char) primaryCode)) {
-          mRightToLeftLayout = true; // one is enough
-        }
-        switch (primaryCode) {
-          case KeyCodes.QUICK_TEXT:
-            if (key instanceof AnyKey) {
-              AnyKey anyKey = (AnyKey) key;
-              if (anyKey.longPressCode == 0
-                  && anyKey.popupResId == 0
-                  && TextUtils.isEmpty(anyKey.popupCharacters)) {
-                anyKey.longPressCode = KeyCodes.QUICK_TEXT_POPUP;
-              }
-            }
-            break;
-          case KeyCodes.DOMAIN:
-            key.text = key.label = KeyboardPrefs.getDefaultDomain(askContext);
-            key.popupResId = R.xml.popup_domains;
-            break;
-          case KeyCodes.MODE_ALPHABET:
-            if (KeyboardPrefs.alwaysHideLanguageKey(askContext)
-                || !AnyApplication.getKeyboardFactory(mLocalContext).hasMultipleAlphabets()) {
-              // need to hide this key
-              foundLanguageKeyIndices.add(keyIndex);
-              Logger.d(TAG, "Found a redundant language key at index %d", keyIndex);
-            }
-            break;
-          default:
-            // setting the character label
-            if (isAlphabetKey(key) && (key.icon == null)) {
-              final boolean labelIsOriginallyEmpty = TextUtils.isEmpty(key.label);
-              if (labelIsOriginallyEmpty) {
-                final int code = key.mCodes[0];
-                // check the ASCII table, everything below 32,
-                // is not printable
-                if (code > 31 && !Character.isWhitespace(code)) {
-                  key.label = new String(new int[] {code}, 0, 1);
-                }
-              }
-            }
-        }
-      }
-    }
-
-    if (!foundLanguageKeyIndices.isEmpty()) {
-      int keysRemoved = 0;
-      for (int foundIndex = 0; foundIndex < foundLanguageKeyIndices.size(); foundIndex++) {
-        final int foundLanguageKeyIndex = foundLanguageKeyIndices.get(foundIndex) - keysRemoved;
-        final List<Key> keyList = getKeys();
-        AnyKey languageKeyToRemove = (AnyKey) keyList.get(foundLanguageKeyIndex);
-        // layout requested that this key should always be shown
-        if (languageKeyToRemove.showKeyInLayout == AnyKey.SHOW_KEY_ALWAYS) continue;
-
-        keysRemoved++;
-
-        final int rowY = languageKeyToRemove.y;
-        int rowStartIndex;
-        int rowEndIndex;
-        for (rowStartIndex = foundLanguageKeyIndex; rowStartIndex > 0; rowStartIndex--) {
-          if (keyList.get(rowStartIndex - 1).y != rowY) break;
-        }
-        for (rowEndIndex = foundLanguageKeyIndex + 1; rowEndIndex < keyList.size(); rowEndIndex++) {
-          if (keyList.get(rowEndIndex).y != rowY) break;
-        }
-
-        final float widthToRemove =
-            languageKeyToRemove.width + keyboardDimens.getKeyHorizontalGap();
-        final float additionalSpacePerKey =
-            widthToRemove
-                / ((float) (rowEndIndex - rowStartIndex - 1 /*the key that was removed*/));
-        float xOffset = 0f;
-        for (int keyIndex = rowStartIndex; keyIndex < rowEndIndex; keyIndex++) {
-          final Key keyToModify = keyList.get(keyIndex);
-          keyToModify.width = (int) (keyToModify.width + additionalSpacePerKey);
-          keyToModify.x = (int) (keyToModify.x + xOffset);
-          if (keyIndex == foundLanguageKeyIndex) {
-            xOffset -= widthToRemove;
-          } else {
-            xOffset += additionalSpacePerKey;
-          }
-        }
-        keyList.remove(foundLanguageKeyIndex);
-      }
-    }
-
-    mKeyboardCondenser = new KeyboardCondenser(askContext, this);
   }
 
   protected void addGenericRows(
@@ -341,120 +168,25 @@ public abstract class AnyKeyboard extends Keyboard {
   private void fixKeyboardDueToGenericRow(
       @NonNull GenericRowKeyboard genericRowKeyboard, final boolean isTopRow) {
     final int genericRowsHeight = genericRowKeyboard.getHeight();
-
     final List<Key> keys = getKeys();
-    if (isTopRow) {
-      // pushing the originals keys down a bit
-      for (Key key : keys) {
-        key.y += genericRowsHeight;
-      }
-    }
-
-    int rowKeyInsertIndex = isTopRow ? 0 : keys.size();
+    final int rowKeyInsertIndex = isTopRow ? 0 : keys.size();
     final int rowKeyYOffset = isTopRow ? 0 : getHeight();
-    final List<Key> rowKeys = genericRowKeyboard.getKeys();
-    for (Key rowKey : rowKeys) {
-      rowKey.y += rowKeyYOffset;
-      final int rowWidth = Key.getEndX(rowKey);
-      if (rowWidth > mMaxGenericRowsWidth) mMaxGenericRowsWidth = rowWidth;
-      keys.add(rowKeyInsertIndex, rowKey);
-      if (rowKey instanceof AnyKey) {
-        final AnyKey anyRowKey = (AnyKey) rowKey;
-        switch (anyRowKey.getPrimaryCode()) {
-          case KeyCodes.CTRL:
-            mControlKey = anyRowKey;
-            break;
-          case KeyCodes.ALT_MODIFIER:
-            mAltKey = anyRowKey;
-            break;
-          case KeyCodes.FUNCTION:
-            mFunctionKey = anyRowKey;
-            break;
-          default:
-            // no-op
-        }
-      }
-      rowKeyInsertIndex++;
-    }
+    final GenericRowApplier.Result result =
+        GenericRowApplier.applyGenericRow(
+            keys,
+            genericRowKeyboard.getKeys(),
+            genericRowsHeight,
+            isTopRow,
+            rowKeyYOffset,
+            rowKeyInsertIndex,
+            mMaxGenericRowsWidth);
+    mMaxGenericRowsWidth = result.maxGenericRowsWidth;
+    if (result.controlKey != null) mControlKey = result.controlKey;
+    if (result.altKey != null) mAltKey = result.altKey;
+    if (result.functionKey != null) mFunctionKey = result.functionKey;
+    if (result.voiceKey != null) mVoiceKey = result.voiceKey;
 
     mGenericRowsHeight += genericRowsHeight;
-  }
-
-  @VisibleForTesting
-  static class GenericRowKeyboard extends AnyKeyboard {
-
-    private final boolean mInAlphabetMode;
-
-    GenericRowKeyboard(
-        @NonNull KeyboardExtension keyboardExtension,
-        @NonNull Context askContext,
-        @NonNull KeyboardDimens keyboardDimens,
-        boolean inAlphabetMode,
-        @KeyboardRowModeId int mode) {
-      super(keyboardExtension, askContext, keyboardExtension.getKeyboardResId(), mode);
-      mInAlphabetMode = inAlphabetMode;
-      loadKeyboard(keyboardDimens);
-    }
-
-    @Override
-    protected void addGenericRows(
-        @NonNull KeyboardDimens keyboardDimens,
-        @NonNull KeyboardExtension topRowPlugin,
-        @NonNull KeyboardExtension bottomRowPlugin) {
-      /*no-op*/
-    }
-
-    @Override
-    public boolean isAlphabetKeyboard() {
-      return mInAlphabetMode;
-    }
-
-    @Override
-    public String getDefaultDictionaryLocale() {
-      return null;
-    }
-
-    @Override
-    public char[] getSentenceSeparators() {
-      return new char[0];
-    }
-
-    @NonNull
-    @Override
-    public CharSequence getKeyboardName() {
-      return "not important";
-    }
-
-    @Override
-    public int getKeyboardIconResId() {
-      return AddOn.INVALID_RES_ID;
-    }
-
-    @NonNull
-    @Override
-    public String getKeyboardId() {
-      return "no-important";
-    }
-
-    public boolean hasNoKeys() {
-      return getKeys().isEmpty();
-    }
-
-    @Override
-    protected boolean setupKeyAfterCreation(AnyKey key) {
-      if (!super.setupKeyAfterCreation(key)) {
-        if (key.popupResId == 0 && mInAlphabetMode) {
-          switch (key.getPrimaryCode()) {
-            case KeyCodes.MODE_SYMBOLS:
-            case KeyCodes.KEYBOARD_MODE_CHANGE:
-              key.popupResId = R.xml.ext_symbols;
-              key.externalResourcePopupLayout = false;
-              return true;
-          }
-        }
-      }
-      return false;
-    }
   }
 
   @Override
@@ -490,8 +222,6 @@ public abstract class AnyKeyboard extends Keyboard {
 
     if (key.mCodes.length > 0) {
       final int primaryCode = key.mCodes[0];
-      android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - primaryCode: " + primaryCode + " (VOICE_INPUT=" + KeyCodes.VOICE_INPUT + ")");
-      android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - key instance: " + key.hashCode() + ", this keyboard instance: " + this.hashCode());
 
       // creating less sensitive keys if required
       switch (primaryCode) {
@@ -520,14 +250,10 @@ public abstract class AnyKeyboard extends Keyboard {
           mFunctionKey = key;
           break;
         case KeyCodes.VOICE_INPUT:
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - Creating VoiceKey for VOICE_INPUT!");
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - Before assignment, mVoiceKey: " + (mVoiceKey != null ? mVoiceKey.hashCode() : "null"));
           key =
               mVoiceKey =
                   new VoiceKey(
                       resourceMapping, keyboardContext, parent, keyboardDimens, x, y, parser);
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - VoiceKey created and assigned to mVoiceKey: " + mVoiceKey.hashCode());
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.createKeyFromXml - VoiceKey instance: " + key.hashCode() + ", mVoiceKey instance: " + mVoiceKey.hashCode());
           break;
       }
 
@@ -557,7 +283,7 @@ public abstract class AnyKeyboard extends Keyboard {
           key.text = key.label = KeyboardPrefs.getDefaultDomain(askContext);
           key.popupResId = R.xml.popup_domains;
           break;
-        
+
         default:
           // setting the character label
           if (isAlphabetKey(key) && (key.icon == null)) {
@@ -641,14 +367,7 @@ public abstract class AnyKeyboard extends Keyboard {
 
   public boolean setShiftLocked(boolean shiftLocked) {
     if (keyboardSupportShift()) {
-      final int initialState = mShiftState;
-      if (shiftLocked) {
-        mShiftState = STICKY_KEY_LOCKED;
-      } else if (mShiftState == STICKY_KEY_LOCKED) {
-        mShiftState = STICKY_KEY_ON;
-      }
-
-      return initialState != mShiftState;
+      return modifierStates.setShiftLocked(shiftLocked);
     }
 
     return false;
@@ -657,7 +376,7 @@ public abstract class AnyKeyboard extends Keyboard {
   @Override
   public boolean isShifted() {
     if (keyboardSupportShift()) {
-      return mShiftState != STICKY_KEY_OFF;
+      return modifierStates.isShifted();
     } else {
       return false;
     }
@@ -666,17 +385,7 @@ public abstract class AnyKeyboard extends Keyboard {
   @Override
   public boolean setShifted(boolean shiftState) {
     if (keyboardSupportShift()) {
-      final int initialState = mShiftState;
-      if (shiftState) {
-        if (mShiftState == STICKY_KEY_OFF) { // so it is not LOCKED
-          mShiftState = STICKY_KEY_ON;
-        }
-        // else this is already ON, or at caps lock.
-      } else {
-        mShiftState = STICKY_KEY_OFF;
-      }
-
-      return mShiftState != initialState;
+      return modifierStates.setShifted(shiftState);
     } else {
       super.setShifted(shiftState);
       return false;
@@ -688,12 +397,12 @@ public abstract class AnyKeyboard extends Keyboard {
   }
 
   public boolean isShiftLocked() {
-    return mShiftState == STICKY_KEY_LOCKED;
+    return modifierStates.isShiftLocked();
   }
 
   public boolean isControl() {
     if (mControlKey != null) {
-      return mControlState != STICKY_KEY_OFF;
+      return modifierStates.isControl();
     } else {
       return false;
     }
@@ -701,166 +410,64 @@ public abstract class AnyKeyboard extends Keyboard {
 
   public boolean setControl(boolean control) {
     if (mControlKey != null) {
-      final int initialState = mControlState;
-      if (control) {
-        if (mControlState == STICKY_KEY_OFF) { // so it is not LOCKED
-          mControlState = STICKY_KEY_ON;
-        }
-        // else this is already ON, or at caps lock.
-      } else {
-        mControlState = STICKY_KEY_OFF;
-      }
-
-      return mControlState != initialState;
+      return modifierStates.setControl(control);
     } else {
       return false;
     }
   }
 
   public boolean isControlActive() {
-    return mControlKey != null && mControlState != STICKY_KEY_OFF;
+    return mControlKey != null && modifierStates.isControlActive();
   }
 
   public boolean setAlt(boolean active, boolean locked) {
     if (mAltKey != null) {
-      final int initialState = mAltState;
-      if (active) {
-        if (locked) {
-          mAltState = STICKY_KEY_LOCKED;
-        } else if (mAltState == STICKY_KEY_OFF) {
-          mAltState = STICKY_KEY_ON;
-        }
-      } else {
-        mAltState = STICKY_KEY_OFF;
-      }
-      return mAltState != initialState;
+      return modifierStates.setAlt(active, locked);
     }
     return false;
   }
 
   public boolean isAltActive() {
-    return mAltKey != null && mAltState != STICKY_KEY_OFF;
+    return mAltKey != null && modifierStates.isAltActive();
   }
 
   public boolean isAltLocked() {
-    return mAltKey != null && mAltState == STICKY_KEY_LOCKED;
+    return mAltKey != null && modifierStates.isAltLocked();
   }
 
   public boolean setFunction(boolean active, boolean locked) {
     if (mFunctionKey != null) {
-      final int initialState = mFunctionState;
-      if (active) {
-        if (locked) {
-          mFunctionState = STICKY_KEY_LOCKED;
-        } else if (mFunctionState == STICKY_KEY_OFF) {
-          mFunctionState = STICKY_KEY_ON;
-        }
-      } else {
-        mFunctionState = STICKY_KEY_OFF;
-      }
-      return mFunctionState != initialState;
+      return modifierStates.setFunction(active, locked);
     }
     return false;
   }
 
   public boolean isFunctionActive() {
-    return mFunctionKey != null && mFunctionState != STICKY_KEY_OFF;
+    return mFunctionKey != null && modifierStates.isFunctionActive();
   }
 
   public boolean isFunctionLocked() {
-    return mFunctionKey != null && mFunctionState == STICKY_KEY_LOCKED;
+    return mFunctionKey != null && modifierStates.isFunctionLocked();
   }
 
-public boolean setVoice(boolean active, boolean locked) {
-    android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice called - active: " + active + ", locked: " + locked);
-    android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - this keyboard instance: " + this.hashCode() + ", mVoiceKey: " + (mVoiceKey != null ? mVoiceKey.hashCode() : "null"));
-    
-    // First try the direct mVoiceKey reference
-    if (mVoiceKey != null) {
-      android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - mVoiceKey is not null, proceeding...");
-      final int initialState = mVoiceState;
-      android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - initialState: " + initialState);
-      android.util.Log.d("AnyKeyboard", "setVoice - initialState: " + initialState);
-      if (active) {
-        if (locked) {
-          mVoiceState = STICKY_KEY_LOCKED;
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - setting state to STICKY_KEY_LOCKED");
-        } else if (mVoiceState == STICKY_KEY_OFF) {
-          mVoiceState = STICKY_KEY_ON;
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - setting state to STICKY_KEY_ON");
-        } else {
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - active but no state change needed");
-        }
-      } else {
-        mVoiceState = STICKY_KEY_OFF;
-        android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - setting state to STICKY_KEY_OFF");
-      }
-boolean stateChanged = mVoiceState != initialState;
-        android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - new state: " + mVoiceState + ", changed: " + stateChanged);
-        android.util.Log.d("AnyKeyboard", "setVoice - new state: " + mVoiceState + ", changed: " + (mVoiceState != initialState));
+  public boolean setVoice(boolean active, boolean locked) {
+    if (mVoiceKey == null) return false;
 
-        // Update the VoiceKey's internal state
-        if (mVoiceKey instanceof VoiceKey) {
-          ((VoiceKey) mVoiceKey).setVoiceActive(active);
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - Updated VoiceKey internal state to: " + active);
-        }
+    final boolean stateChanged = modifierStates.setVoice(active, locked);
 
-      return stateChanged;    } else {
-      android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - mVoiceKey is null, searching for voice key in all keys...");
-      android.util.Log.d("AnyKeyboard", "setVoice - mVoiceKey is null, searching for voice key");
-      
-      // Search through all keys to find a VoiceKey instance
-      VoiceKey foundVoiceKey = null;
-      for (Key key : getKeys()) {
-        if (key instanceof VoiceKey) {
-          foundVoiceKey = (VoiceKey) key;
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - Found VoiceKey in keys list: " + foundVoiceKey.hashCode());
-          break;
-        }
-      }
-      
-      if (foundVoiceKey != null) {
-        android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - Found voice key, proceeding with state change...");
-        final int initialState = mVoiceState;
-        android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - initialState: " + initialState);
-        android.util.Log.d("AnyKeyboard", "setVoice - initialState: " + initialState);
-        if (active) {
-          if (locked) {
-            mVoiceState = STICKY_KEY_LOCKED;
-            android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - setting state to STICKY_KEY_LOCKED");
-          } else if (mVoiceState == STICKY_KEY_OFF) {
-            mVoiceState = STICKY_KEY_ON;
-            android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - setting state to STICKY_KEY_ON");
-          } else {
-            android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - active but no state change needed");
-          }
-        } else {
-          mVoiceState = STICKY_KEY_OFF;
-          android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - setting state to STICKY_KEY_OFF");
-        }
-        boolean stateChanged = mVoiceState != initialState;
-        android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - new state: " + mVoiceState + ", changed: " + stateChanged);
-        android.util.Log.d("AnyKeyboard", "setVoice - new state: " + mVoiceState + ", changed: " + (mVoiceState != initialState));
-
-        // Update the VoiceKey's internal state
-        foundVoiceKey.setVoiceActive(active);
-        android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - Updated VoiceKey internal state to: " + active);
-
-        return stateChanged;
-      } else {
-        android.util.Log.d("VoiceKeyDebug", "AnyKeyboard.setVoice - No voice key found in any keys!");
-        android.util.Log.d("AnyKeyboard", "setVoice - No voice key found in any keys");
-        return false;
-      }
+    if (mVoiceKey instanceof VoiceKey voiceKey) {
+      voiceKey.setVoiceActive(active);
     }
+
+    return stateChanged;
   }
 
   public boolean isVoiceActive() {
-    return mVoiceState != STICKY_KEY_OFF;
+    return modifierStates.isVoiceActive();
   }
 
   public boolean isVoiceLocked() {
-    return mVoiceState == STICKY_KEY_LOCKED;
+    return modifierStates.isVoiceLocked();
   }
 
   @CallSuper
@@ -916,23 +523,7 @@ boolean stateChanged = mVoiceState != initialState;
         HardKeyboardAction action, AnySoftKeyboardBase ime, int multiTapTimeout);
   }
 
-  public static class AnyKey extends Keyboard.Key {
-    public static final int SHOW_KEY_ALWAYS = 0;
-    public static final int SHOW_KEY_IF_APPLICABLE = 1;
-    public static final int SHOW_KEY_NEVER = 2;
-    public CharSequence shiftedKeyLabel;
-    public CharSequence hintLabel;
-    @Nullable public Drawable hintIcon;
-    public int longPressCode;
-    @ShowKeyInLayoutType public int showKeyInLayout;
-    @NonNull int[] mShiftedCodes = EMPTY_INT_ARRAY;
-    private boolean mShiftCodesAlways;
-    private boolean mFunctionalKey;
-    private boolean mEnabled;
-    @NonNull private List<String> mKeyTags = Collections.emptyList();
-    @NonNull private List<EmojiUtils.Gender> mKeyGenders = Collections.emptyList();
-    @NonNull private List<EmojiUtils.SkinTone> mKeySkinTones = Collections.emptyList();
-    @Nullable private String mExtraKeyData;
+  public static class AnyKey extends AnyKeyboardKey {
 
     public AnyKey(Row row, KeyboardDimens keyboardDimens) {
       super(row, keyboardDimens);
@@ -947,348 +538,6 @@ boolean stateChanged = mVoiceState != initialState;
         int y,
         XmlResourceParser parser) {
       super(resourceMapping, keyboardContext, parent, keyboardDimens, x, y, parser);
-      // setting up some defaults
-      mEnabled = true;
-      mFunctionalKey = false;
-      longPressCode = 0;
-      shiftedKeyLabel = null;
-      hintLabel = null;
-      hintIcon = null;
-      boolean mShiftCodesAlwaysOverride = false;
-
-      final int[] remoteStyleableArrayFromLocal =
-          resourceMapping.getRemoteStyleableArrayFromLocal(R.styleable.KeyboardLayout_Key);
-      TypedArray a =
-          keyboardContext.obtainStyledAttributes(
-              Xml.asAttributeSet(parser), remoteStyleableArrayFromLocal);
-      int n = a.getIndexCount();
-      for (int i = 0; i < n; i++) {
-        final int remoteIndex = a.getIndex(i);
-        final int localAttrId =
-            resourceMapping.getLocalAttrId(remoteStyleableArrayFromLocal[remoteIndex]);
-
-        try {
-          switch (localAttrId) {
-            case R.attr.shiftedCodes:
-              mShiftedCodes = KeyboardSupport.getKeyCodesFromTypedArray(a, remoteIndex);
-              break;
-            case R.attr.longPressCode:
-              longPressCode = a.getInt(remoteIndex, 0);
-              break;
-            case R.attr.isFunctional:
-              mFunctionalKey = a.getBoolean(remoteIndex, false);
-              break;
-            case R.attr.shiftedKeyLabel:
-              shiftedKeyLabel = a.getString(remoteIndex);
-              break;
-            case R.attr.isShiftAlways:
-              mShiftCodesAlwaysOverride = true;
-              mShiftCodesAlways = a.getBoolean(remoteIndex, false);
-              break;
-            case R.attr.hintLabel:
-              hintLabel = a.getString(remoteIndex);
-              break;
-            case R.attr.hintIcon:
-              hintIcon = a.getDrawable(remoteIndex);
-              if (hintIcon != null) {
-                KeyboardSupport.updateDrawableBounds(hintIcon);
-              }
-              break;
-            case R.attr.showInLayout:
-              //noinspection WrongConstant
-              showKeyInLayout = a.getInt(remoteIndex, SHOW_KEY_ALWAYS);
-              break;
-            case R.attr.tags:
-              String tags = a.getString(remoteIndex);
-              if (!TextUtils.isEmpty(tags)) {
-                mKeyTags = Arrays.asList(tags.split(","));
-              }
-              break;
-            case R.attr.extra_key_data:
-              mExtraKeyData = a.getString(remoteIndex);
-              break;
-            case R.attr.genders:
-              String genders = a.getString(remoteIndex);
-              if (!TextUtils.isEmpty(genders)) {
-                mKeyGenders = stringsToEnum(EmojiUtils.Gender.class, genders);
-              }
-              break;
-            case R.attr.skinTones:
-              String tones = a.getString(remoteIndex);
-              if (!TextUtils.isEmpty(tones)) {
-                mKeySkinTones = stringsToEnum(EmojiUtils.SkinTone.class, tones);
-              }
-              break;
-          }
-        } catch (Exception e) {
-          Logger.w(TAG, "Failed to set data from XML!", e);
-          if (BuildConfig.DEBUG) throw e;
-        }
-      }
-      a.recycle();
-
-      // ensuring mCodes and mShiftedCodes are the same size
-      if (mShiftedCodes.length != mCodes.length) {
-        int[] wrongSizedShiftCodes = mShiftedCodes;
-        mShiftedCodes = new int[mCodes.length];
-        int i;
-        for (i = 0; i < wrongSizedShiftCodes.length && i < mCodes.length; i++) {
-          mShiftedCodes[i] = wrongSizedShiftCodes[i];
-        }
-        for (
-        /* starting from where i finished above */ ; i < mCodes.length; i++) {
-          final int code = mCodes[i];
-          if (Character.isLetter(code)) {
-            mShiftedCodes[i] = Character.toUpperCase(code);
-          } else {
-            mShiftedCodes[i] = code;
-          }
-        }
-      }
-
-      if (!mShiftCodesAlwaysOverride) {
-        // if the shift-character is a symbol, we only show it if the SHIFT is pressed,
-        // not if the shift is active.
-        mShiftCodesAlways =
-            mShiftedCodes.length == 0
-                || Character.isLetter(mShiftedCodes[0])
-                || Character.getType(mShiftedCodes[0]) == Character.NON_SPACING_MARK
-                || Character.getType(mShiftedCodes[0]) == Character.COMBINING_SPACING_MARK;
-      }
-
-      if (popupCharacters != null && popupCharacters.length() == 0) {
-        // If there is a keyboard with no keys specified in
-        // popupCharacters
-        popupResId = 0;
-      }
-    }
-
-    private static <T extends Enum<T>> List<T> stringsToEnum(Class<T> enumClazz, String enumsCSV) {
-      if (TextUtils.isEmpty(enumsCSV)) {
-      return Collections.emptyList();
-    }
-      String[] enumStrings = enumsCSV.split(",");
-      @SuppressWarnings("unchecked")
-      T[] enums = (T[]) Array.newInstance(enumClazz, enumStrings.length);
-
-      for (int i = 0; i < enumStrings.length; i++) {
-        enums[i] = Enum.valueOf(enumClazz, enumStrings[i]);
-      }
-      return Arrays.asList(enums);
-    }
-
-    @Override
-    public int getCodeAtIndex(int index, boolean isShifted) {
-      return mCodes.length == 0 ? 0 : isShifted ? mShiftedCodes[index] : mCodes[index];
-    }
-
-    public boolean isShiftCodesAlways() {
-      return mShiftCodesAlways;
-    }
-
-    @Nullable
-    public String getExtraKeyData() {
-      return mExtraKeyData;
-    }
-
-    public void enable() {
-      mEnabled = true;
-    }
-
-    public void disable() {
-      iconPreview = null;
-      icon = null;
-      label = "  "; // can not use NULL.
-      mEnabled = false;
-    }
-
-    @Override
-    public boolean isInside(int clickedX, int clickedY) {
-      return mEnabled && super.isInside(clickedX, clickedY);
-    }
-
-    public boolean isFunctional() {
-      return mFunctionalKey;
-    }
-
-    @Override
-    public int[] getCurrentDrawableState(KeyDrawableStateProvider provider) {
-      final AnyKeyboard parentKeyboard = (AnyKeyboard) row.mParent;
-      final int primaryCode = getPrimaryCode();
-      if (primaryCode == KeyCodes.CTRL) {
-        if (parentKeyboard.isControlActive()) {
-          return ensureCheckableState(
-              pressed
-                  ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
-                  : provider.KEY_STATE_FUNCTIONAL_ON);
-        }
-        return ensureCheckableState(
-            pressed
-                ? provider.KEY_STATE_FUNCTIONAL_PRESSED
-                : provider.KEY_STATE_FUNCTIONAL_NORMAL);
-      } else if (primaryCode == KeyCodes.ALT_MODIFIER) {
-        if (parentKeyboard.isAltActive()) {
-          if (parentKeyboard.isAltLocked()) {
-            return ensureCheckableState(provider.KEY_STATE_FUNCTIONAL_ON);
-          }
-          return ensureCheckableState(
-              pressed
-                  ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
-                  : provider.KEY_STATE_FUNCTIONAL_ON);
-        }
-        return ensureCheckableState(
-            pressed
-                ? provider.KEY_STATE_FUNCTIONAL_PRESSED
-                : provider.KEY_STATE_FUNCTIONAL_NORMAL);
-      } else if (primaryCode == KeyCodes.FUNCTION) {
-        if (parentKeyboard.isFunctionActive()) {
-          if (parentKeyboard.isFunctionLocked()) {
-            return ensureCheckableState(provider.KEY_STATE_FUNCTIONAL_ON);
-          }
-          return ensureCheckableState(
-              pressed
-                  ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
-                  : provider.KEY_STATE_FUNCTIONAL_ON);
-        }
-        return ensureCheckableState(
-            pressed
-                ? provider.KEY_STATE_FUNCTIONAL_PRESSED
-                : provider.KEY_STATE_FUNCTIONAL_NORMAL);
-      }
-      if (mFunctionalKey) {
-        if (pressed) {
-          return provider.KEY_STATE_FUNCTIONAL_PRESSED;
-        } else {
-          return provider.KEY_STATE_FUNCTIONAL_NORMAL;
-        }
-      }
-      return super.getCurrentDrawableState(provider);
-    }
-
-    private int[] ensureCheckableState(int[] baseState) {
-      for (int state : baseState) {
-        if (state == android.R.attr.state_checkable) {
-          return baseState;
-        }
-      }
-      int[] merged = Arrays.copyOf(baseState, baseState.length + 1);
-      merged[baseState.length] = android.R.attr.state_checkable;
-      return merged;
-    }
-
-    @NonNull
-    public List<String> getKeyTags() {
-      return mKeyTags;
-    }
-
-    @NonNull
-    public List<EmojiUtils.SkinTone> getSkinTones() {
-      return mKeySkinTones;
-    }
-
-    @Retention(RetentionPolicy.SOURCE)
-    @IntDef({SHOW_KEY_ALWAYS, SHOW_KEY_IF_APPLICABLE, SHOW_KEY_NEVER})
-    public @interface ShowKeyInLayoutType {}
-  }
-
-  private static class EnterKey extends AnyKey {
-
-    private final int mOriginalHeight;
-
-    public EnterKey(
-        @NonNull AddOn.AddOnResourceMapping resourceMapping,
-        Context keyboardContext,
-        Row parent,
-        KeyboardDimens keyboardDimens,
-        int x,
-        int y,
-        XmlResourceParser parser) {
-      super(resourceMapping, keyboardContext, parent, keyboardDimens, x, y, parser);
-      mOriginalHeight = this.height;
-    }
-
-    @Override
-    public void disable() {
-      this.height = 0;
-      super.disable();
-    }
-
-    @Override
-    public void enable() {
-      this.height = mOriginalHeight;
-      super.enable();
-    }
-
-    @Override
-    public int[] getCurrentDrawableState(KeyDrawableStateProvider provider) {
-      if (pressed) {
-        return provider.KEY_STATE_ACTION_PRESSED;
-      } else {
-        return provider.KEY_STATE_ACTION_NORMAL;
-      }
-    }
-  }
-
-  private static class VoiceKey extends AnyKey {
-    private boolean mVoiceActive = false;
-    
-    public VoiceKey(
-        @NonNull AddOn.AddOnResourceMapping resourceMapping,
-        Context keyboardContext,
-        Row parent,
-        KeyboardDimens keyboardDimens,
-        int x,
-        int y,
-        XmlResourceParser parser) {
-      super(resourceMapping, keyboardContext, parent, keyboardDimens, x, y, parser);
-      // Voice key should always be treated as a functional key
-      // Note: mFunctionalKey is private in parent, so we'll handle this in getCurrentDrawableState
-    }
-    
-    public void setVoiceActive(boolean active) {
-      android.util.Log.d("VoiceKeyDebug", "VoiceKey.setVoiceActive called - setting to: " + active);
-      mVoiceActive = active;
-    }
-
-    @Override
-    public int[] getCurrentDrawableState(KeyDrawableStateProvider provider) {
-      android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState called - pressed: " + pressed);
-      android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState - mVoiceActive: " + mVoiceActive + ", pressed: " + pressed);
-      android.util.Log.d("VoiceKey", "getCurrentDrawableState called - mVoiceActive: " + mVoiceActive + ", pressed: " + pressed);
-      
-      if (mVoiceActive) {
-        android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState - Voice is active, returning CHECKED state");
-        if (pressed) {
-          // Voice key is pressed while recording - combine locked and pressed states
-          int[] state = new int[] {android.R.attr.state_checked, android.R.attr.state_pressed};
-          android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState - Returning CHECKED+PRESSED: " + java.util.Arrays.toString(state));
-          android.util.Log.d("VoiceKey", "Returning CHECKED+PRESSED state: " + java.util.Arrays.toString(state));
-          return state;
-        } else {
-          // Voice key is in recording state (locked) but not pressed
-          int[] state = new int[] {android.R.attr.state_checked};
-          android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState - Returning CHECKED: " + java.util.Arrays.toString(state));
-          android.util.Log.d("VoiceKey", "Returning CHECKED state: " + java.util.Arrays.toString(state));
-          return state;
-        }
-      } else {
-        android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState - Voice is NOT active");
-      }
-      
-      // Voice key is not in recording state - use normal functional key behavior
-      // Since we can't access mFunctionalKey directly, we'll treat voice key as functional
-      android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState - Voice not active, using functional key behavior");
-      if (pressed) {
-        int[] state = provider.KEY_STATE_FUNCTIONAL_PRESSED;
-        android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState - Returning FUNCTIONAL_PRESSED: " + java.util.Arrays.toString(state));
-        android.util.Log.d("VoiceKey", "Returning FUNCTIONAL_PRESSED state: " + java.util.Arrays.toString(state));
-        return state;
-      } else {
-        int[] state = provider.KEY_STATE_FUNCTIONAL_NORMAL;
-        android.util.Log.d("VoiceKeyDebug", "VoiceKey.getCurrentDrawableState - Returning FUNCTIONAL_NORMAL: " + java.util.Arrays.toString(state));
-        android.util.Log.d("VoiceKey", "Returning FUNCTIONAL_NORMAL state: " + java.util.Arrays.toString(state));
-        return state;
-      }
     }
   }
 }

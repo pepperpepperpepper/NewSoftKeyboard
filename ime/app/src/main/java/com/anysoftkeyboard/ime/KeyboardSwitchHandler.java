@@ -105,6 +105,7 @@ public final class KeyboardSwitchHandler {
     if (android.text.TextUtils.isEmpty(targetKeyboardId)) {
       return;
     }
+    android.util.Log.d("CustomKeyboardSwitch", targetKeyboardId);
     host.getKeyboardSwitcher()
         .showAlphabetKeyboardById(null, targetKeyboardId);
   }

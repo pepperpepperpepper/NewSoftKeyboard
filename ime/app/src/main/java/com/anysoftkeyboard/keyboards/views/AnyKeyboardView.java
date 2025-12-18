@@ -363,6 +363,9 @@ public class AnyKeyboardView extends AnyKeyboardViewWithExtraDraw
 
   public void openUtilityKeyboard() {
     dismissAllKeyPreviews();
+    if (getKeyboard() == null) {
+      return;
+    }
     if (mUtilityKey == null) {
       mUtilityKey = new AnyKey(new Row(getKeyboard()), getThemedKeyboardDimens());
       mUtilityKey.edgeFlags = Keyboard.EDGE_BOTTOM;

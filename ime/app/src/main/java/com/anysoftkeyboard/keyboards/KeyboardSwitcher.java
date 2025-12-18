@@ -16,11 +16,6 @@
 
 package com.anysoftkeyboard.keyboards;
 
-import static com.anysoftkeyboard.keyboards.Keyboard.KEYBOARD_ROW_MODE_EMAIL;
-import static com.anysoftkeyboard.keyboards.Keyboard.KEYBOARD_ROW_MODE_IM;
-import static com.anysoftkeyboard.keyboards.Keyboard.KEYBOARD_ROW_MODE_NORMAL;
-import static com.anysoftkeyboard.keyboards.Keyboard.KEYBOARD_ROW_MODE_URL;
-
 import android.content.Context;
 import android.text.TextUtils;
 import android.view.inputmethod.EditorInfo;
@@ -106,25 +101,14 @@ public class KeyboardSwitcher {
   private String mInternetInputLayoutId;
   private int mInternetInputLayoutIndex;
   @Nullable private AnyKeyboard mDirectAlphabetKeyboard;
-
-  /** This field will be used to map between requested mode, and enabled mode. */
-  @Keyboard.KeyboardRowModeId
-  private final int[] mRowModesMapping =
-      new int[] {
-        Keyboard.KEYBOARD_ROW_MODE_NONE,
-        Keyboard.KEYBOARD_ROW_MODE_NORMAL,
-        Keyboard.KEYBOARD_ROW_MODE_IM,
-        Keyboard.KEYBOARD_ROW_MODE_URL,
-        Keyboard.KEYBOARD_ROW_MODE_EMAIL,
-        Keyboard.KEYBOARD_ROW_MODE_PASSWORD
-      };
+  private final KeyboardRowModeResolver rowModeResolver = new KeyboardRowModeResolver();
 
   public KeyboardSwitcher(@NonNull KeyboardSwitchedListener ime, @NonNull Context context) {
     mDefaultAddOn = new DefaultAddOn(context, context);
     mKeyboardSwitchedListener = ime;
     mContext = context;
     mKeyboardDimens = KeyboardDimensFactory.from(context);
-    mKeyboardRowMode = KEYBOARD_ROW_MODE_NORMAL;
+    mKeyboardRowMode = Keyboard.KEYBOARD_ROW_MODE_NORMAL;
     // loading saved package-id from prefs
     LayoutByPackageStore.load(context, mAlphabetKeyboardIndexByPackageId);
 
@@ -144,7 +128,7 @@ public class KeyboardSwitcher {
                 }));
     RowModeMappingUpdater.wire(
         prefs,
-        mRowModesMapping,
+        rowModeResolver.getRowModesMapping(),
         mDisposable,
         true,
         true,
@@ -157,36 +141,6 @@ public class KeyboardSwitcher {
         enabled -> mPersistLayoutForPackageId = enabled,
         enabled -> mCycleOverAllSymbols = enabled,
         enabled -> mShowPopupForLanguageSwitch = enabled);
-  }
-
-  @Keyboard.KeyboardRowModeId
-  private int getKeyboardMode(EditorInfo attr) {
-    if (attr == null) return KEYBOARD_ROW_MODE_NORMAL;
-
-    int variation = attr.inputType & EditorInfo.TYPE_MASK_VARIATION;
-
-    switch (variation) {
-      case EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:
-      case EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS:
-        return returnModeIfEnabled(KEYBOARD_ROW_MODE_EMAIL);
-      case EditorInfo.TYPE_TEXT_VARIATION_URI:
-        return returnModeIfEnabled(KEYBOARD_ROW_MODE_URL);
-      case EditorInfo.TYPE_TEXT_VARIATION_SHORT_MESSAGE:
-      case EditorInfo.TYPE_TEXT_VARIATION_EMAIL_SUBJECT:
-      case EditorInfo.TYPE_TEXT_VARIATION_LONG_MESSAGE:
-        return returnModeIfEnabled(KEYBOARD_ROW_MODE_IM);
-      case EditorInfo.TYPE_TEXT_VARIATION_PASSWORD:
-      case EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD:
-      case EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD:
-        return returnModeIfEnabled(Keyboard.KEYBOARD_ROW_MODE_PASSWORD);
-      default:
-        return KEYBOARD_ROW_MODE_NORMAL;
-    }
-  }
-
-  @Keyboard.KeyboardRowModeId
-  private int returnModeIfEnabled(@Keyboard.KeyboardRowModeId int modeId) {
-    return mRowModesMapping[modeId];
   }
 
   public void setInputView(@NonNull InputViewBinder inputView) {
@@ -266,7 +220,7 @@ public class KeyboardSwitcher {
 
     deactivateDirectAlphabetKeyboard();
 
-    final int mode = getKeyboardMode(currentEditorInfo);
+    final int mode = rowModeResolver.resolve(currentEditorInfo);
     AnyKeyboard keyboard = createKeyboardFromCreator(mode, targetBuilder);
     if (keyboard == null) {
       Logger.w(TAG, "Failed to create keyboard for id " + keyboardId);
@@ -328,7 +282,7 @@ public class KeyboardSwitcher {
     final boolean keyboardGlobalModeChanged =
         attr.inputType != (mLastEditorInfo == null ? 0 : mLastEditorInfo.inputType);
     mLastEditorInfo = attr;
-    mKeyboardRowMode = getKeyboardMode(attr);
+    mKeyboardRowMode = rowModeResolver.resolve(attr);
     boolean resubmitToView = true;
     AnyKeyboard keyboard;
 
@@ -590,9 +544,8 @@ public class KeyboardSwitcher {
             mAlphabetKeyboardsCreators,
             keyboards,
             (mInputView != null) ? mInputView.getThemedKeyboardDimens() : mKeyboardDimens,
-            mKeyboardSwitchedListener,
             (mode, creator) -> createKeyboardFromCreator(mode, creator),
-            this::getKeyboardMode);
+            rowModeResolver::resolve);
 
     if (keyboard == null) {
       // fall back to first keyboard if current slot is unusable

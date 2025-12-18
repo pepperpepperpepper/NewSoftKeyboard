@@ -33,17 +33,17 @@ import org.junit.runner.RunWith;
 public class EmojiSearchOverlayInstrumentedTest {
 
   private static final String APP_PACKAGE = "wtf.uhoh.newsoftkeyboard";
-  private static final String IME_COMPONENT =
-      "wtf.uhoh.newsoftkeyboard/com.menny.android.anysoftkeyboard.SoftKeyboard";
   private static final long UI_TIMEOUT_MS = 4000L;
 
   private UiDevice mDevice;
   private ActivityScenario<TestInputActivity> mScenario;
+  private String mImeComponent;
 
   @Before
   public void setUp() throws Exception {
     mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
     wakeAndUnlockDevice();
+    mImeComponent = resolveImeComponentId();
     ensureImeEnabledAndSelected();
     assertImeSelected();
     mScenario = ActivityScenario.launch(TestInputActivity.class);
@@ -138,17 +138,18 @@ public class EmojiSearchOverlayInstrumentedTest {
 
   private void ensureImeEnabledAndSelected() throws IOException {
     String enableOutput =
-        executeShellCommand("ime enable --user 0 " + IME_COMPONENT).trim();
+        executeShellCommand("ime enable --user 0 " + mImeComponent).trim();
     if (enableOutput.contains("Unknown")) {
       throw new IOException("Failed to enable IME: " + enableOutput);
     }
-    executeShellCommand("ime set --user 0 " + IME_COMPONENT);
+    executeShellCommand("ime set --user 0 " + mImeComponent);
     String enabled =
         executeShellCommand("settings get secure enabled_input_methods").trim();
-    if (!enabled.contains(IME_COMPONENT)) {
+    String expanded = expandComponent(mImeComponent);
+    if (!enabled.contains(mImeComponent) && !enabled.contains(expanded)) {
       String prefix = enabled.isEmpty() ? "" : enabled + ":";
       executeShellCommand(
-          "settings put secure enabled_input_methods \"" + prefix + IME_COMPONENT + "\"");
+          "settings put secure enabled_input_methods \"" + prefix + mImeComponent + "\"");
     }
     executeShellCommand("settings put secure show_ime_with_hard_keyboard 1");
     SystemClock.sleep(400);
@@ -157,11 +158,40 @@ public class EmojiSearchOverlayInstrumentedTest {
   private void assertImeSelected() throws IOException {
     String current =
         executeShellCommand("settings get secure default_input_method").trim();
-    boolean packageMatches = current.startsWith("wtf.uhoh.newsoftkeyboard/");
-    boolean serviceMatches = current.endsWith(".SoftKeyboard");
-    if (!(packageMatches && serviceMatches)) {
-      fail("New Soft Keyboard IME not selected. Current: " + current);
+    String expanded = expandComponent(mImeComponent);
+    if (!(current.equals(mImeComponent) || current.equals(expanded))) {
+      fail(
+          "New Soft Keyboard IME not selected. Expected: "
+              + mImeComponent
+              + " Current: "
+              + current);
     }
+  }
+
+  private String resolveImeComponentId() throws IOException {
+    String list = executeShellCommand("ime list -a -s").trim();
+    String[] lines = list.split("\\n");
+    String fallback = null;
+    for (String line : lines) {
+      String trimmed = line.trim();
+      if (!trimmed.startsWith(APP_PACKAGE + "/")) continue;
+      if (trimmed.endsWith(".NewSoftKeyboardService")
+          || trimmed.endsWith("/.NewSoftKeyboardService")) {
+        return trimmed;
+      }
+      if (fallback == null) fallback = trimmed;
+    }
+    if (fallback != null) return fallback;
+    throw new IOException("Unable to find NewSoftKeyboard IME in: " + list);
+  }
+
+  private static String expandComponent(String component) {
+    String[] parts = component.split("/", 2);
+    if (parts.length != 2) return component;
+    String pkg = parts[0];
+    String svc = parts[1];
+    if (!svc.startsWith(".")) return component;
+    return pkg + "/" + pkg + svc;
   }
 
   private String executeShellCommand(String command) throws IOException {
