@@ -6,29 +6,22 @@ import android.os.Bundle;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.autofill.AutofillManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InlineSuggestion;
 import android.view.inputmethod.InlineSuggestionsRequest;
 import android.view.inputmethod.InlineSuggestionsResponse;
-import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.inline.InlinePresentationSpec;
-import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
-import androidx.arch.core.util.Function;
 import androidx.autofill.inline.UiVersions;
 import androidx.autofill.inline.v1.InlineSuggestionUi;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardView;
-import com.anysoftkeyboard.keyboards.views.KeyboardViewContainerView;
 import com.menny.android.anysoftkeyboard.R;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import net.evendanan.pixel.ScrollViewAsMainChild;
 
 public abstract class AnySoftKeyboardInlineSuggestions extends AnySoftKeyboardSuggestions {
@@ -46,7 +39,7 @@ public abstract class AnySoftKeyboardInlineSuggestions extends AnySoftKeyboardSu
       mInlineSuggestionAction = new InlineSuggestionsAction(l -> null, this::removeActionStrip);
     }
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      mAutofillStripAction = new AutofillStripAction(this);
+      mAutofillStripAction = new AutofillStripAction(this::onAutofillStripActionPressed);
     } else {
       mAutofillStripAction = null;
     }
@@ -208,8 +201,7 @@ public abstract class AnySoftKeyboardInlineSuggestions extends AnySoftKeyboardSu
   }
 
   @RequiresApi(Build.VERSION_CODES.O)
-  private void maybeAttachAutofillStripAction(
-      @Nullable EditorInfo attribute, boolean restarting) {
+  private void maybeAttachAutofillStripAction(@Nullable EditorInfo attribute, boolean restarting) {
     if (mAutofillStripAction == null) return;
     var inputViewContainer = getInputViewContainer();
     if (inputViewContainer == null) return;
@@ -301,119 +293,5 @@ public abstract class AnySoftKeyboardInlineSuggestions extends AnySoftKeyboardSu
           v.setOnClickListener(v1 -> cleanUpInlineLayouts(true));
           lister.addListItem(v);
         });
-  }
-
-  @RequiresApi(Build.VERSION_CODES.O)
-  private static class AutofillStripAction
-      implements KeyboardViewContainerView.StripActionProvider {
-    private final AnySoftKeyboardInlineSuggestions mIme;
-
-    AutofillStripAction(@NonNull AnySoftKeyboardInlineSuggestions ime) {
-      mIme = ime;
-    }
-
-    @NonNull
-    @Override
-    public View inflateActionView(@NonNull ViewGroup parent) {
-      var root =
-          LayoutInflater.from(parent.getContext())
-              .inflate(R.layout.autofill_strip_action, parent, false);
-      root.setOnClickListener(v -> mIme.onAutofillStripActionPressed());
-      return root;
-    }
-
-    @Override
-    public void onRemoved() {}
-  }
-
-  static class InlineSuggestionsAction implements KeyboardViewContainerView.StripActionProvider {
-    private final Function<List<InlineSuggestion>, Void> mShowSuggestionsFunction;
-    private final Runnable mRemoveStripAction;
-    private final List<InlineSuggestion> mCurrentSuggestions;
-    @Nullable private TextView mSuggestionsCount;
-    private ImageView mSuggestionTypeIcon;
-
-    InlineSuggestionsAction(
-        Function<List<InlineSuggestion>, Void> showSuggestionsFunction,
-        Runnable removeStripAction) {
-      mShowSuggestionsFunction = showSuggestionsFunction;
-      mRemoveStripAction = removeStripAction;
-      mCurrentSuggestions = new ArrayList<>();
-    }
-
-    @Override
-    public @NonNull View inflateActionView(@NonNull ViewGroup parent) {
-      View root =
-          LayoutInflater.from(parent.getContext())
-              .inflate(R.layout.inline_suggestions_available_action, parent, false);
-
-      root.setOnClickListener(
-          view -> {
-            Logger.d(TAG, "auto-fill action icon clicked");
-            mShowSuggestionsFunction.apply(mCurrentSuggestions);
-            mRemoveStripAction.run();
-          });
-
-      mSuggestionsCount = root.findViewById(R.id.inline_suggestions_strip_text);
-      mSuggestionTypeIcon = root.findViewById(R.id.inline_suggestions_strip_icon);
-      updateSuggestionsCountView();
-      return root;
-    }
-
-    @Override
-    public void onRemoved() {
-      mCurrentSuggestions.clear();
-      mSuggestionsCount = null;
-    }
-
-    void onNewSuggestions(List<InlineSuggestion> suggestions) {
-      mCurrentSuggestions.clear();
-      mCurrentSuggestions.addAll(suggestions);
-      updateSuggestionsCountView();
-    }
-
-    private void updateSuggestionsCountView() {
-      if (mSuggestionsCount == null) return;
-
-      mSuggestionsCount.setText(
-          String.format(Locale.getDefault(), "%d", mCurrentSuggestions.size()));
-      if (mCurrentSuggestions.size() > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-        // taking the type for the icon
-        var hints = mCurrentSuggestions.get(0).getInfo().getAutofillHints();
-        var icon = IconType.Generic;
-        if (hints != null) {
-          for (String hint : hints) {
-            switch (hint) {
-              case "aiai" -> {
-                if (icon.priority < IconType.AI.priority) {
-                  icon = IconType.AI;
-                }
-              }
-              case "smartReply" -> {
-                if (icon.priority < IconType.SMART_REPLY.priority) {
-                  icon = IconType.SMART_REPLY;
-                }
-              }
-            }
-          }
-          // setting the highest priority icon
-          mSuggestionTypeIcon.setImageResource(icon.drawable);
-        }
-      }
-    }
-  }
-
-  private static enum IconType {
-    Generic(0, R.drawable.ic_inline_suggestions),
-    AI(1, R.drawable.ic_inline_suggestions_ai),
-    SMART_REPLY(2, R.drawable.ic_inline_suggestions_ai_reply);
-
-    public final int priority;
-    public final int drawable;
-
-    IconType(int priority, @DrawableRes int drawable) {
-      this.priority = priority;
-      this.drawable = drawable;
-    }
   }
 }

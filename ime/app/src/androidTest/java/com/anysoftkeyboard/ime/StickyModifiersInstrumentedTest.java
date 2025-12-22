@@ -24,16 +24,16 @@ import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.debug.ImeStateTracker;
 import com.anysoftkeyboard.debug.TestInputActivity;
 import com.anysoftkeyboard.keyboardextensions.KeyboardExtensionFactory;
-import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
-import com.anysoftkeyboard.prefs.RxSharedPrefs;
-import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase;
-import com.anysoftkeyboard.keyboards.views.KeyDrawableStateProvider;
+import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
+import com.anysoftkeyboard.prefs.RxSharedPrefs;
 import com.menny.android.anysoftkeyboard.AnyApplication;
-import com.menny.android.anysoftkeyboard.SoftKeyboard;
 import com.menny.android.anysoftkeyboard.R;
+import com.menny.android.anysoftkeyboard.SoftKeyboard;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -54,6 +54,14 @@ public class StickyModifiersInstrumentedTest {
 
   private static final long KEYBOARD_READY_TIMEOUT_MS = 8000L;
   private static final long POLL_INTERVAL_MS = 250L;
+
+  private static String getAppPackage() {
+    return InstrumentationRegistry.getInstrumentation().getTargetContext().getPackageName();
+  }
+
+  private static String resId(String idName) {
+    return getAppPackage() + ":id/" + idName;
+  }
 
   private static final String DEV_TOP_ROW_ID = "d69990b2-7ad1-4bba-9f27-ec4be715af44";
   private static final String NO_BOTTOM_ROW_ID = "a0a6f41c-0b9c-4ed1-9b6e-6c0c4ecf1b92";
@@ -115,7 +123,8 @@ public class StickyModifiersInstrumentedTest {
         .getStringSet(R.string.settings_key_persistent_layout_per_package_id_mapping)
         .set(Collections.singleton(appContext.getPackageName() + " -> " + ROZOFF_MAIN_ID));
 
-    com.anysoftkeyboard.keyboards.KeyboardFactory factory = AnyApplication.getKeyboardFactory(appContext);
+    com.anysoftkeyboard.keyboards.KeyboardFactory factory =
+        AnyApplication.getKeyboardFactory(appContext);
     if (factory.getAddOnById(ROZOFF_MAIN_ID) == null) {
       fail(
           "Mike Rozoff add-on is not installed. Install the standalone APK from "
@@ -190,9 +199,7 @@ public class StickyModifiersInstrumentedTest {
 
     longPressKey(KeyCodes.DELETE, 900);
     waitForCondition(
-        () -> getEditorText().isEmpty(),
-        true,
-        "Text field not cleared after holding delete");
+        () -> getEditorText().isEmpty(), true, "Text field not cleared after holding delete");
   }
 
   @Test
@@ -236,8 +243,7 @@ public class StickyModifiersInstrumentedTest {
     if (altInactiveColor != Color.WHITE) {
       fail(
           String.format(
-              "Alt key text inactive expected white but was #%06X",
-              (altInactiveColor & 0xFFFFFF)));
+              "Alt key text inactive expected white but was #%06X", (altInactiveColor & 0xFFFFFF)));
     }
 
     clickKey(KeyCodes.ALT_MODIFIER);
@@ -277,9 +283,7 @@ public class StickyModifiersInstrumentedTest {
       fail(
           String.format(
               "Function key text color while active expected %s but was #%06X. state=%s",
-              "0x29ABE2",
-              (activeColor & 0xFFFFFF),
-              java.util.Arrays.toString(drawableState)));
+              "0x29ABE2", (activeColor & 0xFFFFFF), java.util.Arrays.toString(drawableState)));
     }
 
     int activeDigitColor = captureDigitKeyLabelColor('1');
@@ -311,7 +315,10 @@ public class StickyModifiersInstrumentedTest {
     PointF center = awaitKeyCenter('k', KEYBOARD_READY_TIMEOUT_MS);
     Assume.assumeTrue("Mike Rozoff key 'k' not available", center != null);
     longPressKey('k', 900);
-    waitForCondition(() -> "(".equals(getEditorText()), true, "Expected '(' but text was '" + getEditorText() + "'");
+    waitForCondition(
+        () -> "(".equals(getEditorText()),
+        true,
+        "Expected '(' but text was '" + getEditorText() + "'");
   }
 
   @Test
@@ -322,7 +329,10 @@ public class StickyModifiersInstrumentedTest {
     PointF center = awaitKeyCenter('l', KEYBOARD_READY_TIMEOUT_MS);
     Assume.assumeTrue("Mike Rozoff key 'l' not available", center != null);
     longPressKey('l', 900);
-    waitForCondition(() -> ")".equals(getEditorText()), true, "Expected ')' but text was '" + getEditorText() + "'");
+    waitForCondition(
+        () -> ")".equals(getEditorText()),
+        true,
+        "Expected ')' but text was '" + getEditorText() + "'");
   }
 
   private void clickKey(int primaryCode) throws Exception {
@@ -408,10 +418,7 @@ public class StickyModifiersInstrumentedTest {
                 }
                 android.util.Log.w(
                     "FunctionColorTest",
-                    "Target key "
-                        + primaryCode
-                        + " not found. Available primary codes="
-                        + codes);
+                    "Target key " + primaryCode + " not found. Available primary codes=" + codes);
                 colorRef.set(Color.TRANSPARENT);
                 return;
               }
@@ -437,10 +444,7 @@ public class StickyModifiersInstrumentedTest {
                       + " keyCode="
                       + primaryCode);
               ColorStateList colors =
-                  view
-                      .getContext()
-                      .getResources()
-                      .getColorStateList(R.color.mike_rozoff_key_text);
+                  view.getContext().getResources().getColorStateList(R.color.mike_rozoff_key_text);
               colorRef.set(colors.getColorForState(state, Color.TRANSPARENT));
             });
     return colorRef.get();
@@ -570,9 +574,7 @@ public class StickyModifiersInstrumentedTest {
 
   private void waitForTestHarness() {
     boolean editorVisible =
-        mDevice.wait(
-            Until.hasObject(By.res("wtf.uhoh.newsoftkeyboard:id/test_edit_text")),
-            KEYBOARD_READY_TIMEOUT_MS);
+        mDevice.wait(Until.hasObject(By.res(resId("test_edit_text"))), KEYBOARD_READY_TIMEOUT_MS);
     if (!editorVisible) {
       dumpWindowHierarchyForDebug();
       fail("Test input editor not visible.");
@@ -580,10 +582,7 @@ public class StickyModifiersInstrumentedTest {
   }
 
   private void focusTestEditor() {
-    UiObject2 editor =
-        mDevice.wait(
-            Until.findObject(By.res("wtf.uhoh.newsoftkeyboard:id/test_edit_text")),
-            2000);
+    UiObject2 editor = mDevice.wait(Until.findObject(By.res(resId("test_edit_text"))), 2000);
     if (editor == null) {
       dumpWindowHierarchyForDebug();
       fail("Unable to locate test input editor.");
@@ -599,8 +598,7 @@ public class StickyModifiersInstrumentedTest {
     }
     executeShellCommand("ime enable --user 0 " + mImeComponent);
     executeShellCommand("ime set --user 0 " + mImeComponent);
-    String enabled =
-        executeShellCommand("settings get secure enabled_input_methods").trim();
+    String enabled = executeShellCommand("settings get secure enabled_input_methods").trim();
     String expanded = expandComponent(mImeComponent);
     if (!enabled.contains(mImeComponent) && !enabled.contains(expanded)) {
       String prefix = enabled.isEmpty() ? "" : enabled + ":";
@@ -614,10 +612,11 @@ public class StickyModifiersInstrumentedTest {
   private String resolveImeComponentId() throws IOException {
     String list = executeShellCommand("ime list -a -s").trim();
     String[] lines = list.split("\\n");
+    String prefix = getAppPackage() + "/";
     String fallback = null;
     for (String line : lines) {
       String trimmed = line.trim();
-      if (!trimmed.startsWith("wtf.uhoh.newsoftkeyboard/")) continue;
+      if (!trimmed.startsWith(prefix)) continue;
       if (trimmed.endsWith(".NewSoftKeyboardService")
           || trimmed.endsWith("/.NewSoftKeyboardService")) {
         return trimmed;
@@ -638,8 +637,7 @@ public class StickyModifiersInstrumentedTest {
   }
 
   private void waitForKeyboardSurface() {
-    mDevice.wait(
-        Until.hasObject(By.pkg("wtf.uhoh.newsoftkeyboard")), KEYBOARD_READY_TIMEOUT_MS);
+    mDevice.wait(Until.hasObject(By.pkg(getAppPackage())), KEYBOARD_READY_TIMEOUT_MS);
   }
 
   private void assertKeyboardActive(String expectedKeyboardId, long timeoutMs) {
@@ -656,11 +654,7 @@ public class StickyModifiersInstrumentedTest {
           return;
         }
       }
-      fail(
-          "Expected keyboard id "
-              + expectedKeyboardId
-              + " but observed "
-              + lastId);
+      fail("Expected keyboard id " + expectedKeyboardId + " but observed " + lastId);
     }
   }
 
@@ -693,7 +687,8 @@ public class StickyModifiersInstrumentedTest {
   private PointF findKeyCenterFromService(int primaryCode) {
     SoftKeyboard service = SoftKeyboard.getInstance();
     if (service == null) {
-      android.util.Log.d("StickyModifiersTest", "SoftKeyboard instance null when locating code " + primaryCode);
+      android.util.Log.d(
+          "StickyModifiersTest", "SoftKeyboard instance null when locating code " + primaryCode);
       return null;
     }
     AnyKeyboardViewBase view = service.getCurrentKeyboardViewForDebug();
@@ -732,7 +727,8 @@ public class StickyModifiersInstrumentedTest {
       InstrumentationRegistry.getInstrumentation()
           .getUiAutomation()
           .executeShellCommand(
-              "log -t StickyModifiersTest \"Window dump saved to " + dumpFile.getAbsolutePath()
+              "log -t StickyModifiersTest \"Window dump saved to "
+                  + dumpFile.getAbsolutePath()
                   + "\"");
     } catch (IOException ignored) {
       // no-op

@@ -228,10 +228,7 @@ public abstract class AddOnImpl implements AddOn {
     return mHiddenAddOn;
   }
 
-  /**
-   * Returns true if this add-on has UI card capability.
-   * This can be set via XML declaration.
-   */
+  /** Returns true if this add-on has UI card capability. This can be set via XML declaration. */
   public boolean hasUICard() {
     return mHasUICard;
   }

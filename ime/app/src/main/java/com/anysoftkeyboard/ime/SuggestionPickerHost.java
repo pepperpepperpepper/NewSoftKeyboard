@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import com.anysoftkeyboard.dictionaries.Suggest;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
@@ -15,8 +14,8 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
   }
 
   @Override
-  public InputConnection currentInputConnection() {
-    return host.mInputConnectionRouter.current();
+  public InputConnectionRouter inputConnectionRouter() {
+    return host.getImeSessionState().getInputConnectionRouter();
   }
 
   @Override
@@ -25,7 +24,8 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
   }
 
   @Override
-  public void checkAddToDictionaryWithAutoDictionary(CharSequence newWord, Suggest.AdditionType type) {
+  public void checkAddToDictionaryWithAutoDictionary(
+      CharSequence newWord, Suggest.AdditionType type) {
     host.checkAddToDictionaryWithAutoDictionary(newWord, type);
   }
 
@@ -45,8 +45,9 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
   }
 
   @Override
-  public boolean tryCommitCompletion(int index, InputConnection ic, CandidateView candidateView) {
-    return host.completionHandler.tryCommitCompletion(index, ic, candidateView);
+  public boolean tryCommitCompletion(
+      int index, InputConnectionRouter inputConnectionRouter, CandidateView candidateView) {
+    return host.completionHandler.tryCommitCompletion(index, inputConnectionRouter, candidateView);
   }
 
   @Override

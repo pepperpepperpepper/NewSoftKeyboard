@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.ime;
 
 import android.text.TextUtils;
-import android.view.inputmethod.InputConnection;
 import com.anysoftkeyboard.dictionaries.SuggestImpl;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import java.util.function.BiConsumer;
@@ -34,7 +33,7 @@ final class SeparatorActionHelper {
       boolean isDoubleSpaceChangesToPeriod,
       int multiTapTimeout,
       WordComposer typedWord,
-      InputConnection ic,
+      InputConnectionRouter inputConnectionRouter,
       SeparatorOutputHandler separatorOutputHandler,
       SpaceTimeTracker spaceTimeTracker,
       IntPredicate isSpaceSwapCharacter,
@@ -65,7 +64,7 @@ final class SeparatorActionHelper {
 
     final SeparatorOutputHandler.Result separatorResult =
         separatorOutputHandler.apply(
-            ic,
+            inputConnectionRouter,
             primaryCode,
             isSpace,
             newLine,

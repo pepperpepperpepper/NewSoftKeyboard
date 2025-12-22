@@ -1,7 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
-
 /**
  * Handles the small batch-edit window around multi-tap interactions so the key logic stays focused
  * in {@link AnySoftKeyboard}.
@@ -15,7 +13,6 @@ public final class MultiTapEditCoordinator {
   }
 
   public void onMultiTapStarted(Runnable beforeSuper) {
-    final InputConnection ic = router.current();
     router.beginBatchEdit();
     beforeSuper.run();
   }

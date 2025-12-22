@@ -7,7 +7,7 @@ import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
-import com.anysoftkeyboard.ime.VoiceInputController.VoiceInputState;
+import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 
 /**
  * Handles visual updates for voice input state: space-bar labels, flashing error indicator, and
@@ -20,7 +20,8 @@ public final class VoiceStatusRenderer {
   private final Handler handler = new Handler(Looper.getMainLooper());
   private Runnable errorFlashRunnable;
 
-  public void updateVoiceKeyState(@Nullable AnyKeyboard keyboard, boolean isRecording, @Nullable View inputView) {
+  public void updateVoiceKeyState(
+      @Nullable AnyKeyboard keyboard, boolean isRecording, @Nullable View inputView) {
     if (keyboard == null) return;
     boolean stateChanged = keyboard.setVoice(isRecording, false);
     if (stateChanged && inputView != null) {
@@ -28,7 +29,8 @@ public final class VoiceStatusRenderer {
     }
   }
 
-  public void updateSpaceBarRecordingStatus(@Nullable AnyKeyboard keyboard, boolean isRecording, @Nullable View inputView) {
+  public void updateSpaceBarRecordingStatus(
+      @Nullable AnyKeyboard keyboard, boolean isRecording, @Nullable View inputView) {
     if (keyboard == null) return;
     for (Keyboard.Key key : keyboard.getKeys()) {
       if (key.getPrimaryCode() == KeyCodes.SPACE) {
@@ -39,7 +41,8 @@ public final class VoiceStatusRenderer {
     }
   }
 
-  public void updateVoiceInputStatus(@Nullable AnyKeyboard keyboard, @Nullable View inputView, VoiceInputState newState) {
+  public void updateVoiceInputStatus(
+      @Nullable AnyKeyboard keyboard, @Nullable View inputView, VoiceInputState newState) {
     if (voiceState == newState) return;
     voiceState = newState;
 

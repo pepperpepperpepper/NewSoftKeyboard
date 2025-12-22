@@ -1,19 +1,27 @@
 package com.anysoftkeyboard.keyboards.views;
 
+import android.content.Context;
 import android.view.Gravity;
+import com.anysoftkeyboard.keyboards.KeyboardSupport;
 import com.anysoftkeyboard.prefs.RxSharedPrefs;
 import com.anysoftkeyboard.rx.GenericOnError;
-import com.anysoftkeyboard.keyboards.KeyboardSupport;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 
-/**
- * Collects all preference-driven bindings for AnyKeyboardViewBase to keep the view slimmer.
- */
+/** Collects all preference-driven bindings for AnyKeyboardViewBase to keep the view slimmer. */
 final class KeyboardViewPreferenceBinder {
 
-  void bind(AnyKeyboardViewBase view, RxSharedPrefs prefs, CompositeDisposable disposables) {
+  void bind(
+      Context context,
+      RxSharedPrefs prefs,
+      CompositeDisposable disposables,
+      KeyboardNameHintController keyboardNameHintController,
+      KeyTextStyleState keyTextStyleState,
+      KeyDisplayState keyDisplayState,
+      TextWidthCache textWidthCache,
+      Runnable invalidateAllKeys,
+      AnimationLevelController animationLevelController) {
     disposables.add(
         prefs
             .getBoolean(
@@ -21,8 +29,9 @@ final class KeyboardViewPreferenceBinder {
                 R.bool.settings_default_show_keyboard_name_text_value)
             .asObservable()
             .subscribe(
-                view::setShowKeyboardNameOnKeyboard,
-                GenericOnError.onError("failed to get settings_default_show_keyboard_name_text_value")));
+                keyboardNameHintController::setShowKeyboardNameOnKeyboard,
+                GenericOnError.onError(
+                    "failed to get settings_default_show_keyboard_name_text_value")));
 
     disposables.add(
         prefs
@@ -31,7 +40,7 @@ final class KeyboardViewPreferenceBinder {
                 R.bool.settings_default_show_hint_text_value)
             .asObservable()
             .subscribe(
-                view::setShowHintsOnKeyboard,
+                keyboardNameHintController::setShowHintsOnKeyboard,
                 GenericOnError.onError("failed to get settings_default_show_hint_text_value")));
 
     disposables.add(
@@ -53,30 +62,11 @@ final class KeyboardViewPreferenceBinder {
                         R.string.settings_default_custom_hint_valign_value)
                     .asObservable()
                     .map(Integer::parseInt),
-                (enabled, align, verticalAlign) -> enabled ? align | verticalAlign : Gravity.NO_GRAVITY)
-            .subscribe(view::setCustomHintGravity, GenericOnError.onError("failed to get calculate hint-gravity")));
-
-    disposables.add(
-        prefs
-            .getString(
-                R.string.settings_key_swipe_distance_threshold,
-                R.string.settings_default_swipe_distance_threshold)
-            .asObservable()
-            .map(Integer::parseInt)
+                (enabled, align, verticalAlign) ->
+                    enabled ? align | verticalAlign : Gravity.NO_GRAVITY)
             .subscribe(
-                integer -> view.setSwipeXDistanceThreshold((int) (integer * view.getDisplayDensity())),
-                GenericOnError.onError("failed to get settings_key_swipe_distance_threshold")));
-
-    disposables.add(
-        prefs
-            .getString(
-                R.string.settings_key_swipe_velocity_threshold,
-                R.string.settings_default_swipe_velocity_threshold)
-            .asObservable()
-            .map(Integer::parseInt)
-            .subscribe(
-                integer -> view.setSwipeVelocityThreshold((int) (integer * view.getDisplayDensity())),
-                GenericOnError.onError("failed to get settings_default_swipe_velocity_threshold")));
+                keyboardNameHintController::setCustomHintGravity,
+                GenericOnError.onError("failed to get calculate hint-gravity")));
 
     disposables.add(
         prefs
@@ -84,7 +74,11 @@ final class KeyboardViewPreferenceBinder {
                 R.string.settings_key_theme_case_type_override,
                 R.string.settings_default_theme_case_type_override)
             .asObservable()
-            .subscribe(view::applyThemeCaseOverride, GenericOnError.onError("failed to get settings_key_theme_case_type_override")));
+            .subscribe(
+                overrideValue ->
+                    keyTextStyleState.setTextCaseForceOverrideType(
+                        ThemeOverrideApplier.caseOverride(overrideValue)),
+                GenericOnError.onError("failed to get settings_key_theme_case_type_override")));
 
     disposables.add(
         prefs
@@ -92,12 +86,18 @@ final class KeyboardViewPreferenceBinder {
                 R.string.settings_key_workaround_disable_rtl_fix,
                 R.bool.settings_default_workaround_disable_rtl_fix)
             .asObservable()
-            .subscribe(view::setAlwaysUseDrawText, GenericOnError.onError("failed to get settings_key_workaround_disable_rtl_fix")));
+            .subscribe(
+                keyDisplayState::setAlwaysUseDrawText,
+                GenericOnError.onError("failed to get settings_key_workaround_disable_rtl_fix")));
 
     disposables.add(
-        KeyboardSupport.getKeyboardHeightFactor(view.getContext())
+        KeyboardSupport.getKeyboardHeightFactor(context)
             .subscribe(
-                view::setKeysHeightFactor,
+                factor -> {
+                  keyDisplayState.setKeysHeightFactor(factor);
+                  textWidthCache.clear();
+                  invalidateAllKeys.run();
+                },
                 GenericOnError.onError("Failed to getKeyboardHeightFactor")));
 
     disposables.add(
@@ -105,11 +105,15 @@ final class KeyboardViewPreferenceBinder {
             .getString(R.string.settings_key_hint_size, R.string.settings_key_hint_size_default)
             .asObservable()
             .subscribe(
-                view::applyHintTextSizeFactor,
+                overrideValue ->
+                    keyTextStyleState.setHintTextSizeMultiplier(
+                        ThemeOverrideApplier.hintSizeMultiplier(overrideValue)),
                 GenericOnError.onError("failed to get settings_key_hint_size")));
 
     disposables.add(
-        com.anysoftkeyboard.prefs.AnimationsLevel.createPrefsObservable(view.getContext())
-            .subscribe(view::setAnimationLevel, GenericOnError.onError("mAnimationLevelSubject")));
+        com.anysoftkeyboard.prefs.AnimationsLevel.createPrefsObservable(context)
+            .subscribe(
+                animationLevelController::setLevel,
+                GenericOnError.onError("mAnimationLevelSubject")));
   }
 }

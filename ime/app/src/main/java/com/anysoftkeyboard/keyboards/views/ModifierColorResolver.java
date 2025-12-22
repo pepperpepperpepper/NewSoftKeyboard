@@ -1,6 +1,7 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import android.content.res.ColorStateList;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 
 /** Resolves the active modifier text color, falling back to default if needed. */
 final class ModifierColorResolver {

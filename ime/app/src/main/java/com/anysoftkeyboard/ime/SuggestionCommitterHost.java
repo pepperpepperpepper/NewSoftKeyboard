@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 /** Host adapter for {@link SuggestionCommitter} to live outside the service class. */
 final class SuggestionCommitterHost implements SuggestionCommitter.Host {
   private final AnySoftKeyboardSuggestions host;
@@ -10,8 +9,8 @@ final class SuggestionCommitterHost implements SuggestionCommitter.Host {
   }
 
   @Override
-  public InputConnection currentInputConnection() {
-    return host.mInputConnectionRouter.current();
+  public InputConnectionRouter inputConnectionRouter() {
+    return host.getImeSessionState().getInputConnectionRouter();
   }
 
   @Override

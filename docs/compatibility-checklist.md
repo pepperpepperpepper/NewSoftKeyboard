@@ -26,5 +26,6 @@ Use this list when validating NewSoftKeyboard remains compatible with existing A
   - Instrumentation (real APKs): `ExternalAddOnSmokeInstrumentedTest` with an installed F-Droid language pack + theme pack.
 
 Notes
+
 - Keep constants centralized in `wtf/uhoh/newsoftkeyboard/api/PluginActions.java` to avoid drift.
 - When adding new add‑on surfaces, provide both `wtf.uhoh.newsoftkeyboard.*` and legacy `com.anysoftkeyboard.*` variants until deprecation.

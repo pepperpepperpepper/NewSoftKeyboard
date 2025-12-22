@@ -5,8 +5,8 @@ import android.view.inputmethod.InputConnection;
 import androidx.annotation.Nullable;
 
 /**
- * Tracks cursor/selection and candidate span positions for the active input session.
- * Extracted from AnySoftKeyboardBase to reduce monolith size.
+ * Tracks cursor/selection and candidate span positions for the active input session. Extracted from
+ * AnySoftKeyboardBase to reduce monolith size.
  */
 final class EditorStateTracker {
 
@@ -25,11 +25,8 @@ final class EditorStateTracker {
     mGlobalCandidateEndPositionDangerous = 0;
   }
 
-  /**
-   * Returns cursor position, updating from ExtractedText when selection updates may lag.
-   */
-  int getCursorPosition(
-      boolean isSelectionUpdateDelayed, @Nullable InputConnection connection) {
+  /** Returns cursor position, updating from ExtractedText when selection updates may lag. */
+  int getCursorPosition(boolean isSelectionUpdateDelayed, @Nullable InputConnection connection) {
     if (isSelectionUpdateDelayed) {
       final ExtractedText extracted = EXTRACTED_TEXT_REQUEST.get(connection);
       if (extracted != null) {

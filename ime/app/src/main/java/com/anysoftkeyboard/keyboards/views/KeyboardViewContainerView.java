@@ -11,8 +11,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import androidx.annotation.NonNull;
-import com.anysoftkeyboard.ime.InputViewActionsProvider;
-import com.anysoftkeyboard.ime.InputViewBinder;
 import com.anysoftkeyboard.keyboards.views.extradraw.ExtraDraw;
 import com.anysoftkeyboard.overlay.OverlayData;
 import com.anysoftkeyboard.overlay.OverlayDataImpl;

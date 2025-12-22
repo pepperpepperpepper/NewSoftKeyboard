@@ -4,9 +4,7 @@ import android.view.MotionEvent;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.base.utils.Logger;
 
-/**
- * Handles pointer up/down/cancel dispatch sequencing, keeping AnyKeyboardViewBase lean.
- */
+/** Handles pointer up/down/cancel dispatch sequencing, keeping AnyKeyboardViewBase lean. */
 final class PointerActionDispatcher {
 
   private static final String TAG = AnyKeyboardViewBase.TAG;
@@ -18,8 +16,10 @@ final class PointerActionDispatcher {
 
   void dispatchPointerAction(int action, long eventTime, int x, int y, PointerTracker tracker) {
     switch (action) {
-      case MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> onDownEvent(tracker, x, y, eventTime);
-      case MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> onUpEvent(tracker, x, y, eventTime);
+      case MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN ->
+          onDownEvent(tracker, x, y, eventTime);
+      case MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP ->
+          onUpEvent(tracker, x, y, eventTime);
       case MotionEvent.ACTION_CANCEL -> onCancelEvent(tracker);
       default -> Logger.d(TAG, "Unhandled pointer action %d", action);
     }
@@ -41,7 +41,10 @@ final class PointerActionDispatcher {
       if (index >= 0) {
         touchDispatcher.releaseAllPointersOlderThan(tracker, eventTime);
       } else {
-        Logger.w(TAG, "onUpEvent: corresponding down event not found for pointer %d", tracker.mPointerId);
+        Logger.w(
+            TAG,
+            "onUpEvent: corresponding down event not found for pointer %d",
+            tracker.mPointerId);
         return;
       }
     }

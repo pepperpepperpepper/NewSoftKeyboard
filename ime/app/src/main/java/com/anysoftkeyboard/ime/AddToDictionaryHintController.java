@@ -53,8 +53,7 @@ final class AddToDictionaryHintController {
         cv.showAddToDictionaryHint(suggestion);
       }
     } else {
-      host.setSuggestions(
-          host.suggest().getNextSuggestions(suggestion, isAllUpperCase), -1);
+      host.setSuggestions(host.suggest().getNextSuggestions(suggestion, isAllUpperCase), -1);
     }
   }
 
@@ -66,11 +65,6 @@ final class AddToDictionaryHintController {
       CharSequence suggestion,
       Locale locale) {
     return AddToDictionaryDecider.shouldShowAddHint(
-        index,
-        justAutoAddedWord,
-        showSuggestions,
-        suggest,
-        suggestion,
-        locale);
+        index, justAutoAddedWord, showSuggestions, suggest, suggestion, locale);
   }
 }

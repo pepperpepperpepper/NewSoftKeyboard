@@ -1,20 +1,19 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.CallSuper;
+import androidx.annotation.NonNull;
 import com.anysoftkeyboard.dictionaries.Suggest;
 import com.anysoftkeyboard.dictionaries.SuggestImpl;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.views.CandidateView;
 
-/**
- * Encapsulates manual pick handling from the suggestions strip.
- */
+/** Encapsulates manual pick handling from the suggestions strip. */
 public final class SuggestionPicker {
 
   public interface Host {
-    InputConnection currentInputConnection();
+    @NonNull
+    InputConnectionRouter inputConnectionRouter();
 
     WordComposer prepareWordComposerForNextWord();
 
@@ -26,7 +25,8 @@ public final class SuggestionPicker {
 
     CandidateView getCandidateView();
 
-    boolean tryCommitCompletion(int index, InputConnection ic, CandidateView candidateView);
+    boolean tryCommitCompletion(
+        int index, InputConnectionRouter inputConnectionRouter, CandidateView candidateView);
 
     AnyKeyboard getCurrentAlphabetKeyboard();
 
@@ -61,19 +61,15 @@ public final class SuggestionPicker {
       boolean justAutoAddedWord,
       boolean isTagsSearchState) {
 
-    InputConnection ic = host.currentInputConnection();
-    if (ic != null) {
-      ic.beginBatchEdit();
-    }
+    final InputConnectionRouter inputConnectionRouter = host.inputConnectionRouter();
+    inputConnectionRouter.beginBatchEdit();
 
     try {
-      if (tryCommitCompletion(index, ic, host.getCandidateView())) {
+      if (tryCommitCompletion(index, inputConnectionRouter, host.getCandidateView())) {
         return;
       }
 
-      host.commitWordToInput(
-          suggestion,
-          suggestion /* manual pick; not a correction */);
+      host.commitWordToInput(suggestion, suggestion /* manual pick; not a correction */);
 
       if (autoSpaceEnabled && (index == 0 || !typedWord.isAtTagsSearchState())) {
         host.sendKeyChar((char) com.anysoftkeyboard.api.KeyCodes.SPACE);
@@ -97,13 +93,12 @@ public final class SuggestionPicker {
                 typedWord);
       }
     } finally {
-      if (ic != null) {
-        ic.endBatchEdit();
-      }
+      inputConnectionRouter.endBatchEdit();
     }
   }
 
-  private boolean tryCommitCompletion(int index, InputConnection ic, CandidateView candidateView) {
-    return host.tryCommitCompletion(index, ic, candidateView);
+  private boolean tryCommitCompletion(
+      int index, InputConnectionRouter inputConnectionRouter, CandidateView candidateView) {
+    return host.tryCommitCompletion(index, inputConnectionRouter, candidateView);
   }
 }

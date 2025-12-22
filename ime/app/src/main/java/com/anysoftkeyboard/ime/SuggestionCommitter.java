@@ -1,14 +1,13 @@
 package com.anysoftkeyboard.ime;
 
 import android.text.TextUtils;
-import android.view.inputmethod.InputConnection;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 
 /** Handles committing a picked suggestion to the input connection. */
 public final class SuggestionCommitter {
 
   public interface Host {
-    InputConnection currentInputConnection();
+    InputConnectionRouter inputConnectionRouter();
 
     boolean isSelectionUpdateDelayed();
 
@@ -26,17 +25,23 @@ public final class SuggestionCommitter {
   }
 
   public void commitWordToInput(CharSequence wordToCommit, CharSequence typedWord) {
-    final InputConnection ic = host.currentInputConnection();
-    if (ic != null) {
-      final boolean delayedUpdates = host.isSelectionUpdateDelayed();
-      host.markExpectingSelectionUpdate();
-      if (TextUtils.equals(wordToCommit, typedWord) || delayedUpdates) {
-        ic.commitText(wordToCommit, 1);
-      } else {
-        AnyApplication.getDeviceSpecific()
-            .commitCorrectionToInputConnection(
-                ic, host.getCursorPosition() - typedWord.length(), typedWord, wordToCommit);
-      }
+    final InputConnectionRouter inputConnectionRouter = host.inputConnectionRouter();
+    if (!inputConnectionRouter.hasConnection()) {
+      host.clearSuggestions();
+      return;
+    }
+
+    final boolean delayedUpdates = host.isSelectionUpdateDelayed();
+    host.markExpectingSelectionUpdate();
+    if (TextUtils.equals(wordToCommit, typedWord) || delayedUpdates) {
+      inputConnectionRouter.commitText(wordToCommit, 1);
+    } else {
+      AnyApplication.getDeviceSpecific()
+          .commitCorrectionToInputConnection(
+              inputConnectionRouter.current(),
+              host.getCursorPosition() - typedWord.length(),
+              typedWord,
+              wordToCommit);
     }
 
     host.clearSuggestions();

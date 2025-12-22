@@ -3,6 +3,7 @@
 This workspace gathers the current language-model artifacts via symlink (see `kenlm/`, `distilgpt2/`) and outlines the plan for rebuilding them with proper casing. The goal is to produce mixed-case outputs natively so the keyboard can surface natural-looking suggestions without runtime heuristics.
 
 ## Goals
+
 - Produce mixed/lowercase-friendly KenLM and VariKN n-gram models.
 - Fine-tune or regenerate neural bundles (DistilGPT-2, TinyLlama) with casing preserved.
 - Establish repeatable tooling so future bundles inherit the correct casing automatically.
@@ -36,14 +37,17 @@ This workspace gathers the current language-model artifacts via symlink (see `ke
 
 6. **Rollout**
    - Publish new bundles to the model CDN/S3 bucket.
-  - Document rollback strategy and user-facing changelog entries.
+
+- Document rollback strategy and user-facing changelog entries.
 
 ## Open Questions
+
 - Do we want a hybrid runtime normalizer for edge cases (acronyms, ALL CAPS contexts) even after retraining?
 - Should we maintain both mixed-case and lowercase variants for regression comparisons?
 - Can we automate corpus licensing checks before publishing rebuilt models?
 
 ## Current Status
+
 - Debug logging has been added to `SuggestionsProvider` so raw Presage/Neural predictions (and their contexts) are captured in debug builds.
 - Retraining scaffolding now lives in `retraining/scripts/`, including `kenlm_rebuild.sh` (KenLM rebuild template), `normalize_corpus.py` (heuristic casing normalizer with acronym/titlecase controls), and `export_simple_enwiki.py` (parquet → text).
 - The Simple English Wikipedia corpus was pulled to `/mnt/subtitled/datasets/simple_enwiki/simple_wikipedia` (83 MB parquet, SHA-256 `668d11a63e5c30f60e483b63b947edc2f2918f8d5c25857710abbdcf7e74b933`) and expanded to plain text (`simple_wikipedia.txt`, 136 MB, SHA-256 `e17bd651ea7f642a76893acdfd8b4b59d8f66a5b052cbbc3f32bfdf67e1e28ca`).
@@ -71,6 +75,7 @@ This workspace gathers the current language-model artifacts via symlink (see `ke
 - Added `retraining/scripts/neural_finetune.py`, a Hugging Face Trainer scaffold for mixed-case DistilGPT-2/TinyLlama fine-tunes, plus `retraining/scripts/neural_pipeline.sh`, which chains fine-tuning with optional ONNX + quantized exports (see usage example below).
 
 ## Next Actions
+
 1. Gather emulator/device logs with the new instrumentation to baseline current uppercase outputs for both n-gram and neural engines.
 2. Expand the normalization vocabulary (proper nouns beyond months, domain-specific acronyms) and re-run `normalize_corpus.py` as needed before regenerating regional models.
 3. Use `retraining/scripts/kenlm_rebuild.sh` with `KENLM_BIN_DIR=/mnt/subtitled/tools/kenlm/build/bin` and a per-order prune schedule (example: `PRUNE_SCHEDULE="0 1 1"`) to produce final ARPA/vocab sets for packaging + manifest updates.

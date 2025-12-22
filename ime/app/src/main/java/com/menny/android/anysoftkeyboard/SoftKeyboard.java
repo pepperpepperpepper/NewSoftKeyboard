@@ -84,7 +84,7 @@ public class SoftKeyboard extends PublicNotices {
 
   @Nullable
   public AnyKeyboardViewBase getCurrentKeyboardViewForDebug() {
-    final com.anysoftkeyboard.ime.InputViewBinder binder = getInputView();
+    final com.anysoftkeyboard.keyboards.views.InputViewBinder binder = getInputView();
     if (binder instanceof AnyKeyboardViewBase) {
       return (AnyKeyboardViewBase) binder;
     }

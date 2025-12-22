@@ -2,6 +2,7 @@ package com.anysoftkeyboard.ime;
 
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.base.utils.Logger;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
 
 /** Encapsulates the logic that decides if we can restart word suggestions. */
 final class WordRestartGate {

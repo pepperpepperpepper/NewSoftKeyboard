@@ -6,9 +6,13 @@ import android.content.Context;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.anysoftkeyboard.dictionaries.neural.NeuralPredictionManager;
+import com.anysoftkeyboard.engine.models.ModelDefinition;
+import com.anysoftkeyboard.engine.models.ModelDownloader;
+import com.anysoftkeyboard.engine.models.ModelStore;
 import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import wtf.uhoh.newsoftkeyboard.engine.EngineType;
 
 @RunWith(AndroidJUnit4.class)
 public class MixedcaseInstallTest {
@@ -16,13 +20,13 @@ public class MixedcaseInstallTest {
   @Test
   public void testInstallAndActivateMixedcaseModel() throws Exception {
     final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-    final PresageModelStore store = new PresageModelStore(context);
+    final ModelStore store = new ModelStore(context);
 
     // Build a direct CatalogEntry for the mixedcase bundle to bypass any CDN caching.
-    final PresageModelDefinition defForEntry =
-        PresageModelDefinition.builder("distilgpt2_mixedcase_sanity")
+    final ModelDefinition defForEntry =
+        ModelDefinition.builder("distilgpt2_mixedcase_sanity")
             .setLabel("DistilGPT-2 mixedcase (sanity)")
-            .setEngineType(PresageModelDefinition.EngineType.NEURAL)
+            .setEngineType(EngineType.NEURAL)
             .setOnnxFile("model_int8.onnx", null, null)
             .setTokenizerVocabFile("vocab.json", null, null)
             .setTokenizerMergesFile("merges.txt", null, null)
@@ -37,16 +41,15 @@ public class MixedcaseInstallTest {
             1,
             false);
 
-    final PresageModelDownloader downloader = new PresageModelDownloader(context, store);
-      final PresageModelDefinition def = DownloaderCompat.run(downloader, target);
+    final ModelDownloader downloader = new ModelDownloader(context, store);
+    final ModelDefinition def = DownloaderCompat.run(downloader, target);
     assertEquals("distilgpt2_mixedcase_sanity", def.getId());
 
-    store.persistSelectedModelId(PresageModelDefinition.EngineType.NEURAL, def.getId());
+    store.persistSelectedModelId(EngineType.NEURAL, def.getId());
 
     final NeuralPredictionManager manager = new NeuralPredictionManager(context);
     assertTrue("Neural predictor failed to activate", manager.activate());
-    final List<String> predictions =
-        manager.predictNextWords(new String[] {"Hello", "how"}, 5);
+    final List<String> predictions = manager.predictNextWords(new String[] {"Hello", "how"}, 5);
     assertFalse("Expected predictions from mixedcase model", predictions.isEmpty());
     manager.deactivate();
   }

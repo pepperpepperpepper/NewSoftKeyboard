@@ -5,19 +5,21 @@ import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
+import com.anysoftkeyboard.keyboards.NextKeyboardType;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardView;
 
-/**
- * Handles keyboard switching and layout mode keys to keep {@link AnySoftKeyboard} smaller.
- */
+/** Handles keyboard switching and layout mode keys to keep {@link AnySoftKeyboard} smaller. */
 public final class KeyboardSwitchHandler {
 
   public interface Host {
-    @NonNull KeyboardSwitcher getKeyboardSwitcher();
+    @NonNull
+    KeyboardSwitcher getKeyboardSwitcher();
 
-    @Nullable AnyKeyboard getCurrentKeyboard();
+    @Nullable
+    AnyKeyboard getCurrentKeyboard();
 
-    @NonNull AnyKeyboard getCurrentAlphabetKeyboard();
+    @NonNull
+    AnyKeyboard getCurrentAlphabetKeyboard();
 
     void setKeyboardForView(@NonNull AnyKeyboard keyboard);
 
@@ -25,12 +27,13 @@ public final class KeyboardSwitchHandler {
 
     void showToastMessage(int resId, boolean important);
 
-    void nextKeyboard(@Nullable android.view.inputmethod.EditorInfo editorInfo,
-                      @NonNull KeyboardSwitcher.NextKeyboardType type);
+    void nextKeyboard(
+        @Nullable android.view.inputmethod.EditorInfo editorInfo, @NonNull NextKeyboardType type);
 
     void nextAlterKeyboard(@Nullable android.view.inputmethod.EditorInfo editorInfo);
 
-    @Nullable AnyKeyboardView getInputView();
+    @Nullable
+    AnyKeyboardView getInputView();
   }
 
   private final Host host;
@@ -59,13 +62,13 @@ public final class KeyboardSwitchHandler {
         }
         return true;
       case com.anysoftkeyboard.api.KeyCodes.MODE_SYMBOLS:
-        host.nextKeyboard(null, KeyboardSwitcher.NextKeyboardType.Symbols);
+        host.nextKeyboard(null, NextKeyboardType.Symbols);
         return true;
       case com.anysoftkeyboard.api.KeyCodes.MODE_ALPHABET:
         if (host.getKeyboardSwitcher().shouldPopupForLanguageSwitch()) {
           host.showLanguageSelectionDialog();
         } else {
-          host.nextKeyboard(null, KeyboardSwitcher.NextKeyboardType.Alphabet);
+          host.nextKeyboard(null, NextKeyboardType.Alphabet);
         }
         return true;
       case com.anysoftkeyboard.api.KeyCodes.MODE_ALPHABET_POPUP:
@@ -75,16 +78,16 @@ public final class KeyboardSwitchHandler {
         host.nextAlterKeyboard(null);
         return true;
       case com.anysoftkeyboard.api.KeyCodes.KEYBOARD_CYCLE:
-        host.nextKeyboard(null, KeyboardSwitcher.NextKeyboardType.Any);
+        host.nextKeyboard(null, NextKeyboardType.Any);
         return true;
       case com.anysoftkeyboard.api.KeyCodes.KEYBOARD_REVERSE_CYCLE:
-        host.nextKeyboard(null, KeyboardSwitcher.NextKeyboardType.PreviousAny);
+        host.nextKeyboard(null, NextKeyboardType.PreviousAny);
         return true;
       case com.anysoftkeyboard.api.KeyCodes.KEYBOARD_CYCLE_INSIDE_MODE:
-        host.nextKeyboard(null, KeyboardSwitcher.NextKeyboardType.AnyInsideMode);
+        host.nextKeyboard(null, NextKeyboardType.AnyInsideMode);
         return true;
       case com.anysoftkeyboard.api.KeyCodes.KEYBOARD_MODE_CHANGE:
-        host.nextKeyboard(null, KeyboardSwitcher.NextKeyboardType.OtherMode);
+        host.nextKeyboard(null, NextKeyboardType.OtherMode);
         return true;
       case com.anysoftkeyboard.api.KeyCodes.UTILITY_KEYBOARD:
         final AnyKeyboardView inputView = host.getInputView();
@@ -106,8 +109,7 @@ public final class KeyboardSwitchHandler {
       return;
     }
     android.util.Log.d("CustomKeyboardSwitch", targetKeyboardId);
-    host.getKeyboardSwitcher()
-        .showAlphabetKeyboardById(null, targetKeyboardId);
+    host.getKeyboardSwitcher().showAlphabetKeyboardById(null, targetKeyboardId);
   }
 
   @Nullable

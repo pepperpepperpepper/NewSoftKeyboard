@@ -52,4 +52,3 @@ public final class PresageEngineAdapter implements PredictionEngine {
     return new PredictionResult(Arrays.asList(preds));
   }
 }
-

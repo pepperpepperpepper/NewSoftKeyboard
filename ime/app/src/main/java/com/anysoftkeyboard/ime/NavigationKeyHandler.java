@@ -1,17 +1,14 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
 
-/**
- * Isolates navigation/function-combo key handling away from {@link AnySoftKeyboard}.
- */
+/** Isolates navigation/function-combo key handling away from {@link AnySoftKeyboard}. */
 public final class NavigationKeyHandler {
 
   public interface Host {
-    boolean handleSelectionExpending(int keyEventCode, @Nullable InputConnection ic);
+    boolean handleSelectionExpending(
+        int keyEventCode, @NonNull InputConnectionRouter inputConnectionRouter);
 
     void sendNavigationKeyEvent(int keyEventCode);
 
@@ -29,7 +26,7 @@ public final class NavigationKeyHandler {
    */
   public boolean handle(
       int primaryCode,
-      @Nullable InputConnection ic,
+      @NonNull InputConnectionRouter inputConnectionRouter,
       boolean functionActive,
       boolean functionLocked,
       @NonNull Runnable resetFunctionState) {
@@ -51,7 +48,7 @@ public final class NavigationKeyHandler {
               primaryCode == KeyCodes.ARROW_LEFT
                   ? android.view.KeyEvent.KEYCODE_DPAD_LEFT
                   : android.view.KeyEvent.KEYCODE_DPAD_RIGHT;
-          if (!host.handleSelectionExpending(keyEventKeyCode, ic)) {
+          if (!host.handleSelectionExpending(keyEventKeyCode, inputConnectionRouter)) {
             host.sendNavigationKeyEvent(keyEventKeyCode);
           }
         }

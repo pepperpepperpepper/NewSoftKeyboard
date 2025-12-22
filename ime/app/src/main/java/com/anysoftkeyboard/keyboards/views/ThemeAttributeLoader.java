@@ -11,27 +11,31 @@ import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import java.util.Set;
 
-/**
- * Loads theme attributes and icons, keeping AnyKeyboardViewBase thinner.
- */
+/** Loads theme attributes and icons, keeping AnyKeyboardViewBase thinner. */
 final class ThemeAttributeLoader {
 
   interface Host {
-    @NonNull ThemeResourcesHolder getThemeOverlayResources();
+    @NonNull
+    ThemeResourcesHolder getThemeOverlayResources();
 
     int getKeyboardStyleResId(@NonNull KeyboardTheme theme);
 
     int getKeyboardIconsStyleResId(@NonNull KeyboardTheme theme);
 
-    @NonNull KeyboardTheme getFallbackTheme();
+    @NonNull
+    KeyboardTheme getFallbackTheme();
 
-    @NonNull int[] getActionKeyTypes();
+    @NonNull
+    int[] getActionKeyTypes();
 
     boolean setValueFromTheme(
         TypedArray remoteTypedArray, int[] padding, int localAttrId, int remoteTypedArrayIndex);
 
     boolean setKeyIconValueFromTheme(
-        KeyboardTheme theme, TypedArray remoteTypedArray, int localAttrId, int remoteTypedArrayIndex);
+        KeyboardTheme theme,
+        TypedArray remoteTypedArray,
+        int localAttrId,
+        int remoteTypedArrayIndex);
 
     void setBackground(Drawable background);
 
@@ -39,7 +43,8 @@ final class ThemeAttributeLoader {
 
     int getWidth();
 
-    @NonNull Resources getResources();
+    @NonNull
+    Resources getResources();
 
     void onKeyDrawableProviderReady(
         int keyTypeFunctionAttrId,
@@ -161,7 +166,8 @@ final class ThemeAttributeLoader {
     host.setPadding(padding[0], padding[1], padding[2], padding[3]);
 
     final Resources res = host.getResources();
-    final int viewWidth = (host.getWidth() > 0) ? host.getWidth() : res.getDisplayMetrics().widthPixels;
+    final int viewWidth =
+        (host.getWidth() > 0) ? host.getWidth() : res.getDisplayMetrics().widthPixels;
     host.onKeyboardDimensSet(viewWidth - padding[0] - padding[2]);
   }
 
@@ -181,9 +187,13 @@ final class ThemeAttributeLoader {
   }
 
   private boolean setKeyIconValueFromThemeInternal(
-      KeyboardTheme theme, TypedArray remoteTypedArray, int localAttrId, int remoteTypedArrayIndex) {
+      KeyboardTheme theme,
+      TypedArray remoteTypedArray,
+      int localAttrId,
+      int remoteTypedArrayIndex) {
     try {
-      return host.setKeyIconValueFromTheme(theme, remoteTypedArray, localAttrId, remoteTypedArrayIndex);
+      return host.setKeyIconValueFromTheme(
+          theme, remoteTypedArray, localAttrId, remoteTypedArrayIndex);
     } catch (RuntimeException e) {
       if (BuildConfig.DEBUG) throw e;
       return false;

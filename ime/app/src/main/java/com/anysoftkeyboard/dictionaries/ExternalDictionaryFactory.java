@@ -25,7 +25,6 @@ import androidx.collection.ArrayMap;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
 import com.anysoftkeyboard.addons.AddOnsFactory.ReceiverSpec;
-import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.KeyboardFactory;
@@ -38,6 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 
 public class ExternalDictionaryFactory extends AddOnsFactory<DictionaryAddOnAndBuilder> {
 

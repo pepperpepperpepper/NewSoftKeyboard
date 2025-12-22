@@ -4,8 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
-import android.os.SystemClock;
 import android.os.ParcelFileDescriptor;
+import android.os.RemoteException;
+import android.os.SystemClock;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.LargeTest;
@@ -17,12 +18,11 @@ import androidx.test.uiautomator.Until;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.debug.TestInputActivity;
 import com.menny.android.anysoftkeyboard.SoftKeyboard;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
-import android.os.RemoteException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,7 +32,10 @@ import org.junit.runner.RunWith;
 @LargeTest
 public class EmojiSearchOverlayInstrumentedTest {
 
-  private static final String APP_PACKAGE = "wtf.uhoh.newsoftkeyboard";
+  private static String getAppPackage() {
+    return InstrumentationRegistry.getInstrumentation().getTargetContext().getPackageName();
+  }
+
   private static final long UI_TIMEOUT_MS = 4000L;
 
   private UiDevice mDevice;
@@ -70,15 +73,14 @@ public class EmojiSearchOverlayInstrumentedTest {
 
     UiObject2 queryView =
         mDevice.wait(
-            Until.findObject(By.res(APP_PACKAGE, "emoji_search_query")), UI_TIMEOUT_MS);
+            Until.findObject(By.res(getAppPackage(), "emoji_search_query")), UI_TIMEOUT_MS);
     assertNotNull("Emoji search query view not found.", queryView);
     assertEquals(":", queryView.getText());
 
-    runOnImeThread(
-        () -> SoftKeyboard.getInstance().onKey('h', null, 0, null, true));
+    runOnImeThread(() -> SoftKeyboard.getInstance().onKey('h', null, 0, null, true));
     queryView =
         mDevice.wait(
-            Until.findObject(By.res(APP_PACKAGE, "emoji_search_query")), UI_TIMEOUT_MS);
+            Until.findObject(By.res(getAppPackage(), "emoji_search_query")), UI_TIMEOUT_MS);
     assertNotNull("Emoji search query view disappeared after typing.", queryView);
     assertEquals(":h", queryView.getText());
   }
@@ -100,17 +102,16 @@ public class EmojiSearchOverlayInstrumentedTest {
   }
 
   private void waitForKeyboardToBeReady() {
-    boolean keyboardVisible =
-        mDevice.wait(Until.hasObject(By.pkg(APP_PACKAGE)), UI_TIMEOUT_MS);
+    boolean keyboardVisible = mDevice.wait(Until.hasObject(By.pkg(getAppPackage())), UI_TIMEOUT_MS);
     if (!keyboardVisible) {
-      fail("Keyboard window not detected for package " + APP_PACKAGE);
+      fail("Keyboard window not detected for package " + getAppPackage());
     }
     SystemClock.sleep(250);
   }
 
   private void waitForTestHarness() {
     boolean editorVisible =
-        mDevice.wait(Until.hasObject(By.res(APP_PACKAGE, "test_edit_text")), UI_TIMEOUT_MS);
+        mDevice.wait(Until.hasObject(By.res(getAppPackage(), "test_edit_text")), UI_TIMEOUT_MS);
     if (!editorVisible) {
       fail("Test harness editor not visible.");
     }
@@ -118,7 +119,7 @@ public class EmojiSearchOverlayInstrumentedTest {
 
   private void focusTestEditor() {
     UiObject2 editor =
-        mDevice.wait(Until.findObject(By.res(APP_PACKAGE, "test_edit_text")), UI_TIMEOUT_MS);
+        mDevice.wait(Until.findObject(By.res(getAppPackage(), "test_edit_text")), UI_TIMEOUT_MS);
     if (editor != null) {
       editor.click();
       SystemClock.sleep(250);
@@ -137,14 +138,12 @@ public class EmojiSearchOverlayInstrumentedTest {
   }
 
   private void ensureImeEnabledAndSelected() throws IOException {
-    String enableOutput =
-        executeShellCommand("ime enable --user 0 " + mImeComponent).trim();
+    String enableOutput = executeShellCommand("ime enable --user 0 " + mImeComponent).trim();
     if (enableOutput.contains("Unknown")) {
       throw new IOException("Failed to enable IME: " + enableOutput);
     }
     executeShellCommand("ime set --user 0 " + mImeComponent);
-    String enabled =
-        executeShellCommand("settings get secure enabled_input_methods").trim();
+    String enabled = executeShellCommand("settings get secure enabled_input_methods").trim();
     String expanded = expandComponent(mImeComponent);
     if (!enabled.contains(mImeComponent) && !enabled.contains(expanded)) {
       String prefix = enabled.isEmpty() ? "" : enabled + ":";
@@ -156,8 +155,7 @@ public class EmojiSearchOverlayInstrumentedTest {
   }
 
   private void assertImeSelected() throws IOException {
-    String current =
-        executeShellCommand("settings get secure default_input_method").trim();
+    String current = executeShellCommand("settings get secure default_input_method").trim();
     String expanded = expandComponent(mImeComponent);
     if (!(current.equals(mImeComponent) || current.equals(expanded))) {
       fail(
@@ -171,10 +169,11 @@ public class EmojiSearchOverlayInstrumentedTest {
   private String resolveImeComponentId() throws IOException {
     String list = executeShellCommand("ime list -a -s").trim();
     String[] lines = list.split("\\n");
+    String prefix = getAppPackage() + "/";
     String fallback = null;
     for (String line : lines) {
       String trimmed = line.trim();
-      if (!trimmed.startsWith(APP_PACKAGE + "/")) continue;
+      if (!trimmed.startsWith(prefix)) continue;
       if (trimmed.endsWith(".NewSoftKeyboardService")
           || trimmed.endsWith("/.NewSoftKeyboardService")) {
         return trimmed;
@@ -196,9 +195,7 @@ public class EmojiSearchOverlayInstrumentedTest {
 
   private String executeShellCommand(String command) throws IOException {
     ParcelFileDescriptor pfd =
-        InstrumentationRegistry.getInstrumentation()
-            .getUiAutomation()
-            .executeShellCommand(command);
+        InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command);
     try (InputStream inputStream = new ParcelFileDescriptor.AutoCloseInputStream(pfd);
         InputStreamReader reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
         BufferedReader bufferedReader = new BufferedReader(reader)) {

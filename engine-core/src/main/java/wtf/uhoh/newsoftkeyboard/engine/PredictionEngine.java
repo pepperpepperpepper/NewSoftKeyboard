@@ -20,4 +20,3 @@ public interface PredictionEngine {
   @NonNull
   PredictionResult predict(@NonNull String[] contextTokens, int maxResults);
 }
-

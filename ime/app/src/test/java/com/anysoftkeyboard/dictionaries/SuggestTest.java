@@ -967,8 +967,7 @@ public class SuggestTest {
     Assert.assertEquals(2, suggestions.size());
     Assert.assertEquals("and", suggestions.get(0).toString());
     Assert.assertEquals("the", suggestions.get(1).toString());
-    Mockito.verify(mProvider)
-        .getNextWords(Mockito.eq("zorg"), Mockito.anyList(), Mockito.eq(12));
+    Mockito.verify(mProvider).getNextWords(Mockito.eq("zorg"), Mockito.anyList(), Mockito.eq(12));
   }
 
   @Test

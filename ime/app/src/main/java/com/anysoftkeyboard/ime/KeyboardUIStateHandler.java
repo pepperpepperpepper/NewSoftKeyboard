@@ -3,7 +3,6 @@ package com.anysoftkeyboard.ime;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
-import android.view.inputmethod.InputConnection;
 import com.menny.android.anysoftkeyboard.R;
 import java.lang.ref.WeakReference;
 
@@ -39,14 +38,13 @@ public final class KeyboardUIStateHandler extends Handler {
       // delayed posts and such may result in the reference gone
       return;
     }
-    final InputConnection ic = ask.getInputConnectionRouter().current();
 
     switch (msg.what) {
       case MSG_UPDATE_SUGGESTIONS:
         ask.performUpdateSuggestions();
         break;
       case MSG_RESTART_NEW_WORD_SUGGESTIONS:
-        ask.performRestartWordSuggestion(ic);
+        ask.performRestartWordSuggestion();
         break;
       case MSG_CLOSE_DICTIONARIES:
         ask.closeDictionaries();

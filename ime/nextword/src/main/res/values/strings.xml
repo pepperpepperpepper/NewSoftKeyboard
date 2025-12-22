@@ -1,0 +1,5 @@
+<resources>
+    <string name="prediction_engine_neural_activation_failed">Neural model failed to load (%1$s). Falling back to offline suggestions.</string>
+    <string name="prediction_engine_error_unknown">unknown error</string>
+</resources>
+

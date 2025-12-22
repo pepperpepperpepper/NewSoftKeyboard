@@ -1,4 +1,3 @@
-
 package com.anysoftkeyboard.dictionaries;
 
 import android.content.Context;
@@ -6,14 +5,14 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelStore;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelStore.ActiveModel;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelDefinition;
+import com.anysoftkeyboard.engine.models.ModelStore;
+import com.anysoftkeyboard.engine.models.ModelStore.ActiveModel;
 import com.anysoftkeyboard.suggestions.presage.PresageNative;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import wtf.uhoh.newsoftkeyboard.engine.EngineType;
 
 public final class PresagePredictionManager {
 
@@ -23,18 +22,17 @@ public final class PresagePredictionManager {
 
   @NonNull private final Context mContext;
   @NonNull private final File mConfigFile;
-  @NonNull private final PresageModelStore mModelStore;
+  @NonNull private final ModelStore mModelStore;
   private ActiveModel mActiveModel;
   private long mHandle;
   @Nullable private String mLastActivationError;
 
   public PresagePredictionManager(@NonNull Context context) {
-    this(context, new PresageModelStore(context));
+    this(context, new ModelStore(context));
   }
 
   @VisibleForTesting
-  public PresagePredictionManager(
-      @NonNull Context context, @NonNull PresageModelStore modelStore) {
+  public PresagePredictionManager(@NonNull Context context, @NonNull ModelStore modelStore) {
     mContext = context.getApplicationContext();
     final File configDirectory = new File(mContext.getNoBackupFilesDir(), CONFIG_DIRECTORY);
     mConfigFile = new File(configDirectory, CONFIG_FILENAME);
@@ -99,8 +97,7 @@ public final class PresagePredictionManager {
   }
 
   private boolean ensureConfigPresent() {
-    final ActiveModel activeModel =
-        mModelStore.ensureActiveModel(PresageModelDefinition.EngineType.NGRAM);
+    final ActiveModel activeModel = mModelStore.ensureActiveModel(EngineType.NGRAM);
     if (activeModel == null) {
       mLastActivationError = "No installed Presage model.";
       Log.w(TAG, "No Presage model available; skipping activation.");
@@ -176,8 +173,12 @@ public final class PresagePredictionManager {
         + "    <DefaultARPAPredictor>\n"
         + "      <PREDICTOR>ARPAPredictor</PREDICTOR>\n"
         + "      <LOGGER>ERROR</LOGGER>\n"
-        + "      <ARPAFILENAME>" + arpaPath + "</ARPAFILENAME>\n"
-        + "      <VOCABFILENAME>" + vocabPath + "</VOCABFILENAME>\n"
+        + "      <ARPAFILENAME>"
+        + arpaPath
+        + "</ARPAFILENAME>\n"
+        + "      <VOCABFILENAME>"
+        + vocabPath
+        + "</VOCABFILENAME>\n"
         + "      <TIMEOUT>100</TIMEOUT>\n"
         + "    </DefaultARPAPredictor>\n"
         + "    <DefaultRecencyPredictor>\n"

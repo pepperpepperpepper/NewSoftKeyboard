@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 
@@ -28,8 +27,8 @@ final class SelectionUpdateHost implements SelectionUpdateProcessor.Host {
   }
 
   @Override
-  public InputConnection currentInputConnection() {
-    return host.currentInputConnection();
+  public InputConnectionRouter inputConnectionRouter() {
+    return host.getInputConnectionRouter();
   }
 
   @Override

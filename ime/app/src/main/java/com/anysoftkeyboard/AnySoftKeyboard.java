@@ -18,64 +18,64 @@ package com.anysoftkeyboard;
 
 import android.content.Intent;
 import android.os.IBinder;
-import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
-import android.view.inputmethod.InputConnection;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.EditText;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.view.ViewCompat;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
+import com.anysoftkeyboard.debug.ImeStateTracker;
 import com.anysoftkeyboard.dictionaries.ExternalDictionaryFactory;
-import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.ime.AnySoftKeyboardColorizeNavBar;
+import com.anysoftkeyboard.ime.AnySoftKeyboardDeleteActionHost;
+import com.anysoftkeyboard.ime.AnySoftKeyboardDictionaryOverrideDialogHost;
+import com.anysoftkeyboard.ime.AnySoftKeyboardInitializer;
+import com.anysoftkeyboard.ime.AnySoftKeyboardLanguageSelectionDialogHost;
+import com.anysoftkeyboard.ime.AnySoftKeyboardOptionsMenuHost;
+import com.anysoftkeyboard.ime.BackWordDeleter;
 import com.anysoftkeyboard.ime.CondenseModeManager;
+import com.anysoftkeyboard.ime.DeleteActionHelper;
 import com.anysoftkeyboard.ime.DictionaryOverrideDialog;
 import com.anysoftkeyboard.ime.EmojiSearchController;
+import com.anysoftkeyboard.ime.FullscreenExtractViewController;
 import com.anysoftkeyboard.ime.FullscreenModeDecider;
 import com.anysoftkeyboard.ime.FunctionKeyHandler;
+import com.anysoftkeyboard.ime.InputConnectionRouter;
 import com.anysoftkeyboard.ime.InputViewLifecycleHandler;
 import com.anysoftkeyboard.ime.KeyboardSwitchHandler;
-import com.anysoftkeyboard.ime.NavigationKeyHandler;
-import com.anysoftkeyboard.ime.InputViewBinder;
 import com.anysoftkeyboard.ime.LanguageSelectionDialog;
 import com.anysoftkeyboard.ime.ModifierKeyStateHandler;
 import com.anysoftkeyboard.ime.MultiTapEditCoordinator;
+import com.anysoftkeyboard.ime.NavigationKeyHandler;
+import com.anysoftkeyboard.ime.NonFunctionKeyHandler;
 import com.anysoftkeyboard.ime.OptionsMenuLauncher;
 import com.anysoftkeyboard.ime.PackageBroadcastRegistrar;
+import com.anysoftkeyboard.ime.SelectionEditHelper;
 import com.anysoftkeyboard.ime.SettingsLauncher;
+import com.anysoftkeyboard.ime.ShiftStateController;
 import com.anysoftkeyboard.ime.StatusIconController;
 import com.anysoftkeyboard.ime.StatusIconHelper;
-import com.anysoftkeyboard.ime.VoiceInputController;
-import com.anysoftkeyboard.ime.VoiceKeyUiUpdater;
 import com.anysoftkeyboard.ime.VoiceStatusRenderer;
 import com.anysoftkeyboard.ime.VoiceUiHelper;
-import com.anysoftkeyboard.keyboards.AnyKeyboard;
-import com.anysoftkeyboard.keyboards.CondenseType;
-import com.anysoftkeyboard.keyboards.Keyboard;
-import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
-import com.anysoftkeyboard.keyboards.views.AnyKeyboardView;
-import com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase;
 import com.anysoftkeyboard.ime.WindowAnimationSetter;
+import com.anysoftkeyboard.ime.hosts.AnySoftKeyboardFunctionKeyHost;
+import com.anysoftkeyboard.ime.hosts.AnySoftKeyboardModifierKeyStateHost;
+import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.Keyboard;
+import com.anysoftkeyboard.keyboards.NextKeyboardType;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
+import com.anysoftkeyboard.ui.VoiceInputNotInstalledActivity;
 import com.anysoftkeyboard.ui.dev.DevStripActionProvider;
 import com.anysoftkeyboard.ui.dev.DeveloperUtils;
-import com.anysoftkeyboard.ime.VoiceInputController.VoiceInputState;
-import com.anysoftkeyboard.utils.IMEUtil;
+import com.google.android.voiceime.VoiceImeController;
+import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 import com.google.android.voiceime.VoiceRecognitionTrigger;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
-import com.anysoftkeyboard.debug.ImeStateTracker;
-import wtf.uhoh.newsoftkeyboard.ime.EmojiSearchControllerHost;
-import wtf.uhoh.newsoftkeyboard.ime.KeyboardSwitchHandlerHost;
-import wtf.uhoh.newsoftkeyboard.ime.NavigationKeyHandlerHost;
 import java.util.Locale;
-import net.evendanan.pixel.GeneralDialogController;
 
 /** Input method implementation for QWERTY-ish keyboard. */
 public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
@@ -85,10 +85,9 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private final StringBuilder mTextCapitalizerWorkspace = new StringBuilder();
   private boolean mShowKeyboardIconInStatusBar;
 
-  @NonNull private final SpecialWrapHelper specialWrapHelper = new SpecialWrapHelper();
-
   private FunctionKeyHandler functionKeyHandler;
   private FunctionKeyHandler.Host functionKeyHandlerHost;
+  @NonNull private final NonFunctionKeyHandler nonFunctionKeyHandler = new NonFunctionKeyHandler();
   private ModifierKeyStateHandler modifierKeyStateHandler;
   private InputViewLifecycleHandler inputViewLifecycleHandler;
 
@@ -96,17 +95,15 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private CondenseModeManager condenseModeManager;
   private KeyboardSwitchHandler keyboardSwitchHandler;
   private NavigationKeyHandler navigationKeyHandler;
-  private InputMethodManager mInputMethodManager;
   private StatusIconController statusIconController;
   private StatusIconHelper statusIconHelper;
   private VoiceRecognitionTrigger mVoiceRecognitionTrigger;
-  private VoiceInputController voiceInputController;
+  private VoiceImeController voiceImeController;
   private VoiceStatusRenderer voiceStatusRenderer = new VoiceStatusRenderer();
   private VoiceUiHelper voiceUiHelper;
-  private final VoiceKeyUiUpdater voiceKeyUiUpdater = new VoiceKeyUiUpdater();
   private final FullscreenModeDecider fullscreenModeDecider = new FullscreenModeDecider();
-  private View mFullScreenExtractView;
-  private EditText mFullScreenExtractTextView;
+  private final FullscreenExtractViewController fullscreenExtractViewController =
+      new FullscreenExtractViewController();
 
   @Nullable private DeleteActionHelper.Host deleteActionHost;
 
@@ -115,27 +112,52 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   private boolean mAutoCap = true;
   private boolean mKeyboardAutoCap;
   private MultiTapEditCoordinator multiTapEditCoordinator;
-
-  private static CondenseType parseCondenseType(String prefCondenseType) {
-    switch (prefCondenseType) {
-      case "split":
-        return CondenseType.Split;
-      case "compact_right":
-        return CondenseType.CompactToRight;
-      case "compact_left":
-        return CondenseType.CompactToLeft;
-      default:
-        return CondenseType.None;
-    }
-  }
+  @Nullable private ShiftStateController shiftStateController;
 
   protected AnySoftKeyboard() {
     super();
   }
 
-  @Nullable
-  InputConnection currentInputConnectionForFunctionKeyHandler() {
-    return currentInputConnection();
+  @NonNull
+  private AnySoftKeyboardFunctionKeyHost.ImeActions createFunctionKeyImeActions() {
+    return new AnySoftKeyboardFunctionKeyHost.ImeActions(
+        this::handleFunction,
+        this::handleBackWord,
+        () -> handleDeleteLastCharacter(false),
+        this::handleShift,
+        primaryCode -> {
+          onPress(primaryCode);
+          onRelease(primaryCode);
+        },
+        this::handleForwardDelete,
+        disabledUntilNextInputStart ->
+            abortCorrectionAndResetPredictionState(disabledUntilNextInputStart),
+        this::handleControl,
+        this::handleAlt,
+        this::updateVoiceKeyState,
+        () -> {
+          final Intent intent =
+              new Intent(getApplicationContext(), VoiceInputNotInstalledActivity.class);
+          intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+          startActivity(intent);
+        },
+        this::launchOpenAISettings,
+        this::handleCloseRequest,
+        this::hideWindow,
+        this::showOptionsMenu,
+        this::handleEmojiSearchRequest);
+  }
+
+  @NonNull
+  private AnySoftKeyboardModifierKeyStateHost.Actions createModifierKeyStateActions() {
+    return new AnySoftKeyboardModifierKeyStateHost.Actions(
+        this::toggleCaseOfSelectedCharacters,
+        this::handleShift,
+        this::handleControl,
+        this::handleAlt,
+        this::handleFunction,
+        this::updateShiftStateNow,
+        this::updateVoiceKeyState);
   }
 
   @NonNull
@@ -146,280 +168,72 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     return deleteActionHost;
   }
 
-  boolean isPredictionOnForDeleteActionHelperHost() {
-    return isPredictionOn();
-  }
-
-  int getCursorPositionForDeleteActionHelperHost() {
-    return getCursorPosition();
-  }
-
-  boolean isSelectionUpdateDelayedForDeleteActionHelperHost() {
-    return isSelectionUpdateDelayed();
-  }
-
-  void markExpectingSelectionUpdateForDeleteActionHelperHost() {
-    markExpectingSelectionUpdate();
-  }
-
-  void postUpdateSuggestionsForDeleteActionHelperHost() {
-    postUpdateSuggestions();
-  }
-
-  void sendDownUpKeyEventsForDeleteActionHelperHost(int keyCode) {
-    sendDownUpKeyEvents(keyCode);
-  }
-
-  boolean isFunctionKeyActiveForFunctionKeyHandler() {
-    return mFunctionKeyState.isActive();
-  }
-
-  boolean isFunctionKeyLockedForFunctionKeyHandler() {
-    return mFunctionKeyState.isLocked();
-  }
-
-  void consumeOneShotFunctionKeyForFunctionKeyHandler() {
-    if (mFunctionKeyState.isActive() && !mFunctionKeyState.isLocked()) {
-      mFunctionKeyState.setActiveState(false);
-      handleFunction();
-    }
-  }
-
-  boolean shouldBackWordDeleteForFunctionKeyHandler() {
-    return mUseBackWord && mShiftKeyState.isPressed() && !mShiftKeyState.isLocked();
-  }
-
-  void toggleShiftLockedForFunctionKeyHandler() {
-    mShiftKeyState.toggleLocked();
-  }
-
-  void abortCorrectionAndResetPredictionStateForFunctionKeyHandler(
-      boolean disabledUntilNextInputStart) {
-    abortCorrectionAndResetPredictionState(disabledUntilNextInputStart);
-  }
-
-  boolean isVoiceRecognitionInstalledForFunctionKeyHandler() {
-    return mVoiceRecognitionTrigger != null && mVoiceRecognitionTrigger.isInstalled();
-  }
-
-  @NonNull
-  String defaultDictionaryLocaleForFunctionKeyHandler() {
-    final AnyKeyboard keyboard = getCurrentAlphabetKeyboard();
-    if (keyboard == null) return Locale.ROOT.toString();
-    return keyboard.getDefaultDictionaryLocale();
-  }
-
-  void startVoiceRecognitionForFunctionKeyHandler(@NonNull String locale) {
-    if (mVoiceRecognitionTrigger != null) {
-      mVoiceRecognitionTrigger.startVoiceRecognition(locale);
-    }
-  }
-
-  void onQuickTextRequestedForFunctionKeyHandler(@Nullable Keyboard.Key key) {
-    onQuickTextRequested(key);
-  }
-
-  void onQuickTextKeyboardRequestedForFunctionKeyHandler(@Nullable Keyboard.Key key) {
-    onQuickTextKeyboardRequested(key);
-  }
-
-  void handleClipboardOperationForFunctionKeyHandler(
-      @Nullable Keyboard.Key key, int primaryCode, @NonNull InputConnection ic) {
-    handleClipboardOperation(key, primaryCode, ic);
-  }
-
-  void handleMediaInsertionKeyForFunctionKeyHandler() {
-    handleMediaInsertionKey();
-  }
-
-  void clearQuickTextHistoryForFunctionKeyHandler() {
-    getQuickKeyHistoryRecords().clearHistory();
-  }
-
-  @NonNull
-  KeyboardSwitcher getKeyboardSwitcherForLanguageSelectionDialogHost() {
-    return getKeyboardSwitcher();
-  }
-
-  void showOptionsDialogWithDataForLanguageSelectionDialogHost(
-      int titleResId,
-      int iconResId,
-      CharSequence[] items,
-      android.content.DialogInterface.OnClickListener listener) {
-    showOptionsDialogWithData(titleResId, iconResId, items, listener);
-  }
-
-  @Nullable
-  EditorInfo getCurrentInputEditorInfoForLanguageSelectionDialogHost() {
-    return getCurrentInputEditorInfo();
-  }
-
-  @Nullable
-  AnyKeyboard getCurrentAlphabetKeyboardForDictionaryOverrideDialogHost() {
-    return getCurrentAlphabetKeyboard();
-  }
-
-  void showOptionsDialogWithDataForDictionaryOverrideDialogHost(
-      CharSequence title,
-      int iconRes,
-      CharSequence[] items,
-      android.content.DialogInterface.OnClickListener listener,
-      GeneralDialogController.DialogPresenter presenter) {
-    showOptionsDialogWithData(title, iconRes, items, listener, presenter);
-  }
-
-  boolean isIncognitoForOptionsMenuHost() {
-    return getSuggest().isIncognitoMode();
-  }
-
-  void setIncognitoForOptionsMenuHost(boolean incognito, boolean notify) {
-    setIncognito(incognito, notify);
-  }
-
-  void launchSettingsForOptionsMenuHost() {
-    launchSettings();
-  }
-
-  void launchDictionaryOverridingForOptionsMenuHost() {
-    launchDictionaryOverriding();
-  }
-
-  void showOptionsDialogWithDataForOptionsMenuHost(
-      int titleResId,
-      int iconResId,
-      CharSequence[] items,
-      android.content.DialogInterface.OnClickListener listener) {
-    showOptionsDialogWithData(titleResId, iconResId, items, listener);
-  }
-
   @Override
   public void onCreate() {
     super.onCreate();
-    multiTapEditCoordinator = new MultiTapEditCoordinator(mInputConnectionRouter);
-    modifierKeyStateHandler =
-        new ModifierKeyStateHandler(
-            new AnySoftKeyboardModifierKeyStateHost(this),
-            mInputConnectionRouter,
-            mShiftKeyState,
-            mControlKeyState,
-            mAltKeyState,
-            mFunctionKeyState,
-            mVoiceKeyState);
-    inputViewLifecycleHandler =
-        new InputViewLifecycleHandler(new AnySoftKeyboardInputViewLifecycleHost(this));
-    if (!BuildConfig.DEBUG && DeveloperUtils.hasTracingRequested(getApplicationContext())) {
-      try {
-        DeveloperUtils.startTracing();
-        Toast.makeText(getApplicationContext(), R.string.debug_tracing_starting, Toast.LENGTH_SHORT)
-            .show();
-      } catch (Exception e) {
-        // see issue https://github.com/AnySoftKeyboard/AnySoftKeyboard/issues/105
-        // I might get a "Permission denied" error.
-        e.printStackTrace();
-        Toast.makeText(
-                getApplicationContext(), R.string.debug_tracing_starting_failed, Toast.LENGTH_LONG)
-            .show();
-      }
-    }
+    getShiftStateController();
     if (!BuildConfig.DEBUG && BuildConfig.VERSION_NAME.endsWith("-SNAPSHOT")) {
       throw new RuntimeException("You can not run a 'RELEASE' build with a SNAPSHOT postfix!");
     }
 
     addDisposable(WindowAnimationSetter.subscribe(this, getWindow().getWindow()));
 
-    emojiSearchController =
-        new EmojiSearchController(
-            new EmojiSearchControllerHost(
-                this::getQuickTextTagsSearcher,
-                this::getQuickKeyHistoryRecords,
-                this::handleCloseRequest,
-                this::showToastMessage,
-                this::getInputViewContainer,
-                this::commitEmojiFromSearch,
-                () -> this));
-
-    condenseModeManager =
-        new CondenseModeManager(
-            () -> {
-              getKeyboardSwitcher().flushKeyboardsCache();
-              hideWindow();
-            });
-
-    keyboardSwitchHandler =
-        new KeyboardSwitchHandler(
-            new KeyboardSwitchHandlerHost(
-                this::getKeyboardSwitcher,
-                this::getCurrentKeyboard,
-                this::getCurrentAlphabetKeyboard,
-                this::setKeyboardForView,
-                this::showLanguageSelectionDialog,
-                this::showToastMessage,
-                this::nextKeyboard,
-                this::nextAlterKeyboard,
-                this::getCurrentInputEditorInfo,
-                this::getInputView),
-            condenseModeManager);
-    navigationKeyHandler =
-        new NavigationKeyHandler(
-            new NavigationKeyHandlerHost(
-                this::handleSelectionExpending,
-                this::sendNavigationKeyEvent,
-                this::sendDownUpKeyEvents));
-    functionKeyHandlerHost = new AnySoftKeyboardFunctionKeyHost(this);
-    functionKeyHandler =
-        new FunctionKeyHandler(functionKeyHandlerHost, navigationKeyHandler, keyboardSwitchHandler);
-
-    AnySoftKeyboardPrefsBinder.wire(
-        prefs(),
-        this::addDisposable,
-        aBoolean -> mAutoCap = aBoolean,
-        condenseModeManager,
-        this::getCurrentOrientation,
-        AnySoftKeyboard::parseCondenseType,
-        aBoolean -> mShowKeyboardIconInStatusBar = aBoolean);
-
-    condenseModeManager.updateForOrientation(getCurrentOrientation());
-
-    mInputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-    statusIconController = new StatusIconController(mInputMethodManager);
-    statusIconHelper =
-        new StatusIconHelper(
-            statusIconController,
+    final AnySoftKeyboardInitializer.Result init =
+        AnySoftKeyboardInitializer.initialize(
+            this,
+            super.getInputMethodManager(),
+            this::setKeyboardForView,
+            this::handleCloseRequest,
+            createModifierKeyStateActions(),
+            createFunctionKeyImeActions(),
+            this::updateVoiceKeyState,
+            this::updateShiftStateNow,
+            this::commitEmojiFromSearch,
+            this::showLanguageSelectionDialog,
+            this::nextKeyboard,
+            this::nextAlterKeyboard,
+            this::sendNavigationKeyEvent,
+            this::sendDownUpKeyEvents,
+            aBoolean -> mAutoCap = aBoolean,
+            aBoolean -> mShowKeyboardIconInStatusBar = aBoolean,
             () -> mShowKeyboardIconInStatusBar,
-            this::getImeToken,
-            this::getCurrentAlphabetKeyboard);
-    packageBroadcastRegistrar = new PackageBroadcastRegistrar(this, this::onCriticalPackageChanged);
-    packageBroadcastRegistrar.register();
-
-    mVoiceRecognitionTrigger = new VoiceRecognitionTrigger(this);
-    voiceUiHelper = new VoiceUiHelper(voiceStatusRenderer, mVoiceRecognitionTrigger);
-    voiceInputController =
-        new VoiceInputController(
-            mVoiceRecognitionTrigger,
-            new VoiceInputController.HostCallbacks() {
-              @Override
-              public void updateVoiceKeyState() {
-                AnySoftKeyboard.this.updateVoiceKeyState();
-              }
-
-              @Override
-              public void updateSpaceBarRecordingStatus(boolean isRecording) {
-                AnySoftKeyboard.this.updateSpaceBarRecordingStatus(isRecording);
-              }
-
-              @Override
-              public void updateVoiceInputStatus(VoiceInputState state) {
-                AnySoftKeyboard.this.updateVoiceInputStatus(state);
-              }
-
-              @Override
-              public android.content.Context getContext() {
-                return AnySoftKeyboard.this;
-              }
-            });
-    voiceInputController.attachCallbacks();
+            this::updateSpaceBarRecordingStatus,
+            this::updateVoiceInputStatus);
+    multiTapEditCoordinator = init.multiTapEditCoordinator();
+    modifierKeyStateHandler = init.modifierKeyStateHandler();
+    inputViewLifecycleHandler = init.inputViewLifecycleHandler();
+    emojiSearchController = init.emojiSearchController();
+    condenseModeManager = init.condenseModeManager();
+    keyboardSwitchHandler = init.keyboardSwitchHandler();
+    navigationKeyHandler = init.navigationKeyHandler();
+    functionKeyHandlerHost = init.functionKeyHandlerHost();
+    functionKeyHandler = init.functionKeyHandler();
+    statusIconController = init.statusIconController();
+    statusIconHelper = init.statusIconHelper();
+    packageBroadcastRegistrar = init.packageBroadcastRegistrar();
+    mVoiceRecognitionTrigger = init.voiceRecognitionTrigger();
+    voiceImeController = init.voiceImeController();
+    voiceUiHelper = new VoiceUiHelper(voiceStatusRenderer, voiceImeController);
+    voiceImeController.attachCallbacks();
 
     mDevToolsAction = new DevStripActionProvider(this);
+  }
+
+  @NonNull
+  private ShiftStateController getShiftStateController() {
+    if (shiftStateController == null) {
+      shiftStateController =
+          new ShiftStateController(
+              mShiftKeyState,
+              () -> mAutoCap,
+              this::getCurrentKeyboard,
+              this::getCurrentAlphabetKeyboard,
+              this::getInputView,
+              getImeSessionState().getInputConnectionRouter(),
+              getImeSessionState()::currentEditorInfo,
+              TAG);
+    }
+    return shiftStateController;
   }
 
   @Override
@@ -430,7 +244,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     }
 
     final IBinder imeToken = getImeToken();
-    if (imeToken != null) mInputMethodManager.hideStatusIcon(imeToken);
+    if (imeToken != null) super.getInputMethodManager().hideStatusIcon(imeToken);
 
     hideWindow();
 
@@ -488,7 +302,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   @Override
   public boolean onEvaluateFullscreenMode() {
     return fullscreenModeDecider.shouldUseFullscreen(
-        getCurrentInputEditorInfo(),
+        currentInputEditorInfo(),
         getCurrentOrientation(),
         mUseFullScreenInputInPortrait,
         mUseFullScreenInputInLandscape);
@@ -528,42 +342,16 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     voiceUiHelper.updateVoiceKeyState(getCurrentAlphabetKeyboard(), getInputView());
   }
 
-  void resubmitCurrentKeyboardToViewForInputViewLifecycleHandler() {
-    final InputViewBinder inputView = getInputView();
-    if (inputView instanceof AnyKeyboardViewBase && ((AnyKeyboardViewBase) inputView).getKeyboard() != null) {
-      return;
-    }
-    final AnyKeyboard current = getCurrentKeyboard();
-    if (current != null) {
-      setKeyboardForView(current);
-    }
-  }
-
-  @Nullable
-  AnyKeyboard getCurrentAlphabetKeyboardForInputViewLifecycleHandler() {
-    return getCurrentAlphabetKeyboard();
-  }
-
-  @Nullable
-  AnyKeyboard getCurrentKeyboardForInputViewLifecycleHandler() {
-    return getCurrentKeyboard();
-  }
-
-  @Nullable
-  VoiceRecognitionTrigger getVoiceRecognitionTriggerForInputViewLifecycleHandler() {
-    return mVoiceRecognitionTrigger;
-  }
-
   /**
-   * Updates the space bar text to show recording status.
-   * This provides clear visual feedback when voice recording is active.
+   * Updates the space bar text to show recording status. This provides clear visual feedback when
+   * voice recording is active.
    */
-  private void updateSpaceBarRecordingStatus(boolean isRecording) {
+  void updateSpaceBarRecordingStatus(boolean isRecording) {
     voiceUiHelper.updateSpaceBarRecordingStatus(
         isRecording, getCurrentAlphabetKeyboard(), getInputView());
   }
-  
-  private void updateVoiceInputStatus(VoiceInputState newState) {
+
+  void updateVoiceInputStatus(VoiceInputState newState) {
     voiceUiHelper.updateVoiceInputStatus(newState, getCurrentAlphabetKeyboard(), getInputView());
   }
 
@@ -577,133 +365,33 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   // convert ASCII codes to Android KeyEvent codes
   // ASCII Codes Table: https://ascii.cl
-  private boolean handleFunctionCombination(int primaryCode, @Nullable Keyboard.Key key) {
-    return ModifierKeyEventHelper.handleFunctionCombination(
-        primaryCode, key, this::sendDownUpKeyEvents);
-  }
-
-  private boolean handleAltCombination(int primaryCode, @Nullable InputConnection ic) {
-    return ModifierKeyEventHelper.handleAltCombination(primaryCode, ic);
-  }
-
-  // send key events with meta state
-  private void sendKeyEvent(InputConnection ic, int action, int keyCode, int meta) {
-    if (ic == null) return;
-    long now = System.currentTimeMillis();
-    ic.sendKeyEvent(new KeyEvent(now, now, action, keyCode, 0, meta));
-  }
-
-  private void onNonFunctionKey(
-      final int primaryCode,
-      final Keyboard.Key key,
-      final int multiTapIndex,
-      final int[] nearByKeyCodes) {
-    if (BuildConfig.DEBUG) Logger.d(TAG, "onNonFunctionKey %d", primaryCode);
-
-    final InputConnection ic = currentInputConnection();
-
-    if (mFunctionKeyState.isActive()) {
-      if (handleFunctionCombination(primaryCode, key)) {
-        if (!mFunctionKeyState.isLocked()) {
-          mFunctionKeyState.setActiveState(false);
-          handleFunction();
-        }
-        return;
-      }
-    }
-
-    if (mAltKeyState.isActive()) {
-      if (handleAltCombination(primaryCode, ic)) {
-        if (!mAltKeyState.isLocked()) {
-          mAltKeyState.setActiveState(false);
-          handleAlt();
-          mInputConnectionRouter.sendKeyUp(KeyEvent.KEYCODE_ALT_LEFT);
-        }
-        return;
-      }
-    }
-
-    switch (primaryCode) {
-      case KeyCodes.ENTER:
-        handleEnterKey(ic);
-        break;
-      case KeyCodes.TAB:
-        sendTab();
-        break;
-      case KeyCodes.ESCAPE:
-        sendEscape();
-        break;
-      default:
-        if (getSelectionStartPositionDangerous() != getCursorPosition()
-            && specialWrapHelper.hasWrapCharacters(primaryCode)) {
-          int[] wrapCharacters = specialWrapHelper.getWrapCharacters(primaryCode);
-          wrapSelectionWithCharacters(wrapCharacters[0], wrapCharacters[1]);
-        } else if (isWordSeparator(primaryCode)) {
-          handleSeparator(primaryCode);
-        } else if (mControlKeyState.isActive()) {
-          boolean consumed =
-              ModifierKeyEventHelper.handleControlCombination(
-                  primaryCode, ic, this::sendTab, TAG);
-          if (!consumed) {
-            handleCharacter(primaryCode, key, multiTapIndex, nearByKeyCodes);
-          }
-          mControlKeyState.setActiveState(false);
-          handleControl();
-        } else {
-          handleCharacter(primaryCode, key, multiTapIndex, nearByKeyCodes);
-        }
-        break;
-    }
-  }
-
-  private void handleEnterKey(@Nullable InputConnection ic) {
-    if (mShiftKeyState.isPressed() && ic != null) {
-      // power-users feature ahead: Shift+Enter
-      // getting away from firing the default editor action, by forcing newline
-      abortCorrectionAndResetPredictionState(false);
-      ic.commitText("\n", 1);
-      return;
-    }
-
-    final EditorInfo editorInfo = getCurrentInputEditorInfo();
-    final int imeOptionsActionId = IMEUtil.getImeOptionsActionIdFromEditorInfo(editorInfo);
-    if (ic != null && IMEUtil.IME_ACTION_CUSTOM_LABEL == imeOptionsActionId) {
-      // Either we have an actionLabel and we should performEditorAction with actionId regardless
-      // of its value.
-      ic.performEditorAction(editorInfo.actionId);
-    } else if (ic != null && EditorInfo.IME_ACTION_NONE != imeOptionsActionId) {
-      // We didn't have an actionLabel, but we had another action to execute.
-      // EditorInfo.IME_ACTION_NONE explicitly means no action. In contrast,
-      // EditorInfo.IME_ACTION_UNSPECIFIED is the default value for an action, so it
-      // means there should be an action and the app didn't bother to set a specific
-      // code for it - presumably it only handles one. It does not have to be treated
-      // in any specific way: anything that is not IME_ACTION_NONE should be sent to
-      // performEditorAction.
-      ic.performEditorAction(imeOptionsActionId);
-    } else {
-      handleSeparator(KeyCodes.ENTER);
-    }
-  }
-
   @Override
   public void onKey(
       int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI) {
     // Ensure editor state tracker is in sync before applying wrap/separator logic.
     getCursorPosition();
 
-    final InputConnection ic = mInputConnectionRouter.current();
-    mInputConnectionRouter.beginBatchEdit();
+    final InputConnectionRouter inputConnectionRouter =
+        getImeSessionState().getInputConnectionRouter();
+    inputConnectionRouter.beginBatchEdit();
     boolean handledByOverlay = emojiSearchController.handleOverlayKey(primaryCode, key);
     if (!handledByOverlay) {
       super.onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
       if (primaryCode > 0) {
-        onNonFunctionKey(primaryCode, key, multiTapIndex, nearByKeyCodes);
+        nonFunctionKeyHandler.handle(
+            this,
+            primaryCode,
+            key,
+            multiTapIndex,
+            nearByKeyCodes,
+            this::sendDownUpKeyEvents,
+            () -> sendKeyChar((char) 27));
       } else {
         if (BuildConfig.DEBUG) Logger.d(TAG, "onFunctionKey %d", primaryCode);
         functionKeyHandler.handle(primaryCode, key, fromUI);
       }
     }
-    mInputConnectionRouter.endBatchEdit();
+    inputConnectionRouter.endBatchEdit();
   }
 
   @Override
@@ -714,29 +402,12 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     super.onText(key, text);
   }
 
-  private void sendTab() {
-    InputConnection ic = currentInputConnection();
-    if (ic == null) {
-      return;
-    }
-    TerminalKeySender.sendTab(ic, TerminalKeySender.isTerminalEmulation(getCurrentInputEditorInfo()));
-  }
-
-  private void sendEscape() {
-    InputConnection ic = currentInputConnection();
-    if (ic == null) {
-      return;
-    }
-    final boolean terminalEmulation = TerminalKeySender.isTerminalEmulation(getCurrentInputEditorInfo());
-    TerminalKeySender.sendEscape(ic, terminalEmulation, () -> sendKeyChar((char) 27));
-  }
-
   @Override
   public void onAlphabetKeyboardSet(@NonNull AnyKeyboard keyboard) {
     super.onAlphabetKeyboardSet(keyboard);
     setKeyboardFinalStuff();
     mKeyboardAutoCap = keyboard.autoCap;
-    ImeStateTracker.onKeyboardVisible(keyboard, getCurrentInputEditorInfo());
+    ImeStateTracker.onKeyboardVisible(keyboard, currentInputEditorInfo());
     InputViewBinder inputView = getInputView();
     if (inputView instanceof com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase) {
       ImeStateTracker.reportKeyboardView(
@@ -758,36 +429,19 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   @Override
   public View onCreateExtractTextView() {
-    mFullScreenExtractView = super.onCreateExtractTextView();
-    if (mFullScreenExtractView != null) {
-      mFullScreenExtractTextView =
-          mFullScreenExtractView.findViewById(android.R.id.inputExtractEditText);
-    }
-
-    return mFullScreenExtractView;
+    return fullscreenExtractViewController.onCreateExtractTextView(super.onCreateExtractTextView());
   }
 
   @Override
   public void updateFullscreenMode() {
     super.updateFullscreenMode();
-    InputViewBinder inputViewBinder = getInputView();
-    if (mFullScreenExtractView != null && inputViewBinder != null) {
-      final AnyKeyboardView anyKeyboardView = (AnyKeyboardView) inputViewBinder;
-      ViewCompat.setBackground(mFullScreenExtractView, anyKeyboardView.getBackground());
-      if (mFullScreenExtractTextView != null) {
-        mFullScreenExtractTextView.setTextColor(
-            anyKeyboardView.getCurrentResourcesHolder().getKeyTextColor());
-      }
-    }
+    fullscreenExtractViewController.updateFullscreenMode(getInputView());
   }
 
   @Override
-  protected void handleBackWord(InputConnection ic) {
-    if (ic == null) {
-      return;
-    }
+  protected void handleBackWord() {
     BackWordDeleter.handleBackWord(
-        ic,
+        getImeSessionState().getInputConnectionRouter(),
         this::markExpectingSelectionUpdate,
         this::postUpdateSuggestions,
         getCurrentComposedWord(),
@@ -802,15 +456,16 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     }
     DeleteActionHelper.handleDeleteLastCharacter(
         getDeleteActionHost(),
-        mInputConnectionRouter,
-        currentInputConnection(),
+        getImeSessionState().getInputConnectionRouter(),
         getCurrentComposedWord(),
         forMultiTap);
   }
 
-  void handleForwardDelete(InputConnection ic) {
+  void handleForwardDelete() {
     DeleteActionHelper.handleForwardDelete(
-        getDeleteActionHost(), mInputConnectionRouter, ic, getCurrentComposedWord());
+        getDeleteActionHost(),
+        getImeSessionState().getInputConnectionRouter(),
+        getCurrentComposedWord());
   }
 
   void handleControl() {
@@ -832,8 +487,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   }
 
   private void sendNavigationKeyEvent(int keyEventCode) {
-    final boolean temporarilyDisableShift =
-        getInputView() != null && getInputView().isShifted();
+    final boolean temporarilyDisableShift = getInputView() != null && getInputView().isShifted();
     if (temporarilyDisableShift) {
       getInputView().setShifted(false);
     }
@@ -843,28 +497,8 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     }
   }
 
-  private void handleVoice() {
-    voiceKeyUiUpdater.applyState(
-        getInputView(), mVoiceKeyState.isActive(), mVoiceKeyState.isLocked());
-  }
-
-  private boolean mManualShiftState = false;
-
   void handleShift() {
-    final AnyKeyboard currentKeyboard = getCurrentKeyboard();
-    if (currentKeyboard != null) {
-      currentKeyboard.setShifted(mShiftKeyState.isActive());
-      currentKeyboard.setShiftLocked(mShiftKeyState.isLocked());
-    }
-    if (getInputView() != null) {
-      Logger.d(
-          TAG,
-          "shift Setting UI active:%s, locked: %s",
-          mShiftKeyState.isActive(),
-          mShiftKeyState.isLocked());
-      getInputView().setShifted(mShiftKeyState.isActive());
-      getInputView().setShiftLocked(mShiftKeyState.isLocked());
-    }
+    getShiftStateController().applyShiftStateToKeyboardAndView();
   }
 
   void toggleCaseOfSelectedCharacters() {
@@ -872,14 +506,10 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
     final ExtractedText et = getExtractedText();
     AnyKeyboard currentAlphabetKeyboard = getCurrentAlphabetKeyboard();
     @NonNull
-    Locale locale = currentAlphabetKeyboard != null ? currentAlphabetKeyboard.getLocale() : Locale.ROOT;
+    Locale locale =
+        currentAlphabetKeyboard != null ? currentAlphabetKeyboard.getLocale() : Locale.ROOT;
     SelectionEditHelper.toggleCaseOfSelectedCharacters(
-        et, mInputConnectionRouter, mTextCapitalizerWorkspace, locale);
-  }
-
-  private void wrapSelectionWithCharacters(int prefix, int postfix) {
-    final ExtractedText et = getExtractedText();
-    SelectionEditHelper.wrapSelectionWithCharacters(et, mInputConnectionRouter, prefix, postfix);
+        et, getImeSessionState().getInputConnectionRouter(), mTextCapitalizerWorkspace, locale);
   }
 
   @Override
@@ -906,7 +536,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
         getCurrentSymbolsKeyboard().getKeyboardName());
   }
 
-  private void nextKeyboard(EditorInfo currentEditorInfo, KeyboardSwitcher.NextKeyboardType type) {
+  private void nextKeyboard(EditorInfo currentEditorInfo, NextKeyboardType type) {
     getKeyboardSwitcher().nextKeyboard(currentEditorInfo, type);
   }
 
@@ -931,7 +561,7 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   public void onPress(int primaryCode) {
     super.onPress(primaryCode);
     if (primaryCode == KeyCodes.SHIFT || primaryCode == KeyCodes.SHIFT_LOCK) {
-      mManualShiftState = true;
+      getShiftStateController().markManualShiftState();
     }
     modifierKeyStateHandler.onPress(primaryCode);
   }
@@ -981,35 +611,11 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
 
   @Override
   public void deleteLastCharactersFromInput(int countToDelete) {
-    if (countToDelete == 0) {
-      return;
-    }
-
-    final WordComposer currentComposedWord = getCurrentComposedWord();
-    final int currentLength = currentComposedWord.codePointCount();
-    boolean shouldDeleteUsingCompletion;
-    if (currentLength > 0) {
-      shouldDeleteUsingCompletion = true;
-      if (currentLength > countToDelete) {
-        int deletesLeft = countToDelete;
-        while (deletesLeft > 0) {
-          currentComposedWord.deleteCodePointAtCurrentPosition();
-          deletesLeft--;
-        }
-      } else {
-        currentComposedWord.reset();
-      }
-    } else {
-      shouldDeleteUsingCompletion = false;
-    }
-    InputConnection ic = currentInputConnection();
-    if (ic != null) {
-      if (isPredictionOn() && shouldDeleteUsingCompletion) {
-        ic.setComposingText(currentComposedWord.getTypedWord() /* mComposing */, 1);
-      } else {
-        ic.deleteSurroundingText(countToDelete, 0);
-      }
-    }
+    DeleteActionHelper.deleteLastCharactersFromInput(
+        getDeleteActionHost(),
+        getImeSessionState().getInputConnectionRouter(),
+        getCurrentComposedWord(),
+        countToDelete);
   }
 
   @Override
@@ -1029,34 +635,6 @@ public abstract class AnySoftKeyboard extends AnySoftKeyboardColorizeNavBar {
   }
 
   void updateShiftStateNow() {
-    final InputConnection ic = currentInputConnection();
-    EditorInfo ei = getCurrentInputEditorInfo();
-    final int caps;
-    final AnyKeyboard currentAlphabetKeyboard = getCurrentAlphabetKeyboard();
-    final boolean keyboardAutoCap = currentAlphabetKeyboard != null && currentAlphabetKeyboard.autoCap;
-    if (keyboardAutoCap
-        && mAutoCap
-        && ic != null
-        && ei != null
-        && ei.inputType != EditorInfo.TYPE_NULL) {
-      caps = ic.getCursorCapsMode(ei.inputType);
-    } else {
-      caps = 0;
-    }
-    final boolean inputSaysCaps = caps != 0;
-    Logger.d(TAG, "shift updateShiftStateNow inputSaysCaps=%s", inputSaysCaps);
-    if (inputSaysCaps) {
-      if (!mShiftKeyState.isActive()) {
-        mManualShiftState = false;
-        mShiftKeyState.setActiveState(true);
-      }
-    } else if (!mManualShiftState) {
-      mShiftKeyState.setActiveState(false);
-    }
-    if (!mShiftKeyState.isActive()) {
-      mManualShiftState = false;
-    }
-    handleShift();
+    getShiftStateController().updateShiftStateNow();
   }
-
 }

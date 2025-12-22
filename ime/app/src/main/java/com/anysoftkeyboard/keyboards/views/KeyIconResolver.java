@@ -4,15 +4,14 @@ import android.graphics.drawable.Drawable;
 import android.util.SparseArray;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.CompatUtils;
+import com.anysoftkeyboard.base.utils.Logger;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.overlay.ThemeOverlayCombiner;
 
-/**
- * Maintains key icon builders/cache and resolves the drawable for a given key.
- */
+/** Maintains key icon builders/cache and resolves the drawable for a given key. */
 final class KeyIconResolver {
   private final SparseArray<DrawableBuilder> keysIconBuilders = new SparseArray<>(64);
   private final SparseArray<Drawable> keysIcons = new SparseArray<>(64);
@@ -81,8 +80,9 @@ final class KeyIconResolver {
     final Drawable drawable = builder.buildDrawable();
     if (drawable == null) return null;
     if (drawable.getCurrent() == null) {
-      drawable.setState(key.getCurrentDrawableState(new KeyDrawableStateProvider(
-          0, 0, 0, 0, 0))); // fallback neutral state
+      drawable.setState(
+          key.getCurrentDrawableState(
+              new KeyDrawableStateProvider(0, 0, 0, 0, 0))); // fallback neutral state
     }
     if (!force && drawable.getCurrent() == null) return null;
     keysIcons.put(primaryCode, drawable);

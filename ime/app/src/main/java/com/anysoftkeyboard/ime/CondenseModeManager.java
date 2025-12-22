@@ -28,8 +28,8 @@ public final class CondenseModeManager {
   }
 
   /**
-   * Update current mode based on device orientation. Returns true if mode changed and callbacks were
-   * invoked.
+   * Update current mode based on device orientation. Returns true if mode changed and callbacks
+   * were invoked.
    */
   public boolean updateForOrientation(int orientation) {
     CondenseType desired =

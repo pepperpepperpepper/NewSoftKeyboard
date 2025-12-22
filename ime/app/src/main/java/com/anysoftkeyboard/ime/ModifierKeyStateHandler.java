@@ -143,7 +143,8 @@ public final class ModifierKeyStateHandler {
           KeyCodes.CTRL_LOCK,
           KeyCodes.ALT,
           KeyCodes.ALT_MODIFIER,
-          KeyCodes.FUNCTION -> true;
+          KeyCodes.FUNCTION ->
+          true;
       default -> false;
     };
   }

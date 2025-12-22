@@ -5,6 +5,7 @@ import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import java.util.function.Function;
 
 /** Owns special-key icon/label resolution to keep {@link AnyKeyboardViewBase} slimmer. */
@@ -75,8 +76,7 @@ final class SpecialKeyManager {
   }
 
   @Nullable
-  Drawable getIconForKeyCode(
-      int keyCode, int keyboardActionType, AnyKeyboard keyboard) {
+  Drawable getIconForKeyCode(int keyCode, int keyboardActionType, AnyKeyboard keyboard) {
     if (drawableStatesProvider == null || actionIconStateSetter == null) {
       return null;
     }

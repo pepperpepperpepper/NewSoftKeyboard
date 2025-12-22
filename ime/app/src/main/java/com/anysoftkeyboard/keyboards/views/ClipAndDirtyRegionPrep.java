@@ -10,7 +10,12 @@ final class ClipAndDirtyRegionPrep {
   private ClipAndDirtyRegionPrep() {}
 
   static boolean prepare(
-      Canvas canvas, Rect dirtyRect, Rect clipRegion, Keyboard.Key[] keys, int paddingLeft, int paddingTop) {
+      Canvas canvas,
+      Rect dirtyRect,
+      Rect clipRegion,
+      Keyboard.Key[] keys,
+      int paddingLeft,
+      int paddingTop) {
     canvas.getClipBounds(dirtyRect);
     clipRegion.set(dirtyRect);
 

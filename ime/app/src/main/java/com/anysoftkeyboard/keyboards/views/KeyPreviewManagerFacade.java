@@ -5,8 +5,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
-import com.anysoftkeyboard.keyboards.views.preview.PreviewPopupTheme;
 import com.anysoftkeyboard.keyboards.views.preview.NullKeyPreviewsManager;
+import com.anysoftkeyboard.keyboards.views.preview.PreviewPopupTheme;
 
 /** Wraps preview show/dismiss logic so {@link AnyKeyboardViewBase} can delegate. */
 final class KeyPreviewManagerFacade {

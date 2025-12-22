@@ -1,9 +1,9 @@
 package com.google.android.voiceime;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.SharedPreferences;
 import android.inputmethodservice.InputMethodService;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
@@ -52,17 +52,18 @@ public class VoiceRecognitionTriggerTest {
         .thenReturn(false); // Default to disabled
     Mockito.when(mMockSharedPreferences.getString(Mockito.anyString(), Mockito.anyString()))
         .thenReturn(""); // Default to empty string
-    
+
     // Mock context.getString() to return resource names for OpenAI settings
     Mockito.when(mMockInputMethodService.getString(Mockito.anyInt()))
-        .thenAnswer(invocation -> {
-          int resourceId = invocation.getArgument(0);
-          // Return known resource names based on common patterns
-          if (resourceId > 0x7f000000) { // Android resource ID pattern
-            return "settings_key_openai_enabled"; // Default key
-          }
-          return "unknown_key";
-        });
+        .thenAnswer(
+            invocation -> {
+              int resourceId = invocation.getArgument(0);
+              // Return known resource names based on common patterns
+              if (resourceId > 0x7f000000) { // Android resource ID pattern
+                return "settings_key_openai_enabled"; // Default key
+              }
+              return "unknown_key";
+            });
   }
 
   private void addInputMethodInfo(List<String> modes) {

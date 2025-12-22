@@ -5,9 +5,7 @@ import com.anysoftkeyboard.rx.GenericOnError;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.disposables.CompositeDisposable;
 
-/**
- * Wires preference-driven timing values into the shared pointer configuration.
- */
+/** Wires preference-driven timing values into the shared pointer configuration. */
 final class PointerConfigLoader {
 
   private final RxSharedPrefs prefs;
@@ -36,8 +34,7 @@ final class PointerConfigLoader {
     disposables.add(
         prefs
             .getString(
-                R.string.settings_key_multitap_timeout,
-                R.string.settings_default_multitap_timeout)
+                R.string.settings_key_multitap_timeout, R.string.settings_default_multitap_timeout)
             .asObservable()
             .map(Integer::parseInt)
             .subscribe(

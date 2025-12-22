@@ -44,9 +44,7 @@ final class HintLayoutCalculator {
     if (hintVAlign == Gravity.TOP) {
       iconTop = (int) (keyBackgroundPadding.top + 0.5f);
     } else {
-      iconTop =
-          (int)
-              (keyHeight - keyBackgroundPadding.bottom - iconHeight - 0.5f);
+      iconTop = (int) (keyHeight - keyBackgroundPadding.bottom - iconHeight - 0.5f);
     }
     drawable.setBounds(iconLeft, iconTop, iconLeft + iconWidth, iconTop + iconHeight);
   }

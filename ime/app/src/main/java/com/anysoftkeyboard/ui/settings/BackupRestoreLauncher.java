@@ -6,8 +6,8 @@ import android.net.Uri;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
-import androidx.fragment.app.Fragment;
 import androidx.core.util.Pair;
+import androidx.fragment.app.Fragment;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.prefs.GlobalPrefsBackup;
 import com.anysoftkeyboard.rx.RxSchedulers;
@@ -39,12 +39,12 @@ final class BackupRestoreLauncher {
     switch (optionId) {
       case R.id.backup_prefs -> {
         intentAction = Intent.ACTION_CREATE_DOCUMENT;
-        requestCode = MainFragment.BACKUP_REQUEST_ID;
+        requestCode = PrefsBackupRestoreController.BACKUP_REQUEST_ID;
         errorMsg = R.string.toast_error_custom_path_backup;
       }
       case R.id.restore_prefs -> {
         intentAction = Intent.ACTION_OPEN_DOCUMENT;
-        requestCode = MainFragment.RESTORE_REQUEST_ID;
+        requestCode = PrefsBackupRestoreController.RESTORE_REQUEST_ID;
         errorMsg = R.string.toast_error_custom_path_backup;
       }
       default -> throw new IllegalArgumentException("Unsupported optionId " + optionId);
@@ -80,12 +80,14 @@ final class BackupRestoreLauncher {
       action =
           listPair ->
               GlobalPrefsBackup.backup(
-                  listPair, fragment.requireContext().getContentResolver().openOutputStream(filePath));
+                  listPair,
+                  fragment.requireContext().getContentResolver().openOutputStream(filePath));
     } else {
       action =
           listPair ->
               GlobalPrefsBackup.restore(
-                  listPair, fragment.requireContext().getContentResolver().openInputStream(filePath));
+                  listPair,
+                  fragment.requireContext().getContentResolver().openInputStream(filePath));
     }
 
     return RxProgressDialog.create(
@@ -102,12 +104,17 @@ final class BackupRestoreLauncher {
                     "BackupRestoreLauncher",
                     "Finished backing up %s",
                     providerDetails.provider.providerId()),
-            e -> dialogHost.showDialog(
-                isBackup ? MainFragment.DIALOG_SAVE_FAILED : MainFragment.DIALOG_LOAD_FAILED,
-                e.getMessage()),
+            e ->
+                dialogHost.showDialog(
+                    isBackup
+                        ? PrefsBackupRestoreController.DIALOG_SAVE_FAILED
+                        : PrefsBackupRestoreController.DIALOG_LOAD_FAILED,
+                    e.getMessage()),
             () ->
                 dialogHost.showDialog(
-                    isBackup ? MainFragment.DIALOG_SAVE_SUCCESS : MainFragment.DIALOG_LOAD_SUCCESS,
+                    isBackup
+                        ? PrefsBackupRestoreController.DIALOG_SAVE_SUCCESS
+                        : PrefsBackupRestoreController.DIALOG_LOAD_SUCCESS,
                     filePath));
   }
 }

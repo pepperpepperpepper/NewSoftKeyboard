@@ -31,9 +31,7 @@ public final class MiniKeyboardActionListener implements OnKeyboardActionListene
   public void onKey(
       int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI) {
     mParentListener.listener().onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
-    if ((mInOneShot
-            && primaryCode != KeyCodes.DELETE
-            && primaryCode != KeyCodes.ARROW_DOWN)
+    if ((mInOneShot && primaryCode != KeyCodes.DELETE && primaryCode != KeyCodes.ARROW_DOWN)
         || primaryCode == KeyCodes.ENTER
         || primaryCode == KeyCodes.CANCEL) {
       mKeyboardDismissAction.run();

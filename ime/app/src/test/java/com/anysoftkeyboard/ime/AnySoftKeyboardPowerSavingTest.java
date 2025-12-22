@@ -8,6 +8,7 @@ import com.anysoftkeyboard.AnySoftKeyboardBaseTest;
 import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import com.anysoftkeyboard.ViewTestUtils;
 import com.anysoftkeyboard.android.PowerSavingTest;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
 import com.anysoftkeyboard.overlay.OverlayData;
 import com.anysoftkeyboard.overlay.OverlyDataCreator;
 import com.anysoftkeyboard.test.SharedPrefsHelper;

@@ -1,7 +1,7 @@
 package com.anysoftkeyboard.debug;
 
-import android.os.SystemClock;
 import android.graphics.PointF;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.inputmethod.EditorInfo;
 import androidx.annotation.NonNull;
@@ -110,8 +110,7 @@ public final class ImeStateTracker {
     }
 
     @Override
-    public void onVisible(
-        PublicNotices ime, AnyKeyboard keyboard, EditorInfo editorInfo) {
+    public void onVisible(PublicNotices ime, AnyKeyboard keyboard, EditorInfo editorInfo) {
       recordVisible(keyboard, editorInfo);
     }
 
@@ -132,14 +131,19 @@ public final class ImeStateTracker {
                 + " name="
                 + mLastKeyboardName
                 + " view="
-                + (mLastKeyboardView != null ? mLastKeyboardView.getClass().getSimpleName() : "null"));
+                + (mLastKeyboardView != null
+                    ? mLastKeyboardView.getClass().getSimpleName()
+                    : "null"));
       } else {
         mLastKeyboardId = null;
         mLastKeyboardName = null;
         mLastKeyboard = null;
-        Log.d(TAG, "recordVisible missing add-on? keyboard="
-            + keyboard + " addon="
-            + (keyboard != null ? keyboard.getKeyboardAddOn() : "null"));
+        Log.d(
+            TAG,
+            "recordVisible missing add-on? keyboard="
+                + keyboard
+                + " addon="
+                + (keyboard != null ? keyboard.getKeyboardAddOn() : "null"));
       }
       mLastEditorInfo = editorInfo;
       if (BuildConfig.DEBUG) {
@@ -187,7 +191,10 @@ public final class ImeStateTracker {
 
     void setKeyboardView(@Nullable AnyKeyboardViewBase keyboardView) {
       mLastKeyboardView = keyboardView;
-      Log.d(TAG, "reportKeyboardView set to " + (keyboardView != null ? keyboardView.getClass().getName() : "null"));
+      Log.d(
+          TAG,
+          "reportKeyboardView set to "
+              + (keyboardView != null ? keyboardView.getClass().getName() : "null"));
     }
 
     @Nullable
@@ -195,7 +202,9 @@ public final class ImeStateTracker {
       AnyKeyboard keyboard = mLastKeyboard;
       AnyKeyboardViewBase keyboardView = mLastKeyboardView;
       if (keyboard == null || keyboardView == null) {
-        Log.d(TAG, "computeKeyCenterByPopup missing data keyboard=" + keyboard + " view=" + keyboardView);
+        Log.d(
+            TAG,
+            "computeKeyCenterByPopup missing data keyboard=" + keyboard + " view=" + keyboardView);
         return null;
       }
       List<Keyboard.Key> keys = keyboard.getKeys();
@@ -204,7 +213,8 @@ public final class ImeStateTracker {
         return null;
       }
       for (Keyboard.Key key : keys) {
-        String popupString = key.popupCharacters == null ? null : String.valueOf(key.popupCharacters);
+        String popupString =
+            key.popupCharacters == null ? null : String.valueOf(key.popupCharacters);
         String extraKeyData =
             key instanceof AnyKeyboard.AnyKey ? ((AnyKeyboard.AnyKey) key).getExtraKeyData() : null;
         if (popupCharacters.equals(popupString) || popupCharacters.equals(extraKeyData)) {

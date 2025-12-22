@@ -45,8 +45,7 @@ public class TestInputActivity extends Activity {
     }
     mEditText.post(
         () -> {
-          InputMethodManager imm =
-              (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+          InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
           if (imm != null) {
             boolean shown = imm.showSoftInput(mEditText, InputMethodManager.SHOW_FORCED);
             sLastShowResult = shown;

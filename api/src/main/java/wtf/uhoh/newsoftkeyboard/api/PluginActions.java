@@ -44,10 +44,14 @@ public final class PluginActions {
       "com.anysoftkeyboard.plugindata.keyboardtheme";
 
   // Older legacy namespace used by many published language packs (e.g., F-Droid)
-  public static final String ACTION_KEYBOARD_ASK_MENNY = "com.menny.android.anysoftkeyboard.KEYBOARD";
-  public static final String ACTION_DICTIONARY_ASK_MENNY = "com.menny.android.anysoftkeyboard.DICTIONARY";
-  public static final String METADATA_KEYBOARDS_ASK_MENNY = "com.menny.android.anysoftkeyboard.keyboards";
-  public static final String METADATA_DICTIONARIES_ASK_MENNY = "com.menny.android.anysoftkeyboard.dictionaries";
+  public static final String ACTION_KEYBOARD_ASK_MENNY =
+      "com.menny.android.anysoftkeyboard.KEYBOARD";
+  public static final String ACTION_DICTIONARY_ASK_MENNY =
+      "com.menny.android.anysoftkeyboard.DICTIONARY";
+  public static final String METADATA_KEYBOARDS_ASK_MENNY =
+      "com.menny.android.anysoftkeyboard.keyboards";
+  public static final String METADATA_DICTIONARIES_ASK_MENNY =
+      "com.menny.android.anysoftkeyboard.dictionaries";
 
   public static boolean isKeyboardAction(String action) {
     return ACTION_KEYBOARD_NEW.equals(action)

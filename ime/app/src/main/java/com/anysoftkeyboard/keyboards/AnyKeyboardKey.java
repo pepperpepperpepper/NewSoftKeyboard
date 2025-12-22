@@ -12,7 +12,6 @@ import androidx.annotation.Nullable;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
-import com.anysoftkeyboard.keyboards.views.KeyDrawableStateProvider;
 import com.anysoftkeyboard.utils.EmojiUtils;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
@@ -235,9 +234,7 @@ class AnyKeyboardKey extends Keyboard.Key {
     if (primaryCode == KeyCodes.CTRL) {
       if (parentKeyboard.isControlActive()) {
         return ensureCheckableState(
-            pressed
-                ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
-                : provider.KEY_STATE_FUNCTIONAL_ON);
+            pressed ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED : provider.KEY_STATE_FUNCTIONAL_ON);
       }
       return ensureCheckableState(
           pressed ? provider.KEY_STATE_FUNCTIONAL_PRESSED : provider.KEY_STATE_FUNCTIONAL_NORMAL);
@@ -247,9 +244,7 @@ class AnyKeyboardKey extends Keyboard.Key {
           return ensureCheckableState(provider.KEY_STATE_FUNCTIONAL_ON);
         }
         return ensureCheckableState(
-            pressed
-                ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
-                : provider.KEY_STATE_FUNCTIONAL_ON);
+            pressed ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED : provider.KEY_STATE_FUNCTIONAL_ON);
       }
       return ensureCheckableState(
           pressed ? provider.KEY_STATE_FUNCTIONAL_PRESSED : provider.KEY_STATE_FUNCTIONAL_NORMAL);
@@ -259,9 +254,7 @@ class AnyKeyboardKey extends Keyboard.Key {
           return ensureCheckableState(provider.KEY_STATE_FUNCTIONAL_ON);
         }
         return ensureCheckableState(
-            pressed
-                ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED
-                : provider.KEY_STATE_FUNCTIONAL_ON);
+            pressed ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED : provider.KEY_STATE_FUNCTIONAL_ON);
       }
       return ensureCheckableState(
           pressed ? provider.KEY_STATE_FUNCTIONAL_PRESSED : provider.KEY_STATE_FUNCTIONAL_NORMAL);

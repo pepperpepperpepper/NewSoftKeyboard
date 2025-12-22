@@ -7,23 +7,24 @@ import static org.mockito.ArgumentMatchers.same;
 
 import android.content.Context;
 import android.graphics.Point;
+import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
-import android.graphics.drawable.Drawable;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import com.anysoftkeyboard.ViewTestUtils;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
+import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
+import com.anysoftkeyboard.keyboards.views.preview.PreviewPopupTheme;
 import com.anysoftkeyboard.rx.TestRxSchedulers;
 import com.anysoftkeyboard.test.SharedPrefsHelper;
 import com.anysoftkeyboard.theme.KeyboardThemeFactory;
-import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
-import com.anysoftkeyboard.keyboards.views.preview.PreviewPopupTheme;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.R;
 import java.util.Arrays;
@@ -427,10 +428,7 @@ public class AnyKeyboardViewBaseTest {
 
     @Override
     public void showPreviewForKey(
-        Keyboard.Key key,
-        Drawable icon,
-        View parentView,
-        PreviewPopupTheme previewPopupTheme) {}
+        Keyboard.Key key, Drawable icon, View parentView, PreviewPopupTheme previewPopupTheme) {}
 
     @Override
     public void showPreviewForKey(
@@ -447,6 +445,7 @@ public class AnyKeyboardViewBaseTest {
     @Override
     public void destroy() {}
   }
+
   protected int findKeyIndex(int codeToFind) {
     Keyboard keyboard = mUnderTest.getKeyboard();
     if (keyboard == null) return -1;

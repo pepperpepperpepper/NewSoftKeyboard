@@ -22,6 +22,7 @@ import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.devicespecific.PressVibrator;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
 import com.anysoftkeyboard.keyboards.views.preview.AboveKeyPositionCalculator;
 import com.anysoftkeyboard.keyboards.views.preview.AboveKeyboardPositionCalculator;
 import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;

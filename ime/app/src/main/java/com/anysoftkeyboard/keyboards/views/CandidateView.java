@@ -17,17 +17,10 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
-import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.Paint.Align;
-import android.graphics.Rect;
-import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import android.text.Layout.Alignment;
-import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import android.util.AttributeSet;
@@ -35,23 +28,18 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import androidx.annotation.NonNull;
-import com.menny.android.anysoftkeyboard.BuildConfig;
-import androidx.core.content.ContextCompat;
-import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.base.utils.Logger;
-import com.anysoftkeyboard.ime.AnySoftKeyboardSuggestions;
 import com.anysoftkeyboard.keyboards.KeyboardSupport;
 import com.anysoftkeyboard.overlay.OverlayData;
 import com.anysoftkeyboard.overlay.OverlayDataNormalizer;
 import com.anysoftkeyboard.overlay.ThemeOverlayCombiner;
-import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
 import com.anysoftkeyboard.rx.GenericOnError;
 import com.anysoftkeyboard.theme.KeyboardTheme;
 import com.menny.android.anysoftkeyboard.AnyApplication;
+import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.disposables.CompositeDisposable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 @SuppressWarnings("this-escape")
@@ -62,30 +50,27 @@ public class CandidateView extends View implements ThemeableChild {
   private static final int OUT_OF_BOUNDS_X_CORD = -1;
   private int mTouchX = OUT_OF_BOUNDS_X_CORD;
   private static final int MAX_SUGGESTIONS = 32;
-  private final int[] mWordWidth = new int[MAX_SUGGESTIONS];
-  private final int[] mWordX = new int[MAX_SUGGESTIONS];
-  private static final int SCROLL_PIXELS = 20;
   private final ArrayList<CharSequence> mSuggestions = new ArrayList<>();
-  private float mHorizontalGap;
   private final ThemeOverlayCombiner mThemeOverlayCombiner = new ThemeOverlayCombiner();
   private final Paint mPaint;
   private final TextPaint mTextPaint;
   private final GestureDetector mGestureDetector;
-  private AnySoftKeyboardSuggestions mService;
+  private CandidateViewHost mHost;
   private boolean mNoticing = false;
   private CharSequence mSelectedString;
   private CharSequence mJustAddedWord;
   private int mSelectedIndex;
   private int mHighlightedIndex;
-  private Rect mBgPadding;
   private Drawable mDivider;
   private Drawable mCloseDrawable;
   private Drawable mSelectionHighlight;
-  private boolean mScrolled;
   private boolean mShowingAddToDictionary;
   private final CharSequence mAddToDictionaryHint;
-  private int mTargetScrollX;
-  private int mTotalWidth;
+  private final CandidateStripScrollController mScrollController =
+      new CandidateStripScrollController();
+  private final CandidateStripRenderer mStripRenderer = new CandidateStripRenderer(MAX_SUGGESTIONS);
+  private final CandidateStripRenderer.RenderResult stripRenderResult =
+      new CandidateStripRenderer.RenderResult();
 
   private boolean mAlwaysUseDrawText;
   private final CompositeDisposable mDisposables = new CompositeDisposable();
@@ -107,7 +92,8 @@ public class CandidateView extends View implements ThemeableChild {
     final int minTouchableWidth =
         context.getResources().getDimensionPixelOffset(R.dimen.candidate_min_touchable_width);
     mGestureDetector =
-        new GestureDetector(context, new CandidateStripGestureListener(minTouchableWidth));
+        new GestureDetector(
+            context, mScrollController.createGestureListener(minTouchableWidth, this));
 
     setWillNotDraw(false);
     setHorizontalScrollBarEnabled(false);
@@ -128,8 +114,8 @@ public class CandidateView extends View implements ThemeableChild {
     if (index < 0 || index >= mSuggestions.size()) return false;
     mSelectedIndex = index;
     mSelectedString = mSuggestions.get(index);
-    if (mService != null) {
-      mService.pickSuggestionManually(mSelectedIndex, mSelectedString);
+    if (mHost != null) {
+      mHost.pickSuggestionManually(mSelectedIndex, mSelectedString);
       return true;
     }
     return false;
@@ -142,120 +128,30 @@ public class CandidateView extends View implements ThemeableChild {
             overlay, 96, overlay.getPrimaryDarkColor(), overlay.getSecondaryTextColor());
     mThemeOverlayCombiner.setOverlayData(normalized);
     setBackgroundDrawable(mThemeOverlayCombiner.getThemeResources().getKeyboardBackground());
+    mStripRenderer.invalidateBackground();
     invalidate();
   }
 
   @Override
   public void setKeyboardTheme(@NonNull KeyboardTheme theme) {
-    final Context context = getContext();
-    final AddOn.AddOnResourceMapping remoteAttrs = theme.getResourceMapping();
-    final int[] remoteStyleableArray =
-        remoteAttrs.getRemoteStyleableArrayFromLocal(R.styleable.AnyKeyboardViewTheme);
-    TypedArray a =
-        theme
-            .getPackageContext()
-            .obtainStyledAttributes(theme.getThemeResId(), remoteStyleableArray);
-    mThemeOverlayCombiner.setThemeTextColor(
-        new ColorStateList(
-            new int[][] {{0}},
-            new int[] {ContextCompat.getColor(context, R.color.candidate_normal)}));
-    mThemeOverlayCombiner.setThemeNameTextColor(
-        ContextCompat.getColor(context, R.color.candidate_recommended));
-    mThemeOverlayCombiner.setThemeHintTextColor(
-        ContextCompat.getColor(context, R.color.candidate_other));
-    mHorizontalGap = context.getResources().getDimensionPixelSize(R.dimen.candidate_strip_x_gap);
-    mDivider = null;
-    mCloseDrawable = null;
-    mSelectionHighlight = null;
     setBackgroundDrawable(null);
     setBackgroundColor(Color.BLACK);
-    float defaultFontSizePixel =
-        context.getResources().getDimensionPixelSize(R.dimen.candidate_font_height);
-    float fontSizePixel = defaultFontSizePixel;
-    float keyTextSizePixel = Float.NaN;
-    float suggestionTextSizePixel = Float.NaN;
+    final CandidateViewThemeApplier.Result themeResult =
+        CandidateViewThemeApplier.applyTheme(getContext(), theme, mThemeOverlayCombiner, mPaint);
 
-    final int resolvedAttrsCount = a.getIndexCount();
-    for (int attrIndex = 0; attrIndex < resolvedAttrsCount; attrIndex++) {
-      final int remoteIndex = a.getIndex(attrIndex);
-      try {
-        switch (remoteAttrs.getLocalAttrId(remoteStyleableArray[remoteIndex])) {
-          case R.attr.suggestionNormalTextColor:
-            mThemeOverlayCombiner.setThemeNameTextColor(
-                a.getColor(remoteIndex, ContextCompat.getColor(context, R.color.candidate_normal)));
-            break;
-          case R.attr.suggestionRecommendedTextColor:
-            mThemeOverlayCombiner.setThemeTextColor(
-                new ColorStateList(
-                    new int[][] {{0}},
-                    new int[] {
-                      a.getColor(
-                          remoteIndex,
-                          ContextCompat.getColor(context, R.color.candidate_recommended))
-                    }));
-            break;
-          case R.attr.suggestionOthersTextColor:
-            mThemeOverlayCombiner.setThemeHintTextColor(
-                a.getColor(remoteIndex, ContextCompat.getColor(context, R.color.candidate_other)));
-            break;
-          case R.attr.suggestionDividerImage:
-            mDivider = a.getDrawable(remoteIndex);
-            break;
-          case R.attr.suggestionCloseImage:
-            mCloseDrawable = a.getDrawable(remoteIndex);
-            break;
-          case R.attr.suggestionTextSize:
-            suggestionTextSizePixel = a.getDimension(remoteIndex, defaultFontSizePixel);
-            break;
-          case R.attr.keyTextSize:
-            keyTextSizePixel = a.getDimension(remoteIndex, defaultFontSizePixel);
-            break;
-          case R.attr.suggestionWordXGap:
-            mHorizontalGap = a.getDimension(remoteIndex, mHorizontalGap);
-            break;
-          case R.attr.suggestionBackgroundImage:
-            final Drawable stripImage = a.getDrawable(remoteIndex);
-            if (stripImage != null) {
-              setBackgroundColor(Color.TRANSPARENT);
-              mThemeOverlayCombiner.setThemeKeyboardBackground(stripImage);
-              setBackgroundDrawable(
-                  mThemeOverlayCombiner.getThemeResources().getKeyboardBackground());
-            }
-            break;
-          case R.attr.suggestionSelectionHighlight:
-            mSelectionHighlight = a.getDrawable(remoteIndex);
-            break;
-        }
-      } catch (Exception e) {
-        Logger.w(TAG, "Got an exception while reading theme data", e);
-      }
-    }
-    a.recycle();
+    final float horizontalGap = themeResult.horizontalGap();
+    mDivider = themeResult.divider();
+    mCloseDrawable = themeResult.closeDrawable();
+    mSelectionHighlight = themeResult.selectionHighlight();
+    mStripRenderer.onThemeUpdated(mDivider, mSelectionHighlight, horizontalGap);
 
-    if (!Float.isNaN(keyTextSizePixel)) {
-      fontSizePixel = keyTextSizePixel;
-    } else if (!Float.isNaN(suggestionTextSizePixel)) {
-      fontSizePixel = suggestionTextSizePixel;
-    } else {
-      fontSizePixel = defaultFontSizePixel;
+    if (themeResult.backgroundDrawable() != null) {
+      setBackgroundColor(Color.TRANSPARENT);
+      setBackgroundDrawable(themeResult.backgroundDrawable());
     }
 
-    if (mDivider == null) {
-      mDivider = ContextCompat.getDrawable(context, R.drawable.dark_suggestions_divider);
-    }
-    if (mCloseDrawable == null) {
-      mCloseDrawable = ContextCompat.getDrawable(context, R.drawable.close_suggestions_strip_icon);
-    }
-    if (mSelectionHighlight == null) {
-      mSelectionHighlight =
-          ContextCompat.getDrawable(context, R.drawable.dark_candidate_selected_background);
-    }
-    mPaint.setColor(mThemeOverlayCombiner.getThemeResources().getKeyTextColor().getDefaultColor());
-    mPaint.setAntiAlias(true);
-    mBaseSuggestionTextSizePx = fontSizePixel;
+    mBaseSuggestionTextSizePx = themeResult.baseSuggestionTextSizePx();
     applyTextSize();
-    mPaint.setStrokeWidth(0);
-    mPaint.setTextAlign(Align.CENTER);
     mTextPaint.set(mPaint);
   }
 
@@ -299,14 +195,14 @@ public class CandidateView extends View implements ThemeableChild {
     mDisposables.clear();
   }
 
-  /** A connection back to the service to communicate with the text field */
-  public void setService(AnySoftKeyboardSuggestions listener) {
-    mService = listener;
+  /** A connection back to the IME runtime to communicate with the editor. */
+  public void setHost(CandidateViewHost host) {
+    mHost = host;
   }
 
   @Override
   public int computeHorizontalScrollRange() {
-    return mTotalWidth;
+    return mScrollController.totalWidth();
   }
 
   /**
@@ -315,136 +211,30 @@ public class CandidateView extends View implements ThemeableChild {
   @Override
   protected void onDraw(@NonNull Canvas canvas) {
     super.onDraw(canvas);
-    mTotalWidth = 0;
-
-    final int height = getHeight();
-    if (mBgPadding == null) {
-      mBgPadding = new Rect(0, 0, 0, 0);
-      if (getBackground() != null) {
-        getBackground().getPadding(mBgPadding);
-      }
-      mDivider.setBounds(0, 0, mDivider.getIntrinsicWidth(), mDivider.getIntrinsicHeight());
-    }
-
-    final int dividerYOffset = (height - mDivider.getMinimumHeight()) / 2;
-    final int count = mSuggestions.size();
-    final Rect bgPadding = mBgPadding;
-    final Paint paint = mPaint;
-    final int touchX = mTouchX;
+    mScrollController.setTotalWidth(0);
     final int scrollX = getScrollX();
-    final boolean scrolled = mScrolled;
-
-    final ThemeResourcesHolder themeResources = mThemeOverlayCombiner.getThemeResources();
-    int x = 0;
-    for (int i = 0; i < count; i++) {
-      CharSequence suggestion = mSuggestions.get(i);
-      if (suggestion == null) {
-        continue;
-      }
-      final int wordLength = suggestion.length();
-
-      paint.setColor(themeResources.getNameTextColor());
-      paint.setTypeface(Typeface.DEFAULT);
-      if (i == mHighlightedIndex) {
-        paint.setTypeface(Typeface.DEFAULT_BOLD);
-        paint.setColor(themeResources.getKeyTextColor().getDefaultColor());
-        // existsAutoCompletion = true;
-      } else if (i != 0 || (wordLength == 1 && count > 1)) {
-        // HACK: even if i == 0, we use mColorOther when this
-        // suggestion's length is 1 and
-        // there are multiple suggestions, such as the default
-        // punctuation list.
-        paint.setColor(themeResources.getHintTextColor());
-      }
-
-      // now that we set the typeFace, we can measure
-      int wordWidth;
-      if ((wordWidth = mWordWidth[i]) == 0) {
-        float textWidth = paint.measureText(suggestion, 0, wordLength);
-        // wordWidth = Math.max(0, (int) textWidth + X_GAP * 2);
-        wordWidth = (int) (textWidth + mHorizontalGap * 2);
-        mWordWidth[i] = wordWidth;
-      }
-
-      mWordX[i] = x;
-
-      if (touchX != OUT_OF_BOUNDS_X_CORD
-          && !scrolled
-          && touchX + scrollX >= x
-          && touchX + scrollX < x + wordWidth) {
-        if (!mShowingAddToDictionary) {
-          canvas.translate(x, 0);
-          mSelectionHighlight.setBounds(0, bgPadding.top, wordWidth, height);
-          mSelectionHighlight.draw(canvas);
-          canvas.translate(-x, 0);
-        }
-        mSelectedString = suggestion;
-        mSelectedIndex = i;
-      }
-
-      // (+)This is the trick to get RTL/LTR text correct
-      if (mAlwaysUseDrawText) {
-        final int y = (int) (height + paint.getTextSize() - paint.descent()) / 2;
-        canvas.drawText(suggestion, 0, wordLength, x + wordWidth / 2f, y, paint);
-      } else {
-        final int y = (int) (height - paint.getTextSize() + paint.descent()) / 2;
-        // no matter what: StaticLayout
-        float textX = x + (wordWidth / 2.0f) - mHorizontalGap;
-        float textY = y - bgPadding.bottom - bgPadding.top;
-
-        canvas.translate(textX, textY);
-        mTextPaint.setTypeface(paint.getTypeface());
-        mTextPaint.setColor(paint.getColor());
-
-        StaticLayout suggestionText =
-            new StaticLayout(
-                suggestion, mTextPaint, wordWidth, Alignment.ALIGN_CENTER, 1.0f, 0.0f, false);
-        suggestionText.draw(canvas);
-
-        canvas.translate(-textX, -textY);
-      }
-      // (-)
-      // paint.setColor(themeResources.getHintTextColor());
-      canvas.translate(x + wordWidth, 0);
-      // Draw a divider unless it's after the hint
-      // or the last suggested word
-      if (count > 1 && !mShowingAddToDictionary && i != (count - 1)) {
-        canvas.translate(0, dividerYOffset);
-        mDivider.draw(canvas);
-        canvas.translate(0, -dividerYOffset);
-      }
-      canvas.translate(-x - wordWidth, 0);
-      // paint.setTypeface(Typeface.DEFAULT);
-      x += wordWidth;
+    stripRenderResult.reset();
+    mStripRenderer.render(
+        canvas,
+        getHeight(),
+        getBackground(),
+        mTouchX,
+        scrollX,
+        mScrollController.isScrolled(),
+        mShowingAddToDictionary,
+        mAlwaysUseDrawText,
+        mHighlightedIndex,
+        mSuggestions,
+        mPaint,
+        mTextPaint,
+        mThemeOverlayCombiner.getThemeResources(),
+        stripRenderResult);
+    mSelectedString = stripRenderResult.selectedString;
+    mSelectedIndex = stripRenderResult.selectedIndex;
+    mScrollController.setTotalWidth(stripRenderResult.totalWidth);
+    if (mScrollController.shouldScrollToTarget(scrollX)) {
+      mScrollController.scrollToTarget(this);
     }
-    mTotalWidth = x;
-    if (mTargetScrollX != scrollX) {
-      scrollToTarget();
-    }
-  }
-
-  private void scrollToTarget() {
-    int scrollX = getScrollX();
-    if (mTargetScrollX > scrollX) {
-      scrollX += SCROLL_PIXELS;
-      if (scrollX >= mTargetScrollX) {
-        scrollX = mTargetScrollX;
-        scrollTo(scrollX, getScrollY());
-        requestLayout();
-      } else {
-        scrollTo(scrollX, getScrollY());
-      }
-    } else {
-      scrollX -= SCROLL_PIXELS;
-      if (scrollX <= mTargetScrollX) {
-        scrollX = mTargetScrollX;
-        scrollTo(scrollX, getScrollY());
-        requestLayout();
-      } else {
-        scrollTo(scrollX, getScrollY());
-      }
-    }
-    invalidate();
   }
 
   /**
@@ -466,7 +256,7 @@ public class CandidateView extends View implements ThemeableChild {
 
     mHighlightedIndex = highlightedWordIndex;
     scrollTo(0, getScrollY());
-    mTargetScrollX = 0;
+    mScrollController.setTargetScrollX(0);
     // re-drawing required.
     invalidate();
   }
@@ -501,8 +291,7 @@ public class CandidateView extends View implements ThemeableChild {
     mSelectedIndex = -1;
     mShowingAddToDictionary = false;
     invalidate();
-    Arrays.fill(mWordWidth, 0);
-    Arrays.fill(mWordX, 0);
+    mStripRenderer.resetCaches();
   }
 
   @Override
@@ -520,30 +309,30 @@ public class CandidateView extends View implements ThemeableChild {
       case MotionEvent.ACTION_MOVE:
         // Fling up!?
         // Fling up should be a hacker's way to delete words (user dictionary words)
-        if (y <= 0 && mSelectedString != null) {
+        if (y <= 0 && mSelectedString != null && mHost != null) {
           Logger.d(
               TAG,
               "Fling up from candidates view. Deleting word at index %d, which is %s",
               mSelectedIndex,
               mSelectedString);
-          mService.removeFromUserDictionary(mSelectedString.toString());
+          mHost.removeFromUserDictionary(mSelectedString.toString());
           clear(); // clear also calls invalidate().
         }
         break;
       case MotionEvent.ACTION_UP:
-        if (!mScrolled && mSelectedString != null) {
+        if (!mScrollController.isScrolled() && mSelectedString != null && mHost != null) {
           if (mShowingAddToDictionary) {
             final CharSequence word = mSuggestions.get(0);
             if (word.length() >= 2 && !mNoticing) {
               Logger.d(TAG, "User wants to add the word '%s' to the user-dictionary.", word);
-              mService.addWordToDictionary(word.toString());
+              mHost.addWordToDictionary(word.toString());
             }
           } else if (!mNoticing) {
-            mService.pickSuggestionManually(mSelectedIndex, mSelectedString);
+            mHost.pickSuggestionManually(mSelectedIndex, mSelectedString);
           } else if (mSelectedIndex == 1 && !TextUtils.isEmpty(mJustAddedWord)) {
             // 1 is the index of "Remove?"
             Logger.d(TAG, "User wants to remove an added word '%s'", mJustAddedWord);
-            mService.removeFromUserDictionary(mJustAddedWord.toString());
+            mHost.removeFromUserDictionary(mJustAddedWord.toString());
           }
         }
         break;
@@ -582,52 +371,5 @@ public class CandidateView extends View implements ThemeableChild {
 
   public Drawable getCloseIcon() {
     return mCloseDrawable;
-  }
-
-  private class CandidateStripGestureListener extends GestureDetector.SimpleOnGestureListener {
-    private final int mTouchSlopSquare;
-
-    public CandidateStripGestureListener(int touchSlop) {
-      // Slightly reluctant to scroll to be able to easily choose the
-      // suggestion
-      mTouchSlopSquare = touchSlop * touchSlop;
-    }
-
-    @Override
-    public boolean onDown(MotionEvent e) {
-      mScrolled = false;
-      return false;
-    }
-
-    @Override
-    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-      if (!mScrolled) {
-        // This is applied only when we recognize that scrolling is
-        // starting.
-        final int deltaX = (int) (e2.getX() - e1.getX());
-        final int deltaY = (int) (e2.getY() - e1.getY());
-        final int distance = (deltaX * deltaX) + (deltaY * deltaY);
-        if (distance < mTouchSlopSquare) {
-          return true;
-        }
-        mScrolled = true;
-      }
-
-      final int width = getWidth();
-      mScrolled = true;
-      int scrollX = getScrollX();
-      scrollX += (int) distanceX;
-      if (scrollX < 0) {
-        scrollX = 0;
-      }
-      if (distanceX > 0 && scrollX + width > mTotalWidth) {
-        scrollX -= (int) distanceX;
-      }
-      mTargetScrollX = scrollX;
-      scrollTo(scrollX, getScrollY());
-      // hidePreview();
-      invalidate();
-      return true;
-    }
   }
 }

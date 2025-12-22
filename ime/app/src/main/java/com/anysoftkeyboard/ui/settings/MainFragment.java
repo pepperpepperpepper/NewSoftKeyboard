@@ -1,17 +1,16 @@
 package com.anysoftkeyboard.ui.settings;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.AnimationDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.method.LinkMovementMethod;
@@ -24,7 +23,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.annotation.StringRes;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
@@ -36,7 +34,6 @@ import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.DemoAnyKeyboardView;
 import com.anysoftkeyboard.permissions.PermissionRequestHelper;
-import com.anysoftkeyboard.prefs.GlobalPrefsBackup;
 import com.anysoftkeyboard.releaseinfo.ChangeLogFragment;
 import com.anysoftkeyboard.rx.RxSchedulers;
 import com.anysoftkeyboard.ui.settings.setup.SetupSupport;
@@ -48,22 +45,13 @@ import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.disposables.Disposables;
-import java.util.List;
 import net.evendanan.pixel.GeneralDialogController;
 import net.evendanan.pixel.UiUtils;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 
 public class MainFragment extends Fragment {
 
-  static final int DIALOG_SAVE_SUCCESS = 10;
-  static final int DIALOG_SAVE_FAILED = 11;
-  static final int DIALOG_LOAD_SUCCESS = 20;
-  static final int DIALOG_LOAD_FAILED = 21;
-  static final int BACKUP_REQUEST_ID = 1341;
-  static final int RESTORE_REQUEST_ID = 1343;
   private static final String TAG = "MainFragment";
-  public static List<GlobalPrefsBackup.ProviderDetails> supportedProviders;
-  public static Boolean[] checked;
 
   private final boolean mTestingBuild;
   @NonNull private final CompositeDisposable mDisposable = new CompositeDisposable();
@@ -75,6 +63,8 @@ public class MainFragment extends Fragment {
   private GeneralDialogController mDialogController;
   private ViewGroup mAddOnUICardsContainer;
   private AddOnUICardManager mAddOnUICardManager;
+  private final PrefsBackupRestoreController mPrefsBackupRestoreController =
+      new PrefsBackupRestoreController();
 
   public MainFragment() {
     this(BuildConfig.TESTING_BUILD);
@@ -331,73 +321,10 @@ public class MainFragment extends Fragment {
 
   private void onSetupDialogRequired(
       Context context, AlertDialog.Builder builder, int optionId, Object data) {
-    switch (optionId) {
-      case R.id.backup_prefs:
-      case R.id.restore_prefs:
-        onBackupRestoreDialogRequired(builder, optionId);
-        break;
-      case DIALOG_SAVE_SUCCESS:
-        builder.setTitle(R.string.prefs_providers_operation_success);
-        builder.setMessage(getString(R.string.prefs_providers_backed_up_to, data));
-        builder.setPositiveButton(android.R.string.ok, null);
-        break;
-      case DIALOG_SAVE_FAILED:
-        builder.setTitle(R.string.prefs_providers_operation_failed);
-        builder.setMessage(getString(R.string.prefs_providers_failed_backup_due_to, data));
-        builder.setPositiveButton(android.R.string.ok, null);
-        break;
-      case DIALOG_LOAD_SUCCESS:
-        builder.setTitle(R.string.prefs_providers_operation_success);
-        builder.setMessage(getString(R.string.prefs_providers_restored_to, data));
-        builder.setPositiveButton(android.R.string.ok, null);
-        break;
-      case DIALOG_LOAD_FAILED:
-        builder.setTitle(R.string.prefs_providers_operation_failed);
-        builder.setMessage(getString(R.string.prefs_providers_failed_restore_due_to, data));
-        builder.setPositiveButton(android.R.string.ok, null);
-        break;
-      default:
-        throw new IllegalArgumentException("The option-id " + optionId + " is not supported here.");
+    if (mPrefsBackupRestoreController.onSetupDialogRequired(this, builder, optionId, data)) {
+      return;
     }
-  }
-
-  private void onBackupRestoreDialogRequired(AlertDialog.Builder builder, int optionId) {
-    @StringRes final int actionTitle;
-
-    switch (optionId) {
-      case R.id.backup_prefs -> {
-        actionTitle = R.string.word_editor_action_backup_words;
-        builder.setTitle(R.string.pick_prefs_providers_to_backup);
-      }
-      case R.id.restore_prefs -> {
-        actionTitle = R.string.word_editor_action_restore_words;
-        builder.setTitle(R.string.pick_prefs_providers_to_restore);
-      }
-      default ->
-          throw new IllegalArgumentException(
-              "The option-id " + optionId + " is not supported here.");
-    }
-
-    supportedProviders = GlobalPrefsBackup.getAllPrefsProviders(requireContext());
-    final CharSequence[] providersTitles = new CharSequence[supportedProviders.size()];
-    final boolean[] initialChecked = new boolean[supportedProviders.size()];
-    checked = new Boolean[supportedProviders.size()];
-
-    for (int providerIndex = 0; providerIndex < supportedProviders.size(); providerIndex++) {
-      // starting with everything checked
-      checked[providerIndex] = initialChecked[providerIndex] = true;
-      providersTitles[providerIndex] = getText(supportedProviders.get(providerIndex).providerTitle);
-    }
-
-    builder.setMultiChoiceItems(
-        providersTitles, initialChecked, (dialogInterface, i, b) -> checked[i] = b);
-    builder.setNegativeButton(android.R.string.cancel, null);
-    builder.setCancelable(true);
-    builder.setPositiveButton(
-        actionTitle,
-        (dialog, which) ->
-            BackupRestoreLauncher.startChooser(
-                this, optionId, providersTitles, initialChecked, checked));
+    throw new IllegalArgumentException("The option-id " + optionId + " is not supported here.");
   }
 
   // This function is if launched when selecting backup/restore button of the main Fragment
@@ -405,25 +332,11 @@ public class MainFragment extends Fragment {
   public void onActivityResult(int requestCode, int resultCode, Intent data) {
     super.onActivityResult(requestCode, resultCode, data);
 
-    if ((requestCode == RESTORE_REQUEST_ID || requestCode == BACKUP_REQUEST_ID)
-        && resultCode == Activity.RESULT_OK) {
-
-      try {
-        Uri filePath = data.getData();
-        if (filePath != null) {
-          boolean isBackup = requestCode == BACKUP_REQUEST_ID;
-          mDisposable.add(
-              BackupRestoreLauncher.launch(
-                  this,
-                  mDialogController::showDialog,
-                  isBackup,
-                  filePath,
-                  supportedProviders,
-                  checked));
-        }
-      } catch (Exception e) {
-        Logger.d(TAG, "Error when handling backup/restore result", e);
-      }
+    final Disposable operation =
+        mPrefsBackupRestoreController.handleActivityResult(
+            this, mDialogController, requestCode, resultCode, data);
+    if (operation != null) {
+      mDisposable.add(operation);
     }
   }
 

@@ -37,25 +37,33 @@ final class KeyIconAttributeSetter {
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyInputMoveEnd -> KeyCodes.MOVE_END;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyMic -> KeyCodes.VOICE_INPUT;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeySettings -> KeyCodes.SETTINGS;
-          case com.menny.android.anysoftkeyboard.R.attr.iconKeyCondenseNormal -> KeyCodes.MERGE_LAYOUT;
-          case com.menny.android.anysoftkeyboard.R.attr.iconKeyCondenseSplit -> KeyCodes.SPLIT_LAYOUT;
+          case com.menny.android.anysoftkeyboard.R.attr.iconKeyCondenseNormal ->
+              KeyCodes.MERGE_LAYOUT;
+          case com.menny.android.anysoftkeyboard.R.attr.iconKeyCondenseSplit ->
+              KeyCodes.SPLIT_LAYOUT;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyCondenseCompactToRight ->
               KeyCodes.COMPACT_LAYOUT_TO_RIGHT;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyCondenseCompactToLeft ->
               KeyCodes.COMPACT_LAYOUT_TO_LEFT;
-          case com.menny.android.anysoftkeyboard.R.attr.iconKeyClipboardCopy -> KeyCodes.CLIPBOARD_COPY;
-          case com.menny.android.anysoftkeyboard.R.attr.iconKeyClipboardCut -> KeyCodes.CLIPBOARD_CUT;
-          case com.menny.android.anysoftkeyboard.R.attr.iconKeyClipboardPaste -> KeyCodes.CLIPBOARD_PASTE;
+          case com.menny.android.anysoftkeyboard.R.attr.iconKeyClipboardCopy ->
+              KeyCodes.CLIPBOARD_COPY;
+          case com.menny.android.anysoftkeyboard.R.attr.iconKeyClipboardCut ->
+              KeyCodes.CLIPBOARD_CUT;
+          case com.menny.android.anysoftkeyboard.R.attr.iconKeyClipboardPaste ->
+              KeyCodes.CLIPBOARD_PASTE;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyClipboardSelect ->
               KeyCodes.CLIPBOARD_SELECT_ALL;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyClipboardFineSelect ->
               KeyCodes.CLIPBOARD_SELECT;
-          case com.menny.android.anysoftkeyboard.R.attr.iconKeyQuickTextPopup -> KeyCodes.QUICK_TEXT_POPUP;
+          case com.menny.android.anysoftkeyboard.R.attr.iconKeyQuickTextPopup ->
+              KeyCodes.QUICK_TEXT_POPUP;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyQuickText -> KeyCodes.QUICK_TEXT;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyUndo -> KeyCodes.UNDO;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyRedo -> KeyCodes.REDO;
-          case com.menny.android.anysoftkeyboard.R.attr.iconKeyForwardDelete -> KeyCodes.FORWARD_DELETE;
-          case com.menny.android.anysoftkeyboard.R.attr.iconKeyImageInsert -> KeyCodes.IMAGE_MEDIA_POPUP;
+          case com.menny.android.anysoftkeyboard.R.attr.iconKeyForwardDelete ->
+              KeyCodes.FORWARD_DELETE;
+          case com.menny.android.anysoftkeyboard.R.attr.iconKeyImageInsert ->
+              KeyCodes.IMAGE_MEDIA_POPUP;
           case com.menny.android.anysoftkeyboard.R.attr.iconKeyClearQuickTextHistory ->
               KeyCodes.CLEAR_QUICK_TEXT_HISTORY;
           default -> 0;

@@ -27,14 +27,16 @@ final class InputFieldConfigurator {
     switch (attribute.inputType & EditorInfo.TYPE_MASK_CLASS) {
       case EditorInfo.TYPE_CLASS_DATETIME:
         Logger.d(
-            logTag,
-            "Setting INPUT_MODE_DATETIME as keyboard due to a TYPE_CLASS_DATETIME input.");
-        keyboardSwitcher.setKeyboardMode(KeyboardSwitcher.INPUT_MODE_DATETIME, attribute, restarting);
+            logTag, "Setting INPUT_MODE_DATETIME as keyboard due to a TYPE_CLASS_DATETIME input.");
+        keyboardSwitcher.setKeyboardMode(
+            KeyboardSwitcher.INPUT_MODE_DATETIME, attribute, restarting);
         r.predictionOn = false;
         break;
       case EditorInfo.TYPE_CLASS_NUMBER:
-        Logger.d(logTag, "Setting INPUT_MODE_NUMBERS as keyboard due to a TYPE_CLASS_NUMBER input.");
-        keyboardSwitcher.setKeyboardMode(KeyboardSwitcher.INPUT_MODE_NUMBERS, attribute, restarting);
+        Logger.d(
+            logTag, "Setting INPUT_MODE_NUMBERS as keyboard due to a TYPE_CLASS_NUMBER input.");
+        keyboardSwitcher.setKeyboardMode(
+            KeyboardSwitcher.INPUT_MODE_NUMBERS, attribute, restarting);
         r.predictionOn = false;
         break;
       case EditorInfo.TYPE_CLASS_PHONE:
@@ -76,22 +78,29 @@ final class InputFieldConfigurator {
           case EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS:
             Logger.d(
                 logTag,
-                "Setting INPUT_MODE_EMAIL as keyboard due to a TYPE_TEXT_VARIATION_EMAIL_ADDRESS input.");
-            keyboardSwitcher.setKeyboardMode(KeyboardSwitcher.INPUT_MODE_EMAIL, attribute, restarting);
+                "Setting INPUT_MODE_EMAIL as keyboard due to a TYPE_TEXT_VARIATION_EMAIL_ADDRESS"
+                    + " input.");
+            keyboardSwitcher.setKeyboardMode(
+                KeyboardSwitcher.INPUT_MODE_EMAIL, attribute, restarting);
             break;
           case EditorInfo.TYPE_TEXT_VARIATION_URI:
-            Logger.d(logTag, "Setting INPUT_MODE_URL as keyboard due to a TYPE_TEXT_VARIATION_URI input.");
-            keyboardSwitcher.setKeyboardMode(KeyboardSwitcher.INPUT_MODE_URL, attribute, restarting);
+            Logger.d(
+                logTag,
+                "Setting INPUT_MODE_URL as keyboard due to a TYPE_TEXT_VARIATION_URI input.");
+            keyboardSwitcher.setKeyboardMode(
+                KeyboardSwitcher.INPUT_MODE_URL, attribute, restarting);
             break;
           case EditorInfo.TYPE_TEXT_VARIATION_SHORT_MESSAGE:
             Logger.d(
                 logTag,
-                "Setting INPUT_MODE_IM as keyboard due to a TYPE_TEXT_VARIATION_SHORT_MESSAGE input.");
+                "Setting INPUT_MODE_IM as keyboard due to a TYPE_TEXT_VARIATION_SHORT_MESSAGE"
+                    + " input.");
             keyboardSwitcher.setKeyboardMode(KeyboardSwitcher.INPUT_MODE_IM, attribute, restarting);
             break;
           default:
             Logger.d(logTag, "Setting INPUT_MODE_TEXT as keyboard due to a default input.");
-            keyboardSwitcher.setKeyboardMode(KeyboardSwitcher.INPUT_MODE_TEXT, attribute, restarting);
+            keyboardSwitcher.setKeyboardMode(
+                KeyboardSwitcher.INPUT_MODE_TEXT, attribute, restarting);
         }
         break;
       default:

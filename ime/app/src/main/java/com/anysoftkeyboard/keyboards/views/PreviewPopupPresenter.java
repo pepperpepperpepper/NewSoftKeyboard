@@ -10,9 +10,7 @@ import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
 import java.util.function.Function;
 
-/**
- * Handles preview popup show/hide logic so {@link AnyKeyboardViewBase} stays slimmer.
- */
+/** Handles preview popup show/hide logic so {@link AnyKeyboardViewBase} stays slimmer. */
 final class PreviewPopupPresenter {
 
   private final KeyIconResolver keyIconResolver;

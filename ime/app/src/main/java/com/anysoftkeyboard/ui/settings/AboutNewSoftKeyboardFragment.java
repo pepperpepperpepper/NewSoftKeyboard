@@ -62,7 +62,8 @@ public class AboutNewSoftKeyboardFragment extends Fragment implements View.OnCli
                     .actionAboutNewSoftKeyboardFragmentToAdditionalSoftwareLicensesFragment());
         break;
       case R.id.about_privacy_link:
-        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_policy))));
+        startActivity(
+            new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.privacy_policy))));
         break;
       case R.id.about_web_site_link:
         startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(getString(R.string.main_site_url))));

@@ -18,73 +18,75 @@ package com.anysoftkeyboard.ui.settings;
 
 import java.util.Objects;
 
-/**
- * Data model for a saved OpenAI prompt.
- */
+/** Data model for a saved OpenAI prompt. */
 public class OpenAISavedPrompt {
-    private long id;
-    private String text;
-    private long timestamp;
+  private long id;
+  private String text;
+  private long timestamp;
 
-    public OpenAISavedPrompt() {
-        // Default constructor for JSON deserialization
-    }
+  public OpenAISavedPrompt() {
+    // Default constructor for JSON deserialization
+  }
 
-    public OpenAISavedPrompt(String text) {
-        this.id = -1; // Will be set by manager
-        this.text = text;
-        this.timestamp = System.currentTimeMillis();
-    }
+  public OpenAISavedPrompt(String text) {
+    this.id = -1; // Will be set by manager
+    this.text = text;
+    this.timestamp = System.currentTimeMillis();
+  }
 
-    public OpenAISavedPrompt(long id, String text, long timestamp) {
-        this.id = id;
-        this.text = text;
-        this.timestamp = timestamp;
-    }
+  public OpenAISavedPrompt(long id, String text, long timestamp) {
+    this.id = id;
+    this.text = text;
+    this.timestamp = timestamp;
+  }
 
-    public long getId() {
-        return id;
-    }
+  public long getId() {
+    return id;
+  }
 
-    public void setId(long id) {
-        this.id = id;
-    }
+  public void setId(long id) {
+    this.id = id;
+  }
 
-    public String getText() {
-        return text;
-    }
+  public String getText() {
+    return text;
+  }
 
-    public void setText(String text) {
-        this.text = text;
-    }
+  public void setText(String text) {
+    this.text = text;
+  }
 
-    public long getTimestamp() {
-        return timestamp;
-    }
+  public long getTimestamp() {
+    return timestamp;
+  }
 
-    public void setTimestamp(long timestamp) {
-        this.timestamp = timestamp;
-    }
+  public void setTimestamp(long timestamp) {
+    this.timestamp = timestamp;
+  }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        OpenAISavedPrompt that = (OpenAISavedPrompt) o;
-        return id == that.id;
-    }
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    OpenAISavedPrompt that = (OpenAISavedPrompt) o;
+    return id == that.id;
+  }
 
-    @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
+  @Override
+  public int hashCode() {
+    return Objects.hash(id);
+  }
 
-    @Override
-    public String toString() {
-        return "OpenAISavedPrompt{" +
-                "id=" + id +
-                ", text='" + text + '\'' +
-                ", timestamp=" + timestamp +
-                '}';
-    }
+  @Override
+  public String toString() {
+    return "OpenAISavedPrompt{"
+        + "id="
+        + id
+        + ", text='"
+        + text
+        + '\''
+        + ", timestamp="
+        + timestamp
+        + '}';
+  }
 }

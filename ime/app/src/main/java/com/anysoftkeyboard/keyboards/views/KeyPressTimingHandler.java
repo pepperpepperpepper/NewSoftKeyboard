@@ -8,9 +8,7 @@ import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import java.lang.ref.WeakReference;
 
-/**
- * Handles repeat and long-press timers for pointer trackers, decoupled from the view.
- */
+/** Handles repeat and long-press timers for pointer trackers, decoupled from the view. */
 class KeyPressTimingHandler extends Handler {
 
   private static final int MSG_REPEAT_KEY = 3;

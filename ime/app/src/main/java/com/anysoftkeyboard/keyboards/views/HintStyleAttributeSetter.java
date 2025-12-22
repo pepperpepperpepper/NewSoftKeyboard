@@ -31,11 +31,13 @@ final class HintStyleAttributeSetter {
         return true;
       }
       case com.menny.android.anysoftkeyboard.R.attr.hintLabelVAlign -> {
-        setHintVAlign.accept(remoteTypedArray.getInt(remoteTypedArrayIndex, android.view.Gravity.BOTTOM));
+        setHintVAlign.accept(
+            remoteTypedArray.getInt(remoteTypedArrayIndex, android.view.Gravity.BOTTOM));
         return true;
       }
       case com.menny.android.anysoftkeyboard.R.attr.hintLabelAlign -> {
-        setHintAlign.accept(remoteTypedArray.getInt(remoteTypedArrayIndex, android.view.Gravity.RIGHT));
+        setHintAlign.accept(
+            remoteTypedArray.getInt(remoteTypedArrayIndex, android.view.Gravity.RIGHT));
         return true;
       }
       default -> {

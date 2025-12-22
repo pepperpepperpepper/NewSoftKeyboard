@@ -1,413 +1,141 @@
 package com.anysoftkeyboard.dictionaries;
 
-import static com.anysoftkeyboard.dictionaries.DictionaryBackgroundLoader.NO_OP_LISTENER;
-
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.SystemClock;
-import android.text.TextUtils;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
-import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.content.ContactsDictionary;
-import com.anysoftkeyboard.dictionaries.sqlite.AbbreviationsDictionary;
-import com.anysoftkeyboard.dictionaries.sqlite.AutoDictionary;
-import com.anysoftkeyboard.dictionaries.neural.NeuralPredictionManager;
-import wtf.uhoh.newsoftkeyboard.engine.NeuralEngineAdapter;
-import wtf.uhoh.newsoftkeyboard.engine.PredictionEngine;
-import wtf.uhoh.newsoftkeyboard.engine.PresageEngineAdapter;
-import com.anysoftkeyboard.nextword.NextWordSuggestions;
+import com.anysoftkeyboard.nextword.pipeline.NextWordSuggestionsPipeline;
+import com.anysoftkeyboard.nextword.prediction.NextWordPredictionEngines;
 import com.anysoftkeyboard.prefs.RxSharedPrefs;
-import com.anysoftkeyboard.rx.GenericOnError;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.BuildConfig;
-import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.disposables.CompositeDisposable;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import wtf.uhoh.newsoftkeyboard.pipeline.EngineOrchestrator;
 
+@SuppressWarnings("this-escape")
 public class SuggestionsProvider {
 
   private static final String TAG = "SuggestionsProvider";
-  private static final int NEURAL_MIN_CONTEXT_TOKENS = 2;
-  private static final long NEURAL_LATENCY_BUDGET_MS = 25L;
-  private static final char NEURAL_FAILURE_DELIMITER = '|';
-
-  private static final EditableDictionary NullDictionary =
-      new EditableDictionary("NULL") {
-        @Override
-        public boolean addWord(String word, int frequency) {
-          return false;
-        }
-
-        @Override
-        public void deleteWord(String word) {}
-
-        @Override
-        public void getLoadedWords(@NonNull GetWordsCallback callback) {
-          throw new UnsupportedOperationException();
-        }
-
-        @Override
-        public void getSuggestions(KeyCodesProvider composer, WordCallback callback) {}
-
-        @Override
-        public boolean isValidWord(CharSequence word) {
-          return false;
-        }
-
-        @Override
-        protected void closeAllResources() {}
-
-        @Override
-        protected void loadAllResources() {}
-      };
-
-  private static final NextWordSuggestions NULL_NEXT_WORD_SUGGESTIONS =
-      new NextWordSuggestions() {
-        @Override
-        @NonNull
-        public Iterable<String> getNextWords(
-            @NonNull String currentWord, int maxResults, int minWordUsage) {
-          return Collections.emptyList();
-        }
-
-        @Override
-        public void notifyNextTypedWord(@NonNull String currentWord) {}
-
-        @Override
-        public void resetSentence() {}
-      };
 
   @NonNull private final Context mContext;
-  @NonNull private final Handler mMainHandler = new Handler(Looper.getMainLooper());
-  @NonNull private final List<String> mInitialSuggestionsList = new ArrayList<>();
+  @NonNull private final SuggestionsDictionariesManager mDictionariesManager;
 
-  @NonNull private CompositeDisposable mDictionaryDisposables = new CompositeDisposable();
-
-  private int mCurrentSetupHashCode;
-
-  @NonNull private final List<Dictionary> mMainDictionary = new ArrayList<>();
-  @NonNull private final List<EditableDictionary> mUserDictionary = new ArrayList<>();
-  @NonNull private final List<NextWordSuggestions> mUserNextWordDictionary = new ArrayList<>();
-  private boolean mQuickFixesEnabled;
-  // if true secondary languages will not have autotext on. For primary language is intended the
-  // current keyboard layout language
-  private boolean mQuickFixesSecondDisabled;
-  @NonNull private final List<AutoText> mQuickFixesAutoText = new ArrayList<>();
-
-  private boolean mNextWordEnabled;
-  private boolean mAlsoSuggestNextPunctuations;
-  private int mMaxNextWordSuggestionsCount;
-  private int mMinWordUsage;
-
-  @NonNull private EditableDictionary mAutoDictionary = NullDictionary;
-  private boolean mContactsDictionaryEnabled;
-  private boolean mUserDictionaryEnabled;
-  @NonNull private Dictionary mContactsDictionary = NullDictionary;
+  @NonNull
+  private NextWordSuggestionsPipeline.Config mNextWordConfig =
+      new NextWordSuggestionsPipeline.Config(
+          /* enabled= */ false,
+          /* alsoSuggestNextPunctuations= */ false,
+          /* maxNextWordSuggestionsCount= */ 3,
+          /* minWordUsage= */ 5);
 
   private boolean mIncognitoMode;
-
-  @NonNull private NextWordSuggestions mContactsNextWordDictionary = NULL_NEXT_WORD_SUGGESTIONS;
-
-  private final ContactsDictionaryLoaderListener mContactsDictionaryListener =
-      new ContactsDictionaryLoaderListener();
-
-  private enum PredictionEngineMode {
-    NONE,
-    NGRAM,
-    NEURAL,
-    HYBRID
-  }
-
-  @NonNull private final PresagePredictionManager mPresagePredictionManager;
-  @NonNull private final NeuralPredictionManager mNeuralPredictionManager;
-  @NonNull private final PredictionEngine mNgramEngine;
-  @NonNull private final PredictionEngine mNeuralEngine;
-  @NonNull private PredictionEngineMode mPredictionEngineMode = PredictionEngineMode.HYBRID;
-  @NonNull private final ArrayDeque<String> mPresageContext =
-      new ArrayDeque<>(PRESAGE_CONTEXT_WINDOW);
-  private long mLastNeuralLatencyMs;
-
-  private class ContactsDictionaryLoaderListener implements DictionaryBackgroundLoader.Listener {
-
-    @NonNull private DictionaryBackgroundLoader.Listener mDelegate = NO_OP_LISTENER;
-
-    @Override
-    public void onDictionaryLoadingStarted(Dictionary dictionary) {
-      mDelegate.onDictionaryLoadingStarted(dictionary);
-    }
-
-    @Override
-    public void onDictionaryLoadingDone(Dictionary dictionary) {
-      mDelegate.onDictionaryLoadingDone(dictionary);
-    }
-
-    @Override
-    public void onDictionaryLoadingFailed(Dictionary dictionary, Throwable exception) {
-      mDelegate.onDictionaryLoadingFailed(dictionary, exception);
-      if (dictionary == mContactsDictionary) {
-        mContactsDictionary = NullDictionary;
-        mContactsNextWordDictionary = NULL_NEXT_WORD_SUGGESTIONS;
-      }
-    }
-  }
-
-  @NonNull private final List<Dictionary> mAbbreviationDictionary = new ArrayList<>();
   private final CompositeDisposable mPrefsDisposables = new CompositeDisposable();
-  private static final int PRESAGE_CONTEXT_WINDOW = 16;
+
+  @NonNull private final NextWordPredictionEngines mPredictionEngines;
+  @NonNull private final NextWordSuggestionsPipeline mNextWordPipeline;
 
   public SuggestionsProvider(@NonNull Context context) {
     mContext = context.getApplicationContext();
-    mPresagePredictionManager = new PresagePredictionManager(mContext);
-    mNeuralPredictionManager = new NeuralPredictionManager(mContext);
-    mNgramEngine = new PresageEngineAdapter(mPresagePredictionManager);
-    mNeuralEngine = new NeuralEngineAdapter(mNeuralPredictionManager);
-
+    mDictionariesManager =
+        new SuggestionsDictionariesManager(
+            mContext, this::createUserDictionaryForLocale, this::createRealContactsDictionary);
     final RxSharedPrefs rxSharedPrefs = AnyApplication.prefs(mContext);
-    mPrefsDisposables.add(
-        rxSharedPrefs
-            .getBoolean(R.string.settings_key_quick_fix, R.bool.settings_default_quick_fix)
-            .asObservable()
-            .subscribe(
-                value -> {
-                  mCurrentSetupHashCode = 0;
-                  mQuickFixesEnabled = value;
-                },
-                GenericOnError.onError("settings_key_quick_fix")));
-    mPrefsDisposables.add(
-        rxSharedPrefs
-            .getBoolean(
-                R.string.settings_key_quick_fix_second_disabled,
-                R.bool.settings_default_key_quick_fix_second_disabled)
-            .asObservable()
-            .subscribe(
-                value -> {
-                  mCurrentSetupHashCode = 0;
-                  mQuickFixesSecondDisabled = value;
-                },
-                GenericOnError.onError("settings_key_quick_fix_second_disable")));
-    mPrefsDisposables.add(
-        rxSharedPrefs
-            .getBoolean(
-                R.string.settings_key_use_contacts_dictionary,
-                R.bool.settings_default_contacts_dictionary)
-            .asObservable()
-            .subscribe(
-                value -> {
-                  mCurrentSetupHashCode = 0;
-                  mContactsDictionaryEnabled = value;
-                  if (!mContactsDictionaryEnabled) {
-                    mContactsDictionary.close();
-                    mContactsDictionary = NullDictionary;
-                  }
-                },
-                GenericOnError.onError("settings_key_use_contacts_dictionary")));
-    mPrefsDisposables.add(
-        rxSharedPrefs
-            .getBoolean(
-                R.string.settings_key_use_user_dictionary, R.bool.settings_default_user_dictionary)
-            .asObservable()
-            .subscribe(
-                value -> {
-                  mCurrentSetupHashCode = 0;
-                  mUserDictionaryEnabled = value;
-                },
-                GenericOnError.onError("settings_key_use_user_dictionary")));
-    mPrefsDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_prediction_engine_mode,
-                R.string.settings_default_prediction_engine_mode)
-            .asObservable()
-            .subscribe(
-                modeValue -> {
-                  mCurrentSetupHashCode = 0;
-                  updatePredictionEngine(modeValue);
-                },
-                GenericOnError.onError("settings_key_prediction_engine_mode")));
-    mPrefsDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_next_word_suggestion_aggressiveness,
-                R.string.settings_default_next_word_suggestion_aggressiveness)
-            .asObservable()
-            .subscribe(
-                aggressiveness -> {
-                  switch (aggressiveness) {
-                    case "medium_aggressiveness":
-                      mMaxNextWordSuggestionsCount = 5;
-                      mMinWordUsage = 3;
-                      break;
-                    case "maximum_aggressiveness":
-                      mMaxNextWordSuggestionsCount = 8;
-                      mMinWordUsage = 1;
-                      break;
-                    case "minimal_aggressiveness":
-                    default:
-                      mMaxNextWordSuggestionsCount = 3;
-                      mMinWordUsage = 5;
-                      break;
-                  }
-                },
-                GenericOnError.onError("settings_key_next_word_suggestion_aggressiveness")));
-    mPrefsDisposables.add(
-        rxSharedPrefs
-            .getString(
-                R.string.settings_key_next_word_dictionary_type,
-                R.string.settings_default_next_words_dictionary_type)
-            .asObservable()
-            .subscribe(
-                type -> {
-                  switch (type) {
-                    case "off":
-                      mNextWordEnabled = false;
-                      mAlsoSuggestNextPunctuations = false;
-                      break;
-                    case "words_punctuations":
-                      mNextWordEnabled = true;
-                      mAlsoSuggestNextPunctuations = true;
-                      break;
-                    case "word":
-                    default:
-                      mNextWordEnabled = true;
-                      mAlsoSuggestNextPunctuations = false;
-                      break;
-                  }
-                },
-                GenericOnError.onError("settings_key_next_word_dictionary_type")));
+    mPredictionEngines =
+        new NextWordPredictionEngines(
+            mContext, rxSharedPrefs, TAG, BuildConfig.DEBUG, BuildConfig.TESTING_BUILD);
+    mNextWordPipeline =
+        new NextWordSuggestionsPipeline(
+            mPredictionEngines,
+            mDictionariesManager.userNextWordDictionaries(),
+            mDictionariesManager::contactsNextWordDictionary,
+            mDictionariesManager.initialSuggestionsList());
+    SuggestionsProviderPrefsBinder.wire(
+        rxSharedPrefs,
+        mPrefsDisposables,
+        mDictionariesManager::setQuickFixesEnabled,
+        mDictionariesManager::setQuickFixesSecondDisabled,
+        mDictionariesManager::setContactsDictionaryEnabled,
+        mDictionariesManager::setUserDictionaryEnabled,
+        this::onPredictionEngineModeChanged,
+        this::setNextWordAggressiveness,
+        this::setNextWordDictionaryType);
   }
 
-  private static boolean allDictionariesIsValid(
-      List<? extends Dictionary> dictionaries, CharSequence word) {
-    for (Dictionary dictionary : dictionaries) {
-      if (dictionary.isValidWord(word)) return true;
-    }
-
-    return false;
+  private void onPredictionEngineModeChanged(@NonNull String modeValue) {
+    mDictionariesManager.invalidateSetupHash();
+    mPredictionEngines.updatePredictionEngine(modeValue);
   }
 
-  private static void allDictionariesGetWords(
-      List<? extends Dictionary> dictionaries,
-      KeyCodesProvider wordComposer,
-      Dictionary.WordCallback wordCallback) {
-    for (Dictionary dictionary : dictionaries) {
-      dictionary.getSuggestions(wordComposer, wordCallback);
+  private void setNextWordAggressiveness(@NonNull String aggressiveness) {
+    int maxNextWordSuggestionsCount;
+    int minWordUsage;
+    switch (aggressiveness) {
+      case "medium_aggressiveness":
+        maxNextWordSuggestionsCount = 5;
+        minWordUsage = 3;
+        break;
+      case "maximum_aggressiveness":
+        maxNextWordSuggestionsCount = 8;
+        minWordUsage = 1;
+        break;
+      case "minimal_aggressiveness":
+      default:
+        maxNextWordSuggestionsCount = 3;
+        minWordUsage = 5;
+        break;
     }
+    mNextWordConfig =
+        new NextWordSuggestionsPipeline.Config(
+            mNextWordConfig.enabled,
+            mNextWordConfig.alsoSuggestNextPunctuations,
+            maxNextWordSuggestionsCount,
+            minWordUsage);
+  }
+
+  private void setNextWordDictionaryType(@NonNull String type) {
+    boolean enabled;
+    boolean alsoSuggestNextPunctuations;
+    switch (type) {
+      case "off":
+        enabled = false;
+        alsoSuggestNextPunctuations = false;
+        break;
+      case "words_punctuations":
+        enabled = true;
+        alsoSuggestNextPunctuations = true;
+        break;
+      case "word":
+      default:
+        enabled = true;
+        alsoSuggestNextPunctuations = false;
+        break;
+    }
+    mNextWordConfig =
+        new NextWordSuggestionsPipeline.Config(
+            enabled,
+            alsoSuggestNextPunctuations,
+            mNextWordConfig.maxNextWordSuggestionsCount,
+            mNextWordConfig.minWordUsage);
   }
 
   public void setupSuggestionsForKeyboard(
       @NonNull List<DictionaryAddOnAndBuilder> dictionaryBuilders,
       @NonNull DictionaryBackgroundLoader.Listener cb) {
-    if (BuildConfig.TESTING_BUILD) {
-      Logger.d(TAG, "setupSuggestionsFor %d dictionaries", dictionaryBuilders.size());
-      for (DictionaryAddOnAndBuilder dictionaryBuilder : dictionaryBuilders) {
-        Logger.d(
-            TAG,
-            " * dictionary %s (%s)",
-            dictionaryBuilder.getId(),
-            dictionaryBuilder.getLanguage());
-      }
-    }
-    final int newSetupHashCode = calculateHashCodeForBuilders(dictionaryBuilders);
-    if (newSetupHashCode == mCurrentSetupHashCode) {
+    final int newSetupHashCode =
+        SuggestionsDictionariesManager.calculateHashCodeForBuilders(dictionaryBuilders);
+    if (newSetupHashCode == mDictionariesManager.currentSetupHashCode()) {
       // no need to load, since we have all the same dictionaries,
       // but, we do need to notify the dictionary loaded listeners.
-      final List<Dictionary> dictionariesToSimulateLoad =
-          new ArrayList<>(mMainDictionary.size() + mUserDictionary.size() + 1 /*for contacts*/);
-      dictionariesToSimulateLoad.addAll(mMainDictionary);
-      dictionariesToSimulateLoad.addAll(mUserDictionary);
-      if (mContactsDictionaryEnabled) dictionariesToSimulateLoad.add(mContactsDictionary);
-
-      for (Dictionary dictionary : dictionariesToSimulateLoad) {
-        cb.onDictionaryLoadingStarted(dictionary);
-      }
-      for (Dictionary dictionary : dictionariesToSimulateLoad) {
-        cb.onDictionaryLoadingDone(dictionary);
-      }
+      mDictionariesManager.simulateDictionaryLoad(cb);
       return;
     }
 
     close();
 
-    mCurrentSetupHashCode = newSetupHashCode;
-    final CompositeDisposable disposablesHolder = mDictionaryDisposables;
-
-    for (int i = 0; i < dictionaryBuilders.size(); i++) {
-      DictionaryAddOnAndBuilder dictionaryBuilder = dictionaryBuilders.get(i);
-      try {
-        Logger.d(
-            TAG,
-            " Creating dictionary %s (%s)...",
-            dictionaryBuilder.getId(),
-            dictionaryBuilder.getLanguage());
-        final Dictionary dictionary = dictionaryBuilder.createDictionary();
-        mMainDictionary.add(dictionary);
-        Logger.d(
-            TAG,
-            " Loading dictionary %s (%s)...",
-            dictionaryBuilder.getId(),
-            dictionaryBuilder.getLanguage());
-        disposablesHolder.add(
-            DictionaryBackgroundLoader.loadDictionaryInBackground(cb, dictionary));
-      } catch (Exception e) {
-        Logger.e(TAG, e, "Failed to create dictionary %s", dictionaryBuilder.getId());
-      }
-
-      if (mUserDictionaryEnabled) {
-        final UserDictionary userDictionary =
-            createUserDictionaryForLocale(dictionaryBuilder.getLanguage());
-        mUserDictionary.add(userDictionary);
-        Logger.d(TAG, " Loading user dictionary for %s...", dictionaryBuilder.getLanguage());
-        disposablesHolder.add(
-            DictionaryBackgroundLoader.loadDictionaryInBackground(cb, userDictionary));
-        mUserNextWordDictionary.add(userDictionary.getUserNextWordGetter());
-      } else {
-        Logger.d(TAG, " User does not want user dictionary, skipping...");
-      }
-      // if mQuickFixesEnabled and mQuickFixesSecondDisabled are true
-      // it  activates autotext only to the current keyboard layout language
-      if (mQuickFixesEnabled && (i == 0 || !mQuickFixesSecondDisabled)) {
-        final AutoText autoText = dictionaryBuilder.createAutoText();
-        if (autoText != null) {
-          mQuickFixesAutoText.add(autoText);
-        }
-        final AbbreviationsDictionary abbreviationsDictionary =
-            new AbbreviationsDictionary(mContext, dictionaryBuilder.getLanguage());
-        mAbbreviationDictionary.add(abbreviationsDictionary);
-        Logger.d(TAG, " Loading abbr dictionary for %s...", dictionaryBuilder.getLanguage());
-        disposablesHolder.add(
-            DictionaryBackgroundLoader.loadDictionaryInBackground(abbreviationsDictionary));
-      }
-
-      mInitialSuggestionsList.addAll(dictionaryBuilder.createInitialSuggestions());
-
-      // only one auto-dictionary. There is no way to know to which language the typed word
-      // belongs.
-      mAutoDictionary = new AutoDictionary(mContext, dictionaryBuilder.getLanguage());
-      Logger.d(TAG, " Loading auto dictionary for %s...", dictionaryBuilder.getLanguage());
-      disposablesHolder.add(DictionaryBackgroundLoader.loadDictionaryInBackground(mAutoDictionary));
-    }
-
-    if (mContactsDictionaryEnabled && mContactsDictionary == NullDictionary) {
-      mContactsDictionaryListener.mDelegate = cb;
-      final ContactsDictionary realContactsDictionary = createRealContactsDictionary();
-      mContactsDictionary = realContactsDictionary;
-      mContactsNextWordDictionary = realContactsDictionary;
-      disposablesHolder.add(
-          DictionaryBackgroundLoader.loadDictionaryInBackground(
-              mContactsDictionaryListener, mContactsDictionary));
-    }
-
-        activatePresageIfNeeded();
+    mDictionariesManager.setCurrentSetupHashCode(newSetupHashCode);
+    mDictionariesManager.buildDictionaries(dictionaryBuilders, cb, BuildConfig.TESTING_BUILD);
+    mPredictionEngines.activatePresageIfNeeded();
   }
 
   @NonNull
@@ -416,47 +144,27 @@ public class SuggestionsProvider {
     return new ContactsDictionary(mContext);
   }
 
-  private static int calculateHashCodeForBuilders(
-      List<DictionaryAddOnAndBuilder> dictionaryBuilders) {
-    return Arrays.hashCode(dictionaryBuilders.toArray());
-  }
-
   @NonNull
   protected UserDictionary createUserDictionaryForLocale(@NonNull String locale) {
     return new UserDictionary(mContext, locale);
   }
 
   public void removeWordFromUserDictionary(String word) {
-    for (EditableDictionary dictionary : mUserDictionary) {
-      dictionary.deleteWord(word);
-    }
+    mDictionariesManager.removeWordFromUserDictionary(word);
   }
 
   public boolean addWordToUserDictionary(String word) {
     if (mIncognitoMode) return false;
-
-    if (mUserDictionary.size() > 0) {
-      return mUserDictionary.get(0).addWord(word, 128);
-    } else {
-      return false;
-    }
+    return mDictionariesManager.addWordToUserDictionary(word);
   }
 
   public boolean isValidWord(CharSequence word) {
-    if (TextUtils.isEmpty(word)) {
-      return false;
-    }
-
-    return allDictionariesIsValid(mMainDictionary, word)
-        || allDictionariesIsValid(mUserDictionary, word)
-        || mContactsDictionary.isValidWord(word);
+    return mDictionariesManager.isValidWord(word);
   }
 
   public void setIncognitoMode(boolean incognitoMode) {
     mIncognitoMode = incognitoMode;
-    if (incognitoMode) {
-      mPresageContext.clear();
-    }
+    mPredictionEngines.setIncognitoMode(incognitoMode);
   }
 
   public boolean isIncognitoMode() {
@@ -464,24 +172,8 @@ public class SuggestionsProvider {
   }
 
   public void close() {
-    Logger.d(TAG, "closeDictionaries");
-    mCurrentSetupHashCode = 0;
-    mMainDictionary.clear();
-    mAbbreviationDictionary.clear();
-    mUserDictionary.clear();
-    mQuickFixesAutoText.clear();
-    mUserNextWordDictionary.clear();
-    mInitialSuggestionsList.clear();
-    resetNextWordSentence();
-    mContactsNextWordDictionary = NULL_NEXT_WORD_SUGGESTIONS;
-    mAutoDictionary = NullDictionary;
-    mContactsDictionary = NullDictionary;
-    mPresagePredictionManager.deactivate();
-    mNeuralPredictionManager.deactivate();
-    mPresageContext.clear();
-
-    mDictionaryDisposables.dispose();
-    mDictionaryDisposables = new CompositeDisposable();
+    mDictionariesManager.closeDictionariesForShutdown(this::resetNextWordSentence);
+    mPredictionEngines.close();
   }
 
   public void destroy() {
@@ -490,360 +182,39 @@ public class SuggestionsProvider {
   }
 
   public void resetNextWordSentence() {
-    for (NextWordSuggestions nextWordSuggestions : mUserNextWordDictionary) {
-      nextWordSuggestions.resetSentence();
-    }
-    mContactsNextWordDictionary.resetSentence();
-    mPresageContext.clear();
-  }
-
-  private void updatePredictionEngine(@NonNull String modeValue) {
-    switch (modeValue) {
-      case "ngram":
-        mPredictionEngineMode = PredictionEngineMode.NGRAM;
-        activatePresageIfNeeded();
-        mNeuralPredictionManager.deactivate();
-        break;
-      case "neural":
-        mPredictionEngineMode = PredictionEngineMode.NEURAL;
-        mPresagePredictionManager.deactivate();
-        activateNeuralIfNeeded();
-        break;
-      case "hybrid":
-        mPredictionEngineMode = PredictionEngineMode.HYBRID;
-        activatePresageIfNeeded();
-        activateNeuralIfNeeded();
-        break;
-      default:
-        mPredictionEngineMode = PredictionEngineMode.NONE;
-        mPresagePredictionManager.deactivate();
-        mNeuralPredictionManager.deactivate();
-        mPresageContext.clear();
-        break;
-    }
-    if (mPredictionEngineMode == PredictionEngineMode.NONE) {
-      mPresageContext.clear();
-    }
-    Logger.i(TAG, "Prediction engine set to " + mPredictionEngineMode);
-  }
-
-  private void activatePresageIfNeeded() {
-    if (usesPresageEngine()) {
-      mNgramEngine.activate();
-    }
-  }
-
-  private void activateNeuralIfNeeded() {
-    if (mPredictionEngineMode == PredictionEngineMode.NEURAL
-        || mPredictionEngineMode == PredictionEngineMode.HYBRID) {
-      if (!mNeuralEngine.activate()) {
-        handleNeuralActivationFailure();
-      }
-    }
+    mNextWordPipeline.resetSentence();
   }
 
   public void getSuggestions(KeyCodesProvider wordComposer, Dictionary.WordCallback wordCallback) {
-    mContactsDictionary.getSuggestions(wordComposer, wordCallback);
-    allDictionariesGetWords(mUserDictionary, wordComposer, wordCallback);
-    allDictionariesGetWords(mMainDictionary, wordComposer, wordCallback);
+    mDictionariesManager.getSuggestions(wordComposer, wordCallback);
   }
 
   public void getAbbreviations(
       KeyCodesProvider wordComposer, Dictionary.WordCallback wordCallback) {
-    allDictionariesGetWords(mAbbreviationDictionary, wordComposer, wordCallback);
+    mDictionariesManager.getAbbreviations(wordComposer, wordCallback);
   }
 
   public void getAutoText(KeyCodesProvider wordComposer, Dictionary.WordCallback wordCallback) {
-    final CharSequence word = wordComposer.getTypedWord();
-    for (AutoText autoText : mQuickFixesAutoText) {
-      final String fix = autoText.lookup(word);
-      if (fix != null) wordCallback.addWord(fix.toCharArray(), 0, fix.length(), 255, null);
-    }
+    mDictionariesManager.getAutoText(wordComposer, wordCallback);
   }
 
   public void getNextWords(
       String currentWord, Collection<CharSequence> suggestionsHolder, int maxSuggestions) {
-    if (!mNextWordEnabled) return;
-
-    if (!mIncognitoMode) {
-      recordPresageContext(currentWord);
-    }
-    if (mPredictionEngineMode == PredictionEngineMode.NONE || mIncognitoMode) {
-      mPresageContext.clear();
-    }
-
-    int remainingSuggestions = maxSuggestions;
-
-    int addedByPresage = 0;
-    boolean presageHadRaw = false;
-    if (usesPresageEngine()) {
-      final EngineOrchestrator.MergeOutcome outcome =
-          appendPresageSuggestions(suggestionsHolder, remainingSuggestions);
-      addedByPresage = outcome.added;
-      presageHadRaw = outcome.hadRaw;
-      remainingSuggestions -= addedByPresage;
-      if (remainingSuggestions <= 0) return;
-    }
-
-    int addedByNeural = 0;
-    boolean neuralHadRaw = false;
-    if (mPredictionEngineMode == PredictionEngineMode.NEURAL
-        || mPredictionEngineMode == PredictionEngineMode.HYBRID) {
-      if (BuildConfig.DEBUG) {
-        final String[] ctx = mPresageContext.toArray(new String[0]);
-        Logger.d(
-            TAG,
-            "Invoking neural next-word with context %s, limit %d",
-            Arrays.toString(ctx),
-            remainingSuggestions);
-      }
-      final EngineOrchestrator.MergeOutcome outcome =
-          appendNeuralSuggestions(suggestionsHolder, remainingSuggestions);
-      addedByNeural = outcome.added;
-      neuralHadRaw = outcome.hadRaw;
-      remainingSuggestions -= addedByNeural;
-      if (remainingSuggestions <= 0) return;
-    }
-
-    final boolean shouldIncludeLegacyNextWords;
-    switch (mPredictionEngineMode) {
-      case NGRAM:
-        shouldIncludeLegacyNextWords = !presageHadRaw;
-        break;
-      case NEURAL:
-        shouldIncludeLegacyNextWords = !neuralHadRaw;
-        break;
-      case HYBRID:
-        shouldIncludeLegacyNextWords = !(presageHadRaw || neuralHadRaw);
-        break;
-      case NONE:
-      default:
-        shouldIncludeLegacyNextWords = true;
-        break;
-    }
-
-    if (shouldIncludeLegacyNextWords) {
-      final int sizeBeforeUser = suggestionsHolder.size();
-      allDictionariesGetNextWord(
-          mUserNextWordDictionary, currentWord, suggestionsHolder, remainingSuggestions);
-      remainingSuggestions -= suggestionsHolder.size() - sizeBeforeUser;
-      if (remainingSuggestions <= 0) return;
-    } else if (!mIncognitoMode) {
-      for (NextWordSuggestions nextWordDictionary : mUserNextWordDictionary) {
-        nextWordDictionary.notifyNextTypedWord(currentWord);
-      }
-    }
-
-    for (String nextWordSuggestion :
-        mContactsNextWordDictionary.getNextWords(
-            currentWord, mMaxNextWordSuggestionsCount, mMinWordUsage)) {
-      suggestionsHolder.add(nextWordSuggestion);
-      remainingSuggestions--;
-      if (remainingSuggestions == 0) return;
-    }
-
-    if (mAlsoSuggestNextPunctuations) {
-      for (String evenMoreSuggestions : mInitialSuggestionsList) {
-        suggestionsHolder.add(evenMoreSuggestions);
-        remainingSuggestions--;
-        if (remainingSuggestions == 0) return;
-      }
-    }
-  }
-
-  private void allDictionariesGetNextWord(
-      List<NextWordSuggestions> nextWordDictionaries,
-      String currentWord,
-      Collection<CharSequence> suggestionsHolder,
-      int maxSuggestions) {
-    for (NextWordSuggestions nextWordDictionary : nextWordDictionaries) {
-
-      if (!mIncognitoMode) nextWordDictionary.notifyNextTypedWord(currentWord);
-
-      for (String nextWordSuggestion :
-          nextWordDictionary.getNextWords(
-              currentWord, mMaxNextWordSuggestionsCount, mMinWordUsage)) {
-        suggestionsHolder.add(nextWordSuggestion);
-        maxSuggestions--;
-        if (maxSuggestions == 0) return;
-      }
-    }
-  }
-
-  private boolean usesPresageEngine() {
-    return mPredictionEngineMode == PredictionEngineMode.NGRAM
-        || mPredictionEngineMode == PredictionEngineMode.HYBRID;
+    mNextWordPipeline.appendNextWords(
+        currentWord, suggestionsHolder, maxSuggestions, mIncognitoMode, mNextWordConfig);
   }
 
   public boolean isPresageEnabled() {
-    return usesPresageEngine();
+    return mPredictionEngines.isPresageEnabled();
   }
 
   /** Returns true when the neural predictor should be considered active in the pipeline. */
   public boolean isNeuralEnabled() {
-    return mPredictionEngineMode == PredictionEngineMode.NEURAL
-        || mPredictionEngineMode == PredictionEngineMode.HYBRID;
-  }
-
-  private void recordPresageContext(@NonNull String word) {
-    if (TextUtils.isEmpty(word)) return;
-    if (mPresageContext.size() == PRESAGE_CONTEXT_WINDOW) {
-      mPresageContext.removeFirst();
-    }
-    mPresageContext.addLast(word);
-  }
-
-  private EngineOrchestrator.MergeOutcome appendPresageSuggestions(
-      Collection<CharSequence> suggestionsHolder, int limit) {
-    if (limit <= 0) return EngineOrchestrator.MergeOutcome.empty();
-    if (!mNgramEngine.isReady() && !mNgramEngine.activate()) {
-      return EngineOrchestrator.MergeOutcome.empty();
-    }
-    if (mPresageContext.isEmpty()) {
-      return EngineOrchestrator.MergeOutcome.empty();
-    }
-    return EngineOrchestrator.predictAndMerge(
-        mNgramEngine,
-        mPresageContext,
-        mMaxNextWordSuggestionsCount,
-        suggestionsHolder,
-        limit,
-        BuildConfig.TESTING_BUILD,
-        TAG + "-Presage");
-  }
-
-  private EngineOrchestrator.MergeOutcome appendNeuralSuggestions(
-      Collection<CharSequence> suggestionsHolder, int limit) {
-    if (limit <= 0) {
-      return EngineOrchestrator.MergeOutcome.empty();
-    }
-    if (mPresageContext.size() < NEURAL_MIN_CONTEXT_TOKENS) {
-      return EngineOrchestrator.MergeOutcome.empty();
-    }
-    if (mPredictionEngineMode == PredictionEngineMode.HYBRID
-        && mLastNeuralLatencyMs > NEURAL_LATENCY_BUDGET_MS
-        && !suggestionsHolder.isEmpty()) {
-      Logger.d(
-          TAG,
-          "Skipping neural cascade; last inference "
-              + mLastNeuralLatencyMs
-              + "ms exceeded budget.");
-      return EngineOrchestrator.MergeOutcome.empty();
-    }
-    if (!mNeuralEngine.isReady() && !mNeuralEngine.activate()) {
-      handleNeuralActivationFailure();
-      return EngineOrchestrator.MergeOutcome.empty();
-    }
-    final long start = SystemClock.elapsedRealtime();
-    final EngineOrchestrator.MergeOutcome outcome =
-        EngineOrchestrator.predictAndMerge(
-            mNeuralEngine,
-            mPresageContext,
-            mMaxNextWordSuggestionsCount,
-            suggestionsHolder,
-            limit,
-            BuildConfig.TESTING_BUILD,
-            TAG + "-Neural");
-    mLastNeuralLatencyMs = SystemClock.elapsedRealtime() - start;
-    if (mLastNeuralLatencyMs > NEURAL_LATENCY_BUDGET_MS) {
-      Logger.i(
-          TAG,
-          "Neural inference latency " + mLastNeuralLatencyMs + "ms for current context");
-    }
-    clearNeuralActivationFailureStatus();
-    if (outcome.added == 0
-        && !outcome.hadRaw
-        && !TextUtils.isEmpty(mNeuralPredictionManager.getLastActivationError())) {
-      handleNeuralActivationFailure();
-    }
-    return outcome;
-  }
-
-  private void handleNeuralActivationFailure() {
-    final String error = mNeuralPredictionManager.getLastActivationError();
-    persistNeuralActivationFailure(error);
-    Logger.w(TAG, "Neural prediction engine failed to activate: " + error);
-    final String message =
-        mContext.getString(
-            R.string.prediction_engine_neural_activation_failed,
-            TextUtils.isEmpty(error)
-                ? mContext.getString(R.string.prediction_engine_error_unknown)
-                : error);
-    mMainHandler.post(() -> Toast.makeText(mContext, message, Toast.LENGTH_LONG).show());
-
-    if (mPredictionEngineMode == PredictionEngineMode.NEURAL
-        || mPredictionEngineMode == PredictionEngineMode.HYBRID) {
-      final String currentModeValue = modeToPreferenceValue(mPredictionEngineMode);
-      if (!"ngram".equals(currentModeValue)) {
-        updatePredictionEnginePreference("ngram");
-      } else {
-        updatePredictionEnginePreference("none");
-      }
-    }
-  }
-
-  private void updatePredictionEnginePreference(@NonNull String newMode) {
-    AnyApplication.prefs(mContext)
-        .getString(
-            R.string.settings_key_prediction_engine_mode,
-            R.string.settings_default_prediction_engine_mode)
-        .set(newMode);
-  }
-
-  private void persistNeuralActivationFailure(@Nullable String rawError) {
-    final String sanitized =
-        TextUtils.isEmpty(rawError)
-            ? mContext.getString(R.string.prediction_engine_error_unknown)
-            : sanitizeNeuralFailureMessage(rawError);
-    final String value;
-    if (TextUtils.isEmpty(sanitized)) {
-      value = "";
-    } else {
-      value = System.currentTimeMillis() + String.valueOf(NEURAL_FAILURE_DELIMITER) + sanitized;
-    }
-    AnyApplication.prefs(mContext)
-        .getString(
-            R.string.settings_key_prediction_engine_last_neural_error,
-            R.string.settings_default_prediction_engine_last_neural_error)
-        .set(value);
-  }
-
-  private void clearNeuralActivationFailureStatus() {
-    AnyApplication.prefs(mContext)
-        .getString(
-            R.string.settings_key_prediction_engine_last_neural_error,
-            R.string.settings_default_prediction_engine_last_neural_error)
-        .set("");
-  }
-
-  private String sanitizeNeuralFailureMessage(@Nullable String rawError) {
-    if (TextUtils.isEmpty(rawError)) {
-      return "";
-    }
-    return rawError.replace(String.valueOf(NEURAL_FAILURE_DELIMITER), " ").trim();
-  }
-
-  private String modeToPreferenceValue(@NonNull PredictionEngineMode mode) {
-    switch (mode) {
-      case NGRAM:
-        return "ngram";
-      case NEURAL:
-        return "neural";
-      case HYBRID:
-        return "hybrid";
-      case NONE:
-      default:
-        return "none";
-    }
+    return mPredictionEngines.isNeuralEnabled();
   }
 
   public boolean tryToLearnNewWord(CharSequence newWord, int frequencyDelta) {
-    if (mIncognitoMode || !mNextWordEnabled) return false;
-
-    if (!isValidWord(newWord)) {
-      return mAutoDictionary.addWord(newWord.toString(), frequencyDelta);
-    }
-
-    return false;
+    if (mIncognitoMode || !mNextWordConfig.enabled) return false;
+    return mDictionariesManager.tryToLearnNewWord(newWord, frequencyDelta);
   }
 }

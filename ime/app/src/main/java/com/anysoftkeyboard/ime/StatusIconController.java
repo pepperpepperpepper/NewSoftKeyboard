@@ -6,8 +6,8 @@ import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 
 /**
- * Handles showing/hiding the IME status icon based on the current keyboard and flags.
- * Extracted from {@link com.anysoftkeyboard.AnySoftKeyboard} to reduce lifecycle clutter.
+ * Handles showing/hiding the IME status icon based on the current keyboard and flags. Extracted
+ * from {@link com.anysoftkeyboard.AnySoftKeyboard} to reduce lifecycle clutter.
  */
 public final class StatusIconController {
 

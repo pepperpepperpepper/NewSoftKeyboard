@@ -6,7 +6,7 @@ package com.anysoftkeyboard.dictionaries;
 final class BaseCharactersTable {
   private BaseCharactersTable() {}
 
-static final char[] TABLE = {
+  static final char[] TABLE = {
     0x0000,
     0x0001,
     0x0002,

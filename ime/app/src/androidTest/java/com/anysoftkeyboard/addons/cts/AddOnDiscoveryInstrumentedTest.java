@@ -4,6 +4,7 @@ import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.dictionaries.DictionaryAddOnAndBuilder;
 import com.anysoftkeyboard.dictionaries.ExternalDictionaryFactory;
@@ -16,7 +17,6 @@ import com.anysoftkeyboard.theme.KeyboardThemeFactory;
 import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 /**
  * Verifies that add-on discovery works for both the NewSoftKeyboard and legacy ASK namespaces using
@@ -34,21 +34,15 @@ public class AddOnDiscoveryInstrumentedTest {
 
     assertTrue(
         "Expected NewSoftKeyboard-namespace test keyboard add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_keyboard_new")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_keyboard_new")));
 
     assertTrue(
         "Expected plugin-legacy test keyboard add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_keyboard_plugin")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_keyboard_plugin")));
 
     assertTrue(
         "Expected menny-legacy test keyboard add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_keyboard_menny")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_keyboard_menny")));
   }
 
   @Test
@@ -60,21 +54,15 @@ public class AddOnDiscoveryInstrumentedTest {
 
     assertTrue(
         "Expected NewSoftKeyboard-namespace test dictionary add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_dictionary_new")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_dictionary_new")));
 
     assertTrue(
         "Expected plugin-legacy test dictionary add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_dictionary_plugin")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_dictionary_plugin")));
 
     assertTrue(
         "Expected menny-legacy test dictionary add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_dictionary_menny")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_dictionary_menny")));
   }
 
   @Test
@@ -86,15 +74,11 @@ public class AddOnDiscoveryInstrumentedTest {
 
     assertTrue(
         "Expected NewSoftKeyboard-namespace test theme add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_theme_new")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_theme_new")));
 
     assertTrue(
         "Expected plugin-legacy test theme add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_theme_plugin")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_theme_plugin")));
   }
 
   @Test
@@ -106,14 +90,10 @@ public class AddOnDiscoveryInstrumentedTest {
 
     assertTrue(
         "Expected NewSoftKeyboard-namespace test quick-text add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_quick_text_new")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_quick_text_new")));
 
     assertTrue(
         "Expected plugin-legacy test quick-text add-on to be discovered",
-        addOns.stream()
-            .map(AddOn::getId)
-            .anyMatch(id -> id.equals("test_quick_text_plugin")));
+        addOns.stream().map(AddOn::getId).anyMatch(id -> id.equals("test_quick_text_plugin")));
   }
 }

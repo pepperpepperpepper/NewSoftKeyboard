@@ -12,14 +12,14 @@ import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelDefinition;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelStore;
+import com.anysoftkeyboard.engine.models.ModelDefinition;
+import com.anysoftkeyboard.engine.models.ModelStore;
 import com.anysoftkeyboard.ui.settings.NextWordPreferenceSummaries.NeuralFailureStatus;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.disposables.CompositeDisposable;
 import java.util.List;
-
 import net.evendanan.pixel.UiUtils;
+import wtf.uhoh.newsoftkeyboard.engine.EngineType;
 
 public class NextWordSettingsFragment extends PreferenceFragmentCompat {
 
@@ -31,7 +31,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
   @Nullable private String mPredictionEnginePrefKey;
   @Nullable private String mNextWordModePrefKey;
   @Nullable private String mNeuralFailurePrefKey;
-  @Nullable private PresageModelStore mPresageModelStore;
+  @Nullable private ModelStore mModelStore;
 
   private final SharedPreferences.OnSharedPreferenceChangeListener mSharedPreferenceChangeListener =
       (sharedPreferences, key) -> {
@@ -54,7 +54,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     addPreferencesFromResource(R.xml.prefs_next_word);
-    mPresageModelStore = new PresageModelStore(requireContext());
+    mModelStore = new ModelStore(requireContext());
     mPredictionEnginePrefKey = getString(R.string.settings_key_prediction_engine_mode);
     mNextWordModePrefKey = getString(R.string.settings_key_next_word_dictionary_type);
     mNeuralFailurePrefKey = getString(R.string.settings_key_prediction_engine_last_neural_error);
@@ -62,7 +62,8 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     if (enginePreference instanceof ListPreference) {
       mPredictionEnginePreference = (ListPreference) enginePreference;
     }
-    mManageModelsPreference = findPreference(getString(R.string.settings_key_manage_presage_models));
+    mManageModelsPreference =
+        findPreference(getString(R.string.settings_key_manage_presage_models));
   }
 
   @Override
@@ -90,8 +91,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     super.onResume();
     mSharedPreferences = getPreferenceManager().getSharedPreferences();
     if (mSharedPreferences != null) {
-      mSharedPreferences.registerOnSharedPreferenceChangeListener(
-          mSharedPreferenceChangeListener);
+      mSharedPreferences.registerOnSharedPreferenceChangeListener(mSharedPreferenceChangeListener);
     }
     updatePredictionEnginePreferenceSummary();
     updateManageModelsSummary();
@@ -115,8 +115,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     loadUsageStatistics();
   }
 
-  private boolean onPredictionEnginePreferenceChange(
-      Preference preference, Object newValue) {
+  private boolean onPredictionEnginePreferenceChange(Preference preference, Object newValue) {
     final String modeValue = String.valueOf(newValue);
     if (TextUtils.isEmpty(modeValue)) {
       return true;
@@ -128,14 +127,14 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     }
 
     if (("ngram".equals(modeValue) || "hybrid".equals(modeValue))
-        && !hasModelsForEngine(PresageModelDefinition.EngineType.NGRAM)) {
-      showMissingModelDialog(PresageModelDefinition.EngineType.NGRAM);
+        && !hasModelsForEngine(EngineType.NGRAM)) {
+      showMissingModelDialog(EngineType.NGRAM);
       return false;
     }
 
     if ("neural".equals(modeValue)) {
-      if (!hasModelsForEngine(PresageModelDefinition.EngineType.NEURAL)) {
-        showMissingModelDialog(PresageModelDefinition.EngineType.NEURAL);
+      if (!hasModelsForEngine(EngineType.NEURAL)) {
+        showMissingModelDialog(EngineType.NEURAL);
         return false;
       }
       updatePredictionEnginePreferenceSummary(modeValue);
@@ -174,8 +173,8 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
 
     final NeuralFailureStatus failureStatus =
         NextWordPreferenceSummaries.readLastNeuralFailureStatus(requireContext());
-    final String ngramLabel = resolveActiveModelLabel(PresageModelDefinition.EngineType.NGRAM);
-    final String neuralLabel = resolveActiveModelLabel(PresageModelDefinition.EngineType.NEURAL);
+    final String ngramLabel = resolveActiveModelLabel(EngineType.NGRAM);
+    final String neuralLabel = resolveActiveModelLabel(EngineType.NEURAL);
     final CharSequence summary =
         NextWordPreferenceSummaries.buildPredictionSummary(
             requireContext(),
@@ -208,8 +207,8 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
       return;
     }
 
-    final String ngramLabel = resolveActiveModelLabel(PresageModelDefinition.EngineType.NGRAM);
-    final String neuralLabel = resolveActiveModelLabel(PresageModelDefinition.EngineType.NEURAL);
+    final String ngramLabel = resolveActiveModelLabel(EngineType.NGRAM);
+    final String neuralLabel = resolveActiveModelLabel(EngineType.NEURAL);
     final NeuralFailureStatus failureStatus =
         NextWordPreferenceSummaries.readLastNeuralFailureStatus(requireContext());
     final CharSequence summary =
@@ -218,12 +217,12 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     mManageModelsPreference.setSummary(summary);
   }
 
-  private boolean hasModelsForEngine(@NonNull PresageModelDefinition.EngineType engineType) {
-    if (mPresageModelStore == null) {
+  private boolean hasModelsForEngine(@NonNull EngineType engineType) {
+    if (mModelStore == null) {
       return false;
     }
-    final List<PresageModelDefinition> definitions = mPresageModelStore.listAvailableModels();
-    for (PresageModelDefinition definition : definitions) {
+    final List<ModelDefinition> definitions = mModelStore.listAvailableModels();
+    for (ModelDefinition definition : definitions) {
       if (definition.getEngineType() == engineType) {
         return true;
       }
@@ -240,8 +239,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     }
     final String currentValue =
         mSharedPreferences.getString(
-            mNextWordModePrefKey,
-            getString(R.string.settings_default_next_words_dictionary_type));
+            mNextWordModePrefKey, getString(R.string.settings_default_next_words_dictionary_type));
     return currentValue == null || !"off".equals(currentValue);
   }
 
@@ -250,19 +248,18 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
   }
 
   @Nullable
-  private String resolveActiveModelLabel(
-      @NonNull PresageModelDefinition.EngineType engineType) {
-    if (mPresageModelStore == null) {
+  private String resolveActiveModelLabel(@NonNull EngineType engineType) {
+    if (mModelStore == null) {
       return null;
     }
-    final List<PresageModelDefinition> definitions = mPresageModelStore.listAvailableModels();
+    final List<ModelDefinition> definitions = mModelStore.listAvailableModels();
     if (definitions.isEmpty()) {
       return null;
     }
 
-    final String selectedId = mPresageModelStore.getSelectedModelId(engineType);
+    final String selectedId = mModelStore.getSelectedModelId(engineType);
     String fallback = null;
-    for (PresageModelDefinition definition : definitions) {
+    for (ModelDefinition definition : definitions) {
       if (definition.getEngineType() != engineType) {
         continue;
       }
@@ -279,7 +276,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
 
   @Nullable
   private String resolveActiveModelLabel() {
-    return resolveActiveModelLabel(PresageModelDefinition.EngineType.NGRAM);
+    return resolveActiveModelLabel(EngineType.NGRAM);
   }
 
   private void showSuggestionsDisabledDialog() {
@@ -293,17 +290,16 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
         .show();
   }
 
-  private void showMissingModelDialog(
-      @NonNull PresageModelDefinition.EngineType missingEngine) {
+  private void showMissingModelDialog(@NonNull EngineType missingEngine) {
     if (!isAdded()) {
       return;
     }
     final int titleRes =
-        missingEngine == PresageModelDefinition.EngineType.NEURAL
+        missingEngine == EngineType.NEURAL
             ? R.string.prediction_engine_missing_model_dialog_title_neural
             : R.string.prediction_engine_missing_model_dialog_title;
     final int messageRes =
-        missingEngine == PresageModelDefinition.EngineType.NEURAL
+        missingEngine == EngineType.NEURAL
             ? R.string.prediction_engine_missing_model_dialog_message_neural
             : R.string.prediction_engine_missing_model_dialog_message;
     new AlertDialog.Builder(requireContext())
@@ -332,8 +328,7 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
 
   private void loadUsageStatistics() {
     final Preference clearDataPreference = findPreference("clear_next_word_data");
-    final PreferenceCategory statsCategory =
-        (PreferenceCategory) findPreference("next_word_stats");
+    final PreferenceCategory statsCategory = (PreferenceCategory) findPreference("next_word_stats");
     if (clearDataPreference == null || statsCategory == null) {
       return;
     }

@@ -1,0 +1,13 @@
+apply plugin: 'com.android.library'
+
+apply from: "${rootDir}/gradle/android_general.gradle"
+
+android {
+    namespace 'com.anysoftkeyboard.engine.models'
+}
+
+dependencies {
+    api project(':ime:base')
+    api project(':engine-core')
+    api 'androidx.annotation:annotation:1.9.1'
+}

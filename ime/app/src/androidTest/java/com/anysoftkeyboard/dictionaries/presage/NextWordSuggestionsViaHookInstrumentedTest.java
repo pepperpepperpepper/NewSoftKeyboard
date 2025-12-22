@@ -26,7 +26,11 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public class NextWordSuggestionsViaHookInstrumentedTest {
   private static final String TAG = "NextWordHook";
-  private static final String APP_PACKAGE = "wtf.uhoh.newsoftkeyboard";
+
+  private static String getAppPackage() {
+    return InstrumentationRegistry.getInstrumentation().getTargetContext().getPackageName();
+  }
+
   private ActivityScenario<TestInputActivity> mScenario;
   private String mImeComponent;
 
@@ -96,8 +100,9 @@ public class NextWordSuggestionsViaHookInstrumentedTest {
       }
       if (touchLine == null) return;
       java.util.regex.Matcher m =
-          java.util.regex.Pattern
-              .compile("touchable region=SkRegion\\\\(\\\\((\\\\d+),(\\\\d+),(\\\\d+),(\\\\d+)\\\\)\\\\)")
+          java.util.regex.Pattern.compile(
+                  "touchable"
+                      + " region=SkRegion\\\\(\\\\((\\\\d+),(\\\\d+),(\\\\d+),(\\\\d+)\\\\)\\\\)")
               .matcher(touchLine);
       if (!m.find()) return;
       int L = Integer.parseInt(m.group(1));
@@ -140,11 +145,13 @@ public class NextWordSuggestionsViaHookInstrumentedTest {
   private String resolveImeComponentId() throws IOException {
     String list = execShell("ime list -a -s").trim();
     String[] lines = list.split("\\n");
+    String prefix = getAppPackage() + "/";
     String fallback = null;
     for (String line : lines) {
       String trimmed = line.trim();
-      if (!trimmed.startsWith(APP_PACKAGE + "/")) continue;
-      if (trimmed.endsWith(".NewSoftKeyboardService") || trimmed.endsWith("/.NewSoftKeyboardService")) {
+      if (!trimmed.startsWith(prefix)) continue;
+      if (trimmed.endsWith(".NewSoftKeyboardService")
+          || trimmed.endsWith("/.NewSoftKeyboardService")) {
         return trimmed;
       }
       if (fallback == null) fallback = trimmed;

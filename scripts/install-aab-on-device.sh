@@ -1,9 +1,10 @@
 #!/bin/bash
 
 AAB_PATH="$1"
+DEVICE_ID="${3:-${GENYMOTION_DEV:-${ANDROID_SERIAL:-}}}"
 
 if [[ -z "${AAB_PATH}" ]]; then
-    echo "Please provide the path to the AAB file you want to install as the first argument."
+    echo "Usage: $0 <path-to.aab> [bundletool-version] [adb-serial]"
     exit 1
 fi
 
@@ -23,4 +24,9 @@ java -jar "${TOOL_JAR}" build-apks --bundle="${AAB_PATH}" --output="${TEMP_APKS}
 
 ADB_BIN="$(which adb)"
 echo "Installing to connected device (using ADB at '${ADB_BIN}')..."
-java -jar "${TOOL_JAR}" install-apks --adb="${ADB_BIN}" --apks="${TEMP_APKS}"
+INSTALL_ARGS=(install-apks --adb="${ADB_BIN}" --apks="${TEMP_APKS}")
+if [[ -n "${DEVICE_ID}" ]]; then
+    echo "Using device serial '${DEVICE_ID}'"
+    INSTALL_ARGS+=(--device-id="${DEVICE_ID}")
+fi
+java -jar "${TOOL_JAR}" "${INSTALL_ARGS[@]}"

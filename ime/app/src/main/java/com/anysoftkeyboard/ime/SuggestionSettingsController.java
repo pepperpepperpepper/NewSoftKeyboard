@@ -14,8 +14,7 @@ final class SuggestionSettingsController {
   void attach(@NonNull AnySoftKeyboardSuggestions host, @NonNull Suggest suggest) {
     final Observable<Boolean> powerSavingShowSuggestionsObservable =
         Observable.combineLatest(
-            host
-                .prefs()
+            host.prefs()
                 .getBoolean(
                     R.string.settings_key_show_suggestions,
                     R.bool.settings_default_show_suggestions)
@@ -28,14 +27,12 @@ final class SuggestionSettingsController {
     host.addDisposable(
         Observable.combineLatest(
                 powerSavingShowSuggestionsObservable,
-                host
-                    .prefs()
+                host.prefs()
                     .getString(
                         R.string.settings_key_auto_pick_suggestion_aggressiveness,
                         R.string.settings_default_auto_pick_suggestion_aggressiveness)
                     .asObservable(),
-                host
-                    .prefs()
+                host.prefs()
                     .getBoolean(
                         R.string.settings_key_try_splitting_words_for_correction,
                         R.bool.settings_default_try_splitting_words_for_correction)
@@ -46,41 +43,41 @@ final class SuggestionSettingsController {
                 GenericOnError.onError("suggestions_prefs")));
 
     host.addDisposable(
-        host
-            .prefs()
+        host.prefs()
             .getBoolean(
                 R.string.settings_key_allow_suggestions_restart,
                 R.bool.settings_default_allow_suggestions_restart)
             .asObservable()
-            .subscribe(host::setAllowSuggestionsRestart,
+            .subscribe(
+                host::setAllowSuggestionsRestart,
                 GenericOnError.onError("settings_key_allow_suggestions_restart")));
   }
 
   /** Applies current pref snapshot immediately (helps tests before reactive streams emit). */
   void applySnapshot(@NonNull AnySoftKeyboardSuggestions host, @NonNull Suggest suggest) {
     final boolean showSuggestions =
-        host
-            .prefs()
+        host.prefs()
             .getBoolean(
                 R.string.settings_key_show_suggestions, R.bool.settings_default_show_suggestions)
             .get();
     final String autoPickAggressiveness =
-        host
-            .prefs()
+        host.prefs()
             .getString(
                 R.string.settings_key_auto_pick_suggestion_aggressiveness,
                 R.string.settings_default_auto_pick_suggestion_aggressiveness)
             .get();
     final boolean trySplitting =
-        host
-            .prefs()
+        host.prefs()
             .getBoolean(
                 R.string.settings_key_try_splitting_words_for_correction,
                 R.bool.settings_default_try_splitting_words_for_correction)
             .get();
 
     applyAutoPickConfig(
-        host, suggest, com.anysoftkeyboard.utils.Triple.create(showSuggestions, autoPickAggressiveness, trySplitting));
+        host,
+        suggest,
+        com.anysoftkeyboard.utils.Triple.create(
+            showSuggestions, autoPickAggressiveness, trySplitting));
   }
 
   private void applyAutoPickConfig(

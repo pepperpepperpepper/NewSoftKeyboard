@@ -92,7 +92,8 @@ class KeyboardSetter {
     host.markKeyboardChanged();
     host.invalidateAllKeys();
 
-    keyDetector.setProximityThreshold(proximityCalculator.computeProximityThreshold(keyboard, keys));
+    keyDetector.setProximityThreshold(
+        proximityCalculator.computeProximityThreshold(keyboard, keys));
     swipeConfiguration.recomputeForKeyboard(keyboard);
   }
 }

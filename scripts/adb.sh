@@ -33,11 +33,15 @@ case $choice in
         color="\033[0;36m"
         nocolor="\033[0m"
         error="\033[0;31m"
+        adbDevice=""
+        if [[ -n "${GENYMOTION_DEV:-}" ]]; then
+            adbDevice=" -s ${GENYMOTION_DEV}"
+        fi
         # Retrieving current working path
         oldpath="$(pwd)"
         if [ $clearlogcat == 1 ]; then
             echo -e "${color}Clearing${nocolor} last entries…"
-            adb logcat -c
+            adb${adbDevice} logcat -c
         fi
         echo -e "${color}Searching${nocolor} for tags in source code…"
         # cd project_root_folder
@@ -61,9 +65,9 @@ case $choice in
         fi
         tags="$tags dalvikvm System.err AndroidRuntime StrictMode DEBUG "
         if [ -z "$filters" ]; then
-        comm="adb logcat$flags $(echo "$tags" | sed "s/ /:$1 /g")*:S"
+        comm="adb${adbDevice} logcat$flags $(echo "$tags" | sed "s/ /:$1 /g")*:S"
         else
-        comm="adb logcat$flags $(echo "$tags" | sed "s/ /:$1 /g")${filters:1}"
+        comm="adb${adbDevice} logcat$flags $(echo "$tags" | sed "s/ /:$1 /g")${filters:1}"
         fi
         echo -e "${color}Running: $nocolor$comm"
         # Run command:
@@ -87,4 +91,3 @@ case $choice in
         Run this command with no arguments or with \`--help\` to get help."
         ;;
 esac
-

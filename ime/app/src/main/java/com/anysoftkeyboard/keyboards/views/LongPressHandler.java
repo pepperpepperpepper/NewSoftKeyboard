@@ -18,7 +18,8 @@ final class LongPressHandler {
   interface Host {
     void onCancelEvent(@NonNull PointerTracker tracker);
 
-    @NonNull Context getContext();
+    @NonNull
+    Context getContext();
   }
 
   static boolean handleLongPress(

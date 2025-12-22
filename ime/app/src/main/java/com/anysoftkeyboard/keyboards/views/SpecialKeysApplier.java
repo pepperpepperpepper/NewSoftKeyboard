@@ -1,6 +1,8 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
+
 /** Applies icons/labels to special keys based on state. */
 final class SpecialKeysApplier {
 

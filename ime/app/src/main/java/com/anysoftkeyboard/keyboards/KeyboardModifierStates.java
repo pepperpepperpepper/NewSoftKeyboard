@@ -133,4 +133,3 @@ final class KeyboardModifierStates {
     return voiceState == STICKY_KEY_LOCKED;
   }
 }
-

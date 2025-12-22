@@ -12,9 +12,8 @@ import android.content.Context;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.base.utils.Logger;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelDefinition;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelStore;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelStore.ActiveModel;
+import com.anysoftkeyboard.engine.models.ModelStore;
+import com.anysoftkeyboard.engine.models.ModelStore.ActiveModel;
 import java.io.File;
 import java.io.IOException;
 import java.nio.FloatBuffer;
@@ -27,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import wtf.uhoh.newsoftkeyboard.engine.EngineType;
 
 /** Handles ONNX Runtime backed next-word predictions. */
 public final class NeuralPredictionManager {
@@ -39,7 +39,7 @@ public final class NeuralPredictionManager {
       Pattern.compile("past_key_values\\.(\\d+)\\.(key|value)");
 
   private final Context mContext;
-  private final PresageModelStore mModelStore;
+  private final ModelStore mModelStore;
   private final ReentrantLock mSessionLock = new ReentrantLock();
 
   @Nullable private ActiveModel mActiveModel;
@@ -56,13 +56,12 @@ public final class NeuralPredictionManager {
   private int mModelVocabSize = 0;
 
   public NeuralPredictionManager(@NonNull Context context) {
-    this(context, new PresageModelStore(context));
+    this(context, new ModelStore(context));
   }
 
-  NeuralPredictionManager(
-      @NonNull Context context, @NonNull PresageModelStore presageModelStore) {
+  NeuralPredictionManager(@NonNull Context context, @NonNull ModelStore modelStore) {
     mContext = context.getApplicationContext();
-    mModelStore = presageModelStore;
+    mModelStore = modelStore;
   }
 
   public boolean activate() {
@@ -73,8 +72,7 @@ public final class NeuralPredictionManager {
       }
 
       mLastActivationError = null;
-      final ActiveModel activeModel =
-          mModelStore.ensureActiveModel(PresageModelDefinition.EngineType.NEURAL);
+      final ActiveModel activeModel = mModelStore.ensureActiveModel(EngineType.NEURAL);
       if (activeModel == null) {
         mLastActivationError = "No neural language model installed.";
         return false;
@@ -331,7 +329,8 @@ public final class NeuralPredictionManager {
           break;
         case INT64:
           final long[] lData = new long[(int) size];
-          final OnnxTensor lTensor = OnnxTensor.createTensor(mEnvironment, LongBuffer.wrap(lData), shape);
+          final OnnxTensor lTensor =
+              OnnxTensor.createTensor(mEnvironment, LongBuffer.wrap(lData), shape);
           owned.add(lTensor);
           out.put(name, lTensor);
           break;
@@ -373,7 +372,8 @@ public final class NeuralPredictionManager {
       return "[]";
     }
     final java.util.PriorityQueue<int[]> heap =
-        new java.util.PriorityQueue<>(java.util.Comparator.comparingDouble(a -> Float.intBitsToFloat(a[1])));
+        new java.util.PriorityQueue<>(
+            java.util.Comparator.comparingDouble(a -> Float.intBitsToFloat(a[1])));
     for (int i = 0; i < lastLogits.length; i++) {
       final float score = lastLogits[i];
       final int packed = Float.floatToRawIntBits(score);
@@ -405,7 +405,8 @@ public final class NeuralPredictionManager {
     }
     final int target = Math.min(lastLogits.length, Math.max(k * 6, k + 8));
     final java.util.PriorityQueue<int[]> heap =
-        new java.util.PriorityQueue<>(java.util.Comparator.comparingDouble(a -> Float.intBitsToFloat(a[1])));
+        new java.util.PriorityQueue<>(
+            java.util.Comparator.comparingDouble(a -> Float.intBitsToFloat(a[1])));
     for (int i = 0; i < lastLogits.length; i++) {
       final float score = lastLogits[i];
       final int packed = Float.floatToRawIntBits(score);
@@ -440,7 +441,8 @@ public final class NeuralPredictionManager {
     }
     final int target = Math.min(lastLogits.length, Math.max(k * 6, k + 8));
     final java.util.PriorityQueue<int[]> heap =
-        new java.util.PriorityQueue<>(java.util.Comparator.comparingDouble(a -> Float.intBitsToFloat(a[1])));
+        new java.util.PriorityQueue<>(
+            java.util.Comparator.comparingDouble(a -> Float.intBitsToFloat(a[1])));
     for (int i = 0; i < lastLogits.length; i++) {
       final float score = lastLogits[i];
       final int packed = Float.floatToRawIntBits(score);
@@ -461,7 +463,8 @@ public final class NeuralPredictionManager {
     final java.util.ArrayList<String> out = new java.util.ArrayList<>(k);
     for (int[] pair : sorted) {
       final int tokenId = pair[0];
-      final String decoded = tokenizer != null ? tokenizer.decodeId(tokenId) : String.valueOf(tokenId);
+      final String decoded =
+          tokenizer != null ? tokenizer.decodeId(tokenId) : String.valueOf(tokenId);
       if (tokenizer != null && isPunctuationOnly(decoded)) {
         continue;
       }

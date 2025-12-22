@@ -1,22 +1,26 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.NinePatchDrawable;
 import android.text.TextUtils;
-import android.view.View;
 import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
 
 /** Draws key icons centered on the key surface. */
 final class KeyIconDrawer {
+
+  interface KeyLabelGuesser {
+    CharSequence guessLabelForKey(int keyCode);
+  }
 
   CharSequence drawIconIfNeeded(
       Canvas canvas,
       AnyKey key,
       KeyIconResolver keyIconResolver,
       CharSequence currentLabel,
-      android.graphics.Rect keyBackgroundPadding,
-      View viewForInvalidate) {
+      Rect keyBackgroundPadding,
+      KeyLabelGuesser keyLabelGuesser) {
     CharSequence label = currentLabel;
     if (!TextUtils.isEmpty(label)) {
       return label;
@@ -31,7 +35,8 @@ final class KeyIconDrawer {
       final int drawableX =
           (key.width + keyBackgroundPadding.left - keyBackgroundPadding.right - drawableWidth) / 2;
       final int drawableY =
-          (key.height + keyBackgroundPadding.top - keyBackgroundPadding.bottom - drawableHeight) / 2;
+          (key.height + keyBackgroundPadding.top - keyBackgroundPadding.bottom - drawableHeight)
+              / 2;
 
       canvas.translate(drawableX, drawableY);
       iconToDraw.setBounds(0, 0, drawableWidth, drawableHeight);
@@ -43,9 +48,7 @@ final class KeyIconDrawer {
     }
 
     // no icon; guess a label fallback
-    label = viewForInvalidate instanceof AnyKeyboardViewBase
-        ? ((AnyKeyboardViewBase) viewForInvalidate).guessLabelForKey(key.getPrimaryCode())
-        : null;
+    label = keyLabelGuesser.guessLabelForKey(key.getPrimaryCode());
     return label;
   }
 }

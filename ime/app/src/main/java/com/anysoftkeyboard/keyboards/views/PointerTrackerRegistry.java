@@ -4,8 +4,8 @@ import android.util.SparseArray;
 import androidx.annotation.NonNull;
 
 /**
- * Small helper that owns {@link PointerTracker} instances for a view.
- * Centralizes creation and iteration so touch plumbing can shrink over time.
+ * Small helper that owns {@link PointerTracker} instances for a view. Centralizes creation and
+ * iteration so touch plumbing can shrink over time.
  */
 final class PointerTrackerRegistry {
 

@@ -4,11 +4,11 @@ import static org.junit.Assert.fail;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.PointF;
+import android.graphics.Rect;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.SystemClock;
-import android.graphics.PointF;
-import android.graphics.Rect;
 import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.test.core.app.ActivityScenario;
@@ -52,6 +52,14 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
   private static final String ROZOFF_SYMBOLS_ID = "mike-rozoff-symbols-001";
   private static final String ROZOFF_SYMBOLS_EXT_ID = "mike-rozoff-symbols-ext-001";
 
+  private static String getAppPackage() {
+    return InstrumentationRegistry.getInstrumentation().getTargetContext().getPackageName();
+  }
+
+  private static String resId(String idName) {
+    return getAppPackage() + ":id/" + idName;
+  }
+
   private UiDevice mDevice;
   private ActivityScenario<TestInputActivity> mScenario;
   private String mLastWindowDumpSnippet = "";
@@ -61,8 +69,7 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
   public void setUp() throws Exception {
     clearLogcat();
     configureMikeRozoffAsDefault();
-    AnyApplication application =
-        (AnyApplication) ApplicationProvider.getApplicationContext();
+    AnyApplication application = (AnyApplication) ApplicationProvider.getApplicationContext();
     boolean trackerRegistered = false;
     for (PublicNotice notice : application.getPublicNotices()) {
       if ("ImeStateTrackerKeyboardVisibility".equals(notice.getName())) {
@@ -80,10 +87,7 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
     com.anysoftkeyboard.keyboards.KeyboardFactory factoryPostConfig =
         AnyApplication.getKeyboardFactory(ApplicationProvider.getApplicationContext());
     Log.d(TAG, "Post-config enabled IDs: " + factoryPostConfig.getEnabledIds());
-    Log.d(
-        TAG,
-        "Post-config active id: "
-            + factoryPostConfig.getEnabledAddOn().getId());
+    Log.d(TAG, "Post-config active id: " + factoryPostConfig.getEnabledAddOn().getId());
     mScenario = ActivityScenario.launch(TestInputActivity.class);
     waitForTestHarness();
     focusTestEditor();
@@ -121,8 +125,11 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
   private void clickPopupSwitch(String targetKeyboardId) throws Exception {
     PointF center = awaitKeyCenter(targetKeyboardId, KEYBOARD_READY_TIMEOUT_MS);
     if (center == null) {
-      fail("Unable to determine coordinates for popup target " + targetKeyboardId
-          + ". Dump: " + mLastWindowDumpSnippet);
+      fail(
+          "Unable to determine coordinates for popup target "
+              + targetKeyboardId
+              + ". Dump: "
+              + mLastWindowDumpSnippet);
     }
     Log.d(TAG, "Clicking popup switch for " + targetKeyboardId + " at " + center);
     mDevice.click(Math.round(center.x), Math.round(center.y));
@@ -176,8 +183,7 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
 
   private void waitForKeyboardSurface() {
     boolean keyboardVisible =
-        mDevice.wait(
-            Until.hasObject(By.pkg("wtf.uhoh.newsoftkeyboard")), KEYBOARD_READY_TIMEOUT_MS);
+        mDevice.wait(Until.hasObject(By.pkg(getAppPackage())), KEYBOARD_READY_TIMEOUT_MS);
     if (!keyboardVisible) {
       dumpWindowHierarchyForDebug();
       SystemClock.sleep(KEYBOARD_READY_TIMEOUT_MS);
@@ -217,20 +223,17 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
     UiObject2 keyboard =
         mDevice.wait(
             Until.findObject(
-                By.res("wtf.uhoh.newsoftkeyboard:id/AnyKeyboardMainView")
+                By.res(resId("AnyKeyboardMainView"))
                     .clazz("com.anysoftkeyboard.keyboards.views.AnyKeyboardView")),
             2000);
     if (keyboard == null) {
       keyboard =
           mDevice.wait(
-              Until.findObject(
-                  By.clazz("com.anysoftkeyboard.keyboards.views.AnyKeyboardView")),
+              Until.findObject(By.clazz("com.anysoftkeyboard.keyboards.views.AnyKeyboardView")),
               2000);
     }
     if (keyboard == null) {
-      keyboard =
-          mDevice.wait(
-              Until.findObject(By.pkg("wtf.uhoh.newsoftkeyboard")), 2000);
+      keyboard = mDevice.wait(Until.findObject(By.pkg(getAppPackage())), 2000);
     }
     if (keyboard != null) {
       Rect bounds = keyboard.getVisibleBounds();
@@ -260,7 +263,8 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
       }
       Matcher frameMatcher =
           Pattern.compile(
-                  "Window\\{[^}]+ InputMethod[\\s\\S]*?mFrame=\\[(\\d+),\\s*(\\d+)]\\[(\\d+),\\s*(\\d+)]",
+                  "Window\\{[^}]+"
+                      + " InputMethod[\\s\\S]*?mFrame=\\[(\\d+),\\s*(\\d+)]\\[(\\d+),\\s*(\\d+)]",
                   Pattern.DOTALL)
               .matcher(dump);
       if (frameMatcher.find()) {
@@ -275,7 +279,8 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
       }
       Matcher shownMatcher =
           Pattern.compile(
-                  "Window\\{[^}]+ InputMethod[\\s\\S]*?Shown frame: \\[(\\d+),\\s*(\\d+)]\\[(\\d+),\\s*(\\d+)]",
+                  "Window\\{[^}]+ InputMethod[\\s\\S]*?Shown frame:"
+                      + " \\[(\\d+),\\s*(\\d+)]\\[(\\d+),\\s*(\\d+)]",
                   Pattern.DOTALL)
               .matcher(dump);
       if (shownMatcher.find()) {
@@ -297,10 +302,7 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
 
   private void waitForTestHarness() {
     boolean editorVisible =
-        mDevice.wait(
-            Until.hasObject(
-                By.res("wtf.uhoh.newsoftkeyboard:id/test_edit_text")),
-            KEYBOARD_READY_TIMEOUT_MS);
+        mDevice.wait(Until.hasObject(By.res(resId("test_edit_text"))), KEYBOARD_READY_TIMEOUT_MS);
     if (!editorVisible) {
       dumpWindowHierarchyForDebug();
       fail("Test input editor not visible.");
@@ -308,11 +310,7 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
   }
 
   private void focusTestEditor() {
-    UiObject2 editor =
-        mDevice.wait(
-            Until.findObject(
-                By.res("wtf.uhoh.newsoftkeyboard:id/test_edit_text")),
-            2000);
+    UiObject2 editor = mDevice.wait(Until.findObject(By.res(resId("test_edit_text"))), 2000);
     if (editor == null) {
       dumpWindowHierarchyForDebug();
       fail("Unable to locate test input editor.");
@@ -336,8 +334,7 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
       throws IOException {
     long timeout = SystemClock.uptimeMillis() + timeoutMs;
     while (SystemClock.uptimeMillis() < timeout) {
-      String output =
-          executeShellCommand(String.format("logcat -d %s:D *:S", tag));
+      String output = executeShellCommand(String.format("logcat -d %s:D *:S", tag));
       if (output.contains(expectedSubstring)) {
         return true;
       }
@@ -350,15 +347,12 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
     if (mImeComponent == null) {
       mImeComponent = resolveImeComponentId();
     }
-    String enableOutput =
-        executeShellCommand("ime enable --user 0 " + mImeComponent);
+    String enableOutput = executeShellCommand("ime enable --user 0 " + mImeComponent);
     Log.d(TAG, "ime enable output: " + enableOutput.trim());
-    String setOutput =
-        executeShellCommand("ime set --user 0 " + mImeComponent);
+    String setOutput = executeShellCommand("ime set --user 0 " + mImeComponent);
     Log.d(TAG, "ime set output: " + setOutput.trim());
 
-    String enabled =
-        executeShellCommand("settings get secure enabled_input_methods").trim();
+    String enabled = executeShellCommand("settings get secure enabled_input_methods").trim();
     String expanded = expandComponent(mImeComponent);
     if (!enabled.contains(mImeComponent) && !enabled.contains(expanded)) {
       String prefix = enabled.isEmpty() ? "" : enabled + ":";
@@ -370,8 +364,7 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
   }
 
   private void assertImeSelected() throws IOException {
-    String current =
-        executeShellCommand("settings get secure default_input_method").trim();
+    String current = executeShellCommand("settings get secure default_input_method").trim();
     String expanded = expandComponent(mImeComponent);
     if (!(current.equals(mImeComponent) || current.equals(expanded))) {
       fail(
@@ -385,10 +378,11 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
   private String resolveImeComponentId() throws IOException {
     String list = executeShellCommand("ime list -a -s").trim();
     String[] lines = list.split("\\n");
+    String prefix = getAppPackage() + "/";
     String fallback = null;
     for (String line : lines) {
       String trimmed = line.trim();
-      if (!trimmed.startsWith("wtf.uhoh.newsoftkeyboard/")) continue;
+      if (!trimmed.startsWith(prefix)) continue;
       if (trimmed.endsWith(".NewSoftKeyboardService")
           || trimmed.endsWith("/.NewSoftKeyboardService")) {
         return trimmed;
@@ -411,8 +405,7 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
   private void dumpWindowHierarchyForDebug() {
     try {
       File cacheDir = ApplicationProvider.getApplicationContext().getCacheDir();
-      File dumpFile =
-          File.createTempFile("ask_keyboard_window_", ".xml", cacheDir);
+      File dumpFile = File.createTempFile("ask_keyboard_window_", ".xml", cacheDir);
       mDevice.dumpWindowHierarchy(dumpFile);
       Log.w(TAG, "Window hierarchy dumped to " + dumpFile.getAbsolutePath());
     } catch (IOException e) {
@@ -463,13 +456,11 @@ public class MikeRozoffKeyboardSwitchInstrumentedTest {
         if (expectedKeyboardId.equals(factoryActive.getId())) {
           Log.w(
               TAG,
-                  "ImeStateTracker did not report state, but KeyboardFactory reports active id "
-                      + factoryActive.getId());
+              "ImeStateTracker did not report state, but KeyboardFactory reports active id "
+                  + factoryActive.getId());
           return;
         }
-        Log.w(
-            TAG,
-            "KeyboardFactory also reports mismatched id: " + factoryActive.getId());
+        Log.w(TAG, "KeyboardFactory also reports mismatched id: " + factoryActive.getId());
       }
       fail(
           "Expected keyboard id "

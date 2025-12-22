@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import androidx.annotation.NonNull;
+import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 
@@ -13,32 +14,64 @@ import com.anysoftkeyboard.keyboards.Keyboard;
  */
 final class KeyDrawHelper {
 
-  private final AnyKeyboardViewBase view;
   private final Paint paint;
+  private final DrawDecisions drawDecisions;
+  private final KeyIconDrawer keyIconDrawer;
+  private final KeyIconResolver keyIconResolver;
+  private final Rect keyBackgroundPadding;
+  private final KeyboardNameRenderer keyboardNameRenderer;
+  private final KeyLabelRenderer keyLabelRenderer;
+  private final KeyHintRenderer keyHintRenderer;
+  private final LabelPaintConfigurator labelPaintConfigurator;
+  private final KeyLabelRenderer.KeyTextPaintSetter keyTextPaintSetter;
+  private final KeyLabelRenderer.LabelTextPaintSetter labelTextPaintSetter;
+  private final KeyIconDrawer.KeyLabelGuesser keyLabelGuesser;
 
-  KeyDrawHelper(AnyKeyboardViewBase view, Paint paint) {
-    this.view = view;
+  KeyDrawHelper(
+      Paint paint,
+      DrawDecisions drawDecisions,
+      KeyIconDrawer keyIconDrawer,
+      KeyIconResolver keyIconResolver,
+      Rect keyBackgroundPadding,
+      KeyboardNameRenderer keyboardNameRenderer,
+      KeyLabelRenderer keyLabelRenderer,
+      KeyHintRenderer keyHintRenderer,
+      LabelPaintConfigurator labelPaintConfigurator,
+      KeyLabelRenderer.KeyTextPaintSetter keyTextPaintSetter,
+      KeyLabelRenderer.LabelTextPaintSetter labelTextPaintSetter,
+      KeyIconDrawer.KeyLabelGuesser keyLabelGuesser) {
     this.paint = paint;
+    this.drawDecisions = drawDecisions;
+    this.keyIconDrawer = keyIconDrawer;
+    this.keyIconResolver = keyIconResolver;
+    this.keyBackgroundPadding = keyBackgroundPadding;
+    this.keyboardNameRenderer = keyboardNameRenderer;
+    this.keyLabelRenderer = keyLabelRenderer;
+    this.keyHintRenderer = keyHintRenderer;
+    this.labelPaintConfigurator = labelPaintConfigurator;
+    this.keyTextPaintSetter = keyTextPaintSetter;
+    this.labelTextPaintSetter = labelTextPaintSetter;
+    this.keyLabelGuesser = keyLabelGuesser;
   }
 
   void drawKeys(@NonNull Canvas canvas, Rect dirtyRect, DrawInputs inputs) {
 
     for (Keyboard.Key keyBase : inputs.keys) {
       final AnyKeyboard.AnyKey key = (AnyKeyboard.AnyKey) keyBase;
-      final boolean keyIsSpace = AnyKeyboardViewBase.isSpaceKey(key);
+      final boolean keyIsSpace = key.getPrimaryCode() == KeyCodes.SPACE;
 
       if (inputs.drawSingleKey && (inputs.invalidKey != key)) {
         continue;
       }
-      if (!view.getDrawDecisions()
-          .shouldDrawKey(key, dirtyRect, inputs.kbdPaddingLeft, inputs.kbdPaddingTop)) {
+      if (!drawDecisions.shouldDrawKey(
+          key, dirtyRect, inputs.kbdPaddingLeft, inputs.kbdPaddingTop)) {
         continue;
       }
 
-      int[] drawableState = key.getCurrentDrawableState(view.getDrawableStatesProvider());
+      int[] drawableState = key.getCurrentDrawableState(inputs.drawableStatesProvider);
 
       int resolvedTextColor =
-          view.getDrawDecisions().resolveTextColor(
+          drawDecisions.resolveTextColor(
               key,
               inputs.themeResourcesHolder,
               inputs.keyTextColor,
@@ -47,7 +80,7 @@ final class KeyDrawHelper {
               inputs.modifierStates.controlModeActive,
               inputs.modifierStates.altModeActive,
               inputs.modifierActiveTextColor,
-              view.getDrawableStatesProvider());
+              inputs.drawableStatesProvider);
 
       paint.setColor(resolvedTextColor);
       inputs.keyBackground.setState(drawableState);
@@ -56,40 +89,40 @@ final class KeyDrawHelper {
           key.label == null
               ? null
               : KeyLabelAdjuster.adjustLabelToShiftState(
-                  view.getKeyboard(),
+                  inputs.keyboard,
                   inputs.keyDetector,
                   inputs.textCaseForceOverrideType,
                   inputs.textCaseType,
                   key);
-      label = KeyLabelAdjuster.adjustLabelForFunctionState(view.getKeyboard(), key, label);
+      label = KeyLabelAdjuster.adjustLabelForFunctionState(inputs.keyboard, key, label);
 
-      view.getDrawDecisions().adjustBoundsIfNeeded(inputs.keyBackground, key);
+      drawDecisions.adjustBoundsIfNeeded(inputs.keyBackground, key);
       canvas.translate(key.x + inputs.kbdPaddingLeft, key.y + inputs.kbdPaddingTop);
       inputs.keyBackground.draw(canvas);
 
       label =
-          view.keyIconDrawer().drawIconIfNeeded(
-              canvas, key, view.keyIconResolver(), label, view.keyBackgroundPadding(), view);
+          keyIconDrawer.drawIconIfNeeded(
+              canvas, key, keyIconResolver, label, keyBackgroundPadding, keyLabelGuesser);
 
       label =
-          view.keyboardNameRenderer().applyKeyboardNameIfNeeded(
-              label, keyIsSpace, inputs.drawKeyboardNameText, view.getKeyboardName());
+          keyboardNameRenderer.applyKeyboardNameIfNeeded(
+              label, keyIsSpace, inputs.drawKeyboardNameText, inputs.keyboardName);
 
       if (label != null) {
-        view.keyLabelRenderer().drawLabel(
+        keyLabelRenderer.drawLabel(
             canvas,
             paint,
             label,
             key,
-            view.keyBackgroundPadding(),
+            keyBackgroundPadding,
             keyIsSpace,
             inputs.keyboardNameTextSize,
-            view.keyboardNameRenderer(),
+            keyboardNameRenderer,
             inputs.alwaysUseDrawText,
-            view::setPaintToKeyText,
-            view::setPaintForLabelText,
+            keyTextPaintSetter,
+            labelTextPaintSetter,
             (p, l, width) ->
-                view.labelPaintConfigurator().adjustTextSizeForLabel(p, l, width, inputs.keyTextSize),
+                labelPaintConfigurator.adjustTextSizeForLabel(p, l, width, inputs.keyTextSize),
             inputs.shadowRadius,
             inputs.shadowOffsetX,
             inputs.shadowOffsetY,
@@ -102,12 +135,12 @@ final class KeyDrawHelper {
               || (key.popupResId != 0)
               || (key.longPressCode != 0))) {
         Paint.Align oldAlign = paint.getTextAlign();
-        view.keyHintRenderer().drawHint(
+        keyHintRenderer.drawHint(
             canvas,
             paint,
             key,
             inputs.themeResourcesHolder,
-            view.keyBackgroundPadding(),
+            keyBackgroundPadding,
             inputs.hintAlign,
             inputs.hintVAlign,
             inputs.hintTextSize,

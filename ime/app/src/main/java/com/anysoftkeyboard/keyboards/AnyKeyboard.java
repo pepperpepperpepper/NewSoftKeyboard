@@ -19,21 +19,16 @@ package com.anysoftkeyboard.keyboards;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
-import android.text.TextUtils;
 import android.view.inputmethod.EditorInfo;
 import androidx.annotation.CallSuper;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.addons.AddOn;
-import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.BTreeDictionary;
-import com.anysoftkeyboard.ime.AnySoftKeyboardBase;
 import com.anysoftkeyboard.keyboardextensions.KeyboardExtension;
-import com.anysoftkeyboard.utils.Workarounds;
 import com.menny.android.anysoftkeyboard.AnyApplication;
-import com.menny.android.anysoftkeyboard.R;
 import java.util.List;
 import java.util.Locale;
 
@@ -208,7 +203,7 @@ public abstract class AnyKeyboard extends Keyboard {
   }
 
   // this function is called from within the super constructor.
-@Override
+  @Override
   protected Key createKeyFromXml(
       @NonNull AddOn.AddOnResourceMapping resourceMapping,
       Context askContext,
@@ -218,91 +213,32 @@ public abstract class AnyKeyboard extends Keyboard {
       int x,
       int y,
       XmlResourceParser parser) {
-    AnyKey key = new AnyKey(resourceMapping, keyboardContext, parent, keyboardDimens, x, y, parser);
+    return AnyKeyboardKeyCreator.createKeyFromXml(
+        this, resourceMapping, askContext, keyboardContext, parent, keyboardDimens, x, y, parser);
+  }
 
-    if (key.mCodes.length > 0) {
-      final int primaryCode = key.mCodes[0];
+  /* package */ void setControlKeyFromXml(@NonNull AnyKey key) {
+    mControlKey = key;
+  }
 
-      // creating less sensitive keys if required
-      switch (primaryCode) {
-        case KeyCodes.DELETE:
-        case KeyCodes.FORWARD_DELETE:
-        case KeyCodes.MODE_ALPHABET:
-        case KeyCodes.KEYBOARD_MODE_CHANGE:
-        case KeyCodes.KEYBOARD_CYCLE:
-        case KeyCodes.KEYBOARD_CYCLE_INSIDE_MODE:
-        case KeyCodes.KEYBOARD_REVERSE_CYCLE:
-        case KeyCodes.ALT:
-        case KeyCodes.MODE_SYMBOLS:
-        case KeyCodes.QUICK_TEXT:
-        case KeyCodes.DOMAIN:
-        case KeyCodes.CANCEL:
-        case KeyCodes.CTRL:
-          mControlKey = key;
-          break;
-        case KeyCodes.ALT_MODIFIER:
-          mAltKey = key;
-          break;
-        case KeyCodes.SHIFT:
-          mShiftKey = key; // I want to reference used by than super.
-          break;
-        case KeyCodes.FUNCTION:
-          mFunctionKey = key;
-          break;
-        case KeyCodes.VOICE_INPUT:
-          key =
-              mVoiceKey =
-                  new VoiceKey(
-                      resourceMapping, keyboardContext, parent, keyboardDimens, x, y, parser);
-          break;
-      }
+  /* package */ void setAltKeyFromXml(@NonNull AnyKey key) {
+    mAltKey = key;
+  }
 
-      if (primaryCode == KeyCodes.DELETE) {
-        AnyKey anyKey = key;
-        if (anyKey.longPressCode == 0) {
-          anyKey.longPressCode = KeyCodes.DELETE_WORD;
-        }
-      }
+  /* package */ void setShiftKeyFromXml(@NonNull AnyKey key) {
+    mShiftKey = key;
+  }
 
-      // detecting LTR languages
-      if (!mRightToLeftLayout
-          && primaryCode >= 0
-          && Workarounds.isRightToLeftCharacter((char) primaryCode)) {
-        mRightToLeftLayout = true; // one is enough
-      }
-      switch (primaryCode) {
-        case KeyCodes.QUICK_TEXT:
-          AnyKey anyKey = key;
-          if (anyKey.longPressCode == 0
-              && anyKey.popupResId == 0
-              && TextUtils.isEmpty(anyKey.popupCharacters)) {
-            anyKey.longPressCode = KeyCodes.QUICK_TEXT_POPUP;
-          }
-          break;
-        case KeyCodes.DOMAIN:
-          key.text = key.label = KeyboardPrefs.getDefaultDomain(askContext);
-          key.popupResId = R.xml.popup_domains;
-          break;
+  /* package */ void setFunctionKeyFromXml(@NonNull AnyKey key) {
+    mFunctionKey = key;
+  }
 
-        default:
-          // setting the character label
-          if (isAlphabetKey(key) && (key.icon == null)) {
-            final boolean labelIsOriginallyEmpty = TextUtils.isEmpty(key.label);
-            if (labelIsOriginallyEmpty) {
-              final int code = key.mCodes[0];
-              // check the ASCII table, everything below 32,
-              // is not printable
-              if (code > 31 && !Character.isWhitespace(code)) {
-                key.label = new String(new int[] {code}, 0, 1);
-              }
-            }
-          }
-      }
-    }
+  /* package */ void setVoiceKeyFromXml(@NonNull AnyKey key) {
+    mVoiceKey = key;
+  }
 
-    setupKeyAfterCreation(key);
-
-    return key;
+  /* package */ void markRightToLeftLayoutFromXml() {
+    mRightToLeftLayout = true;
   }
 
   @Override
@@ -502,25 +438,6 @@ public abstract class AnyKeyboard extends Keyboard {
       computeNearestNeighbors(); // keyboard has changed, so we need to recompute the
       // neighbors.
     }
-  }
-
-  public interface HardKeyboardAction {
-    int getKeyCode();
-
-    boolean isAltActive();
-
-    boolean isShiftActive();
-
-    void setNewKeyCode(int keyCode);
-  }
-
-  public interface HardKeyboardTranslator {
-    /*
-     * Gets the current state of the hard keyboard, and may change the
-     * output key-code.
-     */
-    void translatePhysicalCharacter(
-        HardKeyboardAction action, AnySoftKeyboardBase ime, int multiTapTimeout);
   }
 
   public static class AnyKey extends AnyKeyboardKey {

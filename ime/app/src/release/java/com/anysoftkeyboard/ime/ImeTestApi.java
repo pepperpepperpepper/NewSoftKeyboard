@@ -25,8 +25,8 @@ public final class ImeTestApi {
   }
 
   /**
-   * Forces next-word suggestions using the token immediately before the cursor.
-   * Returns the number of suggestions shown.
+   * Forces next-word suggestions using the token immediately before the cursor. Returns the number
+   * of suggestions shown.
    */
   public static int forceNextWordFromCursor() {
     final AnySoftKeyboardSuggestions svc = sService.get();
@@ -37,8 +37,7 @@ public final class ImeTestApi {
     if (before == null) before = "";
     String prev = extractLastToken(before.toString());
     if (prev.isEmpty()) return 0;
-    java.util.List<? extends CharSequence> next =
-        svc.getSuggest().getNextSuggestions(prev, false);
+    java.util.List<? extends CharSequence> next = svc.getSuggest().getNextSuggestions(prev, false);
     svc.setSuggestions(next, -1);
     return next == null ? 0 : next.size();
   }

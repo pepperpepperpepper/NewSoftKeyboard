@@ -52,7 +52,8 @@ final class KeyTextAttributeSetter {
         return true;
       }
       case com.menny.android.anysoftkeyboard.R.attr.keyboardNameTextColor -> {
-        setKeyboardNameTextColor.accept(remoteTypedArray.getColor(remoteTypedArrayIndex, 0xFFFFFFFF));
+        setKeyboardNameTextColor.accept(
+            remoteTypedArray.getColor(remoteTypedArrayIndex, 0xFFFFFFFF));
         return true;
       }
       default -> {

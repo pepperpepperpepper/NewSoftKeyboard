@@ -43,8 +43,7 @@ public class NextWordSettingsFragmentTest
 
     final long timestamp = System.currentTimeMillis();
     SharedPrefsHelper.setPrefsValue(
-        R.string.settings_key_prediction_engine_last_neural_error,
-        timestamp + "|runtime failure");
+        R.string.settings_key_prediction_engine_last_neural_error, timestamp + "|runtime failure");
 
     final ListPreference enginePreference =
         (ListPreference)

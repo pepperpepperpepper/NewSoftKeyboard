@@ -8,6 +8,7 @@ dependencies {
     implementation project(':ime:base-rx')
     implementation project(':ime:addons')
     implementation project(':api')
+    implementation project(':ime:dictionaries')
 
     testImplementation project(':ime:base-test')
 }

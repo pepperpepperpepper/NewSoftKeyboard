@@ -15,8 +15,8 @@ import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
 import java.util.Locale;
 
 /**
- * Renders hint text or hint icons for a key. Extracted from {@link AnyKeyboardViewBase} to keep
- * the drawing loop focused on orchestration.
+ * Renders hint text or hint icons for a key. Extracted from {@link AnyKeyboardViewBase} to keep the
+ * drawing loop focused on orchestration.
  */
 final class KeyHintRenderer {
 
@@ -63,9 +63,7 @@ final class KeyHintRenderer {
       paint.setTextAlign(Align.CENTER);
       hintX =
           keyBackgroundPadding.left
-              + (float)
-                  (key.width - keyBackgroundPadding.left - keyBackgroundPadding.right)
-                  / 2;
+              + (float) (key.width - keyBackgroundPadding.left - keyBackgroundPadding.right) / 2;
     } else {
       paint.setTextAlign(Align.RIGHT);
       hintX = key.width - keyBackgroundPadding.right - 0.5f;

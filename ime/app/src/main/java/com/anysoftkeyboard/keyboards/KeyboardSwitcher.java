@@ -27,8 +27,7 @@ import androidx.collection.ArrayMap;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.DefaultAddOn;
 import com.anysoftkeyboard.base.utils.Logger;
-import com.anysoftkeyboard.ime.InputViewBinder;
-import com.anysoftkeyboard.keyboards.AnyKeyboard.HardKeyboardTranslator;
+import com.anysoftkeyboard.keyboards.physical.HardKeyboardTranslator;
 import com.anysoftkeyboard.prefs.RxSharedPrefs;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.R;
@@ -37,8 +36,22 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.IntFunction;
+import java.util.function.Supplier;
 
 public class KeyboardSwitcher {
+
+  private static final class KeyboardSwitcherState {
+    @Keyboard.KeyboardRowModeId int keyboardRowMode = Keyboard.KEYBOARD_ROW_MODE_NORMAL;
+    int lastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
+    boolean keyboardLocked = false;
+    int lastSelectedKeyboardIndex = 0;
+    boolean alphabetMode = true;
+    @Nullable EditorInfo lastEditorInfo;
+    @NonNull String internetInputLayoutId = "";
+    int internetInputLayoutIndex = -1;
+    @Nullable AnyKeyboard directAlphabetKeyboard;
+  }
 
   public static final int INPUT_MODE_TEXT = 1;
   public static final int INPUT_MODE_SYMBOLS = 2;
@@ -54,6 +67,7 @@ public class KeyboardSwitcher {
   private boolean mCycleOverAllSymbols;
   private boolean mShowPopupForLanguageSwitch;
   private final AlphabetKeyboardProvider alphabetKeyboardProvider = new AlphabetKeyboardProvider();
+  private final KeyboardModeApplier keyboardModeApplier = new KeyboardModeApplier();
 
   @Retention(RetentionPolicy.SOURCE)
   @IntDef({
@@ -82,25 +96,17 @@ public class KeyboardSwitcher {
   @NonNull private final KeyboardSwitchedListener mKeyboardSwitchedListener;
   @NonNull private final Context mContext;
   private final KeyboardFactoryProvider keyboardFactoryProvider = new KeyboardFactoryProvider();
+  private final KeyboardSwitcherState mState = new KeyboardSwitcherState();
   // this will hold the last used keyboard ID per app's package ID
   private final ArrayMap<String, CharSequence> mAlphabetKeyboardIndexByPackageId = new ArrayMap<>();
   private final KeyboardDimens mKeyboardDimens;
   private final DefaultAddOn mDefaultAddOn;
-  @Nullable private InputViewBinder mInputView;
-  @Keyboard.KeyboardRowModeId private int mKeyboardRowMode;
-  private int mLastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
+  @Nullable private ThemedKeyboardDimensProvider mThemedKeyboardDimensProvider;
   @NonNull @VisibleForTesting protected AnyKeyboard[] mSymbolsKeyboardsArray = EMPTY_AnyKeyboards;
   @NonNull @VisibleForTesting protected AnyKeyboard[] mAlphabetKeyboards = EMPTY_AnyKeyboards;
   @NonNull private KeyboardAddOnAndBuilder[] mAlphabetKeyboardsCreators = EMPTY_Creators;
   // this flag will be used for inputs which require specific layout
   // thus disabling the option to move to another layout
-  private boolean mKeyboardLocked = false;
-  private int mLastSelectedKeyboardIndex = 0;
-  private boolean mAlphabetMode = true;
-  @Nullable private EditorInfo mLastEditorInfo;
-  private String mInternetInputLayoutId;
-  private int mInternetInputLayoutIndex;
-  @Nullable private AnyKeyboard mDirectAlphabetKeyboard;
   private final KeyboardRowModeResolver rowModeResolver = new KeyboardRowModeResolver();
 
   public KeyboardSwitcher(@NonNull KeyboardSwitchedListener ime, @NonNull Context context) {
@@ -108,7 +114,6 @@ public class KeyboardSwitcher {
     mKeyboardSwitchedListener = ime;
     mContext = context;
     mKeyboardDimens = KeyboardDimensFactory.from(context);
-    mKeyboardRowMode = Keyboard.KEYBOARD_ROW_MODE_NORMAL;
     // loading saved package-id from prefs
     LayoutByPackageStore.load(context, mAlphabetKeyboardIndexByPackageId);
 
@@ -121,19 +126,13 @@ public class KeyboardSwitcher {
             .asObservable()
             .subscribe(
                 keyboardId -> {
-                  mInternetInputLayoutId = keyboardId;
-                  mInternetInputLayoutIndex =
+                  mState.internetInputLayoutId = keyboardId;
+                  mState.internetInputLayoutIndex =
                       InternetLayoutLocator.findIndex(
-                          mInternetInputLayoutId, mAlphabetKeyboardsCreators);
+                          mState.internetInputLayoutId, mAlphabetKeyboardsCreators);
                 }));
     RowModeMappingUpdater.wire(
-        prefs,
-        rowModeResolver.getRowModesMapping(),
-        mDisposable,
-        true,
-        true,
-        true,
-        true);
+        prefs, rowModeResolver.getRowModesMapping(), mDisposable, true, true, true, true);
     KeyboardSwitcherPrefsBinder.wire(
         prefs,
         mDisposable,
@@ -143,8 +142,8 @@ public class KeyboardSwitcher {
         enabled -> mShowPopupForLanguageSwitch = enabled);
   }
 
-  public void setInputView(@NonNull InputViewBinder inputView) {
-    mInputView = inputView;
+  public void setInputView(@NonNull ThemedKeyboardDimensProvider themedKeyboardDimensProvider) {
+    mThemedKeyboardDimensProvider = themedKeyboardDimensProvider;
     flushKeyboardsCache();
   }
 
@@ -153,18 +152,20 @@ public class KeyboardSwitcher {
     ensureKeyboardsAreBuilt();
     AnyKeyboard keyboard = mSymbolsKeyboardsArray[keyboardIndex];
 
-    if (keyboard == null || keyboard.getKeyboardMode() != mKeyboardRowMode) {
+    if (keyboard == null || keyboard.getKeyboardMode() != mState.keyboardRowMode) {
       keyboard =
           keyboardFactoryProvider.createSymbolsKeyboard(
               mUse16KeysSymbolsKeyboards,
               mDefaultAddOn,
               mContext,
-              mKeyboardRowMode,
+              mState.keyboardRowMode,
               keyboardIndex,
-              (mInputView != null) ? mInputView.getThemedKeyboardDimens() : mKeyboardDimens,
+              (mThemedKeyboardDimensProvider != null)
+                  ? mThemedKeyboardDimensProvider.getThemedKeyboardDimens()
+                  : mKeyboardDimens,
               mKeyboardSwitchedListener);
       mSymbolsKeyboardsArray[keyboardIndex] = keyboard;
-      mLastSelectedSymbolsKeyboard = keyboardIndex;
+      mState.lastSelectedSymbolsKeyboard = keyboardIndex;
     }
 
     return keyboard;
@@ -228,10 +229,12 @@ public class KeyboardSwitcher {
     }
 
     keyboard.loadKeyboard(
-        (mInputView != null) ? mInputView.getThemedKeyboardDimens() : mKeyboardDimens);
-    mAlphabetMode = true;
-    mLastEditorInfo = currentEditorInfo;
-    mDirectAlphabetKeyboard = keyboard;
+        (mThemedKeyboardDimensProvider != null)
+            ? mThemedKeyboardDimensProvider.getThemedKeyboardDimens()
+            : mKeyboardDimens);
+    mState.alphabetMode = true;
+    mState.lastEditorInfo = currentEditorInfo;
+    mState.directAlphabetKeyboard = keyboard;
     keyboard.setImeOptions(mContext.getResources(), currentEditorInfo);
     mKeyboardSwitchedListener.onAlphabetKeyboardSet(keyboard);
 
@@ -246,33 +249,29 @@ public class KeyboardSwitcher {
     mAlphabetKeyboards = EMPTY_AnyKeyboards;
     mSymbolsKeyboardsArray = EMPTY_AnyKeyboards;
     mAlphabetKeyboardsCreators = EMPTY_Creators;
-    mInternetInputLayoutIndex = -1;
-    mLastEditorInfo = null;
-    mDirectAlphabetKeyboard = null;
+    mState.internetInputLayoutIndex = -1;
+    mState.lastEditorInfo = null;
+    mState.directAlphabetKeyboard = null;
   }
 
   private void ensureKeyboardsAreBuilt() {
-    if (mAlphabetKeyboards.length == 0
-        || mSymbolsKeyboardsArray.length == 0
-        || mAlphabetKeyboardsCreators.length == 0) {
-      if (mAlphabetKeyboards.length == 0 || mAlphabetKeyboardsCreators.length == 0) {
-        final List<KeyboardAddOnAndBuilder> enabledKeyboardBuilders =
-            AnyApplication.getKeyboardFactory(mContext).getEnabledAddOns();
-        mAlphabetKeyboardsCreators =
-            enabledKeyboardBuilders.toArray(new KeyboardAddOnAndBuilder[0]);
-        mInternetInputLayoutIndex =
-            InternetLayoutLocator.findIndex(mInternetInputLayoutId, mAlphabetKeyboardsCreators);
-        mAlphabetKeyboards = new AnyKeyboard[mAlphabetKeyboardsCreators.length];
-        mLastSelectedKeyboardIndex = 0;
-        mKeyboardSwitchedListener.onAvailableKeyboardsChanged(enabledKeyboardBuilders);
-      }
-      if (mSymbolsKeyboardsArray.length == 0) {
-        mSymbolsKeyboardsArray = new AnyKeyboard[SYMBOLS_KEYBOARDS_COUNT];
-        if (mLastSelectedSymbolsKeyboard >= mSymbolsKeyboardsArray.length) {
-          mLastSelectedSymbolsKeyboard = 0;
-        }
-      }
-    }
+    final KeyboardSwitcherCacheEnsurer.Result ensured =
+        KeyboardSwitcherCacheEnsurer.ensureKeyboardsAreBuilt(
+            mContext,
+            mKeyboardSwitchedListener,
+            mAlphabetKeyboardsCreators,
+            mAlphabetKeyboards,
+            mSymbolsKeyboardsArray,
+            mState.internetInputLayoutId,
+            mState.internetInputLayoutIndex,
+            mState.lastSelectedKeyboardIndex,
+            mState.lastSelectedSymbolsKeyboard);
+    mAlphabetKeyboardsCreators = ensured.alphabetKeyboardsCreators();
+    mAlphabetKeyboards = ensured.alphabetKeyboards();
+    mSymbolsKeyboardsArray = ensured.symbolsKeyboardsArray();
+    mState.internetInputLayoutIndex = ensured.internetInputLayoutIndex();
+    mState.lastSelectedKeyboardIndex = ensured.lastSelectedKeyboardIndex();
+    mState.lastSelectedSymbolsKeyboard = ensured.lastSelectedSymbolsKeyboard();
   }
 
   public void setKeyboardMode(
@@ -280,63 +279,32 @@ public class KeyboardSwitcher {
     ensureKeyboardsAreBuilt();
     deactivateDirectAlphabetKeyboard();
     final boolean keyboardGlobalModeChanged =
-        attr.inputType != (mLastEditorInfo == null ? 0 : mLastEditorInfo.inputType);
-    mLastEditorInfo = attr;
-    mKeyboardRowMode = rowModeResolver.resolve(attr);
-    boolean resubmitToView = true;
-    AnyKeyboard keyboard;
+        attr.inputType != (mState.lastEditorInfo == null ? 0 : mState.lastEditorInfo.inputType);
+    mState.lastEditorInfo = attr;
+    mState.keyboardRowMode = rowModeResolver.resolve(attr);
 
-    switch (inputModeId) {
-      case INPUT_MODE_DATETIME:
-        mAlphabetMode = false;
-        mKeyboardLocked = true;
-        keyboard = getSymbolsKeyboard(SYMBOLS_KEYBOARD_DATETIME_INDEX);
-        break;
-      case INPUT_MODE_NUMBERS:
-        mAlphabetMode = false;
-        mKeyboardLocked = true;
-        keyboard = getSymbolsKeyboard(SYMBOLS_KEYBOARD_NUMBERS_INDEX);
-        break;
-      case INPUT_MODE_SYMBOLS:
-        mAlphabetMode = false;
-        mKeyboardLocked = true;
-        keyboard = getSymbolsKeyboard(SYMBOLS_KEYBOARD_REGULAR_INDEX);
-        break;
-      case INPUT_MODE_PHONE:
-        mAlphabetMode = false;
-        mKeyboardLocked = true;
-        keyboard = getSymbolsKeyboard(SYMBOLS_KEYBOARD_PHONE_INDEX);
-        break;
-      case INPUT_MODE_EMAIL:
-      case INPUT_MODE_IM:
-      case INPUT_MODE_TEXT:
-      case INPUT_MODE_URL:
-      default:
-        mKeyboardLocked = false;
-        mLastSelectedKeyboardIndex =
-            AlphabetStartIndexSelector.select(
-                restarting,
-                inputModeId,
-                mLastSelectedKeyboardIndex,
-                mInternetInputLayoutIndex,
-                mPersistLayoutForPackageId,
-                attr,
-                mAlphabetKeyboardsCreators,
-                mAlphabetKeyboardIndexByPackageId);
-        // I'll start with a new alphabet keyboard if
-        // 1) this is a non-restarting session, which means it is a brand
-        // new input field.
-        // 2) this is a restarting, but the mode changed (probably to Normal).
-        if (!restarting || keyboardGlobalModeChanged) {
-          mAlphabetMode = true;
-          keyboard = getAlphabetKeyboard(mLastSelectedKeyboardIndex, attr);
-        } else {
-          // just keep doing what you did before.
-          keyboard = getCurrentKeyboard();
-          resubmitToView = false;
-        }
-        break;
-    }
+    final KeyboardModeApplier.Result result =
+        keyboardModeApplier.apply(
+            inputModeId,
+            attr,
+            restarting,
+            keyboardGlobalModeChanged,
+            new KeyboardModeApplier.State(
+                mState.alphabetMode, mState.keyboardLocked, mState.lastSelectedKeyboardIndex),
+            mState.internetInputLayoutIndex,
+            mPersistLayoutForPackageId,
+            mAlphabetKeyboardsCreators,
+            mAlphabetKeyboardIndexByPackageId,
+            this::getSymbolsKeyboard,
+            this::getAlphabetKeyboard,
+            this::getCurrentKeyboard);
+    final KeyboardModeApplier.State nextState = result.state;
+    mState.alphabetMode = nextState.alphabetMode;
+    mState.keyboardLocked = nextState.keyboardLocked;
+    mState.lastSelectedKeyboardIndex = nextState.lastSelectedKeyboardIndex;
+
+    AnyKeyboard keyboard = result.keyboard;
+    boolean resubmitToView = result.resubmitToView;
 
     keyboard.setImeOptions(mContext.getResources(), attr);
     // now show
@@ -346,7 +314,7 @@ public class KeyboardSwitcher {
   }
 
   private boolean isAlphabetMode() {
-    return mAlphabetMode;
+    return mState.alphabetMode;
   }
 
   public AnyKeyboard nextAlphabetKeyboard(EditorInfo currentEditorInfo, String keyboardId) {
@@ -356,32 +324,24 @@ public class KeyboardSwitcher {
     deactivateDirectAlphabetKeyboard();
 
     final List<KeyboardAddOnAndBuilder> enabledKeyboardsBuilders = getEnabledKeyboardsBuilders();
-    final int keyboardsCount = enabledKeyboardsBuilders.size();
-    for (int keyboardIndex = 0; keyboardIndex < keyboardsCount; keyboardIndex++) {
-      if (TextUtils.equals(enabledKeyboardsBuilders.get(keyboardIndex).getId(), keyboardId)) {
-        // iterating over builders, so we don't create keyboards just for getting ID
-        current = getAlphabetKeyboard(keyboardIndex, currentEditorInfo);
-        mAlphabetMode = true;
-        mLastSelectedKeyboardIndex = keyboardIndex;
-        // returning to the regular symbols keyboard, no matter what
-        mLastSelectedSymbolsKeyboard = 0;
-        current.setImeOptions(mContext.getResources(), currentEditorInfo);
-        mKeyboardSwitchedListener.onAlphabetKeyboardSet(current);
-        return current;
-      }
-    }
+    final Integer keyboardIndexOrNull =
+        KeyboardIdLocator.findIndexOrNull(TAG, enabledKeyboardsBuilders, keyboardId);
+    if (keyboardIndexOrNull == null) return null;
 
-    Logger.w(TAG, "For some reason, I can't find keyboard with ID " + keyboardId);
-    Logger.d(TAG, "Available keyboard IDs:");
-    for (int i = 0; i < enabledKeyboardsBuilders.size(); i++) {
-      Logger.d(TAG, "  " + i + ": " + enabledKeyboardsBuilders.get(i).getId());
-    }
-    return null;
+    // iterating over builders, so we don't create keyboards just for getting ID
+    current = getAlphabetKeyboard(keyboardIndexOrNull, currentEditorInfo);
+    mState.alphabetMode = true;
+    mState.lastSelectedKeyboardIndex = keyboardIndexOrNull;
+    // returning to the regular symbols keyboard, no matter what
+    mState.lastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
+    current.setImeOptions(mContext.getResources(), currentEditorInfo);
+    mKeyboardSwitchedListener.onAlphabetKeyboardSet(current);
+    return current;
   }
 
   @Nullable
   private AnyKeyboard getLockedKeyboard(EditorInfo currentEditorInfo) {
-    if (mKeyboardLocked) {
+    if (mState.keyboardLocked) {
       AnyKeyboard current = getCurrentKeyboard();
       Logger.i(
           TAG,
@@ -397,7 +357,7 @@ public class KeyboardSwitcher {
   }
 
   public String peekNextSymbolsKeyboard() {
-    if (mKeyboardLocked) {
+    if (mState.keyboardLocked) {
       return mContext.getString(R.string.keyboard_change_locked);
     } else {
       ensureKeyboardsAreBuilt();
@@ -407,12 +367,12 @@ public class KeyboardSwitcher {
   }
 
   public CharSequence peekNextAlphabetKeyboard() {
-    if (mKeyboardLocked) {
+    if (mState.keyboardLocked) {
       return mContext.getString(R.string.keyboard_change_locked);
     } else {
       ensureKeyboardsAreBuilt();
       final int keyboardsCount = mAlphabetKeyboardsCreators.length;
-      int selectedKeyboard = mLastSelectedKeyboardIndex;
+      int selectedKeyboard = mState.lastSelectedKeyboardIndex;
       if (isAlphabetMode()) {
         selectedKeyboard++;
       }
@@ -435,29 +395,29 @@ public class KeyboardSwitcher {
       deactivateDirectAlphabetKeyboard();
       final int keyboardsCount = getAlphabetKeyboards().length;
       if (isAlphabetMode()) {
-        mLastSelectedKeyboardIndex += scroll;
+        mState.lastSelectedKeyboardIndex += scroll;
       }
 
-      mAlphabetMode = true;
+      mState.alphabetMode = true;
 
-      mLastSelectedKeyboardIndex =
-          IndexCycler.wrap(mLastSelectedKeyboardIndex, keyboardsCount);
+      mState.lastSelectedKeyboardIndex =
+          IndexCycler.wrap(mState.lastSelectedKeyboardIndex, keyboardsCount);
 
-      current = getAlphabetKeyboard(mLastSelectedKeyboardIndex, currentEditorInfo);
+      current = getAlphabetKeyboard(mState.lastSelectedKeyboardIndex, currentEditorInfo);
       // returning to the regular symbols keyboard, no matter what
-      mLastSelectedSymbolsKeyboard = 0;
+      mState.lastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
 
       if (supportsPhysical) {
         PhysicalKeyboardSelector.Selection physicalSelection =
             PhysicalKeyboardSelector.selectNext(
                 scroll,
                 keyboardsCount,
-                mLastSelectedKeyboardIndex,
+                mState.lastSelectedKeyboardIndex,
                 currentEditorInfo,
                 (index, info) -> getAlphabetKeyboard(index, info));
         if (physicalSelection.keyboard instanceof HardKeyboardTranslator) {
           current = physicalSelection.keyboard;
-          mLastSelectedKeyboardIndex = physicalSelection.index;
+          mState.lastSelectedKeyboardIndex = physicalSelection.index;
         } else {
           Logger.w(
               TAG,
@@ -485,9 +445,9 @@ public class KeyboardSwitcher {
 
     deactivateDirectAlphabetKeyboard();
 
-    mLastSelectedSymbolsKeyboard = scrollSymbolsKeyboardIndex(scroll);
-    mAlphabetMode = false;
-    AnyKeyboard current = getSymbolsKeyboard(mLastSelectedSymbolsKeyboard);
+    mState.lastSelectedSymbolsKeyboard = scrollSymbolsKeyboardIndex(scroll);
+    mState.alphabetMode = false;
+    AnyKeyboard current = getSymbolsKeyboard(mState.lastSelectedSymbolsKeyboard);
     current.setImeOptions(mContext.getResources(), currentEditorInfo);
     mKeyboardSwitchedListener.onSymbolsKeyboardSet(current);
     return current;
@@ -499,14 +459,14 @@ public class KeyboardSwitcher {
 
   private int scrollSymbolsKeyboardIndex(int scroll) {
     return SymbolsKeyboardNavigator.computeNextIndex(
-        isAlphabetMode(), mCycleOverAllSymbols, mLastSelectedSymbolsKeyboard, scroll);
+        isAlphabetMode(), mCycleOverAllSymbols, mState.lastSelectedSymbolsKeyboard, scroll);
   }
 
   public String getCurrentKeyboardSentenceSeparators() {
     if (isAlphabetMode()) {
       ensureKeyboardsAreBuilt();
-      if (mLastSelectedKeyboardIndex < mAlphabetKeyboardsCreators.length) {
-        return mAlphabetKeyboardsCreators[mLastSelectedKeyboardIndex].getSentenceSeparators();
+      if (mState.lastSelectedKeyboardIndex < mAlphabetKeyboardsCreators.length) {
+        return mAlphabetKeyboardsCreators[mState.lastSelectedKeyboardIndex].getSentenceSeparators();
       } else {
         return null;
       }
@@ -517,17 +477,17 @@ public class KeyboardSwitcher {
 
   private AnyKeyboard getCurrentKeyboard() {
     if (isAlphabetMode()) {
-      if (mDirectAlphabetKeyboard != null) {
-        return mDirectAlphabetKeyboard;
+      if (mState.directAlphabetKeyboard != null) {
+        return mState.directAlphabetKeyboard;
       }
-      return getAlphabetKeyboard(mLastSelectedKeyboardIndex, mLastEditorInfo);
+      return getAlphabetKeyboard(mState.lastSelectedKeyboardIndex, mState.lastEditorInfo);
     } else {
-      return getSymbolsKeyboard(mLastSelectedSymbolsKeyboard);
+      return getSymbolsKeyboard(mState.lastSelectedSymbolsKeyboard);
     }
   }
 
   private void deactivateDirectAlphabetKeyboard() {
-    mDirectAlphabetKeyboard = null;
+    mState.directAlphabetKeyboard = null;
   }
 
   @NonNull
@@ -543,7 +503,9 @@ public class KeyboardSwitcher {
             editorInfo,
             mAlphabetKeyboardsCreators,
             keyboards,
-            (mInputView != null) ? mInputView.getThemedKeyboardDimens() : mKeyboardDimens,
+            (mThemedKeyboardDimensProvider != null)
+                ? mThemedKeyboardDimensProvider.getThemedKeyboardDimens()
+                : mKeyboardDimens,
             (mode, creator) -> createKeyboardFromCreator(mode, creator),
             rowModeResolver::resolve);
 
@@ -576,72 +538,23 @@ public class KeyboardSwitcher {
     deactivateDirectAlphabetKeyboard();
 
     final int alphabetKeyboardsCount = getAlphabetKeyboards().length;
-    switch (type) {
-      case Alphabet:
-      case AlphabetSupportsPhysical:
-        return nextAlphabetKeyboard(
-            currentEditorInfo, (type == NextKeyboardType.AlphabetSupportsPhysical));
-      case Symbols:
-        return nextSymbolsKeyboard(currentEditorInfo);
-      case Any:
-        if (mAlphabetMode) {
-          if (mLastSelectedKeyboardIndex >= (alphabetKeyboardsCount - 1)) {
-            // we are at the last alphabet keyboard
-            mLastSelectedKeyboardIndex = 0;
-            return nextSymbolsKeyboard(currentEditorInfo);
-          } else {
-            return nextAlphabetKeyboard(currentEditorInfo, false);
-          }
-        } else {
-          if (mLastSelectedSymbolsKeyboard >= SYMBOLS_KEYBOARD_LAST_CYCLE_INDEX) {
-            // we are at the last symbols keyboard
-            mLastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
-            return nextAlphabetKeyboard(currentEditorInfo, false);
-          } else {
-            return nextSymbolsKeyboard(currentEditorInfo);
-          }
-        }
-      case PreviousAny:
-        if (mAlphabetMode) {
-          if (mLastSelectedKeyboardIndex <= 0) {
-            // we are at the first alphabet keyboard
-            // return to the regular alphabet keyboard, no matter what
-            mLastSelectedKeyboardIndex = 0;
-            return scrollSymbolsKeyboard(currentEditorInfo, -1);
-          } else {
-            return scrollAlphabetKeyboard(currentEditorInfo, false, -1);
-          }
-        } else {
-          if (mLastSelectedSymbolsKeyboard <= SYMBOLS_KEYBOARD_REGULAR_INDEX) {
-            // we are at the first symbols keyboard
-            // return to the regular symbols keyboard, no matter what
-            mLastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
-            // ensure we select the correct alphabet keyboard
-            mLastSelectedKeyboardIndex = alphabetKeyboardsCount - 1;
-            return scrollAlphabetKeyboard(currentEditorInfo, false, 1);
-          } else {
-            return scrollSymbolsKeyboard(currentEditorInfo, -1);
-          }
-        }
-      case AnyInsideMode:
-        if (mAlphabetMode) {
-          // re-calling this function,but with Alphabet
-          return nextKeyboard(currentEditorInfo, NextKeyboardType.Alphabet);
-        } else {
-          // re-calling this function,but with Symbols
-          return nextKeyboard(currentEditorInfo, NextKeyboardType.Symbols);
-        }
-      case OtherMode:
-        if (mAlphabetMode) {
-          // re-calling this function,but with Symbols
-          return nextKeyboard(currentEditorInfo, NextKeyboardType.Symbols);
-        } else {
-          // re-calling this function,but with Alphabet
-          return nextKeyboard(currentEditorInfo, NextKeyboardType.Alphabet);
-        }
-      default:
-        return nextAlphabetKeyboard(currentEditorInfo, false);
-    }
+    final Supplier<AnyKeyboard> symbolsKeyboard = () -> nextSymbolsKeyboard(currentEditorInfo);
+    final IntFunction<AnyKeyboard> scrollSymbols =
+        scroll -> scrollSymbolsKeyboard(currentEditorInfo, scroll);
+    final IntFunction<AnyKeyboard> scrollAlphabet =
+        scroll -> scrollAlphabetKeyboard(currentEditorInfo, false, scroll);
+    return NextKeyboardSelector.nextKeyboard(
+        type,
+        mState.alphabetMode,
+        alphabetKeyboardsCount,
+        () -> mState.lastSelectedKeyboardIndex,
+        value -> mState.lastSelectedKeyboardIndex = value,
+        () -> mState.lastSelectedSymbolsKeyboard,
+        value -> mState.lastSelectedSymbolsKeyboard = value,
+        supportsPhysical -> nextAlphabetKeyboard(currentEditorInfo, supportsPhysical),
+        symbolsKeyboard,
+        scrollSymbols,
+        scrollAlphabet);
   }
 
   public AnyKeyboard nextAlterKeyboard(EditorInfo currentEditorInfo) {
@@ -653,16 +566,16 @@ public class KeyboardSwitcher {
     AnyKeyboard currentKeyboard = getCurrentKeyboard();
 
     if (!isAlphabetMode()) {
-      if (mLastSelectedSymbolsKeyboard == SYMBOLS_KEYBOARD_REGULAR_INDEX) {
-        mLastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_ALT_INDEX;
-      } else // if (mLastSelectedSymbolsKeyboard ==
+      if (mState.lastSelectedSymbolsKeyboard == SYMBOLS_KEYBOARD_REGULAR_INDEX) {
+        mState.lastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_ALT_INDEX;
+      } else // if (mState.lastSelectedSymbolsKeyboard ==
       // SYMBOLS_KEYBOARD_ALT_INDEX)
       {
-        mLastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
+        mState.lastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
       }
       // else return currentKeyboard;
 
-      currentKeyboard = getSymbolsKeyboard(mLastSelectedSymbolsKeyboard);
+      currentKeyboard = getSymbolsKeyboard(mState.lastSelectedSymbolsKeyboard);
       currentKeyboard.setImeOptions(mContext.getResources(), currentEditorInfo);
 
       mKeyboardSwitchedListener.onSymbolsKeyboardSet(currentKeyboard);
@@ -681,14 +594,14 @@ public class KeyboardSwitcher {
     for (int index = 0; index < mSymbolsKeyboardsArray.length; index++) {
       // in alphabet mode we remove all symbols
       // in non-alphabet, we'll keep the currently used one
-      if ((isAlphabetMode() || (mLastSelectedSymbolsKeyboard != index))) {
+      if ((isAlphabetMode() || (mState.lastSelectedSymbolsKeyboard != index))) {
         mSymbolsKeyboardsArray[index] = null;
       }
     }
 
     for (int index = 0; index < mAlphabetKeyboards.length; index++) {
       // keeping currently used alphabet
-      if (mLastSelectedKeyboardIndex != index) {
+      if (mState.lastSelectedKeyboardIndex != index) {
         mAlphabetKeyboards[index] = null;
       }
     }
@@ -698,7 +611,9 @@ public class KeyboardSwitcher {
     // only in alphabet mode,
     // and only if there are more than two keyboards
     // and only if user requested to have a popup
-    return mAlphabetMode && (getAlphabetKeyboards().length > 2) && mShowPopupForLanguageSwitch;
+    return mState.alphabetMode
+        && (getAlphabetKeyboards().length > 2)
+        && mShowPopupForLanguageSwitch;
   }
 
   public void destroy() {
@@ -706,23 +621,5 @@ public class KeyboardSwitcher {
     LayoutByPackageStore.store(mContext, mAlphabetKeyboardIndexByPackageId);
     flushKeyboardsCache();
     mAlphabetKeyboardIndexByPackageId.clear();
-  }
-
-  public enum NextKeyboardType {
-    Symbols,
-    Alphabet,
-    AlphabetSupportsPhysical,
-    Any,
-    PreviousAny,
-    AnyInsideMode,
-    OtherMode
-  }
-
-  public interface KeyboardSwitchedListener {
-    void onAlphabetKeyboardSet(@NonNull AnyKeyboard keyboard);
-
-    void onSymbolsKeyboardSet(@NonNull AnyKeyboard keyboard);
-
-    void onAvailableKeyboardsChanged(@NonNull List<KeyboardAddOnAndBuilder> builders);
   }
 }

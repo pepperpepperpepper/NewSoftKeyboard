@@ -7,9 +7,10 @@ import androidx.annotation.Nullable;
 import com.anysoftkeyboard.debug.ImeStateTracker;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
 import com.anysoftkeyboard.keyboards.views.KeyboardViewContainerView;
 import com.anysoftkeyboard.ui.dev.DevStripActionProvider;
-import com.google.android.voiceime.VoiceRecognitionTrigger;
+import com.google.android.voiceime.VoiceImeController;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 
 public final class InputViewLifecycleHandler {
@@ -28,7 +29,7 @@ public final class InputViewLifecycleHandler {
     KeyboardViewContainerView getInputViewContainer();
 
     @Nullable
-    VoiceRecognitionTrigger getVoiceRecognitionTrigger();
+    VoiceImeController getVoiceImeController();
 
     void updateVoiceKeyState();
 
@@ -61,9 +62,9 @@ public final class InputViewLifecycleHandler {
     }
     ImeStateTracker.onKeyboardVisible(keyboardForDebug, attribute);
 
-    final VoiceRecognitionTrigger voiceRecognitionTrigger = host.getVoiceRecognitionTrigger();
-    if (voiceRecognitionTrigger != null) {
-      voiceRecognitionTrigger.onStartInputView();
+    final VoiceImeController voiceImeController = host.getVoiceImeController();
+    if (voiceImeController != null) {
+      voiceImeController.onStartInputView();
     }
 
     host.updateVoiceKeyState();

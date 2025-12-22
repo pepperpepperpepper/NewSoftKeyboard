@@ -9,7 +9,6 @@ import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.DefaultAddOn;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.dictionaries.Dictionary;
-import com.anysoftkeyboard.keyboards.views.KeyDrawableStateProvider;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.R;
 import org.junit.Assert;
@@ -75,8 +74,7 @@ public class ExternalAnyKeyboardTest {
 
   @Test
   public void testGeneralProperties() throws Exception {
-    AnyKeyboard keyboard =
-        mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
+    AnyKeyboard keyboard = mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
     Assert.assertNotNull(keyboard);
     Assert.assertTrue(keyboard instanceof ExternalAnyKeyboard);
     Assert.assertEquals("en", keyboard.getDefaultDictionaryLocale());
@@ -88,8 +86,7 @@ public class ExternalAnyKeyboardTest {
 
   @Test
   public void testLoadedKeyboard() throws Exception {
-    AnyKeyboard keyboard =
-        mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
+    AnyKeyboard keyboard = mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
     Assert.assertNotNull(keyboard);
     keyboard.loadKeyboard(SIMPLE_KeyboardDimens);
 
@@ -105,8 +102,7 @@ public class ExternalAnyKeyboardTest {
   @Test
   public void testDrawableState() throws Exception {
     // NOTE: this is used ONLY for the key's background drawable!
-    AnyKeyboard keyboard =
-        mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
+    AnyKeyboard keyboard = mEnglishBuilder.createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
     Assert.assertNotNull(keyboard);
     keyboard.loadKeyboard(SIMPLE_KeyboardDimens);
 

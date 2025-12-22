@@ -51,11 +51,9 @@ public class PluginDiscoveryCtsTest {
     List<KeyboardAddOnAndBuilder> addOns = factory.getAllAddOns();
 
     assertTrue(
-        "NSK namespace add-on should be discovered",
-        containsId(addOns, "test_keyboard_new"));
+        "NSK namespace add-on should be discovered", containsId(addOns, "test_keyboard_new"));
     assertTrue(
-        "ASK namespace add-on should be discovered",
-        containsId(addOns, "test_keyboard_ask"));
+        "ASK namespace add-on should be discovered", containsId(addOns, "test_keyboard_ask"));
   }
 
   private static void addReceiver(

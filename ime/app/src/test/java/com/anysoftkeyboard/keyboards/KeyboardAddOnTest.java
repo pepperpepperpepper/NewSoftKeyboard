@@ -50,8 +50,7 @@ public class KeyboardAddOnTest {
     }
 
     Assert.assertTrue(
-        "Expected multiple keyboards bundled with ASK",
-        keyboardsEnabled.size() >= 10);
+        "Expected multiple keyboards bundled with ASK", keyboardsEnabled.size() >= 10);
     Assert.assertTrue(keyboardsEnabled.containsKey(ASK_ENGLISH_1_ID));
     Assert.assertTrue(keyboardsEnabled.get(ASK_ENGLISH_1_ID));
     Assert.assertTrue(keyboardsEnabled.containsKey(ASK_ENGLISH_16_KEYS_ID));

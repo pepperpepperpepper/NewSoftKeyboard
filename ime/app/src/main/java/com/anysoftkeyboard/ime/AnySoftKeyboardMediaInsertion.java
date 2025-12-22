@@ -4,7 +4,6 @@ import android.content.ClipDescription;
 import android.content.Intent;
 import android.os.Build;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.view.inputmethod.EditorInfoCompat;
 import androidx.core.view.inputmethod.InputConnectionCompat;
@@ -76,9 +75,8 @@ public abstract class AnySoftKeyboardMediaInsertion extends AnySoftKeyboardHardw
   }
 
   protected void handleMediaInsertionKey() {
-    final InputConnection inputConnection = currentInputConnection();
-    if (inputConnection != null) {
-      final EditorInfo editorInfo = getCurrentInputEditorInfo();
+    if (getInputConnectionRouter().hasConnection()) {
+      final EditorInfo editorInfo = currentInputEditorInfo();
       mPendingRequestId = 0;
       mPendingCommit = null;
       mKeyboardRemoteInsertion.startMediaRequest(
@@ -100,15 +98,16 @@ public abstract class AnySoftKeyboardMediaInsertion extends AnySoftKeyboardHardw
   }
 
   private void onMediaInsertionReply(int requestId, InputContentInfoCompat inputContentInfo) {
-    final InputConnection inputConnection = currentInputConnection();
-    final EditorInfo editorInfo = getCurrentInputEditorInfo();
+    final InputConnectionRouter inputConnectionRouter = getInputConnectionRouter();
+    final EditorInfo editorInfo = currentInputEditorInfo();
     if (inputContentInfo != null) {
       Logger.i(
           TAG,
           "Received media insertion for ID %d with URI %s",
           requestId,
           inputContentInfo.getContentUri());
-      if (requestId != getIdForInsertionRequest(editorInfo) || inputConnection == null) {
+      if (requestId != getIdForInsertionRequest(editorInfo)
+          || !inputConnectionRouter.hasConnection()) {
         if (mPendingCommit == null) {
           Logger.d(TAG, "Input connection is not available or request ID is wrong. Waiting.");
           mPendingRequestId = requestId;
@@ -127,7 +126,8 @@ public abstract class AnySoftKeyboardMediaInsertion extends AnySoftKeyboardHardw
             inputContentInfo.getContentUri(),
             Intent.FLAG_GRANT_READ_URI_PERMISSION);
         final boolean commitContent =
-            commitMediaToInputConnection(inputContentInfo, inputConnection, editorInfo, flags);
+            commitMediaToInputConnection(
+                inputContentInfo, inputConnectionRouter, editorInfo, flags);
         Logger.i(TAG, "Committed content to input-connection. Result: %s", commitContent);
       }
     }
@@ -139,11 +139,10 @@ public abstract class AnySoftKeyboardMediaInsertion extends AnySoftKeyboardHardw
   @VisibleForTesting
   protected boolean commitMediaToInputConnection(
       InputContentInfoCompat inputContentInfo,
-      InputConnection inputConnection,
+      InputConnectionRouter inputConnectionRouter,
       EditorInfo editorInfo,
       int flags) {
-    return InputConnectionCompat.commitContent(
-        inputConnection, editorInfo, inputContentInfo, flags, null);
+    return inputConnectionRouter.commitContent(editorInfo, inputContentInfo, flags);
   }
 
   private class AskInsertionRequestCallback implements InsertionRequestCallback {

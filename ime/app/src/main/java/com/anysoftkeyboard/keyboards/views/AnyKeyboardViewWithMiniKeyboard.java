@@ -124,7 +124,8 @@ public class AnyKeyboardViewWithMiniKeyboard extends SizeSensitiveAnyKeyboardVie
       mMiniKeyboard.setKeyboard(keyboard, getOriginalVerticalCorrection());
     } else {
       // not passing vertical correction, so the popup keyboard will use its own correction
-      mMiniKeyboard.setKeyboard(keyboard, mNextAlphabetKeyboardName, mNextSymbolsKeyboardName);
+      mMiniKeyboard.setKeyboard(
+          keyboard, getNextAlphabetKeyboardName(), getNextSymbolsKeyboardName());
     }
 
     mMiniKeyboard.measure(

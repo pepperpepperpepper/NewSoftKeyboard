@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.dictionaries.Suggest;
@@ -24,8 +23,8 @@ final class SeparatorHandler {
     final boolean isSpace = primaryCode == KeyCodes.SPACE;
     final boolean isEndOfSentence = newLine || host.isSentenceSeparator(primaryCode);
 
-    InputConnection ic = host.currentInputConnection();
-    if (ic != null) ic.beginBatchEdit();
+    final InputConnectionRouter inputConnectionRouter = host.inputConnectionRouter();
+    inputConnectionRouter.beginBatchEdit();
 
     final WordComposer typedWord = host.prepareWordComposerForNextWord();
     final boolean separatorInsideWord = typedWord.cursorPosition() < typedWord.charCount();
@@ -42,7 +41,7 @@ final class SeparatorHandler {
             host.isDoubleSpaceChangesToPeriod(),
             host.multiTapTimeout(),
             typedWord,
-            ic,
+            inputConnectionRouter,
             host.separatorOutputHandler(),
             host.spaceTimeTracker(),
             host::isSpaceSwapCharacter,
@@ -53,7 +52,7 @@ final class SeparatorHandler {
             code -> host.sendKeyChar((char) code));
 
     host.markExpectingSelectionUpdate();
-    if (ic != null) ic.endBatchEdit();
+    inputConnectionRouter.endBatchEdit();
 
     if (result.endOfSentence) {
       host.suggest().resetNextWordSentence();
@@ -69,7 +68,8 @@ final class SeparatorHandler {
   interface Host {
     void performUpdateSuggestions();
 
-    @NonNull AnyKeyboard currentAlphabetKeyboard();
+    @NonNull
+    AnyKeyboard currentAlphabetKeyboard();
 
     boolean isCurrentlyPredicting();
 
@@ -81,9 +81,11 @@ final class SeparatorHandler {
 
     int multiTapTimeout();
 
-    @NonNull SpaceTimeTracker spaceTimeTracker();
+    @NonNull
+    SpaceTimeTracker spaceTimeTracker();
 
-    @NonNull SeparatorOutputHandler separatorOutputHandler();
+    @NonNull
+    SeparatorOutputHandler separatorOutputHandler();
 
     boolean isSpaceSwapCharacter(int primaryCode);
 
@@ -100,11 +102,13 @@ final class SeparatorHandler {
 
     void markExpectingSelectionUpdate();
 
-    InputConnection currentInputConnection();
+    InputConnectionRouter inputConnectionRouter();
 
-    @NonNull WordComposer prepareWordComposerForNextWord();
+    @NonNull
+    WordComposer prepareWordComposerForNextWord();
 
-    @NonNull Suggest suggest();
+    @NonNull
+    Suggest suggest();
 
     void clearSuggestions();
 

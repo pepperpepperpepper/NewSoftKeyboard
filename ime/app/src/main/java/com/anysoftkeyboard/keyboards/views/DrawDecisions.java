@@ -5,6 +5,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
 
@@ -20,8 +21,7 @@ final class DrawDecisions {
     return hintTextSize > 1 && showHintsOnKeyboard;
   }
 
-  boolean shouldDrawKey(
-      Keyboard.Key key, Rect dirtyOrClip, int paddingLeft, int paddingTop) {
+  boolean shouldDrawKey(Keyboard.Key key, Rect dirtyOrClip, int paddingLeft, int paddingTop) {
     return Rect.intersects(
         dirtyOrClip,
         new Rect(
@@ -66,8 +66,7 @@ final class DrawDecisions {
         keyboard instanceof AnyKeyboard && ((AnyKeyboard) keyboard).isFunctionActive();
     final boolean control =
         keyboard instanceof AnyKeyboard && ((AnyKeyboard) keyboard).isControlActive();
-    final boolean alt =
-        keyboard instanceof AnyKeyboard && ((AnyKeyboard) keyboard).isAltActive();
+    final boolean alt = keyboard instanceof AnyKeyboard && ((AnyKeyboard) keyboard).isAltActive();
     return new ModifierStates(function, control, alt);
   }
 

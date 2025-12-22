@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.ime;
 
 import android.os.SystemClock;
-import android.view.inputmethod.InputConnection;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 
@@ -16,7 +15,7 @@ final class SelectionUpdateProcessor {
 
     boolean isCurrentlyPredicting();
 
-    InputConnection currentInputConnection();
+    InputConnectionRouter inputConnectionRouter();
 
     void abortCorrectionAndResetPredictionState(boolean force);
 
@@ -67,7 +66,8 @@ final class SelectionUpdateProcessor {
             && oldSelEnd == newSelEnd
             && oldCandidateStart == candidatesStart
             && oldCandidateEnd == candidatesEnd;
-    final boolean isExpectedEvent = SystemClock.uptimeMillis() < host.getExpectingSelectionUpdateBy();
+    final boolean isExpectedEvent =
+        SystemClock.uptimeMillis() < host.getExpectingSelectionUpdateBy();
     if (noChange) {
       Logger.v(host.logTag(), "onUpdateSelection: no-change. Discarding.");
       return;
@@ -85,7 +85,8 @@ final class SelectionUpdateProcessor {
       if (host.shouldRevertOnDelete()) {
         Logger.d(
             host.logTag(),
-            "onUpdateSelection: user moved cursor from a undo-commit sensitive position. Will not be able to undo-commit.");
+            "onUpdateSelection: user moved cursor from a undo-commit sensitive position. Will not"
+                + " be able to undo-commit.");
         host.setWordRevertLength(0);
       }
     }
@@ -94,8 +95,7 @@ final class SelectionUpdateProcessor {
       return; // not relevant if no prediction is needed.
     }
 
-    final InputConnection ic = host.currentInputConnection();
-    if (ic == null) {
+    if (!host.inputConnectionRouter().hasConnection()) {
       return; // can't do anything without this connection
     }
 
@@ -117,12 +117,17 @@ final class SelectionUpdateProcessor {
               newPosition);
           host.getCurrentWord().setCursorPosition(newPosition);
         } else {
-          Logger.d(host.logTag(), "onUpdateSelection: cursor moving outside the currently predicting word");
+          Logger.d(
+              host.logTag(),
+              "onUpdateSelection: cursor moving outside the currently predicting word");
           host.abortCorrectionAndResetPredictionState(false);
           host.postRestartWordSuggestion();
         }
       } else {
-        Logger.d(host.logTag(), "onUpdateSelection: not predicting at this moment, maybe the cursor is now at a new word?");
+        Logger.d(
+            host.logTag(),
+            "onUpdateSelection: not predicting at this moment, maybe the cursor is now at a new"
+                + " word?");
         host.postRestartWordSuggestion();
       }
     } else {

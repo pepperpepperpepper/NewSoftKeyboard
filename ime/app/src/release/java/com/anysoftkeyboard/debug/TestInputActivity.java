@@ -2,9 +2,9 @@ package com.anysoftkeyboard.debug;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.util.Log;
 import com.menny.android.anysoftkeyboard.R;
 
 /** Minimal release stub for the test harness activity used by instrumentation. */
@@ -54,8 +54,7 @@ public class TestInputActivity extends Activity {
     if (mEditText == null) return;
     mEditText.post(
         () -> {
-          InputMethodManager imm =
-              (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+          InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
           if (imm != null) {
             boolean shown = imm.showSoftInput(mEditText, InputMethodManager.SHOW_FORCED);
             sLastShowResult = shown;

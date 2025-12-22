@@ -93,4 +93,3 @@ public class NskV8GestureDetector extends GestureDetector {
     else return false;
   }
 }
-

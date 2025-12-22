@@ -7,8 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Small façade over touch handling to peel logic out of AnyKeyboardViewBase.
- * It delegates to PointerTracker while keeping the view thin.
+ * Small façade over touch handling to peel logic out of AnyKeyboardViewBase. It delegates to
+ * PointerTracker while keeping the view thin.
  */
 class TouchDispatcher {
 
@@ -24,9 +24,7 @@ class TouchDispatcher {
     this.twoFingerStateTracker = new TwoFingerStateTracker(twoFingerLingerMs);
   }
 
-  /**
-   * Handle a touch event routed from the view. Returns true if handled.
-   */
+  /** Handle a touch event routed from the view. Returns true if handled. */
   boolean onTouchEvent(@Nullable MotionEvent me) {
     if (me == null || hostView.getKeyboard() == null) return false;
 
@@ -117,7 +115,13 @@ class TouchDispatcher {
     activePointers.clear();
   }
 
-  void disableTouchesTillFingersAreUp() {
+  void disableTouchesTillFingersAreUp(@NonNull PointerTrackerRegistry pointerTrackerRegistry) {
+    pointerTrackerRegistry.forEach(
+        tracker -> {
+          hostView.dispatchPointerAction(MotionEvent.ACTION_CANCEL, 0, 0, 0, tracker);
+          tracker.setAlreadyProcessed();
+        });
+
     touchesAreDisabledTillLastFingerIsUp = true;
   }
 

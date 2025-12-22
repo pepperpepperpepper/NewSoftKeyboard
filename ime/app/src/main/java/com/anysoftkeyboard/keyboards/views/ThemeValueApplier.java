@@ -2,8 +2,8 @@ package com.anysoftkeyboard.keyboards.views;
 
 import android.content.res.TypedArray;
 import android.graphics.Typeface;
-import com.anysoftkeyboard.overlay.ThemeOverlayCombiner;
 import com.anysoftkeyboard.keyboards.views.preview.PreviewPopupTheme;
+import com.anysoftkeyboard.overlay.ThemeOverlayCombiner;
 import com.anysoftkeyboard.theme.KeyboardTheme;
 import com.menny.android.anysoftkeyboard.R;
 import java.util.function.Consumer;
@@ -75,10 +75,7 @@ final class ThemeValueApplier {
   }
 
   boolean apply(
-      TypedArray remoteTypedArray,
-      int[] padding,
-      int localAttrId,
-      int remoteTypedArrayIndex) {
+      TypedArray remoteTypedArray, int[] padding, int localAttrId, int remoteTypedArrayIndex) {
     final float keysHeightFactor = keysHeightFactorSupplier.get();
     switch (localAttrId) {
       case android.R.attr.background -> {
@@ -131,7 +128,8 @@ final class ThemeValueApplier {
             color -> themeOverlayCombiner.setThemeNameTextColor(color));
       }
       case R.attr.shadowColor -> {
-        ShadowAttributeSetter.applyColor(remoteTypedArray, remoteTypedArrayIndex, shadowColorSetter);
+        ShadowAttributeSetter.applyColor(
+            remoteTypedArray, remoteTypedArrayIndex, shadowColorSetter);
         return true;
       }
       case R.attr.shadowRadius -> {

@@ -4,8 +4,8 @@ import com.anysoftkeyboard.dictionaries.Suggest;
 import java.util.Locale;
 
 /**
- * Small helper that encapsulates the logic for showing the
- * "add to dictionary" hint after a manual suggestion pick.
+ * Small helper that encapsulates the logic for showing the "add to dictionary" hint after a manual
+ * suggestion pick.
  */
 final class AddToDictionaryDecider {
 

@@ -1,15 +1,14 @@
 package com.anysoftkeyboard.ime;
 
 import android.view.inputmethod.CompletionInfo;
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.views.CandidateView;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Encapsulates completion (IME suggestions provided by the editor) handling so
- * {@link AnySoftKeyboardSuggestions} can stay smaller.
+ * Encapsulates completion (IME suggestions provided by the editor) handling so {@link
+ * AnySoftKeyboardSuggestions} can stay smaller.
  */
 final class CompletionHandler {
 
@@ -49,14 +48,13 @@ final class CompletionHandler {
     }
   }
 
-  boolean tryCommitCompletion(int index, @Nullable InputConnection ic, @Nullable CandidateView view) {
+  boolean tryCommitCompletion(
+      int index, InputConnectionRouter inputConnectionRouter, @Nullable CandidateView view) {
     if (!completionOn || index < 0 || index >= completions.length) {
       return false;
     }
     CompletionInfo ci = completions[index];
-    if (ic != null) {
-      ic.commitCompletion(ci);
-    }
+    inputConnectionRouter.commitCompletion(ci);
     if (view != null) {
       view.clear();
     }

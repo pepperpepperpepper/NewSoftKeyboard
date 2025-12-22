@@ -11,14 +11,13 @@ import android.os.Build;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 import android.view.inputmethod.InputMethodSession;
 import android.view.inputmethod.InputMethodSubtype;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
 import androidx.annotation.RequiresApi;
+import androidx.annotation.VisibleForTesting;
 import androidx.core.view.inputmethod.InputContentInfoCompat;
 import androidx.test.core.app.ApplicationProvider;
 import com.anysoftkeyboard.addons.AddOn;
@@ -32,12 +31,14 @@ import com.anysoftkeyboard.dictionaries.SuggestionsProvider;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.dictionaries.content.ContactsDictionary;
 import com.anysoftkeyboard.ime.AnySoftKeyboardClipboard;
-import com.anysoftkeyboard.ime.InputViewBinder;
+import com.anysoftkeyboard.ime.InputConnectionRouter;
+import com.anysoftkeyboard.ime.gesturetyping.WordListDictionaryListener;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.GenericKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.KeyboardAddOnAndBuilder;
 import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
+import com.anysoftkeyboard.keyboards.ThemedKeyboardDimensProvider;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardView;
 import com.anysoftkeyboard.keyboards.views.CandidateView;
 import com.anysoftkeyboard.keyboards.views.KeyboardViewContainerView;
@@ -112,11 +113,12 @@ public class TestableAnySoftKeyboard extends SoftKeyboard {
   @Override
   protected boolean commitMediaToInputConnection(
       InputContentInfoCompat inputContentInfo,
-      InputConnection inputConnection,
+      InputConnectionRouter inputConnectionRouter,
       EditorInfo editorInfo,
       int flags) {
     mInputContentInfo = inputContentInfo;
-    return super.commitMediaToInputConnection(inputContentInfo, inputConnection, editorInfo, flags);
+    return super.commitMediaToInputConnection(
+        inputContentInfo, inputConnectionRouter, editorInfo, flags);
   }
 
   public InputContentInfoCompat getCommitedInputContentInfo() {
@@ -663,9 +665,9 @@ public class TestableAnySoftKeyboard extends SoftKeyboard {
     }
 
     @Override
-    public void setInputView(@NonNull InputViewBinder inputView) {
+    public void setInputView(@NonNull ThemedKeyboardDimensProvider themedKeyboardDimensProvider) {
       mViewSet = true;
-      super.setInputView(inputView);
+      super.setInputView(themedKeyboardDimensProvider);
     }
 
     public void verifyNewViewSet() {

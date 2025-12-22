@@ -6,18 +6,18 @@ import android.view.inputmethod.EditorInfo;
 import com.anysoftkeyboard.AnySoftKeyboardBaseTest;
 import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import com.anysoftkeyboard.TestableAnySoftKeyboard.TestableKeyboardSwitcher;
+import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.KeyboardAddOnAndBuilder;
 import com.anysoftkeyboard.keyboards.KeyboardFactory;
-import com.anysoftkeyboard.addons.AddOn;
 import com.menny.android.anysoftkeyboard.R;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.After;
 
 @RunWith(AnySoftKeyboardRobolectricTestRunner.class)
 public class KeyboardSwitcherHiddenLayoutsTest extends AnySoftKeyboardBaseTest {
@@ -42,24 +42,24 @@ public class KeyboardSwitcherHiddenLayoutsTest extends AnySoftKeyboardBaseTest {
             ROZOFF_MAIN_ID,
             "Mike Rozoff Layout",
             R.xml.test_hidden_keyboard_main,
-            /*hidden=*/ false,
-            /*defaultEnabled=*/ true));
+            /* hidden= */ false,
+            /* defaultEnabled= */ true));
     registerHiddenKeyboard(
         mKeyboardFactory,
         createBuilder(
             ROZOFF_SYMBOLS_ID,
             "Mike Rozoff Symbols",
             R.xml.test_hidden_keyboard_symbols,
-            /*hidden=*/ true,
-            /*defaultEnabled=*/ false));
+            /* hidden= */ true,
+            /* defaultEnabled= */ false));
     registerHiddenKeyboard(
         mKeyboardFactory,
         createBuilder(
             ROZOFF_SYMBOLS_EXT_ID,
             "Mike Rozoff Symbols Extended",
             R.xml.test_hidden_keyboard_symbols_extended,
-            /*hidden=*/ true,
-            /*defaultEnabled=*/ false));
+            /* hidden= */ true,
+            /* defaultEnabled= */ false));
 
     simulateOnStartInputFlow();
 
@@ -128,7 +128,7 @@ public class KeyboardSwitcherHiddenLayoutsTest extends AnySoftKeyboardBaseTest {
     return new KeyboardAddOnAndBuilder(
         context,
         context,
-        /*apiVersion=*/ 0,
+        /* apiVersion= */ 0,
         id,
         name,
         layoutResId,
@@ -140,12 +140,11 @@ public class KeyboardSwitcherHiddenLayoutsTest extends AnySoftKeyboardBaseTest {
         "",
         name,
         hidden,
-        /*keyboardIndex=*/ 100,
+        /* keyboardIndex= */ 100,
         defaultEnabled);
   }
 
-  private void registerHiddenKeyboard(
-      KeyboardFactory factory, KeyboardAddOnAndBuilder builder) {
+  private void registerHiddenKeyboard(KeyboardFactory factory, KeyboardAddOnAndBuilder builder) {
     try {
       Field addOnsByIdField =
           com.anysoftkeyboard.addons.AddOnsFactory.class.getDeclaredField("mAddOnsById");

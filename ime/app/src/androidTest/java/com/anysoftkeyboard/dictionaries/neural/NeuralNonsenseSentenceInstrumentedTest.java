@@ -7,11 +7,15 @@ import android.util.Log;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 import com.anysoftkeyboard.dictionaries.neural.NeuralPredictionManager;
+import com.anysoftkeyboard.engine.models.ModelDefinition;
+import com.anysoftkeyboard.engine.models.ModelDownloader;
+import com.anysoftkeyboard.engine.models.ModelStore;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import wtf.uhoh.newsoftkeyboard.engine.EngineType;
 
 @RunWith(AndroidJUnit4.class)
 public class NeuralNonsenseSentenceInstrumentedTest {
@@ -30,7 +34,7 @@ public class NeuralNonsenseSentenceInstrumentedTest {
     for (int i = 0; i < 10; i++) {
       final String[] ctx = words.toArray(new String[0]);
       List<String> preds = manager.predictNextWords(ctx, 5);
-      preds = wtf.uhoh.newsoftkeyboard.pipeline.CandidateNormalizer.normalize(preds);
+      preds = com.anysoftkeyboard.nextword.pipeline.CandidateNormalizer.normalize(preds);
       if (preds.isEmpty()) break;
       String w = preds.get(0);
       words.add(w);
@@ -42,11 +46,11 @@ public class NeuralNonsenseSentenceInstrumentedTest {
   }
 
   private void ensureMixedcaseModelActive(Context context) throws Exception {
-    final PresageModelStore store = new PresageModelStore(context);
-    final PresageModelDefinition defForEntry =
-        PresageModelDefinition.builder("distilgpt2_mixedcase_sanity")
+    final ModelStore store = new ModelStore(context);
+    final ModelDefinition defForEntry =
+        ModelDefinition.builder("distilgpt2_mixedcase_sanity")
             .setLabel("DistilGPT-2 mixedcase (sanity)")
-            .setEngineType(PresageModelDefinition.EngineType.NEURAL)
+            .setEngineType(EngineType.NEURAL)
             .setOnnxFile("model_int8.onnx", null, null)
             .setTokenizerVocabFile("vocab.json", null, null)
             .setTokenizerMergesFile("merges.txt", null, null)
@@ -60,13 +64,12 @@ public class NeuralNonsenseSentenceInstrumentedTest {
             1,
             false);
 
-    final PresageModelDownloader downloader = new PresageModelDownloader(context, store);
+    final ModelDownloader downloader = new ModelDownloader(context, store);
     try {
       DownloaderCompat.run(downloader, target);
     } catch (IOException e) {
       // already installed
     }
-    store.persistSelectedModelId(
-        PresageModelDefinition.EngineType.NEURAL, "distilgpt2_mixedcase_sanity");
+    store.persistSelectedModelId(EngineType.NEURAL, "distilgpt2_mixedcase_sanity");
   }
 }

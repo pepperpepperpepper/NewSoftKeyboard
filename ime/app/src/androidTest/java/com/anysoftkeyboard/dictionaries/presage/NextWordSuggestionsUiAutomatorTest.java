@@ -19,8 +19,11 @@ import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
 import com.anysoftkeyboard.debug.TestInputActivity;
-import com.anysoftkeyboard.keyboards.views.CandidateViewTestRegistry;
 import com.anysoftkeyboard.dictionaries.neural.NeuralPredictionManager;
+import com.anysoftkeyboard.engine.models.ModelDefinition;
+import com.anysoftkeyboard.engine.models.ModelDownloader;
+import com.anysoftkeyboard.engine.models.ModelStore;
+import com.anysoftkeyboard.keyboards.views.CandidateViewTestRegistry;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.R;
 import java.io.FileInputStream;
@@ -31,13 +34,22 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import wtf.uhoh.newsoftkeyboard.engine.EngineType;
 
 @RunWith(AndroidJUnit4.class)
 @LargeTest
 public class NextWordSuggestionsUiAutomatorTest {
 
   private static final String TAG = "NextWordUiAuto";
-  private static final String APP_PACKAGE = "wtf.uhoh.newsoftkeyboard";
+
+  private static String getAppPackage() {
+    return InstrumentationRegistry.getInstrumentation().getTargetContext().getPackageName();
+  }
+
+  private static String resId(String idName) {
+    return getAppPackage() + ":id/" + idName;
+  }
+
   private static final long READY_TIMEOUT_MS = 10000L;
   private static final long SHORT_WAIT_MS = 400L;
   private static final long SUGGESTIONS_TIMEOUT_MS = 8000L;
@@ -64,20 +76,12 @@ public class NextWordSuggestionsUiAutomatorTest {
     SharedPreferences prefs = DirectBootAwareSharedPreferences.create(context);
     prefs
         .edit()
-        .putBoolean(
-            context.getString(R.string.settings_key_show_suggestions),
-            true)
-        .putString(
-            context.getString(R.string.settings_key_next_word_dictionary_type),
-            "words")
-        .putString(
-            context.getString(R.string.settings_key_prediction_engine_mode),
-            "neural")
+        .putBoolean(context.getString(R.string.settings_key_show_suggestions), true)
+        .putString(context.getString(R.string.settings_key_next_word_dictionary_type), "words")
+        .putString(context.getString(R.string.settings_key_prediction_engine_mode), "neural")
         .apply();
 
     // Launch the test harness activity to foreground and show the IME
-    executeShellCommand(
-        "am start -n wtf.uhoh.newsoftkeyboard/com.anysoftkeyboard.debug.TestInputActivity");
     mScenario = ActivityScenario.launch(TestInputActivity.class);
     waitForEditorVisible();
     // Focus the editor explicitly to ensure IME can appear
@@ -128,8 +132,7 @@ public class NextWordSuggestionsUiAutomatorTest {
             for (int idx = 0; idx < count; idx++) {
               String cand = CandidateViewTestRegistry.getSuggestionAt(idx);
               if (cand != null && !cand.trim().isEmpty()) {
-                if (previous[0].isEmpty()
-                    || !cand.trim().equalsIgnoreCase(previous[0].trim())) {
+                if (previous[0].isEmpty() || !cand.trim().equalsIgnoreCase(previous[0].trim())) {
                   pickIdx = idx;
                   break;
                 }
@@ -147,7 +150,8 @@ public class NextWordSuggestionsUiAutomatorTest {
       mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(idxToPick));
       SystemClock.sleep(SHORT_WAIT_MS);
       // Ask IME to compute/show next suggestions for the newly committed token
-      mScenario.onActivity(activity -> com.anysoftkeyboard.ime.ImeTestApi.forceNextWordFromCursor());
+      mScenario.onActivity(
+          activity -> com.anysoftkeyboard.ime.ImeTestApi.forceNextWordFromCursor());
       SystemClock.sleep(SHORT_WAIT_MS);
       waitForNonEmptySuggestions();
     }
@@ -184,11 +188,11 @@ public class NextWordSuggestionsUiAutomatorTest {
   }
 
   private void ensureMixedcaseModelActive(Context context) throws Exception {
-    final PresageModelStore store = new PresageModelStore(context);
-    final PresageModelDefinition defForEntry =
-        PresageModelDefinition.builder("distilgpt2_mixedcase_sanity")
+    final ModelStore store = new ModelStore(context);
+    final ModelDefinition defForEntry =
+        ModelDefinition.builder("distilgpt2_mixedcase_sanity")
             .setLabel("DistilGPT-2 mixedcase (sanity)")
-            .setEngineType(PresageModelDefinition.EngineType.NEURAL)
+            .setEngineType(EngineType.NEURAL)
             .setOnnxFile("model_int8.onnx", null, null)
             .setTokenizerVocabFile("vocab.json", null, null)
             .setTokenizerMergesFile("merges.txt", null, null)
@@ -202,15 +206,14 @@ public class NextWordSuggestionsUiAutomatorTest {
             1,
             false);
 
-    final PresageModelDownloader downloader = new PresageModelDownloader(context, store);
+    final ModelDownloader downloader = new ModelDownloader(context, store);
     try {
-        DownloaderCompat.run(downloader, target);
+      DownloaderCompat.run(downloader, target);
     } catch (IOException e) {
       // If already installed, ignore network error
       Log.w(TAG, "Downloader error (continuing if already installed): ", e);
     }
-    store.persistSelectedModelId(
-        PresageModelDefinition.EngineType.NEURAL, "distilgpt2_mixedcase_sanity");
+    store.persistSelectedModelId(EngineType.NEURAL, "distilgpt2_mixedcase_sanity");
     final NeuralPredictionManager manager = new NeuralPredictionManager(context);
     if (!manager.activate()) {
       fail("Neural predictor failed to activate with mixedcase model");
@@ -220,9 +223,7 @@ public class NextWordSuggestionsUiAutomatorTest {
 
   private void waitForEditorVisible() {
     boolean visible =
-        mDevice.wait(
-            Until.hasObject(By.res("wtf.uhoh.newsoftkeyboard:id/test_edit_text")),
-            READY_TIMEOUT_MS);
+        mDevice.wait(Until.hasObject(By.res(resId("test_edit_text"))), READY_TIMEOUT_MS);
     if (!visible) {
       dumpWindowHierarchyForDebug();
       fail("Test editor not visible");
@@ -230,8 +231,7 @@ public class NextWordSuggestionsUiAutomatorTest {
   }
 
   private void waitForKeyboardVisible() {
-    boolean visible =
-        mDevice.wait(Until.hasObject(By.pkg("wtf.uhoh.newsoftkeyboard")), READY_TIMEOUT_MS);
+    boolean visible = mDevice.wait(Until.hasObject(By.pkg(getAppPackage())), READY_TIMEOUT_MS);
     if (!visible) {
       dumpWindowHierarchyForDebug();
       fail("Keyboard window not visible");
@@ -239,8 +239,7 @@ public class NextWordSuggestionsUiAutomatorTest {
   }
 
   private void focusEditor() {
-    UiObject2 editor =
-        mDevice.wait(Until.findObject(By.res("wtf.uhoh.newsoftkeyboard:id/test_edit_text")), 3000);
+    UiObject2 editor = mDevice.wait(Until.findObject(By.res(resId("test_edit_text"))), 3000);
     if (editor != null) {
       editor.click();
       SystemClock.sleep(300);
@@ -258,12 +257,14 @@ public class NextWordSuggestionsUiAutomatorTest {
     UiObject2 keyboard =
         mDevice.wait(
             Until.findObject(
-                By.res("wtf.uhoh.newsoftkeyboard:id/AnyKeyboardMainView")
+                By.res(resId("AnyKeyboardMainView"))
                     .clazz("com.anysoftkeyboard.keyboards.views.AnyKeyboardView")),
             1500);
     if (keyboard == null) {
-      keyboard = mDevice.wait(
-          Until.findObject(By.clazz("com.anysoftkeyboard.keyboards.views.AnyKeyboardView")), 1500);
+      keyboard =
+          mDevice.wait(
+              Until.findObject(By.clazz("com.anysoftkeyboard.keyboards.views.AnyKeyboardView")),
+              1500);
     }
     if (keyboard != null) {
       return keyboard.getVisibleBounds();
@@ -325,7 +326,8 @@ public class NextWordSuggestionsUiAutomatorTest {
       String dump = executeShellCommand("dumpsys window windows");
       java.util.regex.Matcher frameMatcher =
           java.util.regex.Pattern.compile(
-                  "Window\\{[^}]+ InputMethod[\\s\\S]*?mFrame=\\[(\\d+),\\s*(\\d+)]\\[(\\d+),\\s*(\\d+)]",
+                  "Window\\{[^}]+"
+                      + " InputMethod[\\s\\S]*?mFrame=\\[(\\d+),\\s*(\\d+)]\\[(\\d+),\\s*(\\d+)]",
                   java.util.regex.Pattern.DOTALL)
               .matcher(dump);
       if (frameMatcher.find()) {
@@ -337,7 +339,8 @@ public class NextWordSuggestionsUiAutomatorTest {
       }
       java.util.regex.Matcher shownMatcher =
           java.util.regex.Pattern.compile(
-                  "Window\\{[^}]+ InputMethod[\\s\\S]*?Shown frame: \\[(\\d+),\\s*(\\d+)]\\[(\\d+),\\s*(\\d+)]",
+                  "Window\\{[^}]+ InputMethod[\\s\\S]*?Shown frame:"
+                      + " \\[(\\d+),\\s*(\\d+)]\\[(\\d+),\\s*(\\d+)]",
                   java.util.regex.Pattern.DOTALL)
               .matcher(dump);
       if (shownMatcher.find()) {
@@ -393,8 +396,7 @@ public class NextWordSuggestionsUiAutomatorTest {
     String expanded = expandComponent(mImeComponent);
     if (!(current.equals(mImeComponent) || current.equals(expanded))) {
       Log.e(TAG, "default_input_method=" + current);
-      String enabled =
-          executeShellCommand("settings get secure enabled_input_methods").trim();
+      String enabled = executeShellCommand("settings get secure enabled_input_methods").trim();
       Log.e(TAG, "enabled_input_methods=" + enabled);
       String imeListAll = executeShellCommand("ime list -a -s").trim();
       Log.e(TAG, "ime list -a -s:\n" + imeListAll);
@@ -406,12 +408,14 @@ public class NextWordSuggestionsUiAutomatorTest {
   private String resolveImeComponentId() throws IOException {
     String list = executeShellCommand("ime list -a -s").trim();
     String[] lines = list.split("\\n");
+    String prefix = getAppPackage() + "/";
     String fallback = null;
     for (String line : lines) {
       String trimmed = line.trim();
-      if (!trimmed.startsWith(APP_PACKAGE + "/")) continue;
+      if (!trimmed.startsWith(prefix)) continue;
       // Prefer the nsk flavor service if present.
-      if (trimmed.endsWith(".NewSoftKeyboardService") || trimmed.endsWith("/.NewSoftKeyboardService")) {
+      if (trimmed.endsWith(".NewSoftKeyboardService")
+          || trimmed.endsWith("/.NewSoftKeyboardService")) {
         return trimmed;
       }
       // Otherwise prefer legacy naming.

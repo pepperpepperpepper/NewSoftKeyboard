@@ -21,13 +21,14 @@ import android.util.AttributeSet;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
+import com.anysoftkeyboard.addons.MultipleAddOnsFactory;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
-import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 import java.util.Locale;
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 
-public class QuickTextKeyFactory extends AddOnsFactory.MultipleAddOnsFactory<QuickTextKey> {
+public class QuickTextKeyFactory extends MultipleAddOnsFactory<QuickTextKey> {
 
   private static final String XML_POPUP_KEYBOARD_RES_ID_ATTRIBUTE = "popupKeyboard";
   private static final String XML_POPUP_LIST_TEXT_RES_ID_ATTRIBUTE = "popupListText";

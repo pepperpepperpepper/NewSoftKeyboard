@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.base.utils.Logger;
@@ -36,8 +35,8 @@ final class CharacterInputHandler {
     @Nullable
     CandidateView candidateView();
 
-    @Nullable
-    InputConnection currentInputConnection();
+    @NonNull
+    InputConnectionRouter inputConnectionRouter();
 
     void markExpectingSelectionUpdate();
 
@@ -66,12 +65,12 @@ final class CharacterInputHandler {
 
     host.setLastCharacterWasShifted(host.isShiftActive());
 
-    final InputConnection ic = host.currentInputConnection();
+    final InputConnectionRouter router = host.inputConnectionRouter();
     host.word().add(primaryCode, nearByKeyCodes);
     if (host.isPredictionOn()) {
-      updateComposingForPrediction(primaryCode, key, multiTapIndex, ic, host);
+      updateComposingForPrediction(primaryCode, key, multiTapIndex, router, host);
     } else {
-      outputWithoutPrediction(primaryCode, ic, host);
+      outputWithoutPrediction(primaryCode, router, host);
     }
     host.autoCorrectState().justAutoAddedWord = false;
   }
@@ -97,21 +96,21 @@ final class CharacterInputHandler {
       int primaryCode,
       Keyboard.Key key,
       int multiTapIndex,
-      @Nullable InputConnection ic,
+      @NonNull InputConnectionRouter router,
       Host host) {
     final WordComposer word = host.word();
-    if (ic != null) {
+    if (router.current() != null) {
       final int newCursorPosition =
           computeCursorPositionAfterChar(primaryCode, key, multiTapIndex, word, host);
       if (newCursorPosition > 0) {
-        ic.beginBatchEdit();
+        router.beginBatchEdit();
       }
 
       host.markExpectingSelectionUpdate();
-      ic.setComposingText(word.getTypedWord(), 1);
+      router.setComposingText(word.getTypedWord(), 1);
       if (newCursorPosition > 0) {
-        ic.setSelection(newCursorPosition, newCursorPosition);
-        ic.endBatchEdit();
+        router.setSelection(newCursorPosition, newCursorPosition);
+        router.endBatchEdit();
       }
     }
     if (host.isSuggestionAffectingCharacter(primaryCode)) {
@@ -129,25 +128,22 @@ final class CharacterInputHandler {
   }
 
   private void outputWithoutPrediction(
-      int primaryCode, @Nullable InputConnection ic, Host host) {
-    if (ic != null) {
-      ic.beginBatchEdit();
+      int primaryCode, @NonNull InputConnectionRouter router, Host host) {
+    final boolean hasConnection = router.current() != null;
+    if (hasConnection) {
+      router.beginBatchEdit();
     }
     host.markExpectingSelectionUpdate();
     for (char c : Character.toChars(primaryCode)) {
       host.sendKeyChar(c);
     }
-    if (ic != null) {
-      ic.endBatchEdit();
+    if (hasConnection) {
+      router.endBatchEdit();
     }
   }
 
   private int computeCursorPositionAfterChar(
-      int primaryCode,
-      Keyboard.Key key,
-      int multiTapIndex,
-      @NonNull WordComposer word,
-      Host host) {
+      int primaryCode, Keyboard.Key key, int multiTapIndex, @NonNull WordComposer word, Host host) {
     if (word.cursorPosition() == word.charCount()) {
       return -1;
     }
@@ -155,8 +151,7 @@ final class CharacterInputHandler {
     int newCursorPosition;
     if (multiTapIndex > 0) {
       final int previousKeyCode = key.getMultiTapCode(multiTapIndex - 1);
-      newCursorPosition =
-          Character.charCount(primaryCode) - Character.charCount(previousKeyCode);
+      newCursorPosition = Character.charCount(primaryCode) - Character.charCount(previousKeyCode);
     } else {
       newCursorPosition = Character.charCount(primaryCode);
     }

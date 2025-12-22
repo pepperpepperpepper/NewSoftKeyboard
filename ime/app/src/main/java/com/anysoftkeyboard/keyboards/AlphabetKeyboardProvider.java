@@ -13,8 +13,9 @@ final class AlphabetKeyboardProvider {
       @NonNull KeyboardAddOnAndBuilder[] creators,
       @NonNull AnyKeyboard[] cache,
       @NonNull KeyboardDimens keyboardDimens,
-      @NonNull java.util.function.BiFunction<Integer, KeyboardAddOnAndBuilder, AnyKeyboard>
-          keyboardFactory,
+      @NonNull
+          java.util.function.BiFunction<Integer, KeyboardAddOnAndBuilder, AnyKeyboard>
+              keyboardFactory,
       @NonNull java.util.function.Function<EditorInfo, Integer> modeResolver) {
     if (cache.length == 0 || index >= cache.length) return null;
 

@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.keyboards.views;
 
-
 /** Decides whether to draw keyboard name and/or hint text. */
 final class KeyboardNameVisibilityDecider {
 

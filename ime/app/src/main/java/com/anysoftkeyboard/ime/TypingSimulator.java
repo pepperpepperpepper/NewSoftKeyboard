@@ -1,17 +1,17 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import com.anysoftkeyboard.keyboards.Keyboard;
 
 /** Simulates character-by-character typing for injected text (used by onTyping). */
 final class TypingSimulator {
 
   interface Host {
-    InputConnection currentInputConnection();
+    InputConnectionRouter inputConnectionRouter();
 
     Keyboard.Key lastKey();
 
-    void onKey(int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI);
+    void onKey(
+        int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI);
 
     void clearSpaceTimeTracker();
 
@@ -21,10 +21,9 @@ final class TypingSimulator {
   }
 
   void simulate(CharSequence text, Host host) {
-    InputConnection ic = host.currentInputConnection();
-    if (ic == null) return;
-
-    ic.beginBatchEdit();
+    final InputConnectionRouter router = host.inputConnectionRouter();
+    if (router.current() == null) return;
+    router.beginBatchEdit();
 
     final boolean originalAutoCorrect = host.isAutoCorrectOn();
     host.setAutoCorrectOn(false);
@@ -36,6 +35,6 @@ final class TypingSimulator {
     }
     host.setAutoCorrectOn(originalAutoCorrect);
 
-    ic.endBatchEdit();
+    router.endBatchEdit();
   }
 }

@@ -84,4 +84,3 @@ final class GenericRowKeyboard extends AnyKeyboard {
     return false;
   }
 }
-

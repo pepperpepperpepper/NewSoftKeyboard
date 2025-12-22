@@ -19,41 +19,33 @@ package com.google.android.voiceime.backends;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.inputmethodservice.InputMethodService;
-
 import androidx.annotation.NonNull;
-
 import java.io.File;
 
 /** Backend contract for third-party speech-to-text providers. */
 public interface SpeechToTextBackend {
 
-    /** Unique identifier used for persistence and analytics. */
-    @NonNull
-    String getId();
+  /** Unique identifier used for persistence and analytics. */
+  @NonNull
+  String getId();
 
-    /**
-     * Returns {@code true} when this backend should be considered by the trigger.
-     * This typically checks a persisted provider selection.
-     */
-    boolean isSelected(@NonNull Context context, @NonNull SharedPreferences prefs);
+  /**
+   * Returns {@code true} when this backend should be considered by the trigger. This typically
+   * checks a persisted provider selection.
+   */
+  boolean isSelected(@NonNull Context context, @NonNull SharedPreferences prefs);
 
-    /**
-     * Returns {@code true} when the backend is configured well enough to start transcribing.
-     */
-    boolean isConfigured(@NonNull Context context, @NonNull SharedPreferences prefs);
+  /** Returns {@code true} when the backend is configured well enough to start transcribing. */
+  boolean isConfigured(@NonNull Context context, @NonNull SharedPreferences prefs);
 
-    /**
-     * Shows a user-facing hint describing what is missing from the configuration.
-     */
-    void showConfigurationError(@NonNull Context context);
+  /** Shows a user-facing hint describing what is missing from the configuration. */
+  void showConfigurationError(@NonNull Context context);
 
-    /**
-     * Starts an asynchronous transcription request for the given audio file.
-     */
-    void startTranscription(
-            @NonNull InputMethodService ime,
-            @NonNull SharedPreferences prefs,
-            @NonNull File audioFile,
-            @NonNull String mediaType,
-            @NonNull TranscriptionResultCallback callback);
+  /** Starts an asynchronous transcription request for the given audio file. */
+  void startTranscription(
+      @NonNull InputMethodService ime,
+      @NonNull SharedPreferences prefs,
+      @NonNull File audioFile,
+      @NonNull String mediaType,
+      @NonNull TranscriptionResultCallback callback);
 }

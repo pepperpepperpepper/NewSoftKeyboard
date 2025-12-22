@@ -21,7 +21,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
 import com.anysoftkeyboard.keyboards.Keyboard;
-import java.util.Locale;
 
 class PointerTracker {
   static class SharedPointerTrackersData {
@@ -55,9 +54,9 @@ class PointerTracker {
   private Keyboard.Key[] mKeys;
   private final int mKeyHysteresisDistanceSquared;
 
-  private final KeyState mKeyState;
+  private final PointerKeyState mKeyState;
 
-  private int mKeyCodesInPathLength = -1;
+  private final GestureTypingPathTracker gestureTypingPathTracker = new GestureTypingPathTracker();
 
   // true if keyboard layout has been changed.
   private boolean mKeyboardLayoutHasBeenChanged;
@@ -70,76 +69,11 @@ class PointerTracker {
 
   // For multi-tap
   private final SharedPointerTrackersData mSharedPointerTrackersData;
-  private int mTapCount;
-  private long mLastTapTime;
-  private boolean mInMultiTap;
+  private final PointerMultiTapHandler multiTapHandler;
+  private final PointerKeySender keySender;
 
   // pressed key
   private int mPreviousKey = NOT_A_KEY;
-
-  // This class keeps track of a key index and a position where this pointer is.
-  private static class KeyState {
-    private final KeyDetector mKeyDetector;
-
-    // The current key index where this pointer is.
-    private int mKeyIndex = NOT_A_KEY;
-    // The position where mKeyIndex was recognized for the first time.
-    private int mKeyX;
-    private int mKeyY;
-
-    // Last pointer position.
-    private int mLastX;
-    private int mLastY;
-
-    KeyState(KeyDetector keyDetector) {
-      mKeyDetector = keyDetector;
-    }
-
-    int getKeyIndex() {
-      return mKeyIndex;
-    }
-
-    int getKeyX() {
-      return mKeyX;
-    }
-
-    int getKeyY() {
-      return mKeyY;
-    }
-
-    int getLastX() {
-      return mLastX;
-    }
-
-    int getLastY() {
-      return mLastY;
-    }
-
-    int onDownKey(int x, int y) {
-      return onMoveToNewKey(onMoveKeyInternal(x, y), x, y);
-    }
-
-    private int onMoveKeyInternal(int x, int y) {
-      mLastX = x;
-      mLastY = y;
-      return mKeyDetector.getKeyIndexAndNearbyCodes(x, y, null);
-    }
-
-    int onMoveKey(int x, int y) {
-      return onMoveKeyInternal(x, y);
-    }
-
-    int onMoveToNewKey(int keyIndex, int x, int y) {
-      mKeyIndex = keyIndex;
-      mKeyX = x;
-      mKeyY = y;
-      return keyIndex;
-    }
-
-    int onUpKey(int x, int y) {
-      return onMoveKeyInternal(x, y);
-    }
-  }
 
   PointerTracker(
       int id,
@@ -157,8 +91,9 @@ class PointerTracker {
     mProxy = proxy;
     mHandler = handler;
     mKeyDetector = keyDetector;
-    mKeyState = new KeyState(keyDetector);
-    resetMultiTap();
+    mKeyState = new PointerKeyState(keyDetector);
+    multiTapHandler = new PointerMultiTapHandler(keyDetector, sharedPointerTrackersData);
+    keySender = new PointerKeySender(keyDetector, multiTapHandler);
   }
 
   void setOnKeyboardActionListener(OnKeyboardActionListener listener) {
@@ -242,15 +177,18 @@ class PointerTracker {
     mKeyboardLayoutHasBeenChanged = false;
     mKeyAlreadyProcessed = false;
     mIsRepeatableKey = false;
-    mKeyCodesInPathLength = -1;
-    checkMultiTap(eventTime, keyIndex);
+    gestureTypingPathTracker.reset();
+    Keyboard.Key keyForMultiTap = getKey(keyIndex);
+    if (keyForMultiTap != null) {
+      multiTapHandler.checkMultiTap(keyForMultiTap, keyIndex, eventTime);
+    }
     if (mListener != null && isValidKeyIndex(keyIndex)) {
       AnyKey key = (AnyKey) mKeys[keyIndex];
       final int codeAtIndex = key.getCodeAtIndex(0, mKeyDetector.isKeyShifted(key));
 
       if (!mProxy.isAtTwoFingersState()
           && mListener.onGestureTypingInputStart(x, y, key, eventTime)) {
-        mKeyCodesInPathLength = 1;
+        gestureTypingPathTracker.start();
       }
 
       if (codeAtIndex != 0) {
@@ -280,7 +218,7 @@ class PointerTracker {
 
   void onMoveEvent(int x, int y, long eventTime) {
     if (mProxy.isAtTwoFingersState()) {
-      mKeyCodesInPathLength = -1;
+      gestureTypingPathTracker.reset();
     } else if (canDoGestureTyping()) {
       mListener.onGestureTypingInput(x, y, eventTime);
     }
@@ -288,7 +226,7 @@ class PointerTracker {
     if (mKeyAlreadyProcessed) {
       return;
     }
-    final KeyState keyState = mKeyState;
+    final PointerKeyState keyState = mKeyState;
     final int oldKeyIndex = keyState.getKeyIndex();
     int keyIndex = keyState.onMoveKey(x, y);
     final Keyboard.Key oldKey = getKey(oldKeyIndex);
@@ -317,11 +255,11 @@ class PointerTracker {
         if (mListener != null && !isInGestureTyping()) {
           mListener.onRelease(oldKey.getCodeAtIndex(0, mKeyDetector.isKeyShifted(oldKey)));
         }
-        resetMultiTap();
+        multiTapHandler.reset();
         if (mListener != null) {
           Keyboard.Key key = getKey(keyIndex);
           if (canDoGestureTyping()) {
-            mKeyCodesInPathLength++;
+            gestureTypingPathTracker.markAdditionalKeyVisited();
           } else {
             mListener.onPress(key.getCodeAtIndex(0, mKeyDetector.isKeyShifted(key)));
           }
@@ -346,7 +284,7 @@ class PointerTracker {
         if (mListener != null) {
           mListener.onRelease(oldKey.getCodeAtIndex(0, mKeyDetector.isKeyShifted(oldKey)));
         }
-        resetMultiTap();
+        multiTapHandler.reset();
         keyState.onMoveToNewKey(keyIndex, x, y);
         mHandler.cancelLongPressTimer();
         if (oldKeyIndex != keyIndex) {
@@ -384,7 +322,7 @@ class PointerTracker {
     } else {
       boolean notHandled = true;
       if (isInGestureTyping()) {
-        mKeyCodesInPathLength = -1;
+        gestureTypingPathTracker.reset();
         notHandled = !listener.onGestureTypingInputDone();
       }
       if (notHandled) detectAndSendKey(keyIndex, x, y, eventTime, true);
@@ -396,7 +334,7 @@ class PointerTracker {
   }
 
   void onCancelEvent() {
-    mKeyCodesInPathLength = -1;
+    gestureTypingPathTracker.reset();
     mHandler.cancelAllMessages();
     int keyIndex = mKeyState.getKeyIndex();
     mProxy.hidePreview(keyIndex, this);
@@ -410,7 +348,7 @@ class PointerTracker {
     if (key != null) {
       // While key is repeating, because there is no need to handle multi-tap key, we can
       // pass -1 as eventTime argument.
-      detectAndSendKey(keyIndex, key.x, key.y, -1, false);
+      keySender.sendKey(mListener, keyIndex, key, key.x, key.y, -1, false);
     }
   }
 
@@ -467,137 +405,19 @@ class PointerTracker {
   }
 
   private void detectAndSendKey(int index, int x, int y, long eventTime, boolean withRelease) {
-    final OnKeyboardActionListener listener = mListener;
-    final Keyboard.Key key = getKey(index);
-
-    if (key == null) {
-      if (listener != null) {
-        listener.onCancel();
-      }
-    } else {
-      boolean isShifted = mKeyDetector.isKeyShifted(key);
-
-      if ((key.typedText != null && !isShifted) || (key.shiftedTypedText != null && isShifted)) {
-        if (listener != null) {
-          mTapCount = 0;
-
-          final CharSequence text;
-          if (isShifted) {
-            text = key.shiftedTypedText;
-          } else {
-            text = key.typedText;
-          }
-          listener.onText(key, text);
-          if (withRelease) listener.onRelease(key.getPrimaryCode());
-        }
-      } else if ((key.text != null && !isShifted) || (key.shiftedText != null && isShifted)) {
-        if (listener != null) {
-          mTapCount = 0;
-
-          final CharSequence text;
-          if (isShifted) {
-            text = key.shiftedText;
-          } else {
-            text = key.text;
-          }
-          listener.onText(key, text);
-          if (withRelease) listener.onRelease(key.getPrimaryCode());
-        }
-      } else {
-        final int code;
-        int[] nearByKeyCodes = mKeyDetector.newCodeArray();
-        mKeyDetector.getKeyIndexAndNearbyCodes(x, y, nearByKeyCodes);
-        boolean multiTapStarted = false;
-        // Multi-tap
-        if (mInMultiTap) {
-          if (mTapCount != -1) {
-            multiTapStarted = true;
-            mListener.onMultiTapStarted();
-          } else {
-            mTapCount = 0;
-          }
-          code = key.getMultiTapCode(mTapCount);
-        } else {
-          code = key.getCodeAtIndex(0, mKeyDetector.isKeyShifted(key));
-        }
-        /*
-         * Swap the first and second values in the mCodes array if the primary code is not
-         * the first value but the second value in the array. This happens when key
-         * debouncing is in effect.
-         */
-        if (nearByKeyCodes.length >= 2 && nearByKeyCodes[0] != code && nearByKeyCodes[1] == code) {
-          nearByKeyCodes[1] = nearByKeyCodes[0];
-          nearByKeyCodes[0] = code;
-        }
-        if (listener != null) {
-          listener.onKey(code, key, mTapCount, nearByKeyCodes, x >= 0 || y >= 0);
-          if (withRelease) listener.onRelease(code);
-
-          if (multiTapStarted) {
-            mListener.onMultiTapEnded();
-          }
-        }
-      }
-      mSharedPointerTrackersData.lastSentKeyIndex = index;
-      mLastTapTime = eventTime;
-    }
+    keySender.sendKey(mListener, index, getKey(index), x, y, eventTime, withRelease);
   }
 
   /** Handle multi-tap keys by producing the key label for the current multi-tap state. */
   CharSequence getPreviewText(Keyboard.Key key) {
-    boolean isShifted = mKeyDetector.isKeyShifted(key);
-    AnyKey anyKey = (AnyKey) key;
-    if (isShifted && !TextUtils.isEmpty(anyKey.shiftedKeyLabel)) {
-      return anyKey.shiftedKeyLabel;
-    } else if (!TextUtils.isEmpty(anyKey.label)) {
-      return isShifted ? anyKey.label.toString().toUpperCase(Locale.getDefault()) : anyKey.label;
-    } else {
-      int multiTapCode = key.getMultiTapCode(mTapCount);
-      // The following line became necessary when we stopped casting multiTapCode to char
-      if (multiTapCode < 32) {
-        multiTapCode = 32;
-      }
-      // because, if multiTapCode happened to be negative, this would fail:
-      return new String(new int[] {multiTapCode}, 0, 1);
-    }
-  }
-
-  private void resetMultiTap() {
-    mSharedPointerTrackersData.lastSentKeyIndex = NOT_A_KEY;
-    mTapCount = 0;
-    mLastTapTime = -1;
-    mInMultiTap = false;
-  }
-
-  private void checkMultiTap(long eventTime, int keyIndex) {
-    Keyboard.Key key = getKey(keyIndex);
-    if (key == null) {
-      return;
-    }
-
-    final boolean isMultiTap =
-        (eventTime < mLastTapTime + mSharedPointerTrackersData.multiTapKeyTimeout
-            && keyIndex == mSharedPointerTrackersData.lastSentKeyIndex);
-    if (key.getCodesCount() > 1) {
-      mInMultiTap = true;
-      if (isMultiTap) {
-        mTapCount++;
-        return;
-      } else {
-        mTapCount = -1;
-        return;
-      }
-    }
-    if (!isMultiTap) {
-      resetMultiTap();
-    }
+    return multiTapHandler.getPreviewText(key);
   }
 
   boolean isInGestureTyping() {
-    return mKeyCodesInPathLength > 1;
+    return gestureTypingPathTracker.isInGestureTyping();
   }
 
   boolean canDoGestureTyping() {
-    return mKeyCodesInPathLength >= 1;
+    return gestureTypingPathTracker.canDoGestureTyping();
   }
 }

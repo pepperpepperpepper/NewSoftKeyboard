@@ -10,7 +10,7 @@ import android.widget.LinearLayout;
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 import androidx.viewpager.widget.ViewPager;
-import com.anysoftkeyboard.ime.InputViewActionsProvider;
+import com.anysoftkeyboard.keyboards.views.InputViewActionsProvider;
 import com.anysoftkeyboard.keyboards.views.OnKeyboardActionListener;
 import com.anysoftkeyboard.quicktextkeys.HistoryQuickTextKey;
 import com.anysoftkeyboard.quicktextkeys.QuickKeyHistoryRecords;

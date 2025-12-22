@@ -12,9 +12,9 @@ import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.PresagePredictionManager;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelCatalog;
 import com.anysoftkeyboard.dictionaries.presage.PresageModelCatalog.CatalogEntry;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelDefinition;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelDownloader;
-import com.anysoftkeyboard.dictionaries.presage.PresageModelStore;
+import com.anysoftkeyboard.engine.models.ModelDefinition;
+import com.anysoftkeyboard.engine.models.ModelDownloader;
+import com.anysoftkeyboard.engine.models.ModelStore;
 import com.anysoftkeyboard.rx.RxSchedulers;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.Single;
@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import net.evendanan.pixel.UiUtils;
+import wtf.uhoh.newsoftkeyboard.engine.EngineType;
 
 public class PresageModelsFragment extends PreferenceFragmentCompat {
 
@@ -36,18 +37,18 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
 
   @NonNull private final CompositeDisposable mDisposables = new CompositeDisposable();
 
-  private PresageModelStore mModelStore;
+  private ModelStore mModelStore;
   private PresageModelCatalog mCatalog;
-  private PresageModelDownloader mDownloader;
+  private ModelDownloader mDownloader;
   @Nullable private PreferenceCategory mInstalledCategory;
   @Nullable private PreferenceCategory mAvailableCategory;
 
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     addPreferencesFromResource(R.xml.prefs_presage_models);
-    mModelStore = new PresageModelStore(requireContext());
+    mModelStore = new ModelStore(requireContext());
     mCatalog = new PresageModelCatalog(requireContext());
-    mDownloader = new PresageModelDownloader(requireContext(), mModelStore);
+    mDownloader = new ModelDownloader(requireContext(), mModelStore);
     mInstalledCategory = (PreferenceCategory) findPreference(KEY_INSTALLED_CATEGORY);
     mAvailableCategory = (PreferenceCategory) findPreference(KEY_AVAILABLE_CATEGORY);
   }
@@ -78,23 +79,29 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
     }
     mInstalledCategory.removeAll();
 
-    final List<PresageModelDefinition> definitions = mModelStore.listAvailableModels();
+    final List<ModelDefinition> definitions = mModelStore.listAvailableModels();
     if (definitions.isEmpty()) {
-      mInstalledCategory.addPreference(createInfoPreference(getString(R.string.presage_models_installed_empty)));
+      mInstalledCategory.addPreference(
+          createInfoPreference(getString(R.string.presage_models_installed_empty)));
       return;
     }
 
     Collections.sort(
         definitions,
-        (left, right) -> left.getLabel().toLowerCase(Locale.US).compareTo(right.getLabel().toLowerCase(Locale.US)));
+        (left, right) ->
+            left.getLabel()
+                .toLowerCase(Locale.US)
+                .compareTo(right.getLabel().toLowerCase(Locale.US)));
 
-    final java.util.EnumMap<PresageModelDefinition.EngineType, String> selectedIds =
-        new java.util.EnumMap<>(PresageModelDefinition.EngineType.class);
-    for (PresageModelDefinition.EngineType engineType :
-        PresageModelDefinition.EngineType.values()) {
+    final java.util.EnumMap<EngineType, String> selectedIds =
+        new java.util.EnumMap<>(EngineType.class);
+    for (EngineType engineType : EngineType.values()) {
+      if (engineType == EngineType.NONE) {
+        continue;
+      }
       selectedIds.put(engineType, mModelStore.getSelectedModelId(engineType));
     }
-    for (PresageModelDefinition definition : definitions) {
+    for (ModelDefinition definition : definitions) {
       final Preference preference = new Preference(requireContext());
       preference.setKey("installed_" + definition.getId());
       preference.setTitle(definition.getLabel());
@@ -143,7 +150,8 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
     mAvailableCategory.removeAll();
 
     if (entries.isEmpty()) {
-      mAvailableCategory.addPreference(createInfoPreference(getString(R.string.presage_models_available_empty)));
+      mAvailableCategory.addPreference(
+          createInfoPreference(getString(R.string.presage_models_available_empty)));
       return;
     }
 
@@ -181,8 +189,7 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
     mAvailableCategory.removeAll();
     final Preference errorPreference =
         createInfoPreference(
-            getString(
-                R.string.presage_models_catalog_error_detail, safeErrorMessage(throwable)));
+            getString(R.string.presage_models_catalog_error_detail, safeErrorMessage(throwable)));
     errorPreference.setTitle(R.string.presage_models_catalog_error);
     mAvailableCategory.addPreference(errorPreference);
   }
@@ -213,7 +220,7 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
   }
 
   private void showInstalledModelOptions(
-      @NonNull PresageModelDefinition definition, boolean alreadySelected) {
+      @NonNull ModelDefinition definition, boolean alreadySelected) {
     final List<CharSequence> options = new ArrayList<>();
     final List<Integer> actions = new ArrayList<>();
     if (!alreadySelected) {
@@ -230,8 +237,7 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
             (dialog, which) -> {
               final int action = actions.get(which);
               if (action == 0) {
-                mModelStore.persistSelectedModelId(
-                    definition.getEngineType(), definition.getId());
+                mModelStore.persistSelectedModelId(definition.getEngineType(), definition.getId());
                 stagePresageConfigurationAsync();
                 refreshInstalledModels();
                 fetchCatalog();
@@ -254,9 +260,9 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
   }
 
   private Set<String> collectInstalledIds() {
-    final List<PresageModelDefinition> definitions = mModelStore.listAvailableModels();
+    final List<ModelDefinition> definitions = mModelStore.listAvailableModels();
     final Set<String> ids = new HashSet<>();
-    for (PresageModelDefinition definition : definitions) {
+    for (ModelDefinition definition : definitions) {
       ids.add(definition.getId());
     }
     return ids;
@@ -299,7 +305,7 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
     return message;
   }
 
-  private String engineLabel(@NonNull PresageModelDefinition.EngineType engineType) {
+  private String engineLabel(@NonNull EngineType engineType) {
     switch (engineType) {
       case NEURAL:
         return getString(R.string.presage_models_engine_neural);
@@ -324,8 +330,7 @@ public class PresageModelsFragment extends PreferenceFragmentCompat {
                 errorMessage -> {
                   if (errorMessage != null) {
                     Logger.w(
-                        TAG,
-                        "Failed staging Presage config after model switch: " + errorMessage);
+                        TAG, "Failed staging Presage config after model switch: " + errorMessage);
                   }
                 },
                 throwable ->

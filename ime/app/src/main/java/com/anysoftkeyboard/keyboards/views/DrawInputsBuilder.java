@@ -4,6 +4,7 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.overlay.ThemeOverlayCombiner;
 import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
@@ -35,6 +36,7 @@ final class DrawInputsBuilder {
       Canvas canvas,
       Rect dirtyRect,
       AnyKeyboard keyboard,
+      CharSequence keyboardName,
       Keyboard.Key[] keys,
       @Nullable Keyboard.Key invalidKey,
       Rect clipRegion,
@@ -76,6 +78,8 @@ final class DrawInputsBuilder {
             canvas, invalidKey, clipRegion, paddingLeft, paddingTop);
 
     return new DrawInputs(
+        keyboard,
+        keyboardName,
         keyboardNameHintController.shouldShowKeyboardName() && keyboardNameTextSize > 1f,
         hintTextSize > 1 && keyboardNameHintController.shouldShowHints(),
         keyboard != null && keyboard.isShifted(),
@@ -103,6 +107,7 @@ final class DrawInputsBuilder {
         textCaseForceOverrideType,
         textCaseType,
         keyDetector,
-        keyTextSize);
+        keyTextSize,
+        drawableStatesProvider);
   }
 }

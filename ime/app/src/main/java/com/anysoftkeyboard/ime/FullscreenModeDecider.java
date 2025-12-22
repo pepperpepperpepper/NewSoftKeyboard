@@ -3,9 +3,7 @@ package com.anysoftkeyboard.ime;
 import android.content.res.Configuration;
 import android.view.inputmethod.EditorInfo;
 
-/**
- * Encapsulates the logic for determining whether to enter fullscreen/extract mode.
- */
+/** Encapsulates the logic for determining whether to enter fullscreen/extract mode. */
 public final class FullscreenModeDecider {
 
   public boolean shouldUseFullscreen(

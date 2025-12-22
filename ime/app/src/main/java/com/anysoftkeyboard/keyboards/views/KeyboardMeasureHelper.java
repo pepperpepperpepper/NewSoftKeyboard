@@ -12,7 +12,8 @@ import com.anysoftkeyboard.keyboards.AnyKeyboard;
  */
 final class KeyboardMeasureHelper {
 
-  int calculateWidth(AnyKeyboard keyboard, int paddingLeft, int paddingRight, int widthMeasureSpec) {
+  int calculateWidth(
+      AnyKeyboard keyboard, int paddingLeft, int paddingRight, int widthMeasureSpec) {
     int width = keyboard.getMinWidth() + paddingLeft + paddingRight;
     final int specWidth = getSize(widthMeasureSpec);
     if (specWidth < width + 10) {

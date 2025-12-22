@@ -42,8 +42,7 @@ public class SuggestionsProviderPresageTest {
     clearPresageDirectoriesAndPrefs();
     stageTestModel();
     mSuggestionsProvider = new SuggestionsProvider(getApplicationContext());
-    SharedPrefsHelper.setPrefsValue(
-        R.string.settings_key_prediction_engine_mode, "ngram");
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_prediction_engine_mode, "ngram");
     TestRxSchedulers.drainAllTasks();
   }
 
@@ -67,8 +66,7 @@ public class SuggestionsProviderPresageTest {
     assertTrue(
         "Presage config path should point to the staged file.",
         PresageNativeShadow.getLastModelPath().endsWith("presage/presage_ngram.xml"));
-    assertArrayEquals(
-        new String[] {"hello"}, PresageNativeShadow.getLastContextProvided());
+    assertArrayEquals(new String[] {"hello"}, PresageNativeShadow.getLastContextProvided());
     assertEquals("Expected a single suggestion from Presage.", 1, suggestions.size());
     assertEquals("hello-next", suggestions.get(0));
     assertFalse("Presage session should remain open for reuse.", PresageNativeShadow.wasClosed());
@@ -95,8 +93,7 @@ public class SuggestionsProviderPresageTest {
 
     final SharedPreferences selectionPrefs =
         context.getSharedPreferences("presage_model_selection", Context.MODE_PRIVATE);
-    assertEquals(
-        "test-model", selectionPrefs.getString("selected_model_id_presage_ngram", ""));
+    assertEquals("test-model", selectionPrefs.getString("selected_model_id_presage_ngram", ""));
   }
 
   @Implements(PresageNative.class)
@@ -147,8 +144,7 @@ public class SuggestionsProviderPresageTest {
     }
 
     @Implementation
-    protected static float scoreSequence(
-        long handle, String[] context, String candidate) {
+    protected static float scoreSequence(long handle, String[] context, String candidate) {
       sLastContext = context == null ? new String[0] : context.clone();
       if (candidate == null) return 0f;
       return candidate.hashCode() % 10;
@@ -159,9 +155,7 @@ public class SuggestionsProviderPresageTest {
       sLastContext = context == null ? new String[0] : context.clone();
       if (maxResults <= 0) return new String[0];
       final String suggestion =
-          sLastContext.length == 0
-              ? "fallback"
-              : sLastContext[sLastContext.length - 1] + "-next";
+          sLastContext.length == 0 ? "fallback" : sLastContext[sLastContext.length - 1] + "-next";
       return new String[] {suggestion};
     }
   }
@@ -198,8 +192,8 @@ public class SuggestionsProviderPresageTest {
   private void stageTestModel() {
     final Context context = getApplicationContext();
     final File modelDir =
-        new File(new File(new File(context.getNoBackupFilesDir(), "presage"), "models"),
-            "test-model");
+        new File(
+            new File(new File(context.getNoBackupFilesDir(), "presage"), "models"), "test-model");
     deleteRecursively(modelDir);
     if (!modelDir.mkdirs()) {
       throw new AssertionError("Failed to create test model directory at " + modelDir);

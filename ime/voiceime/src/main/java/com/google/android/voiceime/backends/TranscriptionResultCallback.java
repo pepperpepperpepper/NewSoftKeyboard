@@ -21,9 +21,9 @@ import androidx.annotation.NonNull;
 /** Result callback for speech-to-text transcription. */
 public interface TranscriptionResultCallback {
 
-    void onTranscriptionStarted();
+  void onTranscriptionStarted();
 
-    void onSuccess(@NonNull String text);
+  void onSuccess(@NonNull String text);
 
-    void onError(@NonNull String errorMessage);
+  void onError(@NonNull String errorMessage);
 }

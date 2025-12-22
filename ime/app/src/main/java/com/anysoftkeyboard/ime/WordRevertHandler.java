@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.ime;
 
 import android.view.KeyEvent;
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 
@@ -9,7 +8,7 @@ import com.anysoftkeyboard.dictionaries.WordComposer;
 final class WordRevertHandler {
 
   interface Host {
-    InputConnection currentInputConnection();
+    InputConnectionRouter inputConnectionRouter();
 
     int getCursorPosition();
 
@@ -35,19 +34,19 @@ final class WordRevertHandler {
 
     final int length = autoCorrectState.wordRevertLength;
     predictionState.autoCorrectOn = false;
-    final InputConnection ic = host.currentInputConnection();
-    if (ic == null) {
+    final InputConnectionRouter inputConnectionRouter = host.inputConnectionRouter();
+    if (!inputConnectionRouter.hasConnection()) {
       autoCorrectState.wordRevertLength = 0;
       return new Result(currentWord, previousWord);
     }
 
     final int globalCursorPosition = host.getCursorPosition();
-    ic.setComposingRegion(globalCursorPosition - length, globalCursorPosition);
+    inputConnectionRouter.setComposingRegion(globalCursorPosition - length, globalCursorPosition);
     WordComposer newCurrentWord = previousWord;
     WordComposer newPreviousWord = currentWord;
     autoCorrectState.wordRevertLength = 0;
     final CharSequence typedWord = newCurrentWord.getTypedWord();
-    ic.setComposingText(typedWord, 1);
+    inputConnectionRouter.setComposingText(typedWord, 1);
     host.performUpdateSuggestions();
     if (autoCorrectState.justAutoAddedWord) {
       host.removeFromUserDictionary(typedWord.toString());

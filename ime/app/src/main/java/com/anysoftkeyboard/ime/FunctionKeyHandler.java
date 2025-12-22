@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
@@ -13,8 +12,8 @@ public final class FunctionKeyHandler {
   private static final String TAG = "NSKFunctionKeyHandler";
 
   public interface Host {
-    @Nullable
-    InputConnection currentInputConnection();
+    @NonNull
+    InputConnectionRouter inputConnectionRouter();
 
     boolean isFunctionKeyActive();
 
@@ -24,7 +23,7 @@ public final class FunctionKeyHandler {
 
     boolean shouldBackWordDelete();
 
-    void handleBackWord(@NonNull InputConnection ic);
+    void handleBackWord();
 
     void handleDeleteLastCharacter();
 
@@ -34,7 +33,7 @@ public final class FunctionKeyHandler {
 
     void sendSyntheticPressAndRelease(int primaryCode);
 
-    void handleForwardDelete(@NonNull InputConnection ic);
+    void handleForwardDelete();
 
     void abortCorrectionAndResetPredictionState(boolean disabledUntilNextInputStart);
 
@@ -70,7 +69,9 @@ public final class FunctionKeyHandler {
     void handleEmojiSearchRequest();
 
     void handleClipboardOperation(
-        @Nullable Keyboard.Key key, int primaryCode, @NonNull InputConnection ic);
+        @Nullable Keyboard.Key key,
+        int primaryCode,
+        @NonNull InputConnectionRouter inputConnectionRouter);
 
     void handleMediaInsertionKey();
 
@@ -90,21 +91,26 @@ public final class FunctionKeyHandler {
     this.keyboardSwitchHandler = keyboardSwitchHandler;
   }
 
-  public void handle(final int primaryCode, @Nullable final Keyboard.Key key, final boolean fromUI) {
-    final InputConnection ic = host.currentInputConnection();
+  public void handle(
+      final int primaryCode, @Nullable final Keyboard.Key key, final boolean fromUI) {
+    final InputConnectionRouter inputConnectionRouter = host.inputConnectionRouter();
 
     if (navigationKeyHandler.handle(
-        primaryCode, ic, host.isFunctionKeyActive(), host.isFunctionKeyLocked(), host::consumeOneShotFunctionKey)) {
+        primaryCode,
+        inputConnectionRouter,
+        host.isFunctionKeyActive(),
+        host.isFunctionKeyLocked(),
+        host::consumeOneShotFunctionKey)) {
       return;
     }
 
     switch (primaryCode) {
       case KeyCodes.DELETE:
-        if (ic != null) {
+        if (inputConnectionRouter.hasConnection()) {
           // we do back-word if the shift is pressed while pressing
           // backspace (like in a PC)
           if (host.shouldBackWordDelete()) {
-            host.handleBackWord(ic);
+            host.handleBackWord();
           } else {
             host.handleDeleteLastCharacter();
           }
@@ -123,21 +129,21 @@ public final class FunctionKeyHandler {
         host.handleShift();
         break;
       case KeyCodes.DELETE_WORD:
-        if (ic != null) {
-          host.handleBackWord(ic);
+        if (inputConnectionRouter.hasConnection()) {
+          host.handleBackWord();
         }
         break;
       case KeyCodes.FORWARD_DELETE:
-        if (ic != null) {
-          host.handleForwardDelete(ic);
+        if (inputConnectionRouter.hasConnection()) {
+          host.handleForwardDelete();
         }
         break;
       case KeyCodes.CLEAR_INPUT:
-        if (ic != null) {
-          ic.beginBatchEdit();
+        if (inputConnectionRouter.hasConnection()) {
+          inputConnectionRouter.beginBatchEdit();
           host.abortCorrectionAndResetPredictionState(false);
-          ic.deleteSurroundingText(Integer.MAX_VALUE, Integer.MAX_VALUE);
-          ic.endBatchEdit();
+          inputConnectionRouter.deleteSurroundingText(Integer.MAX_VALUE, Integer.MAX_VALUE);
+          inputConnectionRouter.endBatchEdit();
         }
         break;
       case KeyCodes.CTRL:
@@ -183,15 +189,18 @@ public final class FunctionKeyHandler {
         host.showOptionsMenu();
         break;
       default:
-        if (keyboardSwitchHandler != null && keyboardSwitchHandler.handle(primaryCode, key, fromUI)) {
+        if (keyboardSwitchHandler != null
+            && keyboardSwitchHandler.handle(primaryCode, key, fromUI)) {
           break;
         }
-        handleOtherFunctionKey(primaryCode, key, ic);
+        handleOtherFunctionKey(primaryCode, key, inputConnectionRouter);
     }
   }
 
   private void handleOtherFunctionKey(
-      final int primaryCode, @Nullable final Keyboard.Key key, @Nullable final InputConnection ic) {
+      final int primaryCode,
+      @Nullable final Keyboard.Key key,
+      @NonNull final InputConnectionRouter inputConnectionRouter) {
     switch (primaryCode) {
       case KeyCodes.QUICK_TEXT:
         host.onQuickTextRequested(key);
@@ -210,8 +219,8 @@ public final class FunctionKeyHandler {
       case KeyCodes.CLIPBOARD_SELECT:
       case KeyCodes.UNDO:
       case KeyCodes.REDO:
-        if (ic != null) {
-          host.handleClipboardOperation(key, primaryCode, ic);
+        if (inputConnectionRouter.hasConnection()) {
+          host.handleClipboardOperation(key, primaryCode, inputConnectionRouter);
         }
         break;
       case KeyCodes.IMAGE_MEDIA_POPUP:

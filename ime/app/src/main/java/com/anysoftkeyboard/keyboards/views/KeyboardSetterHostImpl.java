@@ -54,7 +54,7 @@ class KeyboardSetterHostImpl implements KeyboardSetter.Host {
 
   @Override
   public void markKeyboardChanged() {
-    host.mKeyboardChanged = true;
+    host.markKeyboardChanged();
   }
 
   @Override

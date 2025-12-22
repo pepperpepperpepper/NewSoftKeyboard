@@ -7,7 +7,8 @@ import com.anysoftkeyboard.base.utils.Logger;
 import java.util.List;
 
 /**
- * Handles rendering the registered add-on UI cards into a container. Extracted to trim MainFragment.
+ * Handles rendering the registered add-on UI cards into a container. Extracted to trim
+ * MainFragment.
  */
 final class AddOnUICardPresenter {
 

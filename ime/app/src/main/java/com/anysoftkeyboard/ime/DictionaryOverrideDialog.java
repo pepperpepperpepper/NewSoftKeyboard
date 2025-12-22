@@ -51,7 +51,8 @@ public final class DictionaryOverrideDialog {
 
     final CharSequence[] items = new CharSequence[allBuildersUnsorted.size()];
     final boolean[] checked = new boolean[items.length];
-    final List<DictionaryAddOnAndBuilder> sortedAllBuilders = new ArrayList<>(allBuildersUnsorted.size());
+    final List<DictionaryAddOnAndBuilder> sortedAllBuilders =
+        new ArrayList<>(allBuildersUnsorted.size());
 
     sortedAllBuilders.addAll(buildersForKeyboard);
     for (DictionaryAddOnAndBuilder builder : allBuildersUnsorted) {
@@ -71,9 +72,7 @@ public final class DictionaryOverrideDialog {
     }
 
     host.showOptionsDialogWithData(
-        host
-            .getContext()
-            .getString(R.string.override_dictionary_title, keyboard.getKeyboardName()),
+        host.getContext().getString(R.string.override_dictionary_title, keyboard.getKeyboardName()),
         R.drawable.ic_settings_language,
         items,
         (dialog, which) -> {
@@ -104,7 +103,8 @@ public final class DictionaryOverrideDialog {
                 });
             builder.setNeutralButton(
                 R.string.clear_all_dictionary_override,
-                (dialogInterface, i) -> factory.setBuildersForKeyboard(keyboard, Collections.emptyList()));
+                (dialogInterface, i) ->
+                    factory.setBuildersForKeyboard(keyboard, Collections.emptyList()));
           }
         });
   }

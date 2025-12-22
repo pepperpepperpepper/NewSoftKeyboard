@@ -26,14 +26,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.StringRes;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
+import com.anysoftkeyboard.addons.SingleAddOnsFactory;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
-import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import java.util.Locale;
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 
-public class KeyboardExtensionFactory extends AddOnsFactory.SingleAddOnsFactory<KeyboardExtension> {
+public class KeyboardExtensionFactory extends SingleAddOnsFactory<KeyboardExtension> {
 
   protected static final String BASE_PREF_ID_PREFIX = "ext_kbd_enabled_";
 

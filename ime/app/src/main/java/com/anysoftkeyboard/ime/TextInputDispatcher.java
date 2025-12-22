@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.WordComposer;
 import com.anysoftkeyboard.keyboards.Keyboard;
@@ -10,7 +9,7 @@ import com.menny.android.anysoftkeyboard.BuildConfig;
 final class TextInputDispatcher {
 
   interface Host {
-    InputConnection currentInputConnection();
+    InputConnectionRouter inputConnectionRouter();
 
     WordComposer currentWord();
 
@@ -44,22 +43,22 @@ final class TextInputDispatcher {
 
   void onText(CharSequence text, Host host, String logTag) {
     Logger.d(logTag, "onText: '%s'", text);
-    InputConnection ic = host.currentInputConnection();
-    if (ic == null) {
+    final InputConnectionRouter router = host.inputConnectionRouter();
+    if (router.current() == null) {
       return;
     }
-    ic.beginBatchEdit();
+    router.beginBatchEdit();
 
     final WordComposer initialWordComposer = new WordComposer();
     host.currentWord().cloneInto(initialWordComposer);
     host.abortCorrectionAndResetPredictionState(false);
-    ic.commitText(text, 1);
+    router.commitText(text, 1);
 
     final AutoCorrectState state = host.autoCorrectState();
     state.wordRevertLength = initialWordComposer.charCount() + text.length();
     host.setPreviousWord(initialWordComposer);
     host.markExpectingSelectionUpdate();
-    ic.endBatchEdit();
+    router.endBatchEdit();
   }
 
   void onTyping(Keyboard.Key key, CharSequence text, Host host, String logTag) {
@@ -70,8 +69,8 @@ final class TextInputDispatcher {
         text,
         new TypingSimulator.Host() {
           @Override
-          public InputConnection currentInputConnection() {
-            return host.currentInputConnection();
+          public InputConnectionRouter inputConnectionRouter() {
+            return host.inputConnectionRouter();
           }
 
           @Override

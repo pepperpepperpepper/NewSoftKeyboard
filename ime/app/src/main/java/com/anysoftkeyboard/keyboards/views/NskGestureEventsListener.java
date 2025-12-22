@@ -72,10 +72,12 @@ class NskGestureEventsListener implements AskOnGestureListener {
           Logger.v(TAG, "Scroll broke the distance barrier");
           mKeyboardView.disableTouchesTillFingersAreUp();
           if (e2.getX() > e1.getX()) {
-            mKeyboardView.getOnKeyboardActionListener()
+            mKeyboardView
+                .getOnKeyboardActionListener()
                 .onSwipeRight(mKeyboardView.isAtTwoFingersState());
           } else {
-            mKeyboardView.getOnKeyboardActionListener()
+            mKeyboardView
+                .getOnKeyboardActionListener()
                 .onSwipeLeft(mKeyboardView.isAtTwoFingersState());
           }
           return true;

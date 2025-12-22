@@ -11,6 +11,18 @@ import io.reactivex.disposables.Disposable;
 /** A generic RX chain to load AnySoftKeyboard's dictionary object. */
 public final class DictionaryBackgroundLoader {
 
+  public static final Listener SILENT_LISTENER =
+      new Listener() {
+        @Override
+        public void onDictionaryLoadingStarted(Dictionary dictionary) {}
+
+        @Override
+        public void onDictionaryLoadingDone(Dictionary dictionary) {}
+
+        @Override
+        public void onDictionaryLoadingFailed(Dictionary dictionary, Throwable exception) {}
+      };
+
   public static final Listener NO_OP_LISTENER =
       new Listener() {
         @Override

@@ -1,6 +1,7 @@
 # NewSoftKeyboard
 
 NewSoftKeyboard is a refactored fork of AnySoftKeyboard with:
+
 - Downloadable next-word engines (Presage n‑gram, ONNX neural) and a catalog-driven model flow.
 - Whisper-based voice input (bring your own API key).
 - Runtime compatibility with existing ASK add-ons (keyboards, dictionaries, themes, quick‑text).
@@ -9,8 +10,9 @@ NewSoftKeyboard is a refactored fork of AnySoftKeyboard with:
 This repo is the active source of truth for NewSoftKeyboard; legacy ASK badges and store links were removed to avoid confusion.
 
 Quick links
+
 - Build and test: see `BUILDING.md`.
-- Refactor roadmap: `docs/newsoftkeyboard-refactor-plan.md`.
+- Refactor roadmap + architecture: `plan.md`.
 - Neural/suggestions progress: `suggestions-progress.md`.
 - F-Droid: see `FDROID_PUBLISHING.md` and run `fdroid/scripts/publish.sh`.
 

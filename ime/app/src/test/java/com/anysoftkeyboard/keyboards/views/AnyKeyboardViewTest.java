@@ -10,8 +10,8 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.ArgumentMatchers.same;
 
 import android.app.Application;
 import android.content.Context;
@@ -31,6 +31,7 @@ import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import com.anysoftkeyboard.ViewTestUtils;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.extradraw.ExtraDraw;
 import com.anysoftkeyboard.test.SharedPrefsHelper;
@@ -782,7 +783,10 @@ public class AnyKeyboardViewTest extends AnyKeyboardViewWithMiniKeyboardTest {
         getApplicationContext().getResources().getDimensionPixelOffset(R.dimen.watermark_margin);
     final int y = mViewUnderTest.getHeight() - dimen - margin;
     final Keyboard.Key lastKey =
-        mViewUnderTest.getKeyboard().getKeys().get(mViewUnderTest.getKeyboard().getKeys().size() - 1);
+        mViewUnderTest
+            .getKeyboard()
+            .getKeys()
+            .get(mViewUnderTest.getKeyboard().getKeys().size() - 1);
     final int x = Keyboard.Key.getEndX(lastKey); // location of the edge of the last key
     final InOrder inOrder = Mockito.inOrder(canvas);
 

@@ -30,7 +30,8 @@ class PointerTrackerAccessor {
   }
 
   @Nullable
-  PointerTracker get(int id, @Nullable Keyboard.Key[] keys, @Nullable OnKeyboardActionListener listener) {
+  PointerTracker get(
+      int id, @Nullable Keyboard.Key[] keys, @Nullable OnKeyboardActionListener listener) {
     final PointerTracker tracker = registry.get(id);
     wire(tracker, keys, listener);
     return tracker;
@@ -53,7 +54,10 @@ class PointerTrackerAccessor {
     registry.forEach(tracker -> tracker.setOnKeyboardActionListener(listener));
   }
 
-  private void wire(PointerTracker tracker, @Nullable Keyboard.Key[] keys, @Nullable OnKeyboardActionListener listener) {
+  private void wire(
+      PointerTracker tracker,
+      @Nullable Keyboard.Key[] keys,
+      @Nullable OnKeyboardActionListener listener) {
     if (keys != null) {
       tracker.setKeyboard(keys);
     }

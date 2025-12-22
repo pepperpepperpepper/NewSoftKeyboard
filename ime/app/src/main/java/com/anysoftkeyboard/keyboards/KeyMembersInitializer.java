@@ -109,4 +109,3 @@ final class KeyMembersInitializer {
     return !key.repeatable && key.getPrimaryCode() > 0;
   }
 }
-

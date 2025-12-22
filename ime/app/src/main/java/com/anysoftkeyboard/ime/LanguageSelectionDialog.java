@@ -1,9 +1,9 @@
 package com.anysoftkeyboard.ime;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.view.inputmethod.EditorInfo;
-import android.content.DialogInterface;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.keyboards.KeyboardAddOnAndBuilder;
 import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
@@ -21,7 +21,10 @@ public final class LanguageSelectionDialog {
     KeyboardSwitcher getKeyboardSwitcher();
 
     void showOptionsDialogWithData(
-        int titleResId, int iconResId, CharSequence[] items, DialogInterface.OnClickListener listener);
+        int titleResId,
+        int iconResId,
+        CharSequence[] items,
+        DialogInterface.OnClickListener listener);
 
     EditorInfo getCurrentInputEditorInfo();
 
@@ -29,7 +32,8 @@ public final class LanguageSelectionDialog {
   }
 
   public static void show(Host host) {
-    List<KeyboardAddOnAndBuilder> builders = host.getKeyboardSwitcher().getEnabledKeyboardsBuilders();
+    List<KeyboardAddOnAndBuilder> builders =
+        host.getKeyboardSwitcher().getEnabledKeyboardsBuilders();
     ArrayList<CharSequence> keyboardsIds = new ArrayList<>();
     ArrayList<CharSequence> keyboards = new ArrayList<>();
     for (KeyboardAddOnAndBuilder keyboardBuilder : builders) {
@@ -43,7 +47,8 @@ public final class LanguageSelectionDialog {
     keyboards.toArray(items);
     final String SETTINGS_ID = "NSK_LANG_SETTINGS_ID";
     ids[ids.length - 1] = SETTINGS_ID;
-    items[ids.length - 1] = host.getContext().getText(R.string.setup_wizard_step_three_action_languages);
+    items[ids.length - 1] =
+        host.getContext().getText(R.string.setup_wizard_step_three_action_languages);
 
     host.showOptionsDialogWithData(
         R.string.select_keyboard_popup_title,
@@ -54,8 +59,7 @@ public final class LanguageSelectionDialog {
           Logger.d("LanguageSelection", "User selected '%s' with id %s", items[position], id);
           EditorInfo currentEditorInfo = host.getCurrentInputEditorInfo();
           if (SETTINGS_ID.equals(id.toString())) {
-            host
-                .getContext()
+            host.getContext()
                 .startActivity(
                     new Intent(
                             Intent.ACTION_VIEW,

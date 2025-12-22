@@ -22,7 +22,8 @@ public class ShiftStateSmokeTest extends AnySoftKeyboardBaseTest {
     Mockito.clearInvocations(mAnySoftKeyboardUnderTest.getSpiedKeyboardView());
     EditorInfo editorInfo = createEditorInfoWithCaps(TextUtils.CAP_MODE_WORDS);
     simulateOnStartInputFlow(false, editorInfo);
-    Assert.assertTrue(mAnySoftKeyboardUnderTest.getCurrentKeyboardForTests().keyboardSupportShift());
+    Assert.assertTrue(
+        mAnySoftKeyboardUnderTest.getCurrentKeyboardForTests().keyboardSupportShift());
     Assert.assertTrue(mAnySoftKeyboardUnderTest.getCurrentKeyboardForTests().isShifted());
     Mockito.verify(mAnySoftKeyboardUnderTest.getSpiedKeyboardView(), Mockito.atLeastOnce())
         .setShifted(true);

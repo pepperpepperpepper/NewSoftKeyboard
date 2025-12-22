@@ -69,9 +69,7 @@ final class NextWordPreferenceSummaries {
       case "hybrid":
         return hybridNgramLabel != null && hybridNeuralLabel != null
             ? context.getString(
-                R.string.prediction_engine_summary_hybrid_dual,
-                hybridNgramLabel,
-                hybridNeuralLabel)
+                R.string.prediction_engine_summary_hybrid_dual, hybridNgramLabel, hybridNeuralLabel)
             : context.getString(R.string.prediction_engine_summary_missing_model);
       case "neural":
         return neuralLabel != null
@@ -114,9 +112,7 @@ final class NextWordPreferenceSummaries {
   }
 
   private static CharSequence buildNeuralFailureSummary(
-      @NonNull Context context,
-      @NonNull NeuralFailureStatus status,
-      @NonNull String currentMode) {
+      @NonNull Context context, @NonNull NeuralFailureStatus status, @NonNull String currentMode) {
     final CharSequence reason = buildNeuralFailureReason(context, status);
     if ("neural".equals(currentMode) || "hybrid".equals(currentMode)) {
       return context.getString(R.string.prediction_engine_summary_neural_failure, reason);

@@ -68,8 +68,7 @@ public class EmojiSearchOverlay {
 
   public EmojiSearchOverlay(@NonNull Context context) {
     mContext = context;
-    mContentView =
-        LayoutInflater.from(context).inflate(R.layout.emoji_search_overlay, null, false);
+    mContentView = LayoutInflater.from(context).inflate(R.layout.emoji_search_overlay, null, false);
     mQueryView = mContentView.findViewById(R.id.emoji_search_query);
     mEmptyView = mContentView.findViewById(R.id.emoji_search_empty);
     mResultsView = mContentView.findViewById(R.id.emoji_search_results);

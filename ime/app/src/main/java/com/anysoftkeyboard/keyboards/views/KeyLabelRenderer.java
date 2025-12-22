@@ -11,9 +11,7 @@ import android.text.TextPaint;
 import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
 import com.anysoftkeyboard.utils.EmojiUtils;
 
-/**
- * Handles drawing of key labels (main text) to keep {@link AnyKeyboardViewBase#onDraw} smaller.
- */
+/** Handles drawing of key labels (main text) to keep {@link AnyKeyboardViewBase#onDraw} smaller. */
 final class KeyLabelRenderer {
 
   interface KeyTextPaintSetter {
@@ -72,8 +70,7 @@ final class KeyLabelRenderer {
 
     final float centerY =
         keyBackgroundPadding.top
-            + ((float)
-                    (key.height - keyBackgroundPadding.top - keyBackgroundPadding.bottom)
+            + ((float) (key.height - keyBackgroundPadding.top - keyBackgroundPadding.bottom)
                 / (keyIsSpace ? 3 : 2));
 
     final float textX =
@@ -85,7 +82,8 @@ final class KeyLabelRenderer {
     final boolean labelHasSpans =
         label instanceof Spanned
             && ((Spanned) label).getSpans(0, label.length(), Object.class).length > 0;
-    final boolean shouldUseStaticLayout = (label.length() > 1 && !alwaysUseDrawText) || labelHasSpans;
+    final boolean shouldUseStaticLayout =
+        (label.length() > 1 && !alwaysUseDrawText) || labelHasSpans;
     if (shouldUseStaticLayout) {
       final int layoutWidth = Math.max(1, (int) Math.ceil(textWidth));
       textY = centerY - ((labelHeight - paint.descent()) / 2);
@@ -93,13 +91,7 @@ final class KeyLabelRenderer {
       canvas.translate(translateX, textY);
       StaticLayout labelText =
           new StaticLayout(
-              label,
-              new TextPaint(paint),
-              layoutWidth,
-              Alignment.ALIGN_NORMAL,
-              1.0f,
-              0.0f,
-              false);
+              label, new TextPaint(paint), layoutWidth, Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
       labelText.draw(canvas);
     } else {
       textY = centerY + ((labelHeight - paint.descent()) / 2);

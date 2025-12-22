@@ -2,12 +2,16 @@ package com.anysoftkeyboard.keyboards.views;
 
 import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
+import com.anysoftkeyboard.keyboards.AnyKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
 import java.util.Locale;
 
 /** Snapshot of per-frame draw inputs to keep {@link AnyKeyboardViewBase#onDraw} slim. */
 final class DrawInputs {
+  final AnyKeyboard keyboard;
+  final CharSequence keyboardName;
   final boolean drawKeyboardNameText;
   final boolean drawHintText;
   final boolean keyboardShifted;
@@ -36,8 +40,11 @@ final class DrawInputs {
   final int textCaseType;
   final KeyDetector keyDetector;
   final float keyTextSize;
+  final KeyDrawableStateProvider drawableStatesProvider;
 
   DrawInputs(
+      AnyKeyboard keyboard,
+      CharSequence keyboardName,
       boolean drawKeyboardNameText,
       boolean drawHintText,
       boolean keyboardShifted,
@@ -65,7 +72,10 @@ final class DrawInputs {
       int textCaseForceOverrideType,
       int textCaseType,
       KeyDetector keyDetector,
-      float keyTextSize) {
+      float keyTextSize,
+      KeyDrawableStateProvider drawableStatesProvider) {
+    this.keyboard = keyboard;
+    this.keyboardName = keyboardName;
     this.drawKeyboardNameText = drawKeyboardNameText;
     this.drawHintText = drawHintText;
     this.keyboardShifted = keyboardShifted;
@@ -94,5 +104,6 @@ final class DrawInputs {
     this.textCaseType = textCaseType;
     this.keyDetector = keyDetector;
     this.keyTextSize = keyTextSize;
+    this.drawableStatesProvider = drawableStatesProvider;
   }
 }

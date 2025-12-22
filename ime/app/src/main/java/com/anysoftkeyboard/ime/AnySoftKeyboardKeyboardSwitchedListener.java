@@ -27,12 +27,15 @@ import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.KeyboardAddOnAndBuilder;
+import com.anysoftkeyboard.keyboards.KeyboardSwitchedListener;
 import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
+import com.anysoftkeyboard.keyboards.NextKeyboardType;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import java.util.List;
 
 public abstract class AnySoftKeyboardKeyboardSwitchedListener extends AnySoftKeyboardRxPrefs
-    implements KeyboardSwitcher.KeyboardSwitchedListener {
+    implements KeyboardSwitchedListener {
 
   private KeyboardSwitcher mKeyboardSwitcher;
   @Nullable private AnyKeyboard mCurrentAlphabetKeyboard;
@@ -175,7 +178,7 @@ public abstract class AnySoftKeyboardKeyboardSwitchedListener extends AnySoftKey
     }
 
     if (shouldConsumeSubtypeChangedEvent(newSubtypeExtraValue)) {
-      mKeyboardSwitcher.nextAlphabetKeyboard(getCurrentInputEditorInfo(), newSubtypeExtraValue);
+      mKeyboardSwitcher.nextAlphabetKeyboard(currentInputEditorInfo(), newSubtypeExtraValue);
     }
   }
 
@@ -231,8 +234,7 @@ public abstract class AnySoftKeyboardKeyboardSwitchedListener extends AnySoftKey
           && mLastPrimaryInNonAlphabetKeyboard != 0
           && mLastPrimaryInNonAlphabetKeyboard != KeyCodes.SPACE) {
         Logger.d(TAG, "SPACE while in symbols mode");
-        getKeyboardSwitcher()
-            .nextKeyboard(getCurrentInputEditorInfo(), KeyboardSwitcher.NextKeyboardType.Alphabet);
+        getKeyboardSwitcher().nextKeyboard(currentInputEditorInfo(), NextKeyboardType.Alphabet);
       }
     }
 

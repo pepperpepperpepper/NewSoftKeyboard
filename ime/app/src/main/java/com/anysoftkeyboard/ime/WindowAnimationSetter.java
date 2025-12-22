@@ -16,7 +16,8 @@ public final class WindowAnimationSetter {
         .subscribe(
             animationsLevel -> {
               final int fancyAnimation =
-                  context.getResources()
+                  context
+                      .getResources()
                       .getIdentifier("Animation_InputMethodFancy", "style", "android");
               if (window == null) return;
 

@@ -31,4 +31,3 @@ public class NskV19GestureDetector extends NskV8GestureDetector {
     mScaleGestureDetector.setQuickScaleEnabled(false);
   }
 }
-

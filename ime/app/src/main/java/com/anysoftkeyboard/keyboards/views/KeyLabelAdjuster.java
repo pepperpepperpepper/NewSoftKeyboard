@@ -48,7 +48,8 @@ final class KeyLabelAdjuster {
       int textCaseType,
       @NonNull AnyKey key) {
     CharSequence label = key.label;
-    if (isShiftedAccordingToCaseType(textCaseForceOverrideType, textCaseType, keyboard.isShifted())) {
+    if (isShiftedAccordingToCaseType(
+        textCaseForceOverrideType, textCaseType, keyboard.isShifted())) {
       if (!TextUtils.isEmpty(key.shiftedKeyLabel)) {
         return key.shiftedKeyLabel;
       } else if (key.shiftedText != null) {
@@ -60,7 +61,9 @@ final class KeyLabelAdjuster {
                     key.getCodeAtIndex(
                         0,
                         isShiftedAccordingToCaseType(
-                            textCaseForceOverrideType, textCaseType, keyDetector.isKeyShifted(key))));
+                            textCaseForceOverrideType,
+                            textCaseType,
+                            keyDetector.isKeyShifted(key))));
       }
       // remembering for next time
       if (key.isShiftCodesAlways()) key.shiftedKeyLabel = label;

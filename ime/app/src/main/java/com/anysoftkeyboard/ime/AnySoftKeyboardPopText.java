@@ -22,6 +22,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.views.AnyKeyboardViewWithExtraDraw;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
 import com.anysoftkeyboard.keyboards.views.extradraw.PopTextExtraDraw;
 import com.anysoftkeyboard.rx.GenericOnError;
 import com.menny.android.anysoftkeyboard.R;

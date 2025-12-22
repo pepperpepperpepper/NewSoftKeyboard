@@ -23,7 +23,7 @@ public class AddOnsFactoryTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testMustSupplyPrefix() throws Exception {
-    new AddOnsFactory.SingleAddOnsFactory<TestAddOn>(
+    new SingleAddOnsFactory<TestAddOn>(
         getApplicationContext(),
         SharedPrefsHelper.getSharedPreferences(),
         "ASK_KT",
@@ -59,7 +59,7 @@ public class AddOnsFactoryTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testMustSupplyBuiltInAddOnsList() throws Exception {
-    new AddOnsFactory.SingleAddOnsFactory<TestAddOn>(
+    new SingleAddOnsFactory<TestAddOn>(
         getApplicationContext(),
         SharedPrefsHelper.getSharedPreferences(),
         "ASK_KT",
@@ -95,8 +95,8 @@ public class AddOnsFactoryTest {
 
   @Test(expected = IllegalStateException.class)
   public void testMustSupplyNoneEmptyBuiltIns() throws Exception {
-    AddOnsFactory.SingleAddOnsFactory<TestAddOn> singleAddOnsFactory =
-        new AddOnsFactory.SingleAddOnsFactory<>(
+    SingleAddOnsFactory<TestAddOn> singleAddOnsFactory =
+        new SingleAddOnsFactory<>(
             getApplicationContext(),
             SharedPrefsHelper.getSharedPreferences(),
             "ASK_KT",
@@ -112,20 +112,21 @@ public class AddOnsFactoryTest {
 
           @Override
           public void setAddOnEnabled(String addOnId, boolean enabled) {}
-      @Override
-      protected TestAddOn createConcreteAddOn(
-          Context askContext,
-          Context context,
-          int apiVersion,
-          CharSequence prefId,
-          CharSequence name,
-          CharSequence description,
-          boolean isHidden,
-          int sortIndex,
-          boolean hasUICard,
-          AttributeSet attrs) {
-        return null;
-      }
+
+          @Override
+          protected TestAddOn createConcreteAddOn(
+              Context askContext,
+              Context context,
+              int apiVersion,
+              CharSequence prefId,
+              CharSequence name,
+              CharSequence description,
+              boolean isHidden,
+              int sortIndex,
+              boolean hasUICard,
+              AttributeSet attrs) {
+            return null;
+          }
         };
 
     Assert.assertNotNull(singleAddOnsFactory.getAllAddOns());
@@ -184,7 +185,7 @@ public class AddOnsFactoryTest {
   @Test
   public void testUICardDetectionFromXml() throws Exception {
     final TestableAddOnsFactory factory = new TestableAddOnsFactory(true);
-    
+
     // Get specific add-ons to test UI card detection
     TestAddOn uiCardEnabled = factory.getAddOnById("3774f99e-fb4a-49fa-b8d0-4083f762254d");
     TestAddOn uiCardDisabled = factory.getAddOnById("4774f99e-fb4a-49fa-b8d0-4083f762254e");
@@ -192,15 +193,19 @@ public class AddOnsFactoryTest {
 
     // Test add-on with uiCard="true"
     Assert.assertNotNull(uiCardEnabled);
-    Assert.assertTrue("Add-on with uiCard=true should have UI card capability", uiCardEnabled.hasUICard());
+    Assert.assertTrue(
+        "Add-on with uiCard=true should have UI card capability", uiCardEnabled.hasUICard());
 
-    // Test add-on with uiCard="false"  
+    // Test add-on with uiCard="false"
     Assert.assertNotNull(uiCardDisabled);
-    Assert.assertFalse("Add-on with uiCard=false should not have UI card capability", uiCardDisabled.hasUICard());
+    Assert.assertFalse(
+        "Add-on with uiCard=false should not have UI card capability", uiCardDisabled.hasUICard());
 
     // Test add-on without uiCard attribute (should default to false)
     Assert.assertNotNull(uiCardNotSpecified);
-    Assert.assertFalse("Add-on without uiCard attribute should not have UI card capability", uiCardNotSpecified.hasUICard());
+    Assert.assertFalse(
+        "Add-on without uiCard attribute should not have UI card capability",
+        uiCardNotSpecified.hasUICard());
   }
 
   @Test
@@ -211,21 +216,26 @@ public class AddOnsFactoryTest {
 
     // Should have at least one UI card add-on (the one with uiCard="true")
     Assert.assertTrue("Should have at least one UI card add-on", uiCardAddOns.size() > 0);
-    
+
     // Should have fewer UI card add-ons than total add-ons
-    Assert.assertTrue("UI card add-ons should be subset of all add-ons", uiCardAddOns.size() <= allAddOns.size());
+    Assert.assertTrue(
+        "UI card add-ons should be subset of all add-ons", uiCardAddOns.size() <= allAddOns.size());
 
     // All UI card add-ons should have hasUICard() = true
     for (TestAddOn addOn : uiCardAddOns) {
-      Assert.assertTrue("All add-ons in UI card list should have UI card capability", addOn.hasUICard());
+      Assert.assertTrue(
+          "All add-ons in UI card list should have UI card capability", addOn.hasUICard());
     }
 
     // Verify specific add-ons are in the correct lists
     TestAddOn uiCardEnabled = factory.getAddOnById("3774f99e-fb4a-49fa-b8d0-4083f762254d");
     TestAddOn uiCardDisabled = factory.getAddOnById("4774f99e-fb4a-49fa-b8d0-4083f762254e");
 
-    Assert.assertTrue("UI card enabled add-on should be in UI card list", uiCardAddOns.contains(uiCardEnabled));
-    Assert.assertFalse("UI card disabled add-on should not be in UI card list", uiCardAddOns.contains(uiCardDisabled));
+    Assert.assertTrue(
+        "UI card enabled add-on should be in UI card list", uiCardAddOns.contains(uiCardEnabled));
+    Assert.assertFalse(
+        "UI card disabled add-on should not be in UI card list",
+        uiCardAddOns.contains(uiCardDisabled));
   }
 
   @Test
@@ -370,7 +380,16 @@ public class AddOnsFactoryTest {
         boolean isHidden,
         int sortIndex,
         boolean hasUICard) {
-      super(askContext, packageContext, apiVersion, id, name, description, isHidden, sortIndex, hasUICard);
+      super(
+          askContext,
+          packageContext,
+          apiVersion,
+          id,
+          name,
+          description,
+          isHidden,
+          sortIndex,
+          hasUICard);
     }
   }
 
@@ -416,12 +435,19 @@ public class AddOnsFactoryTest {
         boolean hasUICard,
         AttributeSet attrs) {
       return new TestAddOn(
-          askContext, context, apiVersion, prefId, name, description, isHidden, sortIndex, hasUICard);
+          askContext,
+          context,
+          apiVersion,
+          prefId,
+          name,
+          description,
+          isHidden,
+          sortIndex,
+          hasUICard);
     }
   }
 
-  private static class TestableSingleAddOnsFactory
-      extends AddOnsFactory.SingleAddOnsFactory<TestAddOn> {
+  private static class TestableSingleAddOnsFactory extends SingleAddOnsFactory<TestAddOn> {
     protected TestableSingleAddOnsFactory() {
       super(
           getApplicationContext(),
@@ -451,12 +477,19 @@ public class AddOnsFactoryTest {
         boolean hasUICard,
         AttributeSet attrs) {
       return new TestAddOn(
-          askContext, context, apiVersion, prefId, name, description, isHidden, sortIndex, hasUICard);
+          askContext,
+          context,
+          apiVersion,
+          prefId,
+          name,
+          description,
+          isHidden,
+          sortIndex,
+          hasUICard);
     }
   }
 
-  private static class TestableMultiAddOnsFactory
-      extends AddOnsFactory.MultipleAddOnsFactory<TestAddOn> {
+  private static class TestableMultiAddOnsFactory extends MultipleAddOnsFactory<TestAddOn> {
     protected TestableMultiAddOnsFactory() {
       super(
           getApplicationContext(),
@@ -486,7 +519,15 @@ public class AddOnsFactoryTest {
         boolean hasUICard,
         AttributeSet attrs) {
       return new TestAddOn(
-          askContext, context, apiVersion, prefId, name, description, isHidden, sortIndex, hasUICard);
+          askContext,
+          context,
+          apiVersion,
+          prefId,
+          name,
+          description,
+          isHidden,
+          sortIndex,
+          hasUICard);
     }
   }
 }

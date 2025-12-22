@@ -18,11 +18,13 @@ package com.google.android.voiceime;
 
 import android.inputmethodservice.InputMethodService;
 import android.view.inputmethod.InputMethodSubtype;
-
 import com.google.android.voiceime.backends.SpeechToTextBackend;
 import com.google.android.voiceime.backends.SpeechToTextBackendRegistry;
 
-/** Triggers a voice recognition by using {@link ImeTrigger}, {@link IntentApiTrigger}, or {@link ThirdPartySpeechTrigger}. */
+/**
+ * Triggers a voice recognition by using {@link ImeTrigger}, {@link IntentApiTrigger}, or {@link
+ * ThirdPartySpeechTrigger}.
+ */
 public class VoiceRecognitionTrigger {
 
   private final InputMethodService mInputMethodService;
@@ -33,32 +35,32 @@ public class VoiceRecognitionTrigger {
   private IntentApiTrigger mIntentApiTrigger;
   private ThirdPartySpeechTrigger mThirdPartyTrigger;
   private SpeechToTextBackend mCurrentBackend;
-  
+
   /** Callback interface for recording state changes */
   public interface RecordingStateCallback {
     void onRecordingStateChanged(boolean isRecording);
   }
-  
+
   /** Callback interface for transcription state changes */
   public interface TranscriptionStateCallback {
     void onTranscriptionStateChanged(boolean isTranscribing);
   }
-  
+
   /** Callback interface for transcription errors */
   public interface TranscriptionErrorCallback {
     void onTranscriptionError(String error);
   }
-  
+
   /** Callback interface for when recording ends and audio is sent to OpenAI */
   public interface RecordingEndedCallback {
     void onRecordingEnded();
   }
-  
+
   /** Callback interface for when transcribed text has been written to input field */
   public interface TextWrittenCallback {
     void onTextWritten(String text);
   }
-  
+
   private RecordingStateCallback mRecordingStateCallback;
   private TranscriptionStateCallback mTranscriptionStateCallback;
   private TranscriptionErrorCallback mTranscriptionErrorCallback;
@@ -217,16 +219,16 @@ public class VoiceRecognitionTrigger {
 
     // The trigger is refreshed as the system may have changed in the meanwhile.
     mTrigger = getTrigger();
-    
+
     // Ensure callback is preserved after trigger refresh
     if (mRecordingStateCallback != null) {
       setRecordingStateCallback(mRecordingStateCallback);
     }
   }
-  
+
   /**
-   * Checks if currently recording voice input.
-   * This allows the UI to update the microphone button state.
+   * Checks if currently recording voice input. This allows the UI to update the microphone button
+   * state.
    */
   public boolean isRecording() {
     if (mTrigger instanceof ThirdPartySpeechTrigger) {
@@ -234,9 +236,10 @@ public class VoiceRecognitionTrigger {
     }
     return false;
   }
-  
+
   /**
    * Sets the callback for recording state changes.
+   *
    * @param callback The callback to be notified when recording state changes
    */
   public void setRecordingStateCallback(RecordingStateCallback callback) {

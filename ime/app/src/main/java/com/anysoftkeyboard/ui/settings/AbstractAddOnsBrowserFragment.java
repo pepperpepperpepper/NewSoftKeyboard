@@ -36,6 +36,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
+import com.anysoftkeyboard.addons.MultipleAddOnsFactory;
+import com.anysoftkeyboard.addons.SingleAddOnsFactory;
 import com.anysoftkeyboard.addons.ui.AddOnStoreSearchController;
 import com.anysoftkeyboard.addons.ui.AddOnStoreSearchView;
 import com.anysoftkeyboard.base.utils.Logger;
@@ -141,7 +143,7 @@ public abstract class AbstractAddOnsBrowserFragment<E extends AddOn> extends Fra
         recyclerView.scrollToPosition(to);
 
         if (!mIsSingleSelection) {
-          ((AddOnsFactory.MultipleAddOnsFactory<E>) mFactory).setAddOnsOrder(mAllAddOns);
+          ((MultipleAddOnsFactory<E>) mFactory).setAddOnsOrder(mAllAddOns);
         }
 
         return true;
@@ -159,11 +161,11 @@ public abstract class AbstractAddOnsBrowserFragment<E extends AddOn> extends Fra
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     mFactory = getAddOnFactory();
-    if (mIsSingleSelection && !(mFactory instanceof AddOnsFactory.SingleAddOnsFactory)) {
+    if (mIsSingleSelection && !(mFactory instanceof SingleAddOnsFactory)) {
       throw new IllegalStateException(
           "In single-selection state, factor must be SingleAddOnsFactory!");
     }
-    if (!mIsSingleSelection && !(mFactory instanceof AddOnsFactory.MultipleAddOnsFactory)) {
+    if (!mIsSingleSelection && !(mFactory instanceof MultipleAddOnsFactory)) {
       throw new IllegalStateException(
           "In multi-selection state, factor must be MultipleAddOnsFactory!");
     }

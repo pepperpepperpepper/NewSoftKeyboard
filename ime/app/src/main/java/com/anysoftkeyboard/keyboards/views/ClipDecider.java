@@ -20,7 +20,12 @@ final class ClipDecider {
   }
 
   boolean shouldDrawSingleKey(
-      Canvas canvas, Keyboard.Key invalidKey, int paddingLeft, int paddingTop, DirtyRegionDecider dirtyRegionDecider) {
-    return dirtyRegionDecider.shouldDrawSingleKey(canvas, invalidKey, clipRegion, paddingLeft, paddingTop);
+      Canvas canvas,
+      Keyboard.Key invalidKey,
+      int paddingLeft,
+      int paddingTop,
+      DirtyRegionDecider dirtyRegionDecider) {
+    return dirtyRegionDecider.shouldDrawSingleKey(
+        canvas, invalidKey, clipRegion, paddingLeft, paddingTop);
   }
 }

@@ -186,7 +186,7 @@ public abstract class AnySoftKeyboardThemeOverlay extends AnySoftKeyboardKeyboar
     void setToggle(boolean useOverride) {
       mUseOverride = useOverride;
 
-      final EditorInfo currentInputEditorInfo = mOverlayController.getCurrentInputEditorInfo();
+      final EditorInfo currentInputEditorInfo = mOverlayController.currentInputEditorInfo();
       if (currentInputEditorInfo != null) {
         mOverlayController.applyThemeOverlay(currentInputEditorInfo);
       }

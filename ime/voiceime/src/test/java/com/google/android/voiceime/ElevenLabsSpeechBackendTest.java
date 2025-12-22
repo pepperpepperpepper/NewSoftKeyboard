@@ -49,10 +49,7 @@ public class ElevenLabsSpeechBackendTest {
 
   @Test
   public void testIsSelectedFalseWhenDifferent() {
-    mPrefs
-        .edit()
-        .putString("settings_key_speech_to_text_backend", "openai")
-        .apply();
+    mPrefs.edit().putString("settings_key_speech_to_text_backend", "openai").apply();
 
     Assert.assertFalse(mBackend.isSelected(mContext, mPrefs));
   }
@@ -67,10 +64,7 @@ public class ElevenLabsSpeechBackendTest {
 
     Assert.assertFalse(mBackend.isConfigured(mContext, mPrefs));
 
-    mPrefs
-        .edit()
-        .putString("settings_key_elevenlabs_api_key", "xi-123")
-        .apply();
+    mPrefs.edit().putString("settings_key_elevenlabs_api_key", "xi-123").apply();
 
     Assert.assertTrue(mBackend.isConfigured(mContext, mPrefs));
   }
@@ -204,10 +198,12 @@ public class ElevenLabsSpeechBackendTest {
     }
 
     @Override
-    public void registerOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {}
+    public void registerOnSharedPreferenceChangeListener(
+        OnSharedPreferenceChangeListener listener) {}
 
     @Override
-    public void unregisterOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {}
+    public void unregisterOnSharedPreferenceChangeListener(
+        OnSharedPreferenceChangeListener listener) {}
 
     private void clear() {
       mValues.clear();

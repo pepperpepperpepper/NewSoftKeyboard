@@ -20,9 +20,7 @@ import com.anysoftkeyboard.base.utils.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Builds the UI card views for add-on messages. Extracted from {@link MainFragment} to trim it.
- */
+/** Builds the UI card views for add-on messages. Extracted from {@link MainFragment} to trim it. */
 final class AddOnUICardViewFactory {
 
   interface LinkHandler {
@@ -109,7 +107,8 @@ final class AddOnUICardViewFactory {
       }
 
       if (!TextUtils.isEmpty(card.getTargetFragment())) {
-        cardView.setOnClickListener(v -> destinationHandler.onDestination(card.getTargetFragment()));
+        cardView.setOnClickListener(
+            v -> destinationHandler.onDestination(card.getTargetFragment()));
         cardView.setClickable(true);
       }
 

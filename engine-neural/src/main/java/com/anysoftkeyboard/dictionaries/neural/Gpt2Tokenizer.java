@@ -69,7 +69,8 @@ final class Gpt2Tokenizer {
   @NonNull
   private static String readAll(@NonNull File file) throws IOException {
     try (BufferedReader reader =
-        new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
       final StringBuilder builder = new StringBuilder();
       String line;
       while ((line = reader.readLine()) != null) builder.append(line);
@@ -96,7 +97,8 @@ final class Gpt2Tokenizer {
 
   private void loadMerges(@NonNull File mergesTxt) throws IOException {
     try (BufferedReader reader =
-        new BufferedReader(new InputStreamReader(new FileInputStream(mergesTxt), StandardCharsets.UTF_8))) {
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(mergesTxt), StandardCharsets.UTF_8))) {
       String line;
       int rank = 0;
       while ((line = reader.readLine()) != null) {

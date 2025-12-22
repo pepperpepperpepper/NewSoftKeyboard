@@ -17,7 +17,7 @@ import com.menny.android.anysoftkeyboard.R;
 /**
  * Action shown on the suggestion strip to cancel prediction and collapse the strip.
  *
- * Extracted from {@link AnySoftKeyboardSuggestions} to reduce that class size and keep the
+ * <p>Extracted from {@link AnySoftKeyboardSuggestions} to reduce that class size and keep the
  * animation logic contained.
  */
 final class CancelSuggestionsAction implements KeyboardViewContainerView.StripActionProvider {
@@ -60,7 +60,8 @@ final class CancelSuggestionsAction implements KeyboardViewContainerView.StripAc
             closeText.setVisibility(View.GONE);
           }
         });
-    rootView = LayoutInflater.from(context).inflate(R.layout.cancel_suggestions_action, parent, false);
+    rootView =
+        LayoutInflater.from(context).inflate(R.layout.cancel_suggestions_action, parent, false);
 
     closeText = rootView.findViewById(R.id.close_suggestions_strip_text);
     ImageView closeIcon = rootView.findViewById(R.id.close_suggestions_strip_icon);

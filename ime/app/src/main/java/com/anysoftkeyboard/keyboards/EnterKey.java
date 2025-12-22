@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.XmlResourceParser;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.addons.AddOn;
-import com.anysoftkeyboard.keyboards.views.KeyDrawableStateProvider;
 
 final class EnterKey extends AnyKeyboard.AnyKey {
 
@@ -43,4 +42,3 @@ final class EnterKey extends AnyKeyboard.AnyKey {
     }
   }
 }
-

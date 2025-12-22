@@ -1,7 +1,6 @@
 package com.anysoftkeyboard.ime;
 
 import android.text.TextUtils;
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.dictionaries.WordComposer;
@@ -9,8 +8,8 @@ import com.anysoftkeyboard.dictionaries.WordComposer;
 /**
  * Rebuilds the composing word around the cursor so suggestions can restart after cursor moves.
  *
- * Extracted from {@link AnySoftKeyboardSuggestions#performRestartWordSuggestion(InputConnection)}
- * to keep that class smaller and more focused.
+ * <p>Extracted from {@link AnySoftKeyboardSuggestions#performRestartWordSuggestion()} to keep that
+ * class smaller and more focused.
  */
 final class WordRestartHelper {
 
@@ -27,7 +26,7 @@ final class WordRestartHelper {
   }
 
   void restartWordFromCursor(
-      @NonNull InputConnection ic,
+      @NonNull InputConnectionRouter inputConnectionRouter,
       @NonNull WordComposer currentWord,
       @NonNull Host host) {
 
@@ -35,7 +34,7 @@ final class WordRestartHelper {
     CharSequence toLeft = "";
     CharSequence toRight = "";
     while (true) {
-      CharSequence newToLeft = ic.getTextBeforeCursor(toLeft.length() + 1, 0);
+      CharSequence newToLeft = inputConnectionRouter.getTextBeforeCursor(toLeft.length() + 1, 0);
       if (TextUtils.isEmpty(newToLeft)
           || host.isWordSeparator(newToLeft.charAt(0))
           || newToLeft.length() == toLeft.length()) {
@@ -44,7 +43,7 @@ final class WordRestartHelper {
       toLeft = newToLeft;
     }
     while (true) {
-      CharSequence newToRight = ic.getTextAfterCursor(toRight.length() + 1, 0);
+      CharSequence newToRight = inputConnectionRouter.getTextAfterCursor(toRight.length() + 1, 0);
       if (TextUtils.isEmpty(newToRight)
           || host.isWordSeparator(newToRight.charAt(newToRight.length() - 1))
           || newToRight.length() == toRight.length()) {
@@ -73,7 +72,7 @@ final class WordRestartHelper {
     }
     currentWord.setCursorPosition(toLeft.length());
     final int globalCursorPosition = host.getCursorPosition();
-    ic.setComposingRegion(
+    inputConnectionRouter.setComposingRegion(
         globalCursorPosition - toLeft.length(), globalCursorPosition + toRight.length());
 
     host.markExpectingSelectionUpdate();

@@ -18,12 +18,9 @@ package com.google.android.voiceime;
 
 import android.content.Context;
 import android.util.Log;
-
 import androidx.annotation.NonNull;
-
 import java.io.File;
 import java.io.IOException;
-
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
@@ -34,101 +31,89 @@ import okhttp3.Response;
 /** Handles transcription requests to the ElevenLabs speech-to-text API. */
 public final class ElevenLabsTranscriber {
 
-    private static final String TAG = "ElevenLabsTranscriber";
-    private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
+  private static final String TAG = "ElevenLabsTranscriber";
+  private static final OkHttpClient HTTP_CLIENT = new OkHttpClient();
 
-    public interface Callback {
-        void onSuccess(@NonNull String transcription);
+  public interface Callback {
+    void onSuccess(@NonNull String transcription);
 
-        void onError(@NonNull String errorMessage);
+    void onError(@NonNull String errorMessage);
+  }
+
+  public void startAsync(
+      @NonNull Context context,
+      @NonNull File audioFile,
+      @NonNull String mediaType,
+      @NonNull String apiKey,
+      @NonNull String endpoint,
+      @NonNull String modelId,
+      @NonNull String language,
+      boolean addTrailingSpace,
+      @NonNull Callback callback) {
+
+    new Thread(
+            () -> {
+              try {
+                String result =
+                    performRequest(audioFile, mediaType, apiKey, endpoint, modelId, language);
+                if (addTrailingSpace) {
+                  result = result + " ";
+                }
+                postSuccess(callback, result);
+              } catch (IOException e) {
+                Log.e(TAG, "Network failure", e);
+                postError(callback, "Network error: " + e.getMessage());
+              } catch (Exception e) {
+                Log.e(TAG, "Unexpected failure", e);
+                postError(callback, "Transcription failed: " + e.getMessage());
+              }
+            })
+        .start();
+  }
+
+  private String performRequest(
+      File audioFile,
+      String mediaType,
+      String apiKey,
+      String endpoint,
+      String modelId,
+      String language)
+      throws IOException {
+
+    RequestBody fileBody = RequestBody.create(audioFile, MediaType.parse(mediaType));
+    MultipartBody.Builder multipartBuilder =
+        new MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("file", audioFile.getName(), fileBody)
+            .addFormDataPart("model_id", modelId);
+
+    if (!language.isEmpty()) {
+      multipartBuilder.addFormDataPart("language", language);
     }
 
-    public void startAsync(
-            @NonNull Context context,
-            @NonNull File audioFile,
-            @NonNull String mediaType,
-            @NonNull String apiKey,
-            @NonNull String endpoint,
-            @NonNull String modelId,
-            @NonNull String language,
-            boolean addTrailingSpace,
-            @NonNull Callback callback) {
+    Request request =
+        new Request.Builder()
+            .url(endpoint)
+            .addHeader("xi-api-key", apiKey)
+            .post(multipartBuilder.build())
+            .build();
 
-        new Thread(
-                        () -> {
-                            try {
-                                String result =
-                                        performRequest(
-                                                audioFile,
-                                                mediaType,
-                                                apiKey,
-                                                endpoint,
-                                                modelId,
-                                                language);
-                                if (addTrailingSpace) {
-                                    result = result + " ";
-                                }
-                                postSuccess(callback, result);
-                            } catch (IOException e) {
-                                Log.e(TAG, "Network failure", e);
-                                postError(callback, "Network error: " + e.getMessage());
-                            } catch (Exception e) {
-                                Log.e(TAG, "Unexpected failure", e);
-                                postError(callback, "Transcription failed: " + e.getMessage());
-                            }
-                        })
-                .start();
+    try (Response response = HTTP_CLIENT.newCall(request).execute()) {
+      if (!response.isSuccessful()) {
+        String body = response.body() != null ? response.body().string() : "empty";
+        throw new IOException("HTTP " + response.code() + " " + response.message() + " - " + body);
+      }
+      return response.body() != null ? response.body().string() : "";
     }
+  }
 
-    private String performRequest(
-            File audioFile,
-            String mediaType,
-            String apiKey,
-            String endpoint,
-            String modelId,
-            String language)
-            throws IOException {
+  private void postSuccess(Callback callback, String text) {
+    android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    handler.post(() -> callback.onSuccess(text));
+  }
 
-        RequestBody fileBody = RequestBody.create(audioFile, MediaType.parse(mediaType));
-        MultipartBody.Builder multipartBuilder =
-                new MultipartBody.Builder()
-                        .setType(MultipartBody.FORM)
-                        .addFormDataPart("file", audioFile.getName(), fileBody)
-                        .addFormDataPart("model_id", modelId);
-
-        if (!language.isEmpty()) {
-            multipartBuilder.addFormDataPart("language", language);
-        }
-
-        Request request =
-                new Request.Builder()
-                        .url(endpoint)
-                        .addHeader("xi-api-key", apiKey)
-                        .post(multipartBuilder.build())
-                        .build();
-
-        try (Response response = HTTP_CLIENT.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                String body = response.body() != null ? response.body().string() : "empty";
-                throw new IOException(
-                        "HTTP "
-                                + response.code()
-                                + " "
-                                + response.message()
-                                + " - "
-                                + body);
-            }
-            return response.body() != null ? response.body().string() : "";
-        }
-    }
-
-    private void postSuccess(Callback callback, String text) {
-        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-        handler.post(() -> callback.onSuccess(text));
-    }
-
-    private void postError(Callback callback, String message) {
-        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-        handler.post(() -> callback.onError(message));
-    }
+  private void postError(Callback callback, String message) {
+    android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+    handler.post(() -> callback.onError(message));
+  }
 }

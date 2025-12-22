@@ -10,4 +10,3 @@ import com.menny.android.anysoftkeyboard.AnyApplication;
  * name in the manifest.
  */
 public class NewSoftKeyboardApplication extends AnyApplication {}
-

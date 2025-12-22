@@ -2,6 +2,7 @@ package com.anysoftkeyboard.ime;
 
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.base.utils.Logger;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
 
 /** Handles updating the voice key UI state on the current input view. */
 public final class VoiceKeyUiUpdater {

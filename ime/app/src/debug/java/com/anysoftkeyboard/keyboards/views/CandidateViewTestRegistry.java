@@ -2,9 +2,7 @@ package com.anysoftkeyboard.keyboards.views;
 
 import java.lang.ref.WeakReference;
 
-/**
- * Debug-only helper so instrumentation can request candidate picks inside the app process.
- */
+/** Debug-only helper so instrumentation can request candidate picks inside the app process. */
 public final class CandidateViewTestRegistry {
   private static volatile WeakReference<CandidateView> sActive = new WeakReference<>(null);
 

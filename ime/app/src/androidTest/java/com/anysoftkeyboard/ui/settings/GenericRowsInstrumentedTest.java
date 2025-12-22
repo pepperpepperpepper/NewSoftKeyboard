@@ -23,8 +23,7 @@ public class GenericRowsInstrumentedTest {
         ActivityScenario.launch(MainSettingsActivity.class);
     scenario.onActivity(
         activity -> {
-          BottomNavigationView bottomNavigationView =
-              activity.findViewById(R.id.bottom_navigation);
+          BottomNavigationView bottomNavigationView = activity.findViewById(R.id.bottom_navigation);
           bottomNavigationView.setSelectedItemId(R.id.userInterfaceSettingsFragment);
         });
     onView(withId(R.id.settings_tile_even_more)).perform(click());

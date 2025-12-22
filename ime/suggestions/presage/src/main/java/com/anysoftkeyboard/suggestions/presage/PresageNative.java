@@ -28,7 +28,8 @@ public final class PresageNative {
     nativeCloseModel(handle);
   }
 
-  public static float scoreSequence(long handle, @NonNull String[] context, @NonNull String candidate) {
+  public static float scoreSequence(
+      long handle, @NonNull String[] context, @NonNull String candidate) {
     if (!LIBRARY_LOADED || handle == 0L) return 0f;
     return nativeScoreSequence(handle, context, candidate);
   }
@@ -44,7 +45,9 @@ public final class PresageNative {
 
   private static native void nativeCloseModel(long handle);
 
-  private static native float nativeScoreSequence(long handle, @NonNull String[] context, @NonNull String candidate);
+  private static native float nativeScoreSequence(
+      long handle, @NonNull String[] context, @NonNull String candidate);
 
-  private static native String[] nativePredictNext(long handle, @NonNull String[] context, int maxResults);
+  private static native String[] nativePredictNext(
+      long handle, @NonNull String[] context, int maxResults);
 }

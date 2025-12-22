@@ -32,8 +32,7 @@ final class RedundantLanguageKeyRemover {
 
       final float widthToRemove = languageKeyToRemove.width + keyboardDimens.getKeyHorizontalGap();
       final float additionalSpacePerKey =
-          widthToRemove
-              / ((float) (rowEndIndex - rowStartIndex - 1 /*the key that was removed*/));
+          widthToRemove / ((float) (rowEndIndex - rowStartIndex - 1 /*the key that was removed*/));
       float xOffset = 0f;
       for (int keyIndex = rowStartIndex; keyIndex < rowEndIndex; keyIndex++) {
         final Keyboard.Key keyToModify = keys.get(keyIndex);
@@ -49,4 +48,3 @@ final class RedundantLanguageKeyRemover {
     }
   }
 }
-

@@ -2,10 +2,11 @@ package com.anysoftkeyboard.dictionaries.presage;
 
 import android.content.Context;
 import android.text.TextUtils;
+import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
-import androidx.annotation.Keep;
 import com.anysoftkeyboard.base.utils.Logger;
-import androidx.annotation.Keep;
+import com.anysoftkeyboard.engine.models.ModelDefinition;
+import com.anysoftkeyboard.engine.models.RemoteModelStreamProvider;
 import com.menny.android.anysoftkeyboard.R;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -29,9 +30,7 @@ public final class PresageModelCatalog {
   @NonNull private final RemoteModelStreamProvider mStreamProvider;
 
   public PresageModelCatalog(@NonNull Context context) {
-    this(
-        context.getString(R.string.presage_model_catalog_url),
-        RemoteModelStreamProvider.http());
+    this(context.getString(R.string.presage_model_catalog_url), RemoteModelStreamProvider.http());
   }
 
   PresageModelCatalog(
@@ -84,14 +83,15 @@ public final class PresageModelCatalog {
     if (definitionJson == null) {
       throw new JSONException("Catalog entry missing definition");
     }
-    final PresageModelDefinition definition = PresageModelDefinition.fromJson(definitionJson);
+    final ModelDefinition definition = ModelDefinition.fromJson(definitionJson);
     final String bundleUrl = requireString(object, "bundleUrl");
     final String bundleSha256 = requireString(object, "bundleSha256");
     final long bundleSizeBytes = object.optLong("bundleSizeBytes", -1L);
     final int version = object.optInt("version", 0);
     final boolean recommended = object.optBoolean("recommended", false);
 
-    return new CatalogEntry(definition, bundleUrl, bundleSha256, bundleSizeBytes, version, recommended);
+    return new CatalogEntry(
+        definition, bundleUrl, bundleSha256, bundleSizeBytes, version, recommended);
   }
 
   @NonNull
@@ -121,7 +121,7 @@ public final class PresageModelCatalog {
   @Keep
   public static final class CatalogEntry {
 
-    @NonNull private final PresageModelDefinition mDefinition;
+    @NonNull private final ModelDefinition mDefinition;
     @NonNull private final String mBundleUrl;
     @NonNull private final String mBundleSha256;
     private final long mBundleSizeBytes;
@@ -129,7 +129,7 @@ public final class PresageModelCatalog {
     private final boolean mRecommended;
 
     CatalogEntry(
-        @NonNull PresageModelDefinition definition,
+        @NonNull ModelDefinition definition,
         @NonNull String bundleUrl,
         @NonNull String bundleSha256,
         long bundleSizeBytes,
@@ -144,7 +144,7 @@ public final class PresageModelCatalog {
     }
 
     @NonNull
-    public PresageModelDefinition getDefinition() {
+    public ModelDefinition getDefinition() {
       return mDefinition;
     }
 

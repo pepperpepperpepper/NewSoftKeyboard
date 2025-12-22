@@ -8,6 +8,7 @@ import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.GenericKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.menny.android.anysoftkeyboard.R;
 import java.util.function.Function;
@@ -15,7 +16,7 @@ import java.util.function.Function;
 /**
  * Handles dynamic icons/labels for special keys (enter/mode/shift/etc.).
  *
- * Isolated to keep {@link AnyKeyboardViewBase} slimmer while preserving existing behavior.
+ * <p>Isolated to keep {@link AnyKeyboardViewBase} slimmer while preserving existing behavior.
  */
 final class SpecialKeyAppearanceUpdater {
 
@@ -39,8 +40,15 @@ final class SpecialKeyAppearanceUpdater {
       enterKey.iconPreview = null;
       enterKey.label = null;
       ((AnyKeyboard.AnyKey) enterKey).shiftedKeyLabel = null;
-      Drawable icon = getIconToDrawForKey(enterKey, false, keyboard, keyboardActionType,
-          drawableStatesProvider, keyIconResolver, actionIconStateSetter);
+      Drawable icon =
+          getIconToDrawForKey(
+              enterKey,
+              false,
+              keyboard,
+              keyboardActionType,
+              drawableStatesProvider,
+              keyIconResolver,
+              actionIconStateSetter);
       if (icon != null) {
         enterKey.icon = icon;
         enterKey.iconPreview = icon;
@@ -162,13 +170,15 @@ final class SpecialKeyAppearanceUpdater {
         return switch (keyboardActionType) {
           case android.view.inputmethod.EditorInfo.IME_ACTION_DONE ->
               context.getText(R.string.label_done_key);
-          case android.view.inputmethod.EditorInfo.IME_ACTION_GO -> context.getText(R.string.label_go_key);
+          case android.view.inputmethod.EditorInfo.IME_ACTION_GO ->
+              context.getText(R.string.label_go_key);
           case android.view.inputmethod.EditorInfo.IME_ACTION_NEXT ->
               context.getText(R.string.label_next_key);
           case 0x00000007 -> context.getText(R.string.label_previous_key);
           case android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ->
               context.getText(R.string.label_search_key);
-          case android.view.inputmethod.EditorInfo.IME_ACTION_SEND -> context.getText(R.string.label_send_key);
+          case android.view.inputmethod.EditorInfo.IME_ACTION_SEND ->
+              context.getText(R.string.label_send_key);
           default -> "";
         };
       case KeyCodes.KEYBOARD_MODE_CHANGE:

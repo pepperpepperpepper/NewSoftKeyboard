@@ -1,7 +1,7 @@
 package com.anysoftkeyboard.keyboards;
 
 import android.view.inputmethod.EditorInfo;
-import com.anysoftkeyboard.keyboards.AnyKeyboard.HardKeyboardTranslator;
+import com.anysoftkeyboard.keyboards.physical.HardKeyboardTranslator;
 
 /** Scans for the next alphabet keyboard that supports physical layouts. */
 final class PhysicalKeyboardSelector {

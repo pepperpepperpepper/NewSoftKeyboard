@@ -23,4 +23,3 @@ final class AskGestureEventsListener extends NskGestureEventsListener {
     super(keyboardView);
   }
 }
-

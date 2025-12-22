@@ -18,6 +18,7 @@ import com.anysoftkeyboard.TestableAnySoftKeyboard;
 import com.anysoftkeyboard.android.PowerSavingTest;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.keyboards.Keyboard;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
 import com.anysoftkeyboard.keyboards.views.preview.AboveKeyPositionCalculator;
 import com.anysoftkeyboard.keyboards.views.preview.AboveKeyboardPositionCalculator;
 import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;

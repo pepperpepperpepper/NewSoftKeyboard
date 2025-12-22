@@ -1,1 +1,1 @@
--keep class com.anysoftkeyboard.dictionaries.presage.PresageModelDefinition { *; }
+-keep class com.anysoftkeyboard.engine.models.ModelDefinition { *; }

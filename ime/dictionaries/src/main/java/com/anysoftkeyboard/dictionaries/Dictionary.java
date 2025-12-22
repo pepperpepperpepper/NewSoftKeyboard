@@ -36,8 +36,7 @@ public abstract class Dictionary {
    * c is in range, BASE_CHARS[c] == c if c is not a combined character, or the base character if it
    * is combined.
    */
-    private static final char[] BASE_CHARS = BaseCharactersTable.TABLE;
-
+  private static final char[] BASE_CHARS = BaseCharactersTable.TABLE;
 
   public static char toLowerCase(char c) {
     if (c < BASE_CHARS.length) {

@@ -22,16 +22,17 @@ import android.util.AttributeSet;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.AddOnsFactory;
+import com.anysoftkeyboard.addons.SingleAddOnsFactory;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.AnyApplication;
-import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.Observable;
 import io.reactivex.annotations.CheckReturnValue;
 import java.util.Locale;
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
 
-public class KeyboardThemeFactory extends AddOnsFactory.SingleAddOnsFactory<KeyboardTheme> {
+public class KeyboardThemeFactory extends SingleAddOnsFactory<KeyboardTheme> {
 
   private static final String XML_KEYBOARD_THEME_RES_ID_ATTRIBUTE = "themeRes";
   private static final String XML_KEYBOARD_ICONS_THEME_RES_ID_ATTRIBUTE = "iconsThemeRes";

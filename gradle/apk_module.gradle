@@ -8,6 +8,37 @@ static <T> T getExtValue(Project proj, String key, T defaultValue) {
     }
 }
 
+static String trimToNull(String value) {
+    if (value == null) return null
+    def trimmed = value.trim()
+    return trimmed.isEmpty() ? null : trimmed
+}
+
+static String stripWrappingQuotes(String value) {
+    if (value == null || value.length() < 2) return value
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        return value.substring(1, value.length() - 1)
+    }
+    return value
+}
+
+static Map<String, String> parseEnvFile(File envFile) {
+    if (envFile == null || !envFile.exists() || !envFile.isFile()) return Collections.emptyMap()
+    def result = new HashMap<String, String>()
+    envFile.eachLine { String rawLine ->
+        def line = rawLine.trim()
+        if (line.isEmpty() || line.startsWith('#')) return
+        if (line.startsWith('export ')) line = line.substring('export '.length()).trim()
+        def eq = line.indexOf('=')
+        if (eq <= 0) return
+        def key = trimToNull(line.substring(0, eq))
+        if (key == null) return
+        def value = stripWrappingQuotes(line.substring(eq + 1).trim())
+        if (value != null) result.put(key, value)
+    }
+    return Collections.unmodifiableMap(result)
+}
+
 static String calculateApplicationId(Project proj) {
     String addOnName = proj.parent.name
     String defaultId = "wtf.uhoh.newsoftkeyboard."
@@ -64,11 +95,59 @@ android {
 
     namespace calculateApplicationId(project)
 
-    def keystoreFile = file("/tmp/anysoftkeyboard.keystore")
+    // Signing envs are typically provided via exported env vars (local dev/CI).
+    // For local F-Droid publishing setups, the secrets often live in an env file which may not be exported
+    // in non-interactive shells (e.g., after reboot). To keep those flows working, we also try reading
+    // a best-effort `.env` file (without printing values):
+    //  - $FDROID_ENV_FILE (explicit override)
+    //  - $ENV_FILE (legacy)
+    //  - <repo>/fdroid/.env
+    //  - $FDROID_DATA/.env
+    //  - $HOME/fdroid/.env
+    def signingEnvFileCandidates = [
+            trimToNull(System.getenv('FDROID_ENV_FILE')),
+            trimToNull(System.getenv('ENV_FILE')),
+            "${rootDir.absolutePath}/fdroid/.env",
+            trimToNull(System.getenv('FDROID_DATA')) != null ? "${trimToNull(System.getenv('FDROID_DATA'))}/.env" : null,
+            "${System.getProperty('user.home')}/fdroid/.env"
+    ].findAll { it != null }.collect { new File(it) }
+    def signingEnvFile = signingEnvFileCandidates.find { it.exists() && it.isFile() }
+    def envFromFile = parseEnvFile(signingEnvFile)
+
+    def envValue = { String name ->
+        def fromEnv = trimToNull(System.getenv(name))
+        if (fromEnv != null) return fromEnv
+        def fromFile = trimToNull(envFromFile.get(name))
+        return fromFile
+    }
+
+    def keystoreFilePath = envValue("KEY_STORE_FILE") ?: envValue("FDROID_KEYSTORE_FILE")
+    def keystoreFile = null
+    if (keystoreFilePath != null && !keystoreFilePath.trim().isEmpty()) {
+        keystoreFile = file(keystoreFilePath.trim())
+    } else {
+        def preferredKeystore = file("/tmp/newsoftkeyboard.keystore")
+        if (preferredKeystore.exists()) {
+            keystoreFile = preferredKeystore
+        } else {
+            // Common persistent location for local F-Droid setups.
+            def fdroidData = envValue("FDROID_DATA")
+            def fdroidDataKeystore = fdroidData != null ? file("${fdroidData}/keystore.jks") : null
+            def homeFdroidKeystore = file("${System.getProperty('user.home')}/fdroid/keystore.jks")
+            if (fdroidDataKeystore != null && fdroidDataKeystore.exists()) {
+                keystoreFile = fdroidDataKeystore
+            } else if (homeFdroidKeystore.exists()) {
+                keystoreFile = homeFdroidKeystore
+            } else {
+                // Legacy fallback so older local/CI setups keep working.
+                keystoreFile = file("/tmp/anysoftkeyboard.keystore")
+            }
+        }
+    }
     // Support both local and F-Droid CI env var names
-    def envStorePass = System.getenv("KEY_STORE_FILE_PASSWORD") ?: System.getenv("FDROID_KEYSTORE_PASS")
-    def envKeyPass = System.getenv("KEY_STORE_FILE_DEFAULT_ALIAS_PASSWORD") ?: System.getenv("FDROID_KEY_ALIAS_PASS")
-    def envAlias = getExtValue(project, 'override_release_key_alias', (System.getenv("FDROID_KEY_ALIAS") ?: 'fdroidrepo'))
+    def envStorePass = envValue("KEY_STORE_FILE_PASSWORD") ?: envValue("FDROID_KEYSTORE_PASS") ?: envValue("FDROID_KEY_STORE_PASS")
+    def envKeyPass = envValue("KEY_STORE_FILE_DEFAULT_ALIAS_PASSWORD") ?: envValue("FDROID_KEY_ALIAS_PASS") ?: envValue("FDROID_KEY_PASS")
+    def envAlias = getExtValue(project, 'override_release_key_alias', (envValue("FDROID_KEY_ALIAS") ?: 'fdroidrepo'))
 
     signingConfigs {
         release {

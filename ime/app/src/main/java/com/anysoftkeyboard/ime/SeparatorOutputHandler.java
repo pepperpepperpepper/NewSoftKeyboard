@@ -1,7 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
-
 /**
  * Handles output-side separator behaviors such as double-space-to-period and punctuation/space
  * swapping. Extracted from {@link AnySoftKeyboardSuggestions#handleSeparator(int)} to reduce
@@ -24,7 +22,7 @@ final class SeparatorOutputHandler {
   }
 
   Result apply(
-      InputConnection ic,
+      InputConnectionRouter inputConnectionRouter,
       int primaryCode,
       boolean isSpace,
       boolean newLine,
@@ -35,18 +33,19 @@ final class SeparatorOutputHandler {
     boolean handledOutputToInputConnection = false;
     boolean endOfSentence = false;
 
-    if (ic != null) {
+    if (inputConnectionRouter.hasConnection()) {
       if (isSpace) {
         if (doubleSpaceToPeriodEnabled && spaceTimeTracker.isDoubleSpace(multiTapTimeout)) {
-          ic.deleteSurroundingText(1, 0);
-          ic.commitText(". ", 1);
+          inputConnectionRouter.deleteSurroundingText(1, 0);
+          inputConnectionRouter.commitText(". ", 1);
           endOfSentence = true;
           handledOutputToInputConnection = true;
         }
       } else if (spaceTimeTracker.hadSpace()
           && (swapChecker.isSpaceSwapCharacter(primaryCode) || newLine)) {
-        ic.deleteSurroundingText(1, 0);
-        ic.commitText(new String(new int[] {primaryCode}, 0, 1) + (newLine ? "" : " "), 1);
+        inputConnectionRouter.deleteSurroundingText(1, 0);
+        inputConnectionRouter.commitText(
+            new String(new int[] {primaryCode}, 0, 1) + (newLine ? "" : " "), 1);
         handledOutputToInputConnection = true;
       }
     }

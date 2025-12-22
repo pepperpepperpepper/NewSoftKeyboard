@@ -1,6 +1,5 @@
 package com.anysoftkeyboard.ime;
 
-import android.view.inputmethod.InputConnection;
 import android.text.TextUtils;
 
 final class CursorTouchChecker {
@@ -9,15 +8,16 @@ final class CursorTouchChecker {
     boolean isWordSeparator(int codePoint);
   }
 
-  boolean isCursorTouchingWord(InputConnection ic, WordSeparatorChecker separatorChecker) {
-    if (ic == null) return false;
+  boolean isCursorTouchingWord(
+      InputConnectionRouter inputConnectionRouter, WordSeparatorChecker separatorChecker) {
+    if (inputConnectionRouter.current() == null) return false;
 
-    CharSequence toLeft = ic.getTextBeforeCursor(1, 0);
+    CharSequence toLeft = inputConnectionRouter.getTextBeforeCursor(1, 0);
     if (!TextUtils.isEmpty(toLeft) && !separatorChecker.isWordSeparator(toLeft.charAt(0))) {
       return true;
     }
 
-    CharSequence toRight = ic.getTextAfterCursor(1, 0);
+    CharSequence toRight = inputConnectionRouter.getTextAfterCursor(1, 0);
     if (!TextUtils.isEmpty(toRight) && !separatorChecker.isWordSeparator(toRight.charAt(0))) {
       return true;
     }

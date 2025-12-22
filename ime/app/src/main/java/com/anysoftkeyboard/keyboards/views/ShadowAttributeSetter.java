@@ -7,11 +7,13 @@ final class ShadowAttributeSetter {
 
   private ShadowAttributeSetter() {}
 
-  static void applyColor(TypedArray remoteTypedArray, int index, java.util.function.IntConsumer set) {
+  static void applyColor(
+      TypedArray remoteTypedArray, int index, java.util.function.IntConsumer set) {
     set.accept(remoteTypedArray.getColor(index, 0));
   }
 
-  static void applyOffset(TypedArray remoteTypedArray, int index, java.util.function.IntConsumer set) {
+  static void applyOffset(
+      TypedArray remoteTypedArray, int index, java.util.function.IntConsumer set) {
     set.accept(remoteTypedArray.getDimensionPixelOffset(index, 0));
   }
 }

@@ -1,10 +1,10 @@
 package com.anysoftkeyboard.keyboards.views;
 
-import com.anysoftkeyboard.rx.GenericOnError;
 import com.anysoftkeyboard.prefs.AnimationsLevel;
+import com.anysoftkeyboard.rx.GenericOnError;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
-import io.reactivex.disposables.Disposable;
 import java.util.function.Consumer;
 
 /** Owns animation level subject to keep view classes slimmer. */

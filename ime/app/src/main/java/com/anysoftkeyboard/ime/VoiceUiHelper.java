@@ -3,25 +3,26 @@ package com.anysoftkeyboard.ime;
 import android.view.View;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
-import com.anysoftkeyboard.ime.VoiceInputController.VoiceInputState;
-import com.google.android.voiceime.VoiceRecognitionTrigger;
+import com.anysoftkeyboard.keyboards.views.InputViewBinder;
+import com.google.android.voiceime.VoiceImeController;
+import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 
 /** Small helper to centralize voice key/status UI updates. */
 public final class VoiceUiHelper {
 
   private final VoiceStatusRenderer voiceStatusRenderer;
-  private final VoiceRecognitionTrigger voiceRecognitionTrigger;
+  private final VoiceImeController voiceImeController;
 
   public VoiceUiHelper(
-      VoiceStatusRenderer voiceStatusRenderer, VoiceRecognitionTrigger voiceRecognitionTrigger) {
+      VoiceStatusRenderer voiceStatusRenderer, VoiceImeController voiceImeController) {
     this.voiceStatusRenderer = voiceStatusRenderer;
-    this.voiceRecognitionTrigger = voiceRecognitionTrigger;
+    this.voiceImeController = voiceImeController;
   }
 
   public void updateVoiceKeyState(
       @Nullable AnyKeyboard currentKeyboard, @Nullable InputViewBinder view) {
     voiceStatusRenderer.updateVoiceKeyState(
-        currentKeyboard, voiceRecognitionTrigger.isRecording(), asViewOrNull(view));
+        currentKeyboard, voiceImeController.isRecording(), asViewOrNull(view));
   }
 
   public void updateSpaceBarRecordingStatus(
@@ -34,7 +35,9 @@ public final class VoiceUiHelper {
   }
 
   public void updateVoiceInputStatus(
-      VoiceInputState newState, @Nullable AnyKeyboard currentKeyboard, @Nullable InputViewBinder view) {
+      VoiceInputState newState,
+      @Nullable AnyKeyboard currentKeyboard,
+      @Nullable InputViewBinder view) {
     voiceStatusRenderer.updateVoiceInputStatus(currentKeyboard, asViewOrNull(view), newState);
   }
 

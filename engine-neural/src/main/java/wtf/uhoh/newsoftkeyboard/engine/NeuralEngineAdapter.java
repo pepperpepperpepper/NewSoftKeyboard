@@ -48,4 +48,3 @@ public final class NeuralEngineAdapter implements PredictionEngine {
     return new PredictionResult(preds);
   }
 }
-

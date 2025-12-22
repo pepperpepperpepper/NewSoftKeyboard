@@ -23,21 +23,20 @@ public class NeuralPipelineInvocationInstrumentedTest {
   public void testProviderInvokesNeuralWithTwoTokenContext() {
     final Context context = ApplicationProvider.getApplicationContext();
     // Force engine + next-word mode via prefs so provider picks it up quickly.
-    AnyApplication
-        .prefs(context)
+    AnyApplication.prefs(context)
         .getString(
             R.string.settings_key_prediction_engine_mode,
             R.string.settings_default_prediction_engine_mode)
         .set("neural");
-    AnyApplication
-        .prefs(context)
+    AnyApplication.prefs(context)
         .getString(
             R.string.settings_key_next_word_dictionary_type,
             R.string.settings_default_next_words_dictionary_type)
         .set("words");
     try {
       Thread.sleep(250);
-    } catch (InterruptedException ignored) {}
+    } catch (InterruptedException ignored) {
+    }
     final SuggestionsProvider provider = new SuggestionsProvider(context);
 
     // Ensure engine is at least HYBRID/NEURAL via the provider's settings listeners (already wired
@@ -58,7 +57,11 @@ public class NeuralPipelineInvocationInstrumentedTest {
     boolean plausible = false;
     for (CharSequence c : out) {
       final String s = c.toString().toLowerCase();
-      if (s.equals("to") || s.equals("and") || s.equals("a") || s.equals("not") || s.equals("the")) {
+      if (s.equals("to")
+          || s.equals("and")
+          || s.equals("a")
+          || s.equals("not")
+          || s.equals("the")) {
         plausible = true;
         break;
       }

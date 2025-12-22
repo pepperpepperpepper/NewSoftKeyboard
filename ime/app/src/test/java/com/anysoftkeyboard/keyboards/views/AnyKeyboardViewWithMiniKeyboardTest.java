@@ -22,6 +22,7 @@ import com.anysoftkeyboard.ViewTestUtils;
 import com.anysoftkeyboard.addons.DefaultAddOn;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.ExternalAnyKeyboard;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.rx.TestRxSchedulers;
 import com.menny.android.anysoftkeyboard.AnyApplication;

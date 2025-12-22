@@ -44,7 +44,6 @@ set(PRESAGE_SOURCES
     ${PRESAGE_ROOT}/predictors/recencyPredictor.cpp
 
     ${PRESAGE_ROOT}/tinyxml/tinyxml.cpp
-    ${PRESAGE_ROOT}/tinyxml/tinystr.cpp
     ${PRESAGE_ROOT}/tinyxml/tinyxmlerror.cpp
     ${PRESAGE_ROOT}/tinyxml/tinyxmlparser.cpp)
 
@@ -63,7 +62,7 @@ set_target_properties(presage_static PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
-target_compile_definitions(presage_static PRIVATE HAVE_CONFIG_H=1)
+target_compile_definitions(presage_static PRIVATE HAVE_CONFIG_H=1 TIXML_USE_STL=1)
 
 # Presage upstream (0.9.1) emits several warnings under Clang/NDK r27
 # that can fail CI when treated as errors on some toolchains. We keep

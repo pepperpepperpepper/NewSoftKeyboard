@@ -10,8 +10,8 @@ import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 
 /**
- * Clears all next-word dictionaries for every installed language. Extracted to shrink
- * {@link NextWordSettingsFragment}.
+ * Clears all next-word dictionaries for every installed language. Extracted to shrink {@link
+ * NextWordSettingsFragment}.
  */
 final class NextWordDataCleaner {
 

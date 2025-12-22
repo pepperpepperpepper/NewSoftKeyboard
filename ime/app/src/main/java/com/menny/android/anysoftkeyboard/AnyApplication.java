@@ -22,20 +22,16 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
-import androidx.core.util.Pair;
 import androidx.multidex.MultiDexApplication;
 import com.anysoftkeyboard.addons.AddOnsFactory;
 import com.anysoftkeyboard.android.NightMode;
 import com.anysoftkeyboard.base.utils.Logger;
-import com.anysoftkeyboard.base.utils.NullLogProvider;
-import com.anysoftkeyboard.chewbacca.ChewbaccaUncaughtExceptionHandler;
+import com.anysoftkeyboard.crash.CrashHandlerInstaller;
 import com.anysoftkeyboard.devicespecific.DeviceSpecific;
 import com.anysoftkeyboard.devicespecific.DeviceSpecificV19;
 import com.anysoftkeyboard.devicespecific.DeviceSpecificV24;
@@ -49,7 +45,7 @@ import com.anysoftkeyboard.keyboards.KeyboardFactory;
 import com.anysoftkeyboard.notification.NotificationDriver;
 import com.anysoftkeyboard.notification.NotificationDriverImpl;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
-import com.anysoftkeyboard.prefs.GlobalPrefsBackup;
+import com.anysoftkeyboard.prefs.PrefsAutoRestorer;
 import com.anysoftkeyboard.prefs.RxSharedPrefs;
 import com.anysoftkeyboard.quicktextkeys.QuickTextKeyFactory;
 import com.anysoftkeyboard.releaseinfo.TesterNotification;
@@ -57,17 +53,10 @@ import com.anysoftkeyboard.saywhat.EasterEggs;
 import com.anysoftkeyboard.saywhat.Notices;
 import com.anysoftkeyboard.saywhat.PublicNotice;
 import com.anysoftkeyboard.theme.KeyboardThemeFactory;
-import com.anysoftkeyboard.ui.SendBugReportUiActivity;
-import com.anysoftkeyboard.ui.dev.DeveloperUtils;
 import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.functions.Consumer;
-import io.reactivex.plugins.RxJavaPlugins;
 import io.reactivex.subjects.ReplaySubject;
 import io.reactivex.subjects.Subject;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -196,7 +185,9 @@ public class AnyApplication extends MultiDexApplication {
             + " concrete class "
             + msDeviceSpecific.getClass().getName());
 
-    mRxSharedPrefs = new RxSharedPrefs(this, this::prefsAutoRestoreFunction);
+    mRxSharedPrefs =
+        new RxSharedPrefs(
+            this, file -> PrefsAutoRestorer.restoreAutoApplyPrefs(getApplicationContext(), file));
 
     mKeyboardFactory = createKeyboardFactory();
     mExternalDictionaryFactory = createExternalDictionaryFactory();
@@ -245,39 +236,6 @@ public class AnyApplication extends MultiDexApplication {
     updateStatistics(sp);
     TesterNotification.showDragonsIfNeeded(
         getApplicationContext(), mNotificationDriver, BuildConfig.TESTING_BUILD);
-  }
-
-  private void prefsAutoRestoreFunction(@NonNull File file) {
-    Logger.d(TAG, "Starting prefsAutoRestoreFunction for '%s'", file);
-    // NOTE: shared_prefs_provider_name is the only supported prefs. All others require
-    // dictionaries to load prior.
-    final Pair<List<GlobalPrefsBackup.ProviderDetails>, Boolean[]> providers =
-        Observable.fromIterable(GlobalPrefsBackup.getAllAutoApplyPrefsProviders(this))
-            .map(p -> Pair.create(p, true))
-            .collectInto(
-                Pair.create(
-                    new ArrayList<GlobalPrefsBackup.ProviderDetails>(), new ArrayList<Boolean>()),
-                (collectInto, aPair) -> {
-                  collectInto.first.add(aPair.first);
-                  collectInto.second.add(aPair.second);
-                })
-            .map(
-                p ->
-                    Pair.create(
-                        (List<GlobalPrefsBackup.ProviderDetails>) p.first,
-                        p.second.toArray(new Boolean[0])))
-            .blockingGet();
-
-    try {
-      GlobalPrefsBackup.restore(providers, new FileInputStream(file))
-          .blockingForEach(
-              providerDetails ->
-                  Logger.i(
-                      TAG, "Restored prefs for '%s'", getString(providerDetails.providerTitle)));
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-      Logger.w(TAG, e, "Failed to load auto-apply file!");
-    }
   }
 
   public List<PublicNotice> getPublicNotices() {
@@ -394,30 +352,13 @@ public class AnyApplication extends MultiDexApplication {
 
   @CallSuper
   protected void setupCrashHandler(SharedPreferences sp) {
-    JustPrintExceptionHandler globalErrorHandler = new JustPrintExceptionHandler();
-    RxJavaPlugins.setErrorHandler(globalErrorHandler);
-    Thread.setDefaultUncaughtExceptionHandler(globalErrorHandler);
-    final Resources resources = getResources();
-    if (sp.getBoolean(
-        resources.getString(R.string.settings_key_show_chewbacca),
-        resources.getBoolean(R.bool.settings_default_show_chewbacca))) {
-      final boolean enableCrashNotifications = !BuildConfig.TESTING_BUILD || !BuildConfig.DEBUG;
-      final ChewbaccaUncaughtExceptionHandler chewbaccaUncaughtExceptionHandler =
-          new AnyChewbaccaUncaughtExceptionHandler(
-              this,
-              globalErrorHandler,
-              mNotificationDriver,
-              enableCrashNotifications);
-      Thread.setDefaultUncaughtExceptionHandler(chewbaccaUncaughtExceptionHandler);
-      RxJavaPlugins.setErrorHandler(
-          e -> chewbaccaUncaughtExceptionHandler.uncaughtException(Thread.currentThread(), e));
-
-      if (chewbaccaUncaughtExceptionHandler.performCrashDetectingFlow()) {
-        Logger.w(TAG, "Previous crash detected and reported!");
-      }
-    }
-
-    Logger.setLogProvider(new NullLogProvider());
+    CrashHandlerInstaller.install(
+        this,
+        sp,
+        getResources(),
+        mNotificationDriver,
+        BuildConfig.TESTING_BUILD,
+        BuildConfig.DEBUG);
   }
 
   public boolean onPackageChanged(final Intent eventIntent) {
@@ -434,49 +375,5 @@ public class AnyApplication extends MultiDexApplication {
 
   public List<Drawable> getInitialWatermarksList() {
     return new ArrayList<>();
-  }
-
-  private static class JustPrintExceptionHandler
-      implements Consumer<Throwable>, Thread.UncaughtExceptionHandler {
-    @Override
-    public void accept(Throwable throwable) throws Exception {
-      throwable.printStackTrace();
-      Logger.e("NSK_FATAL", throwable, "Fatal RxJava error %s", throwable.getMessage());
-    }
-
-    @Override
-    public void uncaughtException(Thread t, Throwable throwable) {
-      throwable.printStackTrace();
-      Logger.e(
-          "NSK_FATAL",
-          throwable,
-          "Fatal Java error '%s' on thread '%s'",
-          throwable.getMessage(),
-          t.toString());
-    }
-  }
-
-  private static class AnyChewbaccaUncaughtExceptionHandler
-      extends ChewbaccaUncaughtExceptionHandler {
-
-    public AnyChewbaccaUncaughtExceptionHandler(
-        @NonNull Context app,
-        @Nullable Thread.UncaughtExceptionHandler previous,
-        @NonNull NotificationDriver notificationDriver,
-        boolean notificationsEnabled) {
-      super(app, previous, notificationDriver, notificationsEnabled);
-    }
-
-    @NonNull
-    @Override
-    protected Intent createBugReportingActivityIntent() {
-      return new Intent(mApp, SendBugReportUiActivity.class);
-    }
-
-    @NonNull
-    @Override
-    protected String getAppDetails() {
-      return DeveloperUtils.getAppDetails(mApp);
-    }
   }
 }

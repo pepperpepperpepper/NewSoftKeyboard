@@ -118,6 +118,7 @@ android {
                     System.getenv('FDROID_KEYSTORE_PASS'),
                     System.getenv('KEY_STORE_FILE_PASSWORD'),
                     System.getenv('FDROID_KEY_ALIAS_PASS'),
+                    System.getenv('FDROID_KEY_PASS'),
                     System.getenv('KEY_STORE_FILE_DEFAULT_ALIAS_PASSWORD'),
             ].any { it != null && it.trim() }
             testBuildType hasReleaseSigning ? 'release' : 'debug'
@@ -128,6 +129,7 @@ android {
 
 dependencies {
     implementation project(':engine-core')
+    implementation project(':engine-models')
     implementation project(':api')
     implementation project(':addons:base')
     implementation project(':addons:languages:english:pack')
@@ -234,6 +236,38 @@ afterEvaluate { proj ->
         }
     } catch (Throwable ignored) { /* task might not exist yet for some configurations */ }
 
+    def resolveAdbDeviceSerial = { ->
+        def explicit = (System.getenv('GENYMOTION_DEV') ?: '').trim()
+        if (!explicit.isEmpty()) return explicit
+
+        // Try to infer from `adb devices` output. Prefer localhost:* (Genymotion SaaS).
+        try {
+            def stdout = new ByteArrayOutputStream()
+            proj.exec {
+                commandLine 'adb', 'devices'
+                standardOutput = stdout
+                errorOutput = stdout
+                ignoreExitValue true
+            }
+
+            def serials = []
+            stdout.toString('UTF-8').readLines().each { line ->
+                def parts = line.trim().split(/\s+/)
+                if (parts.size() >= 2 && parts[1] == 'device') {
+                    serials.add(parts[0])
+                }
+            }
+            def preferred = serials.find { it.startsWith('localhost:') }
+                    ?: serials.find { it.startsWith('127.0.0.1:') }
+                    ?: serials.find { it.startsWith('emulator-') }
+                    ?: (serials.size() == 1 ? serials[0] : null)
+            if (preferred != null) return preferred
+        } catch (Throwable ignored) { /* best-effort only */ }
+
+        // Backwards-compatible default.
+        return 'localhost:42865'
+    }
+
     tasks.register('resignApksForReleaseTest') { t ->
         t.group = 'verification'
         t.description = 'Re-signs release APK and androidTest APK with a common ephemeral keystore.'
@@ -318,10 +352,14 @@ afterEvaluate { proj ->
         t.description = 'Installs testsigned release + androidTest APKs on connected device.'
         t.dependsOn('resignApksForReleaseTest')
         t.doLast {
-            def dev = System.getenv('GENYMOTION_DEV') ?: 'localhost:42865'
-            // Allow overriding the IME service component; default to NSK-branded service.
-            def imeServiceClass = System.getenv('IME_SERVICE_CLASS') ?: 'wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService'
-            def imeComponent = "wtf.uhoh.newsoftkeyboard/${imeServiceClass}"
+            def dev = resolveAdbDeviceSerial()
+            // Allow overriding the IME component; default to NSK-branded service.
+            def imeComponent = (System.getenv('IME_COMPONENT') ?: '').trim()
+            if (imeComponent.isEmpty()) {
+                def imePackage = (System.getenv('IME_PACKAGE') ?: 'wtf.uhoh.newsoftkeyboard').trim()
+                def imeServiceClass = (System.getenv('IME_SERVICE_CLASS') ?: '.NewSoftKeyboardService').trim()
+                imeComponent = "${imePackage}/${imeServiceClass}"
+            }
             def buildDirPath = project.layout.buildDirectory.get().asFile
             def outDir = new File(buildDirPath, 'outputs/apk/tests-signed')
             def relOut = new File(outDir, 'app-release-testsigned.apk')
@@ -340,7 +378,7 @@ afterEvaluate { proj ->
         t.description = 'Runs the UI tap test against the testsigned release app on Genymotion.'
         t.dependsOn('installReleaseAndTestApks')
         t.doLast {
-            def dev = System.getenv('GENYMOTION_DEV') ?: 'localhost:42865'
+            def dev = resolveAdbDeviceSerial()
             project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'logcat', '-c' }
             project.exec {
                 commandLine 'adb', '-s', dev, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class',

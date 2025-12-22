@@ -37,10 +37,7 @@ final class PredictionStateUpdater {
 
     state.autoComplete = autoComplete;
     suggest.setCorrectionMode(
-        state.showSuggestions,
-        commonalityMaxLengthDiff,
-        commonalityMaxDistance,
-        trySplitting);
+        state.showSuggestions, commonalityMaxLengthDiff, commonalityMaxDistance, trySplitting);
 
     if (showChanged) {
       if (state.showSuggestions) {

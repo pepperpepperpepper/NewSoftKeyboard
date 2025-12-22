@@ -37,8 +37,8 @@ import com.anysoftkeyboard.quicktextkeys.TagsExtractorImpl;
 import com.anysoftkeyboard.rx.GenericOnError;
 import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.R;
+import java.util.AbstractList;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -232,7 +232,7 @@ public abstract class AnySoftKeyboardKeyboardTagsSearcher extends AnySoftKeyboar
     }
   }
 
-  public static class TagsSuggestionList implements List<CharSequence> {
+  public static class TagsSuggestionList extends AbstractList<CharSequence> {
 
     @NonNull private CharSequence mTypedTag = MAGNIFYING_GLASS_CHARACTER;
     @NonNull private List<CharSequence> mFoundTags = Collections.emptyList();
@@ -259,26 +259,24 @@ public abstract class AnySoftKeyboardKeyboardTagsSearcher extends AnySoftKeyboar
       }
     }
 
-    @Override
-    public boolean isEmpty() {
-      return false;
-    }
-
     @NonNull
     @Override
     public Iterator<CharSequence> iterator() {
       return new Iterator<>() {
-        private int mCurrentIndex = 0;
+        private int currentIndex = 0;
 
         @Override
         public boolean hasNext() {
-          return mCurrentIndex < size();
+          return currentIndex < size();
         }
 
         @Override
         public CharSequence next() {
-          if (!hasNext()) throw new NoSuchElementException("Called after end of list!");
-          return get(mCurrentIndex++);
+          if (!hasNext()) {
+            throw new NoSuchElementException("Called after end of list!");
+          }
+
+          return get(currentIndex++);
         }
 
         @Override
@@ -288,111 +286,20 @@ public abstract class AnySoftKeyboardKeyboardTagsSearcher extends AnySoftKeyboar
       };
     }
 
-    /*NOT IMPLEMENTED BELOW!! */
-
-    @Override
-    public void add(int location, CharSequence object) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean add(CharSequence object) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean addAll(int location, @NonNull Collection<? extends CharSequence> collection) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean addAll(@NonNull Collection<? extends CharSequence> collection) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public void clear() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean contains(Object object) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean containsAll(@NonNull Collection<?> collection) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int indexOf(Object object) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public int lastIndexOf(Object object) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     @NonNull
+    @Override
     public ListIterator<CharSequence> listIterator() {
       throw new UnsupportedOperationException();
     }
 
     @NonNull
     @Override
-    public ListIterator<CharSequence> listIterator(int location) {
+    public ListIterator<CharSequence> listIterator(int index) {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public CharSequence remove(int location) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean remove(Object object) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean removeAll(@NonNull Collection<?> collection) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean retainAll(@NonNull Collection<?> collection) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public CharSequence set(int location, CharSequence object) {
-      throw new UnsupportedOperationException();
-    }
-
-    @NonNull
-    @Override
-    public List<CharSequence> subList(int start, int end) {
-      throw new UnsupportedOperationException();
-    }
-
-    @NonNull
-    @Override
-    public Object[] toArray() {
-      Object[] items = new Object[size()];
-      items[0] = mTypedTag;
-      if (items.length > 1) {
-        System.arraycopy(mFoundTags.toArray(), 0, items, 1, items.length - 1);
-      }
-
-      return items;
-    }
-
-    @NonNull
-    @Override
-    public <T> T[] toArray(@NonNull T[] array) {
+    public boolean remove(Object o) {
       throw new UnsupportedOperationException();
     }
   }

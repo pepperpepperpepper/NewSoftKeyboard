@@ -14,8 +14,8 @@ import io.reactivex.Observable;
 import io.reactivex.disposables.CompositeDisposable;
 
 /**
- * Loads next-word usage statistics into a preferences category. Extracted to trim
- * {@link NextWordSettingsFragment} while keeping behavior identical.
+ * Loads next-word usage statistics into a preferences category. Extracted to trim {@link
+ * NextWordSettingsFragment} while keeping behavior identical.
  */
 final class NextWordUsageStatsLoader {
 
@@ -30,8 +30,7 @@ final class NextWordUsageStatsLoader {
     statsCategory.removeAll();
 
     disposables.add(
-        Observable.fromIterable(
-                AnyApplication.getExternalDictionaryFactory(context).getAllAddOns())
+        Observable.fromIterable(AnyApplication.getExternalDictionaryFactory(context).getAllAddOns())
             .filter(addOn -> addOn.getLanguage() != null && !addOn.getLanguage().isEmpty())
             .distinct(DictionaryAddOnAndBuilder::getLanguage)
             .subscribeOn(RxSchedulers.background())

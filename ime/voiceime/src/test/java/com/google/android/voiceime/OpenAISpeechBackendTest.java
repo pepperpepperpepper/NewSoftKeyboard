@@ -41,10 +41,7 @@ public class OpenAISpeechBackendTest {
 
   @Test
   public void testIsSelectedUsesBackendPreference() {
-    mPrefs
-        .edit()
-        .putString("settings_key_speech_to_text_backend", OpenAISpeechBackend.ID)
-        .apply();
+    mPrefs.edit().putString("settings_key_speech_to_text_backend", OpenAISpeechBackend.ID).apply();
 
     Assert.assertTrue(mBackend.isSelected(mContext, mPrefs));
   }
@@ -211,10 +208,12 @@ public class OpenAISpeechBackendTest {
     }
 
     @Override
-    public void registerOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {}
+    public void registerOnSharedPreferenceChangeListener(
+        OnSharedPreferenceChangeListener listener) {}
 
     @Override
-    public void unregisterOnSharedPreferenceChangeListener(OnSharedPreferenceChangeListener listener) {}
+    public void unregisterOnSharedPreferenceChangeListener(
+        OnSharedPreferenceChangeListener listener) {}
 
     private void clear() {
       mValues.clear();

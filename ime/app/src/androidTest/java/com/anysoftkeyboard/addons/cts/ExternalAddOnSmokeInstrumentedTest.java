@@ -94,4 +94,3 @@ public class ExternalAddOnSmokeInstrumentedTest {
         themes.stream().map(AddOn::getPackageName).anyMatch(pkg -> expectedThemePack.equals(pkg)));
   }
 }
-

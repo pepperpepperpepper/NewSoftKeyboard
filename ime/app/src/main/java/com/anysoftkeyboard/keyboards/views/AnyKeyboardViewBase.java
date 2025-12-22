@@ -17,12 +17,9 @@
 package com.anysoftkeyboard.keyboards.views;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Paint.Align;
-import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -36,9 +33,9 @@ import com.anysoftkeyboard.addons.AddOn;
 import com.anysoftkeyboard.addons.DefaultAddOn;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.anysoftkeyboard.base.utils.CompatUtils;
-import com.anysoftkeyboard.ime.InputViewBinder;
 import com.anysoftkeyboard.keyboards.AnyKeyboard;
 import com.anysoftkeyboard.keyboards.AnyKeyboard.AnyKey;
+import com.anysoftkeyboard.keyboards.KeyDrawableStateProvider;
 import com.anysoftkeyboard.keyboards.Keyboard;
 import com.anysoftkeyboard.keyboards.KeyboardDimens;
 import com.anysoftkeyboard.keyboards.views.preview.KeyPreviewsController;
@@ -47,13 +44,9 @@ import com.anysoftkeyboard.overlay.OverlayData;
 import com.anysoftkeyboard.overlay.OverlayDataImpl;
 import com.anysoftkeyboard.overlay.ThemeOverlayCombiner;
 import com.anysoftkeyboard.overlay.ThemeResourcesHolder;
-import com.anysoftkeyboard.prefs.AnimationsLevel;
-import com.anysoftkeyboard.prefs.RxSharedPrefs;
 import com.anysoftkeyboard.theme.KeyboardTheme;
-import com.menny.android.anysoftkeyboard.AnyApplication;
 import com.menny.android.anysoftkeyboard.R;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.subjects.Subject;
 import java.util.List;
 
 @SuppressWarnings("this-escape")
@@ -74,9 +67,11 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   protected final KeyPressTimingHandler mKeyPressTimingHandler;
   // Timing constants
   private final int mKeyRepeatInterval;
+
   @NonNull
   protected final PointerTracker.SharedPointerTrackersData mSharedPointerTrackersData =
       new PointerTracker.SharedPointerTrackersData();
+
   private final PointerTrackerRegistry mPointerTrackerRegistry;
   protected TouchDispatcher mTouchDispatcher;
   private PointerActionDispatcher pointerActionDispatcher;
@@ -93,7 +88,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   private final HintLayoutCalculator hintLayoutCalculator = new HintLayoutCalculator();
   private DrawInputsBuilder drawInputsBuilder;
   private KeyIconResolver keyIconResolver;
-  private final LabelPaintConfigurator labelPaintConfigurator = new LabelPaintConfigurator(textWidthCache);
+  private final LabelPaintConfigurator labelPaintConfigurator =
+      new LabelPaintConfigurator(textWidthCache);
   private PreviewThemeConfigurator previewThemeConfigurator;
   private PreviewPopupPresenter previewPopupPresenter;
   private KeyPreviewInteractor keyPreviewInteractor;
@@ -105,23 +101,23 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   private final KeyboardActionListenerHolder keyboardActionListenerHolder =
       new KeyboardActionListenerHolder();
 
-  @Nullable private KeyboardTheme mLastSetTheme = null;
+  private final KeyboardThemeController keyboardThemeController;
 
-  /** Notes if the keyboard just changed, so that we could possibly reallocate the mBuffer. */
-  protected boolean mKeyboardChanged;
+  private static final class KeyboardRenderState {
+    boolean keyboardChanged;
+    @Nullable CharSequence nextAlphabetKeyboardName;
+    @Nullable CharSequence nextSymbolsKeyboardName;
+    int keyboardActionType = EditorInfo.IME_ACTION_UNSPECIFIED;
+    @Nullable KeyDrawableStateProvider drawableStatesProvider;
+    @Nullable AnyKeyboard keyboard;
+    @Nullable CharSequence keyboardName;
+    @NonNull Keyboard.Key[] keys = new Keyboard.Key[0];
+  }
+
+  private final KeyboardRenderState keyboardRenderState = new KeyboardRenderState();
 
   private final ViewStyleState viewStyleState = new ViewStyleState();
-  protected CharSequence mNextAlphabetKeyboardName;
-  protected CharSequence mNextSymbolsKeyboardName;
-  int mKeyboardActionType = EditorInfo.IME_ACTION_UNSPECIFIED;
-  private KeyDrawableStateProvider mDrawableStatesProvider;
   private final KeyShadowStyle keyShadowStyle = new KeyShadowStyle();
-  // Main keyboard
-  private AnyKeyboard mKeyboard;
-  private CharSequence mKeyboardName;
-
-  // Drawing
-  private Keyboard.Key[] mKeys;
   private final KeyPreviewManagerFacade keyPreviewManager = new KeyPreviewManagerFacade();
 
   private final KeyboardNameHintController keyboardNameHintController =
@@ -136,7 +132,6 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   private final KeyHintRenderer keyHintRenderer = new KeyHintRenderer(hintLayoutCalculator);
   private final KeyLabelRenderer keyLabelRenderer = new KeyLabelRenderer();
   private final KeyIconDrawer keyIconDrawer = new KeyIconDrawer();
-  private final KeyTextColorResolver keyTextColorResolver = new KeyTextColorResolver();
   private final KeyDrawHelper keyDrawHelper;
   private final ThemeValueApplier themeValueApplier;
   private final KeyboardSetter keyboardSetter;
@@ -152,10 +147,12 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   private final NextKeyboardNameResolver nextKeyboardNameResolver = new NextKeyboardNameResolver();
   private final KeyTextStyleState keyTextStyleState = new KeyTextStyleState();
   private final KeyDisplayState keyDisplayState = new KeyDisplayState();
-  private final KeyboardNameHintState keyboardNameHintState = new KeyboardNameHintState();
+  private final KeyboardDrawCoordinator keyboardDrawCoordinator;
+  private final KeyboardModifierStateApplier keyboardModifierStateApplier =
+      new KeyboardModifierStateApplier();
 
   public AnyKeyboardViewBase(Context context, AttributeSet attrs) {
-        this(context, attrs, R.style.PlainLightNewSoftKeyboard);
+    this(context, attrs, R.style.PlainLightNewSoftKeyboard);
   }
 
   public AnyKeyboardViewBase(Context context, AttributeSet attrs, int defStyle) {
@@ -165,70 +162,91 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     mDisplayDensity = getResources().getDisplayMetrics().density;
     mDefaultAddOn = new DefaultAddOn(context, context);
 
-    mTouchDispatcher = new TouchDispatcher(this, TWO_FINGERS_LINGER_TIME);
-    mKeyPressTimingHandler = new KeyPressTimingHandler(this);
-    keyIconResolver = new KeyIconResolver(mThemeOverlayCombiner);
-    specialKeyManager = new SpecialKeyManager(context, keyIconResolver);
-    drawInputsBuilder =
-        new DrawInputsBuilder(
+    final AnyKeyboardViewBaseInitializer.Result init =
+        AnyKeyboardViewBaseInitializer.initialize(
+            this,
+            context,
+            TWO_FINGERS_LINGER_TIME,
             mThemeOverlayCombiner,
             drawDecisions,
             hintLayoutCalculator,
             keyboardNameHintController,
-            dirtyRegionDecider);
-    previewThemeConfigurator = new PreviewThemeConfigurator(mPreviewPopupTheme);
-    previewPopupPresenter =
-        new PreviewPopupPresenter(this, keyIconResolver, keyPreviewManager, previewThemeConfigurator);
-    keyPreviewInteractor = new KeyPreviewInteractor(previewPopupPresenter);
-    pointerActionDispatcher = new PointerActionDispatcher(mTouchDispatcher);
-    keyPreviewControllerBinder = new KeyPreviewControllerBinder(previewPopupPresenter);
-    themeValueApplier = createThemeValueApplier(previewThemeConfigurator);
-
-    mPaint = new Paint();
-    mPaint.setAntiAlias(true);
-    mPaint.setTextAlign(Align.CENTER);
-    mPaint.setAlpha(255);
-
-    keyDrawHelper = new KeyDrawHelper(this, mPaint);
-
-    final Resources res = getResources();
-
-    final float slide = res.getDimension(R.dimen.mini_keyboard_slide_allowance);
-    mKeyDetector = createKeyDetector(slide);
-    final int hysteresisDistance =
-        res.getDimensionPixelOffset(R.dimen.key_hysteresis_distance);
-    mPointerTrackerRegistry =
-        new PointerTrackerRegistry(
-            id ->
-                new PointerTracker(
-                    id,
-                    mKeyPressTimingHandler,
-                    mKeyDetector,
-                    this,
-                    hysteresisDistance,
-                    mSharedPointerTrackersData));
-    pointerTrackerAccessor = new PointerTrackerAccessor(mPointerTrackerRegistry);
-
-    mKeyRepeatInterval = 50;
-    keyboardSetter =
-        new KeyboardSetter(
-            new KeyboardSetterHostImpl(this),
-            mKeyDetector,
-            mPointerTrackerRegistry,
+            dirtyRegionDecider,
+            mPreviewPopupTheme,
+            keyPreviewManager,
+            mSharedPointerTrackersData,
             proximityCalculator,
-            swipeConfiguration);
-    swipeThresholdApplier =
-        new SwipeThresholdApplier(
-            swipeConfiguration, () -> swipeConfiguration.recomputeForKeyboard(getKeyboard()));
-    inputResetter = new InputResetter(keyPreviewManager, mKeyPressTimingHandler, mTouchDispatcher);
+            swipeConfiguration,
+            mDisposables,
+            new KeyboardViewThemeValueApplierFactory(
+                mThemeOverlayCombiner,
+                mKeyboardDimens,
+                mPreviewPopupTheme,
+                keyDisplayState,
+                viewStyleState,
+                keyTextStyleState,
+                keyShadowStyle),
+            keyTextStyleState,
+            keyDisplayState,
+            textWidthCache,
+            animationLevelController);
+    mTouchDispatcher = init.touchDispatcher();
+    mKeyPressTimingHandler = init.keyPressTimingHandler();
+    keyIconResolver = init.keyIconResolver();
+    specialKeyManager = init.specialKeyManager();
+    drawInputsBuilder = init.drawInputsBuilder();
+    previewThemeConfigurator = init.previewThemeConfigurator();
+    previewPopupPresenter = init.previewPopupPresenter();
+    keyPreviewInteractor = init.keyPreviewInteractor();
+    pointerActionDispatcher = init.pointerActionDispatcher();
+    keyPreviewControllerBinder = init.keyPreviewControllerBinder();
+    themeValueApplier = init.themeValueApplier();
+    mPaint = init.paint();
+    keyDrawHelper =
+        new KeyDrawHelper(
+            mPaint,
+            drawDecisions,
+            keyIconDrawer,
+            keyIconResolver,
+            keyBackgroundPadding.rect(),
+            keyboardNameRenderer,
+            keyLabelRenderer,
+            keyHintRenderer,
+            labelPaintConfigurator,
+            this::setPaintToKeyText,
+            this::setPaintForLabelText,
+            this::guessLabelForKey);
+    mKeyDetector = init.keyDetector();
+    mPointerTrackerRegistry = init.pointerTrackerRegistry();
+    pointerTrackerAccessor = init.pointerTrackerAccessor();
+    mKeyRepeatInterval = init.keyRepeatInterval();
+    keyboardSetter = init.keyboardSetter();
+    swipeThresholdApplier = init.swipeThresholdApplier();
+    inputResetter = init.inputResetter();
+    keyboardRenderState.nextAlphabetKeyboardName = init.nextAlphabetKeyboardName();
+    keyboardRenderState.nextSymbolsKeyboardName = init.nextSymbolsKeyboardName();
 
-    mNextAlphabetKeyboardName = getResources().getString(R.string.change_lang_regular);
-    mNextSymbolsKeyboardName = getResources().getString(R.string.change_symbols_regular);
+    keyboardThemeController =
+        new KeyboardThemeController(
+            this,
+            keyIconResolver,
+            textWidthCache,
+            mThemeOverlayCombiner,
+            themeAttributeLoaderRunner,
+            mPaint,
+            keyTextStyleState,
+            this::markKeyboardChanged);
 
-    final RxSharedPrefs rxSharedPrefs = AnyApplication.prefs(context);
-
-    new KeyboardViewPreferenceBinder().bind(this, rxSharedPrefs, mDisposables);
-    new PointerConfigLoader(rxSharedPrefs, mSharedPointerTrackersData).bind(mDisposables);
+    keyboardDrawCoordinator =
+        new KeyboardDrawCoordinator(
+            invalidateHelper,
+            clipRegionHolder,
+            drawInputsBuilder,
+            keyDrawHelper,
+            keyTextStyleState,
+            keyDisplayState,
+            keyShadowStyle,
+            mKeyDetector);
   }
 
   protected static boolean isSpaceKey(final AnyKey key) {
@@ -251,52 +269,24 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   public void disableTouchesTillFingersAreUp() {
     mKeyPressTimingHandler.cancelAllMessages();
     keyPreviewManager.dismissAll();
-
-    mPointerTrackerRegistry.forEach(
-        tracker -> {
-          dispatchPointerAction(MotionEvent.ACTION_CANCEL, 0, 0, 0, tracker);
-          tracker.setAlreadyProcessed();
-        });
-
-    mTouchDispatcher.disableTouchesTillFingersAreUp();
+    mTouchDispatcher.disableTouchesTillFingersAreUp(mPointerTrackerRegistry);
   }
 
   @Nullable
   protected KeyboardTheme getLastSetKeyboardTheme() {
-    return mLastSetTheme;
+    return keyboardThemeController.lastSetTheme();
   }
 
-  @SuppressWarnings("ReferenceEquality")
   @Override
   public void setKeyboardTheme(@NonNull KeyboardTheme theme) {
-    if (theme == mLastSetTheme) return;
-
-    keyIconResolver.clearCache(true);
-    keyIconResolver.clearBuilders();
-    textWidthCache.clear();
-    mLastSetTheme = theme;
-    if (mKeyboard != null) setWillNotDraw(false);
-
-    // the new theme might be of a different size
-    requestLayout();
-    // Hint to reallocate the buffer if the size changed
-    mKeyboardChanged = true;
-    invalidateAllKeys();
-
-    themeAttributeLoaderRunner.applyThemeAttributes(this, mThemeOverlayCombiner, theme);
-    mPaint.setTextSize(keyTextStyleState.keyTextSize());
+    keyboardThemeController.setKeyboardTheme(theme);
   }
 
   @Override
   @CallSuper
   public void setThemeOverlay(OverlayData overlay) {
     mThemeOverlay = overlay;
-    keyIconResolver.clearCache(true);
-    mThemeOverlayCombiner.setOverlayData(overlay);
-    if (mLastSetTheme != null) {
-      themeAttributeLoaderRunner.applyThemeAttributes(this, mThemeOverlayCombiner, mLastSetTheme);
-    }
-    invalidateAllKeys();
+    keyboardThemeController.setThemeOverlay(overlay);
   }
 
   protected KeyDetector createKeyDetector(final float slide) {
@@ -308,8 +298,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
       final int[] padding,
       final int localAttrId,
       final int remoteTypedArrayIndex) {
-    return themeValueApplier.apply(
-        remoteTypedArray, padding, localAttrId, remoteTypedArrayIndex);
+    return themeValueApplier.apply(remoteTypedArray, padding, localAttrId, remoteTypedArrayIndex);
   }
 
   boolean setKeyIconValueFromTheme(
@@ -322,40 +311,16 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   void setDrawableStatesProvider(KeyDrawableStateProvider provider) {
-    mDrawableStatesProvider = provider;
+    keyboardRenderState.drawableStatesProvider = provider;
     specialKeyManager.setDrawableStatesProvider(provider);
   }
 
   KeyDrawableStateProvider getDrawableStatesProvider() {
-    return mDrawableStatesProvider;
+    return keyboardRenderState.drawableStatesProvider;
   }
 
   void setActionIconStateSetter(ActionIconStateSetter setter) {
     specialKeyManager.setActionIconStateSetter(setter);
-  }
-
-  private ThemeValueApplier createThemeValueApplier(
-      PreviewThemeConfigurator previewThemeConfigurator) {
-    return new ThemeValueApplier(
-        mThemeOverlayCombiner,
-        mKeyboardDimens,
-        previewThemeConfigurator,
-        mPreviewPopupTheme,
-        keyDisplayState::keysHeightFactor,
-        viewStyleState::setOriginalVerticalCorrection,
-        viewStyleState::setBackgroundDimAmount,
-        keyTextStyleState::setKeyTextSize,
-        keyTextStyleState::setLabelTextSize,
-        keyTextStyleState::setKeyboardNameTextSize,
-        keyTextStyleState::setKeyTextStyle,
-        keyTextStyleState::setHintTextSize,
-        keyTextStyleState::setThemeHintLabelVAlign,
-        keyTextStyleState::setThemeHintLabelAlign,
-        keyShadowStyle::setColor,
-        keyShadowStyle::setRadius,
-        keyShadowStyle::setOffsetX,
-        keyShadowStyle::setOffsetY,
-        keyTextStyleState::setTextCaseType);
   }
 
   void onKeyDrawableProviderReady(
@@ -377,48 +342,18 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     mKeyboardDimens.setKeyboardMaxWidth(availableWidth);
   }
 
-  DrawDecisions getDrawDecisions() {
-    return drawDecisions;
-  }
-
-  KeyIconDrawer keyIconDrawer() {
-    return keyIconDrawer;
-  }
-
-  KeyIconResolver keyIconResolver() {
-    return keyIconResolver;
-  }
-
-  Rect keyBackgroundPadding() {
-    return keyBackgroundPadding.rect();
-  }
-
-  KeyboardNameRenderer keyboardNameRenderer() {
-    return keyboardNameRenderer;
-  }
-
-  CharSequence getKeyboardName() {
-    return mKeyboardName;
-  }
-
-  KeyLabelRenderer keyLabelRenderer() {
-    return keyLabelRenderer;
-  }
-
-  LabelPaintConfigurator labelPaintConfigurator() {
-    return labelPaintConfigurator;
-  }
-
-  KeyHintRenderer keyHintRenderer() {
-    return keyHintRenderer;
-  }
-
   protected int getKeyboardStyleResId(KeyboardTheme theme) {
     return theme.getPopupThemeResId();
   }
 
   protected int getKeyboardIconsStyleResId(KeyboardTheme theme) {
     return theme.getPopupIconsThemeResId();
+  }
+
+  @NonNull
+  /* package */ KeyboardTheme getFallbackKeyboardTheme() {
+    return com.menny.android.anysoftkeyboard.AnyApplication.getKeyboardThemeFactory(getContext())
+        .getFallbackTheme();
   }
 
   /**
@@ -445,7 +380,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   /* package */ boolean hasThemeSet() {
-    return mLastSetTheme != null;
+    return keyboardThemeController.lastSetTheme() != null;
   }
 
   /* package */ void ensureWillDraw() {
@@ -454,18 +389,13 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   /* package */ void setKeyboardFields(
       AnyKeyboard keyboard, CharSequence keyboardName, Keyboard.Key[] keys) {
-    mKeyboard = keyboard;
-    mKeyboardName = keyboardName;
-    mKeys = keys;
+    keyboardRenderState.keyboard = keyboard;
+    keyboardRenderState.keyboardName = keyboardName;
+    keyboardRenderState.keys = keys;
   }
 
-  /**
-   * Returns the current keyboard being displayed by this view.
-   *
-   * @return the currently attached keyboard
-   */
   public AnyKeyboard getKeyboard() {
-    return mKeyboard;
+    return keyboardRenderState.keyboard;
   }
 
   @Override
@@ -473,84 +403,55 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
       AnyKeyboard currentKeyboard,
       CharSequence nextAlphabetKeyboard,
       CharSequence nextSymbolsKeyboard) {
-    mNextAlphabetKeyboardName = nextAlphabetKeyboard;
-    mNextSymbolsKeyboardName = nextSymbolsKeyboard;
+    keyboardRenderState.nextAlphabetKeyboardName = nextAlphabetKeyboard;
+    keyboardRenderState.nextSymbolsKeyboardName = nextSymbolsKeyboard;
     final var res = getResources();
-    mNextAlphabetKeyboardName =
-        nextKeyboardNameResolver.resolveNextAlphabetName(res, mNextAlphabetKeyboardName);
-    mNextSymbolsKeyboardName =
-        nextKeyboardNameResolver.resolveNextSymbolsName(res, mNextSymbolsKeyboardName);
+    keyboardRenderState.nextAlphabetKeyboardName =
+        nextKeyboardNameResolver.resolveNextAlphabetName(
+            res, keyboardRenderState.nextAlphabetKeyboardName);
+    keyboardRenderState.nextSymbolsKeyboardName =
+        nextKeyboardNameResolver.resolveNextSymbolsName(
+            res, keyboardRenderState.nextSymbolsKeyboardName);
     setKeyboard(currentKeyboard, viewStyleState.originalVerticalCorrection());
   }
 
   @Override
   public boolean setShifted(boolean shifted) {
-    if (mKeyboard != null && mKeyboard.setShifted(shifted)) {
-      // The whole keyboard probably needs to be redrawn
-      invalidateAllKeys();
-      return true;
-    }
-    return false;
+    return keyboardModifierStateApplier.setShifted(getKeyboard(), shifted, this::invalidateAllKeys);
   }
 
   @Override
   public boolean setShiftLocked(boolean shiftLocked) {
-    AnyKeyboard keyboard = getKeyboard();
-    if (keyboard != null && keyboard.setShiftLocked(shiftLocked)) {
-      invalidateAllKeys();
-      return true;
-    }
-    return false;
+    return keyboardModifierStateApplier.setShiftLocked(
+        getKeyboard(), shiftLocked, this::invalidateAllKeys);
   }
 
-  /**
-   * Returns the state of the shift key of the UI, if any.
-   *
-   * @return true if the shift is in a pressed state, false otherwise. If there is no shift key on
-   *     the keyboard or there is no keyboard attached, it returns false.
-   */
   @Override
   public boolean isShifted() {
-    // if there no keyboard is set, then the shift state is false
-    return mKeyboard != null && mKeyboard.isShifted();
+    return keyboardModifierStateApplier.isShifted(getKeyboard());
   }
 
   @Override
   public boolean setControl(boolean control) {
-    if (mKeyboard != null && mKeyboard.setControl(control)) {
-      // The whole keyboard probably needs to be redrawn
-      invalidateAllKeys();
-      return true;
-    }
-    return false;
+    return keyboardModifierStateApplier.setControl(getKeyboard(), control, this::invalidateAllKeys);
   }
 
   @Override
   public boolean setAlt(boolean active, boolean locked) {
-    if (mKeyboard != null && mKeyboard.setAlt(active, locked)) {
-      invalidateAllKeys();
-      return true;
-    }
-    return false;
+    return keyboardModifierStateApplier.setAlt(
+        getKeyboard(), active, locked, this::invalidateAllKeys);
   }
 
   @Override
   public boolean setFunction(boolean active, boolean locked) {
-    if (mKeyboard != null && mKeyboard.setFunction(active, locked)) {
-      invalidateAllKeys();
-      return true;
-    }
-    return false;
+    return keyboardModifierStateApplier.setFunction(
+        getKeyboard(), active, locked, this::invalidateAllKeys);
   }
 
   @Override
   public boolean setVoice(boolean active, boolean locked) {
-    if (mKeyboard != null && mKeyboard.setVoice(active, locked)) {
-      // The whole keyboard probably needs to be redrawn
-      invalidateAllKeys();
-      return true;
-    }
-    return false;
+    return keyboardModifierStateApplier.setVoice(
+        getKeyboard(), active, locked, this::invalidateAllKeys);
   }
 
   /**
@@ -566,7 +467,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   @VisibleForTesting
   CharSequence adjustLabelToShiftState(AnyKey key) {
     return KeyLabelAdjuster.adjustLabelToShiftState(
-        mKeyboard,
+        getKeyboard(),
         mKeyDetector,
         keyTextStyleState.textCaseForceOverrideType(),
         keyTextStyleState.textCaseType(),
@@ -575,21 +476,21 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   @VisibleForTesting
   CharSequence adjustLabelForFunctionState(AnyKey key, CharSequence currentLabel) {
-    return KeyLabelAdjuster.adjustLabelForFunctionState(mKeyboard, key, currentLabel);
+    return KeyLabelAdjuster.adjustLabelForFunctionState(getKeyboard(), key, currentLabel);
   }
 
   @Override
   public void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     // Round up a little
-    if (mKeyboard == null) {
+    final AnyKeyboard keyboard = getKeyboard();
+    if (keyboard == null) {
       super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     } else {
       final int width =
           keyboardMeasureHelper.calculateWidth(
-              mKeyboard, getPaddingLeft(), getPaddingRight(), widthMeasureSpec);
+              keyboard, getPaddingLeft(), getPaddingRight(), widthMeasureSpec);
       final int height =
-          keyboardMeasureHelper.calculateHeight(
-              mKeyboard, getPaddingTop(), getPaddingBottom());
+          keyboardMeasureHelper.calculateHeight(keyboard, getPaddingTop(), getPaddingBottom());
       setMeasuredDimension(width, height);
     }
   }
@@ -603,48 +504,18 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   @CallSuper
   public void onDraw(@NonNull final Canvas canvas) {
     super.onDraw(canvas);
-    if (mKeyboardChanged) {
+    if (keyboardRenderState.keyboardChanged) {
       invalidateAllKeys();
-      mKeyboardChanged = false;
+      keyboardRenderState.keyboardChanged = false;
     }
-
-    final Rect dirtyRect = invalidateHelper.dirtyRect();
-    if (mKeyboard == null || mKeys == null || mKeys.length == 0) {
-      return;
-    }
-
-    if (!ClipAndDirtyRegionPrep.prepare(
-        canvas, dirtyRect, clipRegionHolder.rect(), mKeys, getPaddingLeft(), getPaddingTop())) {
-      return;
-    }
-
-    final DrawInputs drawInputs =
-        drawInputsBuilder.build(
-            canvas,
-            dirtyRect,
-            mKeyboard,
-            mKeys,
-            invalidateHelper.invalidatedKey(),
-            clipRegionHolder.rect(),
-            getPaddingLeft(),
-            getPaddingTop(),
-            keyTextStyleState.keyboardNameTextSize(),
-            keyTextStyleState.hintTextSize(),
-            keyTextStyleState.hintTextSizeMultiplier(),
-            keyDisplayState.alwaysUseDrawText(),
-            keyShadowStyle.radius(),
-            keyShadowStyle.offsetX(),
-            keyShadowStyle.offsetY(),
-            keyShadowStyle.color(),
-            keyTextStyleState.textCaseForceOverrideType(),
-            keyTextStyleState.textCaseType(),
-            mKeyDetector,
-            keyTextStyleState.keyTextSize(),
-            keyTextStyleState.themeHintLabelAlign(),
-            keyTextStyleState.themeHintLabelVAlign(),
-            mDrawableStatesProvider);
-    keyDrawHelper.drawKeys(canvas, dirtyRect, drawInputs);
-    invalidateHelper.clearAfterDraw();
+    keyboardDrawCoordinator.draw(
+        canvas,
+        keyboardRenderState.keyboard,
+        keyboardRenderState.keys,
+        keyboardRenderState.drawableStatesProvider,
+        keyboardRenderState.keyboardName,
+        getPaddingLeft(),
+        getPaddingTop());
   }
 
   protected void setPaintForLabelText(Paint paint) {
@@ -658,17 +529,17 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   @Override
   public void setKeyboardActionType(final int imeOptions) {
-    mKeyboardActionType = imeActionTypeResolver.resolveActionType(imeOptions);
+    keyboardRenderState.keyboardActionType = imeActionTypeResolver.resolveActionType(imeOptions);
     // setting the icon/text
     setSpecialKeysIconsAndLabels();
   }
 
   /* package */ void setSpecialKeysIconsAndLabels() {
     specialKeyManager.applySpecialKeys(
-        mKeyboard,
-        mKeyboardActionType,
-        mNextAlphabetKeyboardName,
-        mNextSymbolsKeyboardName,
+        keyboardRenderState.keyboard,
+        keyboardRenderState.keyboardActionType,
+        keyboardRenderState.nextAlphabetKeyboardName,
+        keyboardRenderState.nextSymbolsKeyboardName,
         textWidthCache,
         this::findKeyByPrimaryKeyCode,
         getContext());
@@ -678,10 +549,10 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   CharSequence guessLabelForKey(int keyCode) {
     return specialKeyManager.guessLabelForKey(
         keyCode,
-        mKeyboardActionType,
-        mNextAlphabetKeyboardName,
-        mNextSymbolsKeyboardName,
-        mKeyboard,
+        keyboardRenderState.keyboardActionType,
+        keyboardRenderState.nextAlphabetKeyboardName,
+        keyboardRenderState.nextSymbolsKeyboardName,
+        keyboardRenderState.keyboard,
         getContext());
   }
 
@@ -692,7 +563,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   @Nullable
   private Drawable getIconForKeyCode(int keyCode) {
-    return specialKeyManager.getIconForKeyCode(keyCode, mKeyboardActionType, mKeyboard);
+    return specialKeyManager.getIconForKeyCode(
+        keyCode, keyboardRenderState.keyboardActionType, keyboardRenderState.keyboard);
   }
 
   void dismissAllKeyPreviews() {
@@ -706,7 +578,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   @Override
   public void showPreview(int keyIndex, PointerTracker tracker) {
-    keyPreviewInteractor.showPreview(keyIndex, tracker, mKeyboard, this::guessLabelForKey);
+    keyPreviewInteractor.showPreview(
+        keyIndex, tracker, keyboardRenderState.keyboard, this::guessLabelForKey);
   }
 
   /**
@@ -774,11 +647,12 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   protected PointerTracker getPointerTracker(@NonNull final MotionEvent motionEvent) {
     return pointerTrackerAccessor.getForMotionEvent(
-        motionEvent, mKeys, keyboardActionListenerHolder.get());
+        motionEvent, keyboardRenderState.keys, keyboardActionListenerHolder.get());
   }
 
   protected PointerTracker getPointerTracker(final int id) {
-    return pointerTrackerAccessor.get(id, mKeys, keyboardActionListenerHolder.get());
+    return pointerTrackerAccessor.get(
+        id, keyboardRenderState.keys, keyboardActionListenerHolder.get());
   }
 
   /* package */ void markTwoFingers(long timeMs) {
@@ -802,7 +676,7 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   /* package */ int getKeyboardActionType() {
-    return mKeyboardActionType;
+    return keyboardRenderState.keyboardActionType;
   }
 
   /* package */ void dispatchPointerAction(
@@ -859,21 +733,13 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     keyIconResolver.clearBuilders();
 
     keyboardActionListenerHolder.set(null);
-    mKeyboard = null;
+    keyboardRenderState.keyboard = null;
+    keyboardRenderState.keyboardName = null;
+    keyboardRenderState.keys = new Keyboard.Key[0];
   }
 
   @Override
   public void setWatermark(@NonNull List<Drawable> watermark) {}
-
-  void applyThemeCaseOverride(final String overrideValue) {
-    keyTextStyleState.setTextCaseForceOverrideType(
-        ThemeOverrideApplier.caseOverride(overrideValue));
-  }
-
-  void applyHintTextSizeFactor(final String overrideValue) {
-    keyTextStyleState.setHintTextSizeMultiplier(
-        ThemeOverrideApplier.hintSizeMultiplier(overrideValue));
-  }
 
   /* package */ float getHintTextSizeMultiplier() {
     return keyTextStyleState.hintTextSizeMultiplier();
@@ -883,55 +749,8 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
     keyPreviewControllerBinder.setKeyPreviewController(controller);
   }
 
-  /* package */ void setShowKeyboardNameOnKeyboard(boolean show) {
-    keyboardNameHintState.setShowKeyboardNameOnKeyboard(show);
-    keyboardNameHintController.setShowKeyboardNameOnKeyboard(
-        keyboardNameHintState.showKeyboardNameOnKeyboard());
-  }
-
-  /* package */ void setShowHintsOnKeyboard(boolean show) {
-    keyboardNameHintState.setShowHintsOnKeyboard(show);
-    keyboardNameHintController.setShowHintsOnKeyboard(
-        keyboardNameHintState.showHintsOnKeyboard());
-  }
-
-  /* package */ void setCustomHintGravity(int gravity) {
-    keyboardNameHintState.setCustomHintGravity(gravity);
-    keyboardNameHintController.setCustomHintGravity(keyboardNameHintState.customHintGravity());
-  }
-
-  /* package */ void setSwipeXDistanceThreshold(int threshold) {
-    swipeThresholdApplier.setSwipeXDistanceThreshold(threshold);
-  }
-
-  /* package */ void setSwipeVelocityThreshold(int threshold) {
-    swipeThresholdApplier.setSwipeVelocityThreshold(threshold);
-  }
-
-  /* package */ void setSwipeYDistanceThreshold(int threshold) {
-    swipeThresholdApplier.setSwipeYDistanceThreshold(threshold);
-  }
-
-  /* package */ void setAlwaysUseDrawText(boolean alwaysUseDrawText) {
-    keyDisplayState.setAlwaysUseDrawText(alwaysUseDrawText);
-  }
-
   protected boolean alwaysUseDrawText() {
     return keyDisplayState.alwaysUseDrawText();
-  }
-
-  /* package */ void setKeysHeightFactor(float factor) {
-    keyDisplayState.setKeysHeightFactor(factor);
-    textWidthCache.clear();
-    invalidateAllKeys();
-  }
-
-  /* package */ void setAnimationLevel(AnimationsLevel level) {
-    animationLevelController.setLevel(level);
-  }
-
-  protected Subject<AnimationsLevel> animationLevelSubject() {
-    return animationLevelController.subject();
   }
 
   /* package */ float getDisplayDensity() {
@@ -960,5 +779,21 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
 
   /* package */ int getSwipeYDistanceThreshold() {
     return swipeConfiguration.getSwipeYDistanceThreshold();
+  }
+
+  protected final boolean isKeyboardChanged() {
+    return keyboardRenderState.keyboardChanged;
+  }
+
+  void markKeyboardChanged() {
+    keyboardRenderState.keyboardChanged = true;
+  }
+
+  protected final CharSequence getNextAlphabetKeyboardName() {
+    return keyboardRenderState.nextAlphabetKeyboardName;
+  }
+
+  protected final CharSequence getNextSymbolsKeyboardName() {
+    return keyboardRenderState.nextSymbolsKeyboardName;
   }
 }

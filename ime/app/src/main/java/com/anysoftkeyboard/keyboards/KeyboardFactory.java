@@ -21,14 +21,15 @@ import android.text.TextUtils;
 import android.util.AttributeSet;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.addons.AddOn;
-import com.anysoftkeyboard.addons.AddOnsFactory;
 import com.anysoftkeyboard.addons.AddOnsFactory.ReceiverSpec;
-import wtf.uhoh.newsoftkeyboard.api.PluginActions;
+import com.anysoftkeyboard.addons.MultipleAddOnsFactory;
 import com.anysoftkeyboard.base.utils.Logger;
 import com.anysoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import com.menny.android.anysoftkeyboard.BuildConfig;
 import com.menny.android.anysoftkeyboard.R;
-public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<KeyboardAddOnAndBuilder> {
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
+
+public class KeyboardFactory extends MultipleAddOnsFactory<KeyboardAddOnAndBuilder> {
   private static final String TAG = "NSKKeyboardFactory";
 
   private static final String XML_LAYOUT_RES_ID_ATTRIBUTE = "layoutResId";
@@ -43,6 +44,7 @@ public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<Keyboar
       "physicalKeyboardMappingResId";
   private static final String XML_DEFAULT_ATTRIBUTE = "defaultEnabled";
   public static final String PREF_ID_PREFIX = "keyboard_";
+
   public KeyboardFactory(@NonNull Context context) {
     super(
         context,
@@ -57,8 +59,7 @@ public class KeyboardFactory extends AddOnsFactory.MultipleAddOnsFactory<Keyboar
         R.string.settings_default_keyboard_id,
         true,
         BuildConfig.TESTING_BUILD,
-        new ReceiverSpec(
-            PluginActions.ACTION_KEYBOARD_ASK, PluginActions.METADATA_KEYBOARDS_ASK),
+        new ReceiverSpec(PluginActions.ACTION_KEYBOARD_ASK, PluginActions.METADATA_KEYBOARDS_ASK),
         new ReceiverSpec(
             PluginActions.ACTION_KEYBOARD_ASK_MENNY, PluginActions.METADATA_KEYBOARDS_ASK_MENNY));
   }

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.XmlResourceParser;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.addons.AddOn;
-import com.anysoftkeyboard.keyboards.views.KeyDrawableStateProvider;
 
 final class VoiceKey extends AnyKeyboard.AnyKey {
 
@@ -46,4 +45,3 @@ final class VoiceKey extends AnyKeyboard.AnyKey {
     }
   }
 }
-

@@ -75,12 +75,14 @@ public class GestureTypingDetectorTest {
     TestRxSchedulers.drainAllTasks();
     mKeys = keyboard.getKeys();
 
+    final List<GestureTypingDetector.GestureKey> gestureKeys =
+        KeyboardGestureKey.fromKeyboardKeys(mKeys);
     mDetectorUnderTest =
         new GestureTypingDetector(
             context.getResources().getDimension(R.dimen.gesture_typing_frequency_factor),
             MAX_SUGGESTIONS,
             context.getResources().getDimensionPixelSize(R.dimen.gesture_typing_min_point_distance),
-            mKeys);
+            gestureKeys);
 
     mCurrentState = new AtomicReference<>();
     mSubscribeState =
@@ -138,6 +140,48 @@ public class GestureTypingDetectorTest {
                     "Missing the word " + word + ". has " + candidates, candidates.remove(word)));
     // ensuring we asserted all words
     Assert.assertTrue("Still has " + candidates, candidates.isEmpty());
+  }
+
+  private static final class KeyboardGestureKey implements GestureTypingDetector.GestureKey {
+    private final Keyboard.Key key;
+
+    private KeyboardGestureKey(Keyboard.Key key) {
+      this.key = key;
+    }
+
+    @Override
+    public int getCodesCount() {
+      return key.getCodesCount();
+    }
+
+    @Override
+    public int getCodeAtIndex(int index) {
+      return key.getCodeAtIndex(index, false);
+    }
+
+    @Override
+    public boolean isInside(int x, int y) {
+      return key.isInside(x, y);
+    }
+
+    @Override
+    public int getCenterX() {
+      return Keyboard.Key.getCenterX(key);
+    }
+
+    @Override
+    public int getCenterY() {
+      return Keyboard.Key.getCenterY(key);
+    }
+
+    private static List<GestureTypingDetector.GestureKey> fromKeyboardKeys(
+        List<Keyboard.Key> keys) {
+      final ArrayList<GestureTypingDetector.GestureKey> gestureKeys = new ArrayList<>(keys.size());
+      for (Keyboard.Key key : keys) {
+        gestureKeys.add(new KeyboardGestureKey(key));
+      }
+      return gestureKeys;
+    }
   }
 
   @Test

@@ -5,9 +5,7 @@ import android.os.Message;
 import com.anysoftkeyboard.base.utils.Logger;
 import java.lang.ref.WeakReference;
 
-/**
- * Handles delayed scheduling of suggestion updates via the keyboard UI handler.
- */
+/** Handles delayed scheduling of suggestion updates via the keyboard UI handler. */
 final class SuggestionsUpdater implements Handler.Callback {
 
   interface Host {

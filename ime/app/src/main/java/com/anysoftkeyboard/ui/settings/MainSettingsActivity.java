@@ -83,19 +83,21 @@ public class MainSettingsActivity extends AppCompatActivity {
 
   private void handleOpenAISettingsNavigation(Intent intent) {
     if (intent == null) return;
-    
+
     // Handle navigation to OpenAI settings
     if (intent.hasExtra("navigate_to_openai_settings")) {
-      android.util.Log.d("MainSettingsActivity", "Found navigate_to_openai_settings extra, calling navigateToOpenAISettings");
+      android.util.Log.d(
+          "MainSettingsActivity",
+          "Found navigate_to_openai_settings extra, calling navigateToOpenAISettings");
       intent.removeExtra("navigate_to_openai_settings");
       navigateToOpenAISettings();
       return;
     }
   }
-  
+
   private void handlePermissionRequest(Intent intent) {
     if (intent == null) return;
-    
+
     if (ACTION_REQUEST_PERMISSION_ACTIVITY.equals(intent.getAction())
         && intent.hasExtra(EXTRA_KEY_ACTION_REQUEST_PERMISSION_ACTIVITY)) {
       final String permission = intent.getStringExtra(EXTRA_KEY_ACTION_REQUEST_PERMISSION_ACTIVITY);
@@ -136,8 +138,7 @@ public class MainSettingsActivity extends AppCompatActivity {
 
   public void navigateToOpenAISettings(String promptText) {
     android.util.Log.d(
-        "MainSettingsActivity",
-        "navigateToOpenAISettings called with prompt: " + promptText);
+        "MainSettingsActivity", "navigateToOpenAISettings called with prompt: " + promptText);
 
     final NavController navController =
         ((NavHostFragment)
@@ -152,14 +153,13 @@ public class MainSettingsActivity extends AppCompatActivity {
     }
 
     if (navController.getCurrentDestination() != null
-        && navController.getCurrentDestination().getId()
-            == R.id.openAISpeechSettingsFragment) {
+        && navController.getCurrentDestination().getId() == R.id.openAISpeechSettingsFragment) {
       android.util.Log.d(
           "MainSettingsActivity", "Already at OpenAI settings, triggering prompt dialog");
       OpenAISpeechSettingsFragment currentFragment =
           (OpenAISpeechSettingsFragment)
-              ((NavHostFragment) getSupportFragmentManager()
-                      .findFragmentById(R.id.nav_host_fragment))
+              ((NavHostFragment)
+                      getSupportFragmentManager().findFragmentById(R.id.nav_host_fragment))
                   .getChildFragmentManager()
                   .getFragments()
                   .get(0);

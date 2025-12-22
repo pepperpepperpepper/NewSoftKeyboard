@@ -123,12 +123,10 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
     for (SpeechToTextBackend backend : backends) {
       if ("openai".equals(backend.getId())) {
         openAiConfigured =
-            backend.isConfigured(
-                requireContext(), mBackendPreference.getSharedPreferences());
+            backend.isConfigured(requireContext(), mBackendPreference.getSharedPreferences());
       } else if ("elevenlabs".equals(backend.getId())) {
         elevenLabsConfigured =
-            backend.isConfigured(
-                requireContext(), mBackendPreference.getSharedPreferences());
+            backend.isConfigured(requireContext(), mBackendPreference.getSharedPreferences());
       }
     }
 
@@ -157,8 +155,6 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
                   ? R.string.speech_to_text_provider_status_configured
                   : R.string.speech_to_text_provider_status_missing_api_key);
     }
-    return baseSummary
-        + "\n"
-        + getString(R.string.speech_to_text_provider_status_not_selected);
+    return baseSummary + "\n" + getString(R.string.speech_to_text_provider_status_not_selected);
   }
 }

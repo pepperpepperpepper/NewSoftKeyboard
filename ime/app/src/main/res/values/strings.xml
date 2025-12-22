@@ -855,8 +855,6 @@
     <string name="prediction_engine_summary_hybrid_dual">Hybrid engine: %1$s + %2$s</string>
     <string name="prediction_engine_summary_neural">Neural engine: %1$s</string>
     <string name="prediction_engine_summary_requires_suggestions">Enable the suggestion bar to use third-party predictions.</string>
-    <string name="prediction_engine_neural_activation_failed">Neural model failed to load (%1$s). Falling back to offline suggestions.</string>
-    <string name="prediction_engine_error_unknown">unknown error</string>
     <string name="prediction_engine_summary_neural_failure">Neural suggestions disabled: %1$s</string>
     <string name="prediction_engine_summary_neural_failure_fallback">Neural suggestions disabled: %1$s. Currently using %2$s.</string>
     <string name="prediction_engine_neural_failure_reason_relative">%1$s ago - %2$s</string>

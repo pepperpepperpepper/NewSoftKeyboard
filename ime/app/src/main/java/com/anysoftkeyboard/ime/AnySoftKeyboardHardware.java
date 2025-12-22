@@ -2,12 +2,11 @@ package com.anysoftkeyboard.ime;
 
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.base.utils.Logger;
-import com.anysoftkeyboard.keyboards.AnyKeyboard;
-import com.anysoftkeyboard.keyboards.KeyboardSwitcher;
+import com.anysoftkeyboard.keyboards.NextKeyboardType;
 import com.anysoftkeyboard.keyboards.physical.HardKeyboardActionImpl;
+import com.anysoftkeyboard.keyboards.physical.HardKeyboardTranslator;
 import com.anysoftkeyboard.keyboards.physical.MyMetaKeyKeyListener;
 import com.anysoftkeyboard.rx.GenericOnError;
 import com.menny.android.anysoftkeyboard.R;
@@ -89,7 +88,7 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
 
   @Override
   public boolean onShowInputRequested(int flags, boolean configChange) {
-    final EditorInfo editorInfo = getCurrentInputEditorInfo();
+    final EditorInfo editorInfo = currentInputEditorInfo();
     // in case the user has used physical keyboard with this input-field,
     // we will not show the keyboard view (until completely finishing, or switching input
     // fields)
@@ -112,8 +111,8 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
   @Override
   @SuppressWarnings("fallthrough")
   public boolean onKeyDown(final int keyEventKeyCode, @NonNull KeyEvent event) {
-    InputConnection ic = currentInputConnection();
-    if (handleSelectionExpending(keyEventKeyCode, ic)) return true;
+    final InputConnectionRouter inputConnectionRouter = getInputConnectionRouter();
+    if (handleSelectionExpending(keyEventKeyCode, inputConnectionRouter)) return true;
     final boolean shouldTranslateSpecialKeys = isInputViewShown();
 
     // greater than zero means it is a physical keyboard.
@@ -145,16 +144,14 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
       case KeyEvent.KEYCODE_BACK:
         if (event.getRepeatCount() == 0 && getInputView() != null && handleCloseRequest()) {
           // consuming the meta keys
-          if (ic != null) {
-            // translated, so we also take care of the meta-state-keys
-            ic.clearMetaKeyStates(Integer.MAX_VALUE);
-          }
+          // translated, so we also take care of the meta-state-keys
+          inputConnectionRouter.clearMetaKeyStates(Integer.MAX_VALUE);
           mMetaState = 0;
           return true;
         }
         break;
       case 0x000000cc: // API 14: KeyEvent.KEYCODE_LANGUAGE_SWITCH
-        switchToNextPhysicalKeyboard(ic);
+        switchToNextPhysicalKeyboard();
         return true;
       case KeyEvent.KEYCODE_SHIFT_LEFT:
       case KeyEvent.KEYCODE_SHIFT_RIGHT:
@@ -166,7 +163,7 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
       case KeyEvent.KEYCODE_SPACE:
         if ((event.isAltPressed() && mSwitchLanguageOnAltSpace)
             || (event.isShiftPressed() && mSwitchLanguageOnShiftSpace)) {
-          switchToNextPhysicalKeyboard(ic);
+          switchToNextPhysicalKeyboard();
           return true;
         }
       // NOTE:
@@ -176,16 +173,16 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
         // Fix issue 185, check if we should process key repeat
         if (!mUseKeyRepeat && event.getRepeatCount() > 0) return true;
 
-        AnyKeyboard.HardKeyboardTranslator keyTranslator =
-            (AnyKeyboard.HardKeyboardTranslator) getCurrentAlphabetKeyboard();
+        HardKeyboardTranslator keyTranslator =
+            (HardKeyboardTranslator) getCurrentAlphabetKeyboard();
         if (getKeyboardSwitcher().isCurrentKeyboardPhysical() && keyTranslator != null) {
           // sometimes, the physical keyboard will delete input, and then add some.
           // we'll try to make it nice.
-          if (ic != null) ic.beginBatchEdit();
+          inputConnectionRouter.beginBatchEdit();
           try {
             // issue 393, back-word on the hw keyboard!
             if (mUseBackWord && keyEventKeyCode == KeyEvent.KEYCODE_DEL && event.isShiftPressed()) {
-              handleBackWord(ic);
+              handleBackWord();
               return true;
             } else {
               // http://article.gmane.org/gmane.comp.handhelds.openmoko.android-freerunner/629
@@ -203,7 +200,7 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
               }
             }
           } finally {
-            if (ic != null) ic.endBatchEdit();
+            inputConnectionRouter.endBatchEdit();
           }
         }
         if (event.isPrintingKey()) {
@@ -216,7 +213,7 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
     return super.onKeyDown(keyEventKeyCode, event);
   }
 
-  protected abstract void handleBackWord(InputConnection ic);
+  protected abstract void handleBackWord();
 
   @Override
   public boolean onKeyUp(int keyCode, @NonNull KeyEvent event) {
@@ -247,8 +244,7 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
                   event.getDeviceId(),
                   event.getScanCode(),
                   KeyEvent.META_SHIFT_LEFT_ON | KeyEvent.META_SHIFT_ON);
-          InputConnection ic = currentInputConnection();
-          if (ic != null) ic.sendKeyEvent(event);
+          getInputConnectionRouter().sendKeyEvent(event);
 
           return true;
         }
@@ -268,35 +264,28 @@ public abstract class AnySoftKeyboardHardware extends AnySoftKeyboardPressEffect
   }
 
   private void setInputConnectionMetaStateAsCurrentMetaKeyKeyListenerState() {
-    InputConnection ic = currentInputConnection();
-    if (ic != null) {
-      int clearStatesFlags = 0;
-      if (MyMetaKeyKeyListener.getMetaState(mMetaState, MyMetaKeyKeyListener.META_ALT_ON) == 0)
-        clearStatesFlags += KeyEvent.META_ALT_ON;
-      if (MyMetaKeyKeyListener.getMetaState(mMetaState, MyMetaKeyKeyListener.META_SHIFT_ON) == 0)
-        clearStatesFlags += KeyEvent.META_SHIFT_ON;
-      if (MyMetaKeyKeyListener.getMetaState(mMetaState, MyMetaKeyKeyListener.META_SYM_ON) == 0)
-        clearStatesFlags += KeyEvent.META_SYM_ON;
-      ic.clearMetaKeyStates(clearStatesFlags);
-    }
+    int clearStatesFlags = 0;
+    if (MyMetaKeyKeyListener.getMetaState(mMetaState, MyMetaKeyKeyListener.META_ALT_ON) == 0)
+      clearStatesFlags += KeyEvent.META_ALT_ON;
+    if (MyMetaKeyKeyListener.getMetaState(mMetaState, MyMetaKeyKeyListener.META_SHIFT_ON) == 0)
+      clearStatesFlags += KeyEvent.META_SHIFT_ON;
+    if (MyMetaKeyKeyListener.getMetaState(mMetaState, MyMetaKeyKeyListener.META_SYM_ON) == 0)
+      clearStatesFlags += KeyEvent.META_SYM_ON;
+    getInputConnectionRouter().clearMetaKeyStates(clearStatesFlags);
   }
 
-  private void switchToNextPhysicalKeyboard(InputConnection ic) {
+  private void switchToNextPhysicalKeyboard() {
     // consuming the meta keys
-    if (ic != null) {
-      // translated, so we also take care of the meta-keys.
-      ic.clearMetaKeyStates(Integer.MAX_VALUE);
-    }
+    // translated, so we also take care of the meta-keys.
+    getInputConnectionRouter().clearMetaKeyStates(Integer.MAX_VALUE);
     mMetaState = 0;
     // only physical keyboard
     getKeyboardSwitcher()
-        .nextKeyboard(
-            getCurrentInputEditorInfo(),
-            KeyboardSwitcher.NextKeyboardType.AlphabetSupportsPhysical);
+        .nextKeyboard(currentInputEditorInfo(), NextKeyboardType.AlphabetSupportsPhysical);
   }
 
   private void onPhysicalKeyboardKeyPressed() {
-    EditorInfo editorInfo = getCurrentInputEditorInfo();
+    EditorInfo editorInfo = currentInputEditorInfo();
     mLastEditorIdPhysicalKeyboardWasUsed = editorInfo == null ? 0 : editorInfo.fieldId;
     if (mHideKeyboardWhenPhysicalKeyboardUsed) {
       hideWindow();
