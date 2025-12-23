@@ -17,10 +17,10 @@
 ** limitations under the License.
 */
 -->
-<com.anysoftkeyboard.keyboards.views.AnyKeyboardViewBase xmlns:android="http://schemas.android.com/apk/res/android"
-                                                         android:id="@+id/AnyKeyboardPopupView"
-                                                         android:layout_width="fill_parent"
-                                                         android:layout_height="wrap_content"
-                                                         android:layout_alignParentBottom="true"
-                                                         android:layout_margin="0px"
-                                                         android:padding="0px"/>
+<com.anysoftkeyboard.keyboards.views.PopupAnyKeyboardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/AnyKeyboardPopupView"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:layout_alignParentBottom="true"
+    android:layout_margin="0px"
+    android:padding="0px" />

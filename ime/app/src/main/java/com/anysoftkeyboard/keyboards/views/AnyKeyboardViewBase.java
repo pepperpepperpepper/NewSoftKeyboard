@@ -343,11 +343,11 @@ public class AnyKeyboardViewBase extends View implements InputViewBinder, Pointe
   }
 
   protected int getKeyboardStyleResId(KeyboardTheme theme) {
-    return theme.getPopupThemeResId();
+    return theme.getThemeResId();
   }
 
   protected int getKeyboardIconsStyleResId(KeyboardTheme theme) {
-    return theme.getPopupIconsThemeResId();
+    return theme.getIconsThemeResId();
   }
 
   @NonNull
