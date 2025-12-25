@@ -34,7 +34,7 @@
         android:layout_margin="0px"
         android:padding="0px" />
 
-    <com.anysoftkeyboard.keyboards.views.AnyKeyboardView
+    <com.anysoftkeyboard.keyboards.views.KeyboardView
         android:id="@+id/AnyKeyboardMainView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

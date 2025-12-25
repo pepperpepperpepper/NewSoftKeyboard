@@ -17,7 +17,7 @@
 ** limitations under the License.
 */
 -->
-<com.anysoftkeyboard.keyboards.views.PopupAnyKeyboardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.anysoftkeyboard.keyboards.views.PopupKeyboardView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/AnyKeyboardPopupView"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
