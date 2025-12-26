@@ -27,7 +27,7 @@ android {
             }
         }
     }
-    namespace 'com.anysoftkeyboard.suggestions.presage'
+    namespace 'wtf.uhoh.newsoftkeyboard.suggestions.presage'
 }
 
 dependencies {

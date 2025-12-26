@@ -9,15 +9,15 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner
 import com.anysoftkeyboard.addon.base.apk.R
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner::class)
+@RunWith(NskRobolectricTestRunner::class)
 class MainActivityBaseTest {
   private companion object {
     private const val NSK_PACKAGE_NAME = "wtf.uhoh.newsoftkeyboard"

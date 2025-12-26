@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import android.view.View;
 import android.widget.TextView;
 import androidx.fragment.app.FragmentActivity;
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import io.reactivex.disposables.Disposable;
 import org.junit.Assert;
 import org.junit.Test;
@@ -15,8 +14,9 @@ import org.mockito.Mockito;
 import org.robolectric.Robolectric;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.shadows.ShadowDialog;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 public class RxProgressDialogTest {
 
   @Test

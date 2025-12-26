@@ -2,8 +2,8 @@ package wtf.uhoh.newsoftkeyboard.engine;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.anysoftkeyboard.dictionaries.neural.NeuralPredictionManager;
 import java.util.List;
+import wtf.uhoh.newsoftkeyboard.engine.neural.NeuralPredictionManager;
 
 /** Adapter over NeuralPredictionManager to conform to PredictionEngine. */
 public final class NeuralEngineAdapter implements PredictionEngine {

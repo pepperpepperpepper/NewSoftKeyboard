@@ -2,6 +2,6 @@
           xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:name="com.anysoftkeyboard.alladdons.AllAddOnsAnyApplication"
+        android:name="wtf.uhoh.newsoftkeyboard.alladdons.AllAddOnsNskApplication"
         tools:replace="android:name" />
 </manifest>

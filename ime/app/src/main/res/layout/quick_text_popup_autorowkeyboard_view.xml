@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:clipToPadding="false">
 
-    <com.anysoftkeyboard.keyboards.views.QuickKeysKeyboardView
+    <wtf.uhoh.newsoftkeyboard.app.keyboards.views.QuickKeysKeyboardView
         android:id="@+id/keys_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

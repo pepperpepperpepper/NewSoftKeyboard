@@ -1,13 +1,13 @@
 # Remove methods annotated with this if their return value is unused.
 -assumenosideeffects class ** {
-@com.anysoftkeyboard.base.RemovableInRelease <methods>;
+@wtf.uhoh.newsoftkeyboard.base.RemovableInRelease <methods>;
 }
 
--assumenosideeffects class com.anysoftkeyboard.base.utils.GenericAutoClose {
+-assumenosideeffects class wtf.uhoh.newsoftkeyboard.base.utils.GenericAutoClose {
     public void noop();
 }
 
--assumenosideeffects class com.anysoftkeyboard.base.utils.Logger {
+-assumenosideeffects class wtf.uhoh.newsoftkeyboard.base.utils.Logger {
     public static void v(...);
     public static void i(...);
     public static void w(...);
@@ -31,11 +31,11 @@
 -keep class androidx.tracing.Trace { *; }
 
 # Keep Presage package intact for release instrumentation/tests
--keep class com.anysoftkeyboard.dictionaries.presage.** { *; }
--keep class com.anysoftkeyboard.dictionaries.neural.** { *; }
--keep class com.anysoftkeyboard.debug.** { *; }
--keep class com.anysoftkeyboard.ime.ImeTestApi { *; }
--keep class com.anysoftkeyboard.keyboards.views.CandidateViewTestRegistry { *; }
+-keep class wtf.uhoh.newsoftkeyboard.app.dictionaries.presage.** { *; }
+-keep class wtf.uhoh.newsoftkeyboard.engine.neural.** { *; }
+-keep class wtf.uhoh.newsoftkeyboard.app.debug.** { *; }
+-keep class wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi { *; }
+-keep class wtf.uhoh.newsoftkeyboard.app.keyboards.views.CandidateViewTestRegistry { *; }
 
 # Keep test harness layout/resource IDs so release instrumentation can find views
 -keepclassmembers class ** {

@@ -14,7 +14,7 @@
 -->
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <style name="AospBaseTheme" parent="@style/AnyKeyboardBaseTheme">
+    <style name="AospBaseTheme" parent="@style/NskKeyboardBaseTheme">
         <item name="keyVerticalGap">5dp</item>
 
         <item name="keyTextStyle">normal</item>
@@ -46,7 +46,7 @@
     </style>
 
     <style name="AospDarkPopup"
-           parent="@style/AnyKeyboardPopupBaseTheme">
+           parent="@style/NskKeyboardPopupBaseTheme">
         <item name="android:background">@drawable/aosp_dark_popup_background</item>
         <item name="keyBackground">@drawable/aosp_dark_btn_popup_key</item>
         <item name="keyTextStyle">normal</item>
@@ -55,7 +55,7 @@
     </style>
 
     <style name="AospDarkKeyIconTheme"
-           parent="AnyKeyboardBaseKeyIconTheme" />
+           parent="NskKeyboardBaseKeyIconTheme" />
 
 
     <style name="AospLightTheme"
@@ -71,7 +71,7 @@
     </style>
 
     <style name="AospLightPopup"
-           parent="@style/AnyKeyboardPopupBaseTheme">
+           parent="@style/NskKeyboardPopupBaseTheme">
         <item name="android:background">@drawable/aosp_light_popup_background</item>
         <item name="keyBackground">@drawable/aosp_light_btn_popup_key</item>
         <item name="keyTextStyle">normal</item>

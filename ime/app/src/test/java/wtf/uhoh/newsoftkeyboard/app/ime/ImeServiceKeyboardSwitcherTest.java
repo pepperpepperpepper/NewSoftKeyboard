@@ -1,0 +1,465 @@
+package wtf.uhoh.newsoftkeyboard.app.ime;
+
+import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
+import static wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard.KEYBOARD_ROW_MODE_EMAIL;
+import static wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard.KEYBOARD_ROW_MODE_IM;
+import static wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard.KEYBOARD_ROW_MODE_NORMAL;
+import static wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard.KEYBOARD_ROW_MODE_PASSWORD;
+import static wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard.KEYBOARD_ROW_MODE_URL;
+
+import android.content.res.Configuration;
+import android.view.inputmethod.EditorInfo;
+import com.anysoftkeyboard.api.KeyCodes;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.Mockito;
+import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardSwitcher;
+import wtf.uhoh.newsoftkeyboard.app.testing.AddOnTestUtils;
+import wtf.uhoh.newsoftkeyboard.app.testing.TestableImeService;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
+import wtf.uhoh.newsoftkeyboard.testing.SharedPrefsHelper;
+
+@RunWith(NskRobolectricTestRunner.class)
+public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
+
+  @Test
+  public void testOnLowMemoryAlphabet() {
+    AddOnTestUtils.ensureKeyboardAtIndexEnabled(0, true);
+    AddOnTestUtils.ensureKeyboardAtIndexEnabled(1, true);
+    AddOnTestUtils.ensureKeyboardAtIndexEnabled(2, true);
+
+    simulateOnStartInputFlow();
+
+    // creating all keyboards
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+
+    Assert.assertEquals(
+        3, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().size());
+    for (KeyboardDefinition keyboard :
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards()) {
+      Assert.assertNotNull(keyboard);
+    }
+
+    Assert.assertEquals(
+        6, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(0));
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(1));
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(2));
+    // special modes keyboards which were not created yet
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(3));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(4));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(5));
+
+    mImeServiceUnderTest.onLowMemory();
+
+    Assert.assertEquals(
+        3, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().size());
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().get(0));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().get(1));
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().get(2));
+
+    Assert.assertEquals(
+        6, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(0));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(1));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(2));
+    // special modes keyboards which were not created yet
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(3));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(4));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(5));
+  }
+
+  @Test
+  public void testOnLowMemorySymbols() {
+    AddOnTestUtils.ensureKeyboardAtIndexEnabled(0, true);
+    AddOnTestUtils.ensureKeyboardAtIndexEnabled(1, true);
+    AddOnTestUtils.ensureKeyboardAtIndexEnabled(2, true);
+
+    simulateOnStartInputFlow();
+
+    // creating all keyboards
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_ALPHABET);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.MODE_SYMBOLS);
+
+    Assert.assertEquals(
+        3, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().size());
+    for (KeyboardDefinition keyboard :
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards()) {
+      Assert.assertNotNull(keyboard);
+    }
+
+    Assert.assertEquals(
+        6, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(0));
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(1));
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(2));
+    // special modes keyboards which were not created yet
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(3));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(4));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(5));
+
+    mImeServiceUnderTest.onLowMemory();
+
+    Assert.assertEquals(
+        3, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().size());
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().get(0));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().get(1));
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().get(2));
+
+    Assert.assertEquals(
+        6, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(0));
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(1));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(2));
+    // special modes keyboards which were not created yet
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(3));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(4));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(5));
+  }
+
+  @Test
+  public void testForceRecreateKeyboardOnSettingKeyboardView() {
+    final EditorInfo editorInfo = TestableImeService.createEditorInfoTextWithSuggestions();
+    mImeServiceUnderTest.onStartInput(editorInfo, false);
+    mImeServiceUnderTest.onCreateInputView();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyNewViewSet();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+  }
+
+  @Test
+  public void testCreatedPhoneKeyboard() {
+    final EditorInfo editorInfo =
+        TestableImeService.createEditorInfo(
+            EditorInfo.IME_ACTION_NONE, EditorInfo.TYPE_CLASS_PHONE);
+    mImeServiceUnderTest.onStartInput(editorInfo, false);
+    mImeServiceUnderTest.onCreateInputView();
+    mImeServiceUnderTest.onStartInputView(editorInfo, false);
+
+    Assert.assertEquals(
+        "phone_symbols_keyboard",
+        mImeServiceUnderTest.getCurrentKeyboardForTests().getKeyboardId().toString());
+    Assert.assertEquals(
+        KeyboardSwitcher.INPUT_MODE_PHONE,
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getInputModeId());
+  }
+
+  @Test
+  public void testCreatedDateTimeKeyboard() {
+    final EditorInfo editorInfo =
+        TestableImeService.createEditorInfo(
+            EditorInfo.IME_ACTION_NONE, EditorInfo.TYPE_CLASS_DATETIME);
+    mImeServiceUnderTest.onStartInput(editorInfo, false);
+    mImeServiceUnderTest.onCreateInputView();
+    mImeServiceUnderTest.onStartInputView(editorInfo, false);
+
+    Assert.assertEquals(
+        "datetime_symbols_keyboard",
+        mImeServiceUnderTest.getCurrentKeyboardForTests().getKeyboardId().toString());
+    Assert.assertEquals(
+        KeyboardSwitcher.INPUT_MODE_DATETIME,
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getInputModeId());
+  }
+
+  @Test
+  public void testCreatedNumbersKeyboard() {
+    final EditorInfo editorInfo =
+        TestableImeService.createEditorInfo(
+            EditorInfo.IME_ACTION_NONE, EditorInfo.TYPE_CLASS_NUMBER);
+    mImeServiceUnderTest.onStartInput(editorInfo, true);
+    mImeServiceUnderTest.onCreateInputView();
+    mImeServiceUnderTest.onStartInputView(editorInfo, true);
+
+    Assert.assertEquals(
+        "numbers_symbols_keyboard",
+        mImeServiceUnderTest.getCurrentKeyboardForTests().getKeyboardId().toString());
+    Assert.assertEquals(
+        KeyboardSwitcher.INPUT_MODE_NUMBERS,
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getInputModeId());
+  }
+
+  @Test
+  public void testCreatedTextInputKeyboard() {
+    final EditorInfo editorInfo = TestableImeService.createEditorInfoTextWithSuggestions();
+    mImeServiceUnderTest.onStartInput(editorInfo, true);
+    mImeServiceUnderTest.onCreateInputView();
+    mImeServiceUnderTest.onStartInputView(editorInfo, true);
+
+    Assert.assertEquals(
+        KeyboardSwitcher.INPUT_MODE_TEXT,
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getInputModeId());
+  }
+
+  @Test
+  public void testCreatedEmailTextInputKeyboard() {
+    final EditorInfo editorInfo =
+        TestableImeService.createEditorInfo(
+            EditorInfo.IME_ACTION_NONE,
+            EditorInfo.TYPE_CLASS_TEXT + EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+    mImeServiceUnderTest.onStartInput(editorInfo, true);
+    mImeServiceUnderTest.onCreateInputView();
+    mImeServiceUnderTest.onStartInputView(editorInfo, true);
+
+    Assert.assertEquals(
+        KeyboardSwitcher.INPUT_MODE_EMAIL,
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getInputModeId());
+  }
+
+  @Test
+  public void testCreatedPasswordTextInputKeyboard() {
+    mImeServiceUnderTest.onFinishInputView(true);
+    mImeServiceUnderTest.onFinishInput();
+
+    final EditorInfo editorInfo =
+        TestableImeService.createEditorInfo(
+            EditorInfo.IME_ACTION_NONE,
+            EditorInfo.TYPE_CLASS_TEXT + EditorInfo.TYPE_TEXT_VARIATION_PASSWORD);
+    mImeServiceUnderTest.onStartInput(editorInfo, false);
+    mImeServiceUnderTest.onStartInputView(editorInfo, true);
+
+    // just a normal text keyboard
+    Assert.assertEquals(
+        KeyboardSwitcher.INPUT_MODE_TEXT,
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getInputModeId());
+    // with password row mode
+    Assert.assertEquals(
+        KEYBOARD_ROW_MODE_PASSWORD,
+        mImeServiceUnderTest.getCurrentKeyboardForTests().getKeyboardMode());
+  }
+
+  private void verifyMaskedKeyboardRow(
+      @Keyboard.KeyboardRowModeId int modeId, int inputModeId, int variant) {
+    SharedPrefsHelper.setPrefsValue(Keyboard.getPrefKeyForEnabledRowMode(modeId), false);
+
+    mImeServiceUnderTest.onFinishInputView(true);
+    mImeServiceUnderTest.onFinishInput();
+
+    final EditorInfo editorInfo =
+        TestableImeService.createEditorInfo(
+            EditorInfo.IME_ACTION_NONE, EditorInfo.TYPE_CLASS_TEXT + variant);
+    mImeServiceUnderTest.onStartInput(editorInfo, false);
+    mImeServiceUnderTest.onStartInputView(editorInfo, true);
+
+    // just a normal text keyboard
+    Assert.assertEquals(
+        inputModeId, mImeServiceUnderTest.getKeyboardSwitcherForTests().getInputModeId());
+    // with NORMAL row mode, since the pref is false
+    Assert.assertEquals(
+        KEYBOARD_ROW_MODE_NORMAL,
+        mImeServiceUnderTest.getCurrentKeyboardForTests().getKeyboardMode());
+  }
+
+  @Test
+  public void testCreatedNormalTextInputKeyboardWhenPasswordFieldButOptionDisabled() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_PASSWORD,
+        KeyboardSwitcher.INPUT_MODE_TEXT,
+        EditorInfo.TYPE_TEXT_VARIATION_PASSWORD);
+  }
+
+  @Test
+  public void
+      testCreatedNormalTextInputKeyboardWhenPasswordFieldButOptionDisabledVisiblePassword() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_PASSWORD,
+        KeyboardSwitcher.INPUT_MODE_TEXT,
+        EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+  }
+
+  @Test
+  public void testCreatedNormalTextInputKeyboardWhenPasswordFieldButOptionDisabledWeb() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_PASSWORD,
+        KeyboardSwitcher.INPUT_MODE_TEXT,
+        EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD);
+  }
+
+  @Test
+  public void testCreatedNormalTextInputKeyboardWhenUrlFieldButOptionDisabled() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_URL, KeyboardSwitcher.INPUT_MODE_URL, EditorInfo.TYPE_TEXT_VARIATION_URI);
+  }
+
+  @Test
+  public void testCreatedNormalTextInputKeyboardWhenEmailAddressFieldButOptionDisabled() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_EMAIL,
+        KeyboardSwitcher.INPUT_MODE_EMAIL,
+        EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+  }
+
+  @Test
+  public void testCreatedNormalTextInputKeyboardWhenWebEmailAddressFieldButOptionDisabled() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_EMAIL,
+        KeyboardSwitcher.INPUT_MODE_EMAIL,
+        EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
+  }
+
+  @Test
+  public void testCreatedNormalTextInputKeyboardWhenShortMessageFieldButOptionDisabled() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_IM,
+        KeyboardSwitcher.INPUT_MODE_IM,
+        EditorInfo.TYPE_TEXT_VARIATION_SHORT_MESSAGE);
+  }
+
+  @Test
+  public void
+      testCreatedNormalTextInputKeyboardWhenShortMessageFieldButOptionDisabledEmailSubject() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_IM,
+        KeyboardSwitcher.INPUT_MODE_TEXT,
+        EditorInfo.TYPE_TEXT_VARIATION_EMAIL_SUBJECT);
+  }
+
+  @Test
+  public void
+      testCreatedNormalTextInputKeyboardWhenShortMessageFieldButOptionDisabledLongMessage() {
+    verifyMaskedKeyboardRow(
+        KEYBOARD_ROW_MODE_IM,
+        KeyboardSwitcher.INPUT_MODE_TEXT,
+        EditorInfo.TYPE_TEXT_VARIATION_LONG_MESSAGE);
+  }
+
+  @Test
+  public void testKeyboardsRecycledOnPasswordRowSupportPrefChange() {
+    mImeServiceUnderTest
+        .getKeyboardSwitcherForTests()
+        .verifyKeyboardsFlushed(); // initial. It will reset flush state
+
+    SharedPrefsHelper.setPrefsValue(
+        Keyboard.getPrefKeyForEnabledRowMode(Keyboard.KEYBOARD_ROW_MODE_EMAIL), false);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+
+    SharedPrefsHelper.setPrefsValue(
+        Keyboard.getPrefKeyForEnabledRowMode(Keyboard.KEYBOARD_ROW_MODE_EMAIL), true);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+
+    // same value
+    SharedPrefsHelper.setPrefsValue(
+        Keyboard.getPrefKeyForEnabledRowMode(Keyboard.KEYBOARD_ROW_MODE_EMAIL), true);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsNotFlushed();
+  }
+
+  @Test
+  public void testForceMakeKeyboardsOnOrientationChange() {
+    mImeServiceUnderTest
+        .getKeyboardSwitcherForTests()
+        .verifyKeyboardsFlushed(); // initial. It will reset flush state
+
+    Assert.assertFalse(mImeServiceUnderTest.isKeyboardViewHidden());
+    final Configuration configuration = getApplicationContext().getResources().getConfiguration();
+    configuration.orientation = Configuration.ORIENTATION_LANDSCAPE;
+    mImeServiceUnderTest.onConfigurationChanged(configuration);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+    // same orientation
+    configuration.orientation = Configuration.ORIENTATION_LANDSCAPE;
+    mImeServiceUnderTest.onConfigurationChanged(configuration);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+  }
+
+  @Test
+  public void testForceMakeKeyboardsOnAddOnsPrefChange() {
+    AddOnTestUtils.ensureKeyboardAtIndexEnabled(1, true);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyNewViewSet();
+    Mockito.reset(mImeServiceUnderTest.getSuggest());
+    SharedPrefsHelper.setPrefsValue("keyboard_some-id_override_dictionary", "dictionary_id");
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsNotFlushed();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyNewViewNotSet();
+    Mockito.verify(mImeServiceUnderTest.getSuggest()).resetNextWordSentence();
+    // no UI, no setup of suggestions dictionaries
+    Mockito.verify(mImeServiceUnderTest.getSuggest(), Mockito.never())
+        .setupSuggestionsForKeyboard(Mockito.anyList(), Mockito.any());
+    Mockito.reset(mImeServiceUnderTest.getSuggest());
+    NskApplicationBase.getQuickTextKeyFactory(getApplicationContext())
+        .setAddOnEnabled(
+            NskApplicationBase.getQuickTextKeyFactory(getApplicationContext())
+                .getAllAddOns()
+                .get(1)
+                .getId(),
+            true);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyNewViewNotSet();
+    NskApplicationBase.getTopRowFactory(getApplicationContext())
+        .setAddOnEnabled(
+            NskApplicationBase.getTopRowFactory(getApplicationContext())
+                .getAllAddOns()
+                .get(1)
+                .getId(),
+            true);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyNewViewNotSet();
+    NskApplicationBase.getBottomRowFactory(getApplicationContext())
+        .setAddOnEnabled(
+            NskApplicationBase.getBottomRowFactory(getApplicationContext())
+                .getAllAddOns()
+                .get(1)
+                .getId(),
+            true);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyNewViewNotSet();
+    SharedPrefsHelper.setPrefsValue(
+        getApplicationContext().getString(R.string.settings_key_always_hide_language_key), true);
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsFlushed();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyNewViewNotSet();
+
+    // sanity
+    SharedPrefsHelper.setPrefsValue("random", "dummy");
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyKeyboardsNotFlushed();
+    mImeServiceUnderTest.getKeyboardSwitcherForTests().verifyNewViewNotSet();
+  }
+}

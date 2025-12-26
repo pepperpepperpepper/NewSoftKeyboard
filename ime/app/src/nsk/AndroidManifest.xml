@@ -5,8 +5,8 @@
         android:name="wtf.uhoh.newsoftkeyboard.NewSoftKeyboardApplication"
         tools:replace="android:name">
         <!-- Remove legacy entry points from the base manifest so the nsk flavor exposes
-             NewSoftKeyboard-qualified components while keeping the legacy classes for
-             internal/compat use. -->
+             NewSoftKeyboard-qualified components. Legacy entrypoint classes live in the
+             askCompat source-set only. -->
         <service
             android:name="com.menny.android.anysoftkeyboard.SoftKeyboard"
             tools:node="remove" />

@@ -1,0 +1,118 @@
+package wtf.uhoh.newsoftkeyboard.app.notices;
+
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Point;
+import android.net.Uri;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.EditorInfo;
+import android.widget.ImageView;
+import androidx.annotation.DrawableRes;
+import androidx.annotation.NonNull;
+import java.util.Locale;
+import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.InputViewBinder;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewWithExtraDraw;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.extradraw.TypingExtraDraw;
+
+class OnKeyEasterEggBaseImpl implements OnKey, OnVisible {
+  private final OnKeyWordHelper mWordTypedHelper;
+  private final StringSupplier mExtraDrawText;
+  private final EasterEggAction mSuggestionAction;
+  private final String mEggName;
+
+  protected OnKeyEasterEggBaseImpl(
+      String word, String suggestion, String extraDrawText, @DrawableRes int image) {
+    this(word, suggestion, () -> extraDrawText, image);
+  }
+
+  protected OnKeyEasterEggBaseImpl(
+      String word, String suggestion, StringSupplier extraDrawText, @DrawableRes int image) {
+    mWordTypedHelper = new OnKeyWordHelper(word);
+    mSuggestionAction = new EasterEggAction(suggestion, image);
+    mExtraDrawText = extraDrawText;
+    mEggName = String.format(Locale.ROOT, "EasterEgg%s", word);
+  }
+
+  @Override
+  public void onKey(PublicNotices ime, int primaryCode, Keyboard.Key key) {
+    if (mWordTypedHelper.shouldShow(primaryCode)) {
+      final InputViewBinder inputView = ime.getInputView();
+      if (inputView instanceof KeyboardViewWithExtraDraw) {
+        final KeyboardViewWithExtraDraw keyboardViewWithExtraDraw =
+            (KeyboardViewWithExtraDraw) inputView;
+        keyboardViewWithExtraDraw.addExtraDraw(
+            new TypingExtraDraw(
+                mExtraDrawText.giveMeSomeString(),
+                new Point(
+                    keyboardViewWithExtraDraw.getWidth() / 2,
+                    keyboardViewWithExtraDraw.getHeight() / 2),
+                120,
+                this::adjustPaint));
+        ime.getInputViewContainer().addStripAction(mSuggestionAction, true);
+      }
+    }
+  }
+
+  @Override
+  public void onVisible(PublicNotices ime, KeyboardDefinition keyboard, EditorInfo editorInfo) {}
+
+  @Override
+  public void onHidden(PublicNotices ime, KeyboardDefinition keyboard) {
+    ime.getInputViewContainer().removeStripAction(mSuggestionAction);
+  }
+
+  private Paint adjustPaint(Paint paint, KeyboardViewWithExtraDraw ime, Float fraction) {
+    Paint newPaint = new Paint(paint);
+    ime.setPaintToKeyText(newPaint);
+    newPaint.setTextSkewX(0.3f);
+    newPaint.setAlpha((int) (255 * (1f - fraction)));
+    newPaint.setTextScaleX(1 + fraction);
+    newPaint.setShadowLayer(5, 0, 0, Color.BLACK);
+
+    return newPaint;
+  }
+
+  @Override
+  @NonNull
+  public String getName() {
+    return mEggName;
+  }
+
+  interface StringSupplier {
+    String giveMeSomeString();
+  }
+
+  private static class EasterEggAction implements KeyboardViewContainerView.StripActionProvider {
+
+    private final Intent mWebPage;
+    @DrawableRes private final int mImage;
+
+    private EasterEggAction(String url, @DrawableRes int image) {
+      mWebPage = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+      mImage = image;
+      mWebPage.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    }
+
+    @Override
+    public @NonNull View inflateActionView(@NonNull ViewGroup parent) {
+      final Context context = parent.getContext();
+      View root = LayoutInflater.from(context).inflate(R.layout.easter_egg_action, parent, false);
+
+      root.setOnClickListener(view -> view.getContext().startActivity(mWebPage));
+      ImageView image = root.findViewById(R.id.easter_egg_icon);
+      image.setImageResource(mImage);
+      return root;
+    }
+
+    @Override
+    public void onRemoved() {}
+  }
+}

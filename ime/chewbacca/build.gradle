@@ -16,5 +16,5 @@ dependencies {
 }
 
 android {
-    namespace 'com.anysoftkeyboard.chewbacca'
+    namespace 'wtf.uhoh.newsoftkeyboard.chewbacca'
 }

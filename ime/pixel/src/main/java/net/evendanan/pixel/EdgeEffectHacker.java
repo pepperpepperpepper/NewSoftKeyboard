@@ -5,7 +5,7 @@ import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
-import com.anysoftkeyboard.base.utils.Logger;
+import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 
 public class EdgeEffectHacker {
 

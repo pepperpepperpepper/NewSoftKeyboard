@@ -20,7 +20,7 @@
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:isDefault="false"
-    android:settingsActivity="com.anysoftkeyboard.ui.settings.MainSettingsActivity"
+    android:settingsActivity="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainSettingsActivity"
     android:supportsInlineSuggestions="true"
     android:supportsSwitchingToNextInputMethod="true"
     tools:targetApi="r">

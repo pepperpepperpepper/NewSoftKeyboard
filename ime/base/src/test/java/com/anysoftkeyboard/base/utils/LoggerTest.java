@@ -1,13 +1,13 @@
-package com.anysoftkeyboard.base.utils;
+package wtf.uhoh.newsoftkeyboard.base.utils;
 
-import com.anysoftkeyboard.AnySoftKeyboardPlainTestRunner;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import wtf.uhoh.newsoftkeyboard.testing.NskPlainTestRunner;
 
-@RunWith(AnySoftKeyboardPlainTestRunner.class)
+@RunWith(NskPlainTestRunner.class)
 public class LoggerTest {
 
   private LogProvider mMockLog;

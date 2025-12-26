@@ -38,7 +38,7 @@
             android:background="@drawable/keyboard_demo_shadow">
 
 
-            <com.anysoftkeyboard.keyboards.views.DemoKeyboardView
+            <wtf.uhoh.newsoftkeyboard.app.keyboards.views.DemoKeyboardView
                 android:id="@+id/demo_keyboard_view"
                 android:layout_width="match_parent"
                 android:layout_height="200dp" />

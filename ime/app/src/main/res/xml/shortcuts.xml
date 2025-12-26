@@ -12,7 +12,7 @@
         android:shortcutShortLabel="@string/app_shortcut_keyboards_short_label">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="com.anysoftkeyboard.ui.settings.MainSettingsActivity"
+            android:targetClass="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainSettingsActivity"
             android:targetPackage="@string/app_shortcut_target_package"
             android:data="@string/deeplink_url_keyboards"/>
         <categories android:name="android.shortcut.conversation" />
@@ -28,7 +28,7 @@
         android:shortcutShortLabel="@string/app_shortcut_themes_short_label">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="com.anysoftkeyboard.ui.settings.MainSettingsActivity"
+            android:targetClass="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainSettingsActivity"
             android:targetPackage="@string/app_shortcut_target_package"
             android:data="@string/deeplink_url_themes"/>
         <categories android:name="android.shortcut.conversation" />
@@ -44,7 +44,7 @@
         android:shortcutShortLabel="@string/app_shortcut_quick_keys_short_label">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="com.anysoftkeyboard.ui.settings.MainSettingsActivity"
+            android:targetClass="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainSettingsActivity"
             android:targetPackage="@string/app_shortcut_target_package"
             android:data="@string/deeplink_url_quick_text"/>
         <categories android:name="android.shortcut.conversation" />
@@ -60,7 +60,7 @@
         android:shortcutShortLabel="@string/app_shortcut_gestures_short_label">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetClass="com.anysoftkeyboard.ui.settings.MainSettingsActivity"
+            android:targetClass="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainSettingsActivity"
             android:targetPackage="@string/app_shortcut_target_package"
             android:data="@string/deeplink_url_gestures"/>
         <categories android:name="android.shortcut.conversation" />

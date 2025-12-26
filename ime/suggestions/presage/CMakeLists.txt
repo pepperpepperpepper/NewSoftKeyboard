@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project(anysoftkeyboard_presage_bridge LANGUAGES CXX)
+project(newsoftkeyboard_presage_bridge LANGUAGES CXX)
 
 set(PRESAGE_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../../third_party/presage/presage-0.9.1/src/lib)
 
@@ -76,14 +76,14 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         -Wno-sign-compare)
 endif()
 
-add_library(anysoftkeyboard_presage SHARED
+add_library(newsoftkeyboard_presage SHARED
     src/main/jni/presage_bridge.cpp)
 
-set_target_properties(anysoftkeyboard_presage PROPERTIES
+set_target_properties(newsoftkeyboard_presage PROPERTIES
     CXX_STANDARD 14
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
-target_compile_options(anysoftkeyboard_presage PRIVATE -Wall -Wextra -Werror -Wno-ignored-qualifiers -fvisibility=hidden)
+target_compile_options(newsoftkeyboard_presage PRIVATE -Wall -Wextra -Werror -Wno-ignored-qualifiers -fvisibility=hidden)
 
 find_library(log-lib log)
-target_link_libraries(anysoftkeyboard_presage PRIVATE presage_static ${log-lib})
+target_link_libraries(newsoftkeyboard_presage PRIVATE presage_static ${log-lib})

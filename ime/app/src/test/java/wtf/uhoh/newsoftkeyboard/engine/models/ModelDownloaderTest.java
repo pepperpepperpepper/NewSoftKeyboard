@@ -1,0 +1,243 @@
+package wtf.uhoh.newsoftkeyboard.engine.models;
+
+import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+import org.json.JSONException;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import wtf.uhoh.newsoftkeyboard.engine.EngineType;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
+
+@RunWith(NskRobolectricTestRunner.class)
+public class ModelDownloaderTest {
+
+  private static final String MODEL_ID = "test-presage-model";
+  private static final String ARPA_FILENAME = MODEL_ID + ".arpa";
+  private static final String VOCAB_FILENAME = MODEL_ID + ".vocab";
+  private static final String MANIFEST_FILENAME = "manifest.json";
+
+  private Context mContext;
+  private ModelStore mModelStore;
+
+  @Before
+  public void setUp() {
+    mContext = getApplicationContext();
+    clearPresageState();
+    mModelStore = new ModelStore(mContext);
+  }
+
+  @After
+  public void tearDown() {
+    clearPresageState();
+  }
+
+  @Test
+  public void testDownloadsAndInstallsBundle() throws Exception {
+    final byte[] arpaContent = "dummy arpa".getBytes(StandardCharsets.UTF_8);
+    final byte[] vocabContent = "dummy vocab".getBytes(StandardCharsets.UTF_8);
+
+    final ModelDefinition definition = buildDefinition(arpaContent, vocabContent);
+    final byte[] archiveBytes = createBundle(definition, arpaContent, vocabContent);
+    final String archiveSha = computeSha256Hex(archiveBytes);
+
+    final String bundleUrl = "https://example.com/" + MODEL_ID + ".zip";
+
+    final ModelDownloader downloader =
+        new ModelDownloader(mContext, mModelStore, url -> new ByteArrayInputStream(archiveBytes));
+
+    final ModelDefinition installedDefinition =
+        downloader.downloadAndInstall(definition, bundleUrl, archiveSha);
+
+    assertEquals(MODEL_ID, installedDefinition.getId());
+
+    final File modelDir = getModelDirectory(MODEL_ID);
+    final File arpaFile = new File(modelDir, ARPA_FILENAME);
+    final File vocabFile = new File(modelDir, VOCAB_FILENAME);
+    assertTrue(arpaFile.exists());
+    assertTrue(vocabFile.exists());
+
+    final ModelDefinition.FileRequirement arpaRequirement =
+        installedDefinition.getArpaRequirement();
+    final ModelDefinition.FileRequirement vocabRequirement =
+        installedDefinition.getVocabRequirement();
+    assertEquals(computeSha256Hex(arpaContent), arpaRequirement.getSha256());
+    assertEquals(computeSha256Hex(vocabContent), vocabRequirement.getSha256());
+
+    assertEquals(MODEL_ID, mModelStore.getSelectedModelId(EngineType.NGRAM));
+    assertTrue(!mModelStore.listAvailableModels().isEmpty());
+  }
+
+  @Test
+  public void testChecksumMismatchFails() throws Exception {
+    final byte[] arpaContent = "arpa".getBytes(StandardCharsets.UTF_8);
+    final byte[] vocabContent = "vocab".getBytes(StandardCharsets.UTF_8);
+    final ModelDefinition definition = buildDefinition(arpaContent, vocabContent);
+    final byte[] archiveBytes = createBundle(definition, arpaContent, vocabContent);
+
+    final String bundleUrl = "https://example.com/fake.zip";
+    final String badSha = "deadbeef";
+
+    final ModelDownloader downloader =
+        new ModelDownloader(mContext, mModelStore, url -> new ByteArrayInputStream(archiveBytes));
+
+    try {
+      downloader.downloadAndInstall(definition, bundleUrl, badSha);
+      fail("Expected checksum mismatch to throw");
+    } catch (IOException expected) {
+      assertTrue(expected.getMessage().contains("Checksum mismatch"));
+    }
+  }
+
+  @Test
+  public void testBundleWithNestedRootDirectoryIsFlattened() throws Exception {
+    final byte[] arpaContent = "arpa".getBytes(StandardCharsets.UTF_8);
+    final byte[] vocabContent = "vocab".getBytes(StandardCharsets.UTF_8);
+
+    final ModelDefinition definition = buildDefinition(arpaContent, vocabContent);
+    final byte[] archiveBytes =
+        createBundleWithNestedRoot(definition, arpaContent, vocabContent, MODEL_ID + "-nested");
+    final String archiveSha = computeSha256Hex(archiveBytes);
+
+    final String bundleUrl = "https://example.com/" + MODEL_ID + "-nested.zip";
+
+    final ModelDownloader downloader =
+        new ModelDownloader(mContext, mModelStore, url -> new ByteArrayInputStream(archiveBytes));
+
+    downloader.downloadAndInstall(definition, bundleUrl, archiveSha);
+
+    final File modelDir = getModelDirectory(MODEL_ID);
+    assertTrue(new File(modelDir, ARPA_FILENAME).exists());
+    assertTrue(new File(modelDir, VOCAB_FILENAME).exists());
+    assertTrue(new File(modelDir, MANIFEST_FILENAME).exists());
+    assertTrue(!new File(modelDir, MODEL_ID + "-nested").exists());
+  }
+
+  private ModelDefinition buildDefinition(byte[] arpaContent, byte[] vocabContent)
+      throws JSONException {
+    return ModelDefinition.builder(MODEL_ID)
+        .setLabel("Test Presage Model")
+        .setArpaFile(ARPA_FILENAME, computeSha256Hex(arpaContent), null, false)
+        .setVocabFile(VOCAB_FILENAME, computeSha256Hex(vocabContent), null, false)
+        .build();
+  }
+
+  private byte[] createBundle(ModelDefinition definition, byte[] arpaContent, byte[] vocabContent)
+      throws IOException, JSONException {
+    final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(byteStream)) {
+      zipOutputStream.putNextEntry(new ZipEntry("manifest.json"));
+      final OutputStreamWriter writer =
+          new OutputStreamWriter(zipOutputStream, StandardCharsets.UTF_8);
+      writer.write(definition.toJson().toString());
+      writer.flush();
+      zipOutputStream.closeEntry();
+
+      zipOutputStream.putNextEntry(new ZipEntry(ARPA_FILENAME));
+      zipOutputStream.write(arpaContent);
+      zipOutputStream.closeEntry();
+
+      zipOutputStream.putNextEntry(new ZipEntry(VOCAB_FILENAME));
+      zipOutputStream.write(vocabContent);
+      zipOutputStream.closeEntry();
+    }
+    return byteStream.toByteArray();
+  }
+
+  private byte[] createBundleWithNestedRoot(
+      ModelDefinition definition, byte[] arpaContent, byte[] vocabContent, String rootDirectory)
+      throws IOException, JSONException {
+    final ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(byteStream)) {
+      final String prefix = rootDirectory.endsWith("/") ? rootDirectory : rootDirectory + "/";
+
+      zipOutputStream.putNextEntry(new ZipEntry(prefix + MANIFEST_FILENAME));
+      final OutputStreamWriter writer =
+          new OutputStreamWriter(zipOutputStream, StandardCharsets.UTF_8);
+      writer.write(definition.toJson().toString());
+      writer.flush();
+      zipOutputStream.closeEntry();
+
+      zipOutputStream.putNextEntry(new ZipEntry(prefix + ARPA_FILENAME));
+      zipOutputStream.write(arpaContent);
+      zipOutputStream.closeEntry();
+
+      zipOutputStream.putNextEntry(new ZipEntry(prefix + VOCAB_FILENAME));
+      zipOutputStream.write(vocabContent);
+      zipOutputStream.closeEntry();
+    }
+    return byteStream.toByteArray();
+  }
+
+  private void clearPresageState() {
+    final File presageRoot = new File(mContext.getNoBackupFilesDir(), "presage");
+    deleteRecursively(presageRoot);
+    final SharedPreferences digestPrefs =
+        mContext.getSharedPreferences("presage_asset_versions", Context.MODE_PRIVATE);
+    digestPrefs.edit().clear().commit();
+    final SharedPreferences selectionPrefs =
+        mContext.getSharedPreferences("presage_model_selection", Context.MODE_PRIVATE);
+    selectionPrefs.edit().clear().commit();
+  }
+
+  private File getModelDirectory(String modelId) {
+    final File presageRoot = new File(mContext.getNoBackupFilesDir(), "presage");
+    final File modelsRoot = new File(presageRoot, "models");
+    return new File(modelsRoot, modelId);
+  }
+
+  private static void deleteRecursively(File file) {
+    if (file == null || !file.exists()) {
+      return;
+    }
+    if (file.isDirectory()) {
+      final File[] children = file.listFiles();
+      if (children != null) {
+        for (File child : children) {
+          deleteRecursively(child);
+        }
+      }
+    }
+    if (!file.delete()) {
+      file.deleteOnExit();
+    }
+  }
+
+  private static String computeSha256Hex(byte[] data) {
+    try {
+      final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      digest.update(data);
+      return toHex(digest.digest());
+    } catch (NoSuchAlgorithmException exception) {
+      throw new AssertionError(exception);
+    }
+  }
+
+  private static String toHex(byte[] digest) {
+    final StringBuilder builder = new StringBuilder(digest.length * 2);
+    for (byte value : digest) {
+      final int intVal = value & 0xFF;
+      if (intVal < 0x10) {
+        builder.append('0');
+      }
+      builder.append(Integer.toHexString(intVal));
+    }
+    return builder.toString();
+  }
+}

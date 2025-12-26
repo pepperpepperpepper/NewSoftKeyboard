@@ -12,5 +12,5 @@ dependencies {
 }
 
 android {
-    namespace 'com.anysoftkeyboard.notification'
+    namespace 'wtf.uhoh.newsoftkeyboard.notification'
 }

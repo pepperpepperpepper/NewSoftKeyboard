@@ -14,5 +14,5 @@ dependencies {
 }
 
 android {
-    namespace 'com.anysoftkeyboard.gesturetyping'
+    namespace 'wtf.uhoh.newsoftkeyboard.gesturetyping'
 }

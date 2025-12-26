@@ -1,4 +1,4 @@
-package com.anysoftkeyboard.base.utils;
+package wtf.uhoh.newsoftkeyboard.base.utils;
 
 import org.junit.Assert;
 import org.junit.Test;

@@ -2,7 +2,6 @@ package com.google.android.voiceime;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import com.anysoftkeyboard.AnySoftKeyboardPlainTestRunner;
 import com.google.android.voiceime.backends.OpenAISpeechBackend;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,8 +12,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import wtf.uhoh.newsoftkeyboard.testing.NskPlainTestRunner;
 
-@RunWith(AnySoftKeyboardPlainTestRunner.class)
+@RunWith(NskPlainTestRunner.class)
 public class OpenAISpeechBackendTest {
 
   private Context mContext;

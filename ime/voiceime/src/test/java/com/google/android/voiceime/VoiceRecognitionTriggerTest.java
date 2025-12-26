@@ -8,7 +8,6 @@ import android.inputmethodservice.InputMethodService;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.view.inputmethod.InputMethodSubtype;
-import com.anysoftkeyboard.AnySoftKeyboardPlainTestRunner;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Assert;
@@ -16,8 +15,9 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import wtf.uhoh.newsoftkeyboard.testing.NskPlainTestRunner;
 
-@RunWith(AnySoftKeyboardPlainTestRunner.class)
+@RunWith(NskPlainTestRunner.class)
 public class VoiceRecognitionTriggerTest {
 
   InputMethodManager mMockInputMethodManager;

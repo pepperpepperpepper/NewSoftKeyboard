@@ -3,13 +3,13 @@ package {{PACKAGE}};
 import android.widget.ImageView;
 import androidx.lifecycle.Lifecycle;
 import androidx.test.core.app.ActivityScenario;
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
+import com.anysoftkeyboard.NskRobolectricTestRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Shadows;
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 public class MainActivityTest {
   @Test
   public void testActivityIsValid() {

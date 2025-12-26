@@ -9,15 +9,15 @@ import android.widget.TextView;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceManager;
 import androidx.test.core.app.ActivityScenario;
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
-import com.anysoftkeyboard.rx.TestRxSchedulers;
-import com.anysoftkeyboard.test.TestFragmentActivity;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import wtf.uhoh.newsoftkeyboard.rx.TestRxSchedulers;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
+import wtf.uhoh.newsoftkeyboard.testing.TestFragmentActivity;
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 public class SlidePreferenceTest {
 
   private TestPrefFragment mTestPrefFragment;

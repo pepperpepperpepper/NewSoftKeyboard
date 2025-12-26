@@ -40,7 +40,7 @@
     </issue>
 
     <issue id="VisibleForTests" severity="error" >
-        <ignore path="*/AnySoftKeyboardRobolectricTestRunner.java" />
+        <ignore path="*/NskRobolectricTestRunner.java" />
     </issue>
 
     <issue id="StringFormatCount" severity="fatal" />

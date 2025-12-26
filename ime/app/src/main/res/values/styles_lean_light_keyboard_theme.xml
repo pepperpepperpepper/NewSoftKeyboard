@@ -14,7 +14,7 @@
 -->
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <style name="LeanLight" parent="@style/AnyKeyboardBaseTheme">
+    <style name="LeanLight" parent="@style/NskKeyboardBaseTheme">
         <item name="android:background">@drawable/lean_light_keyboard_background</item>
         <item name="keyVerticalGap">@dimen/plain_theme_key_horizontal_gap</item>
         <item name="keyTextColor">@color/light_btn_key_text_color</item>
@@ -37,7 +37,7 @@
         <item name="previewAnimationType">extend_key</item>
     </style>
 
-    <style name="LeanLightPopup" parent="@style/AnyKeyboardPopupBaseTheme">
+    <style name="LeanLightPopup" parent="@style/NskKeyboardPopupBaseTheme">
         <item name="android:background">@drawable/lean_light_popup_keyboard_background</item>
         <item name="keyTextColor">@color/light_btn_key_text_color</item>
         <item name="keyBackground">@drawable/lean_light_btn_popup</item>
@@ -48,7 +48,7 @@
         <item name="shadowRadius">0px</item>
     </style>
 
-    <style name="LeanLightKeyIconTheme" parent="@style/AnyKeyboardBaseKeyIconTheme">
+    <style name="LeanLightKeyIconTheme" parent="@style/NskKeyboardBaseKeyIconTheme">
         <item name="iconKeyShift">@drawable/light_key_shift_set</item>
         <item name="iconKeyControl">@drawable/light_key_control_set</item>
         <item name="iconKeyBackspace">@drawable/sym_keyboard_delete_light</item>

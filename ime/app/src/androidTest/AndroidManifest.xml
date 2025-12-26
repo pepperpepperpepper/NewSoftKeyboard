@@ -3,7 +3,7 @@
     <application>
         <!-- Test-only add-on receiver to verify discovery under legacy namespaces used by real add-on packs. -->
         <receiver
-            android:name="com.anysoftkeyboard.addons.cts.TestKeyboardReceiver"
+            android:name="wtf.uhoh.newsoftkeyboard.compat.addons.cts.TestKeyboardReceiver"
             android:exported="true">
             <!-- NewSoftKeyboard namespace (future-proofing our own add-ons). -->
             <intent-filter>

@@ -28,7 +28,7 @@
         android:required="false" />
 
     <application
-        android:name=".AnyApplication"
+        android:name="com.menny.android.anysoftkeyboard.NskApplicationBase"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:installLocation="internalOnly"
@@ -49,7 +49,7 @@
 
         <!-- this is the IME with the pointer to the settings ui (xml/method) -->
         <service
-            android:name=".SoftKeyboard"
+            android:name="com.menny.android.anysoftkeyboard.SoftKeyboard"
             android:label="@string/ime_name"
             android:exported="true"
             android:directBootAware="true"
@@ -84,7 +84,7 @@
                 android:resource="@xml/shortcuts" />
         </activity>
         <activity
-            android:name="com.anysoftkeyboard.ui.settings.MainSettingsActivity"
+            android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainSettingsActivity"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/ime_name"
             android:launchMode="singleTask"
@@ -92,7 +92,7 @@
             android:theme="@style/Theme.NskApp"
             android:windowSoftInputMode="adjustPan" />
         <activity
-            android:name="com.anysoftkeyboard.ui.settings.setup.SetupWizardActivity"
+            android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.setup.SetupWizardActivity"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/ime_name"
             android:launchMode="singleTask"
@@ -101,17 +101,35 @@
             android:windowSoftInputMode="adjustPan" />
         <!-- ui when a crash happens -->
         <activity
-            android:name="com.anysoftkeyboard.ui.SendBugReportUiActivity"
+            android:name="wtf.uhoh.newsoftkeyboard.app.ui.support.SendBugReportUiActivity"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/ime_name"
             android:roundIcon="@mipmap/ic_launcher_round"
             android:theme="@style/Theme.NskApp.NoTitle" />
 
-        <activity
-            android:name="com.anysoftkeyboard.ui.VoiceInputNotInstalledActivity"
+        <activity-alias
+            android:name="com.anysoftkeyboard.ui.SendBugReportUiActivity"
+            android:exported="false"
             android:icon="@mipmap/ic_launcher"
             android:label="@string/ime_name"
             android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity="wtf.uhoh.newsoftkeyboard.app.ui.support.SendBugReportUiActivity"
+            android:theme="@style/Theme.NskApp.NoTitle" />
+
+        <activity
+            android:name="wtf.uhoh.newsoftkeyboard.app.ui.support.VoiceInputNotInstalledActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/ime_name"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <activity-alias
+            android:name="com.anysoftkeyboard.ui.VoiceInputNotInstalledActivity"
+            android:exported="false"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/ime_name"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity="wtf.uhoh.newsoftkeyboard.app.ui.support.VoiceInputNotInstalledActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <!-- Add-on UI Card broadcast receiver -->

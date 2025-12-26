@@ -1,0 +1,132 @@
+package wtf.uhoh.newsoftkeyboard.app.ui.settings.setup;
+
+import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
+
+import android.app.Application;
+import android.content.Intent;
+import android.view.View;
+import androidx.annotation.NonNull;
+import androidx.test.core.app.ApplicationProvider;
+import org.junit.Assert;
+import org.junit.Test;
+import org.robolectric.Robolectric;
+import org.robolectric.Shadows;
+import org.robolectric.shadows.ShadowView;
+import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDimens;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.DemoKeyboardView;
+import wtf.uhoh.newsoftkeyboard.app.ui.settings.MainSettingsActivity;
+
+public class WizardPageWelcomeFragmentTest
+    extends RobolectricWizardFragmentTestCase<
+        WizardPageWelcomeFragmentTest.TestableWizardPageWelcomeFragment> {
+
+  @NonNull
+  @Override
+  protected TestableWizardPageWelcomeFragment createFragment() {
+    return new TestableWizardPageWelcomeFragment();
+  }
+
+  @Test
+  public void testClickStart() {
+    TestableWizardPageWelcomeFragment fragment = startFragment();
+    Assert.assertFalse(fragment.isStepCompleted(getApplicationContext()));
+
+    final View startView = fragment.getView().findViewById(R.id.go_to_start_setup);
+    Assert.assertNotNull(startView);
+    Assert.assertTrue(startView.isClickable());
+    final ShadowView shadowStartView = Shadows.shadowOf(startView);
+    Assert.assertNotNull(shadowStartView.getOnClickListener());
+    Assert.assertFalse(fragment.mRefreshPagerCalled);
+    startView.performClick();
+    Assert.assertTrue(fragment.mRefreshPagerCalled);
+
+    Assert.assertTrue(fragment.isStepCompleted(getApplicationContext()));
+  }
+
+  @Test
+  public void testClickedSkipped() {
+    var fragment = startFragment();
+
+    final View link = fragment.getView().findViewById(R.id.skip_setup_wizard);
+    var linkClickHandler = Shadows.shadowOf(link).getOnClickListener();
+
+    Assert.assertNotNull(linkClickHandler);
+
+    linkClickHandler.onClick(link);
+
+    final Intent nextStartedActivity =
+        Shadows.shadowOf((Application) ApplicationProvider.getApplicationContext())
+            .getNextStartedActivity();
+
+    Assert.assertEquals(
+        MainSettingsActivity.class.getName(), nextStartedActivity.getComponent().getClassName());
+  }
+
+  @Test
+  public void testClickPrivacyPolicy() {
+    WizardPageWelcomeFragment fragment = startFragment();
+    Assert.assertFalse(fragment.isStepCompleted(getApplicationContext()));
+
+    fragment.getView().findViewById(R.id.setup_wizard_welcome_privacy_action).performClick();
+
+    Intent wikiIntent =
+        Shadows.shadowOf((Application) ApplicationProvider.getApplicationContext())
+            .getNextStartedActivity();
+    Assert.assertEquals(Intent.ACTION_VIEW, wikiIntent.getAction());
+    Assert.assertEquals(
+        getApplicationContext().getString(R.string.privacy_policy),
+        wikiIntent.getData().toString());
+  }
+
+  @Test
+  public void testDemoRotate() {
+    WizardPageWelcomeFragment fragment = startFragment();
+    DemoKeyboardView demoKeyboardView = fragment.getView().findViewById(R.id.demo_keyboard_view);
+    int timesDemoChanged = 0;
+    final int runsToMake = 10;
+    for (int tests = 0; tests < runsToMake; tests++) {
+      final long startDemoDescription = describeDemoKeyboard(demoKeyboardView);
+      final long startTime = Robolectric.getForegroundThreadScheduler().getCurrentTime();
+
+      Assert.assertTrue(Robolectric.getForegroundThreadScheduler().advanceToLastPostedRunnable());
+
+      Assert.assertNotEquals(
+          startTime, Robolectric.getForegroundThreadScheduler().getCurrentTime());
+
+      if (startDemoDescription != describeDemoKeyboard(demoKeyboardView)) {
+        timesDemoChanged++;
+      }
+    }
+
+    // making sure that the demo view changed more than half the times.
+    Assert.assertTrue(timesDemoChanged > runsToMake / 2);
+  }
+
+  private long describeDemoKeyboard(DemoKeyboardView demoKeyboardView) {
+    long description = 0;
+    for (Keyboard.Key key : demoKeyboardView.getKeyboard().getKeys()) {
+      description += key.getPrimaryCode();
+    }
+
+    KeyboardDimens themedKeyboardDimens = demoKeyboardView.getThemedKeyboardDimens();
+    description += themedKeyboardDimens.getKeyboardMaxWidth();
+    description += themedKeyboardDimens.getLargeKeyHeight();
+    description += themedKeyboardDimens.getNormalKeyHeight();
+    description += themedKeyboardDimens.getSmallKeyHeight();
+    description += (int) themedKeyboardDimens.getKeyHorizontalGap();
+    description += (int) themedKeyboardDimens.getRowVerticalGap();
+
+    return description;
+  }
+
+  public static class TestableWizardPageWelcomeFragment extends WizardPageWelcomeFragment {
+    private boolean mRefreshPagerCalled;
+
+    @Override
+    protected void refreshWizardPager() {
+      mRefreshPagerCalled = true;
+    }
+  }
+}

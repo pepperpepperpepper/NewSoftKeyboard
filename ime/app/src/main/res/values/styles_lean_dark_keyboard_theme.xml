@@ -14,7 +14,7 @@
 -->
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <style name="LeanDark" parent="@style/AnyKeyboardBaseTheme">
+    <style name="LeanDark" parent="@style/NskKeyboardBaseTheme">
         <item name="android:background">@drawable/lean_dark_keyboard_background</item>
         <item name="keyVerticalGap">@dimen/plain_theme_key_horizontal_gap</item>
         <item name="keyBackground">@drawable/lean_dark_btn</item>
@@ -31,7 +31,7 @@
         <item name="previewAnimationType">extend_key</item>
     </style>
 
-    <style name="LeanDarkPopup" parent="@style/AnyKeyboardPopupBaseTheme">
+    <style name="LeanDarkPopup" parent="@style/NskKeyboardPopupBaseTheme">
         <item name="android:background">@drawable/lean_dark_popup_keyboard_background</item>
         <item name="keyBackground">@drawable/lean_dark_btn_popup</item>
         <item name="keyTextStyle">normal</item>

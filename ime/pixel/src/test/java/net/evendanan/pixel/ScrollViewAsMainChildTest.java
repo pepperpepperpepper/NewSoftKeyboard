@@ -5,8 +5,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
-import com.anysoftkeyboard.rx.TestRxSchedulers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -14,8 +12,10 @@ import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import wtf.uhoh.newsoftkeyboard.rx.TestRxSchedulers;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 @Config(sdk = Build.VERSION_CODES.M) /*this view has no usage before API 30*/
 public class ScrollViewAsMainChildTest {
 

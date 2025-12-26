@@ -17,7 +17,7 @@
 ** limitations under the License.
 */
 -->
-<com.anysoftkeyboard.keyboards.views.PopupKeyboardView xmlns:android="http://schemas.android.com/apk/res/android"
+<wtf.uhoh.newsoftkeyboard.app.keyboards.views.PopupKeyboardView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/AnyKeyboardPopupView"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"

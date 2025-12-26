@@ -18,5 +18,5 @@ android {
     buildFeatures {
         buildConfig = true
     }
-    namespace 'com.anysoftkeyboard.nextword'
+    namespace 'wtf.uhoh.newsoftkeyboard.nextword'
 }

@@ -1,13 +1,13 @@
-package com.anysoftkeyboard.utils;
+package wtf.uhoh.newsoftkeyboard.utils;
 
-import com.anysoftkeyboard.AnySoftKeyboardPlainTestRunner;
 import java.io.IOException;
 import java.io.StringWriter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import wtf.uhoh.newsoftkeyboard.testing.NskPlainTestRunner;
 
-@RunWith(AnySoftKeyboardPlainTestRunner.class)
+@RunWith(NskPlainTestRunner.class)
 public class XmlWriterTest {
 
   @Test

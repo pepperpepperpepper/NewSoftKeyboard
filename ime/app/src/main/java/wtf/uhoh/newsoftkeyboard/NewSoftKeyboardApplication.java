@@ -1,6 +1,6 @@
 package wtf.uhoh.newsoftkeyboard;
 
-import com.menny.android.anysoftkeyboard.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 
 /**
  * Branding-friendly Application entry point for the NSK flavor.

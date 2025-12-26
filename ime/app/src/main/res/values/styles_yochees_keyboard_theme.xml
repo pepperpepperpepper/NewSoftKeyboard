@@ -61,7 +61,7 @@
     </style>
 
     <style name="YocheesBaseTheme"
-           parent="@style/AnyKeyboardBaseTheme">
+           parent="@style/NskKeyboardBaseTheme">
         <item name="keyTextSize">@dimen/key_text_size</item>
         <item name="keyTextStyle">normal</item>
         <item name="labelTextSize">@dimen/key_label_text_size</item>

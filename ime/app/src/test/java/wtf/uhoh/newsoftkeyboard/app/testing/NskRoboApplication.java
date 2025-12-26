@@ -1,0 +1,147 @@
+package wtf.uhoh.newsoftkeyboard.app.testing;
+
+import android.content.ComponentName;
+import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatDelegate;
+import java.lang.reflect.Field;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import org.mockito.Mockito;
+import org.robolectric.Shadows;
+import wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService;
+import wtf.uhoh.newsoftkeyboard.app.dictionaries.ExternalDictionaryFactory;
+import wtf.uhoh.newsoftkeyboard.app.keyboardextensions.KeyboardExtensionFactory;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardFactory;
+import wtf.uhoh.newsoftkeyboard.app.notices.OnKey;
+import wtf.uhoh.newsoftkeyboard.app.notices.OnUiPage;
+import wtf.uhoh.newsoftkeyboard.app.notices.OnVisible;
+import wtf.uhoh.newsoftkeyboard.app.notices.PublicNotice;
+import wtf.uhoh.newsoftkeyboard.app.quicktextkeys.QuickTextKeyFactory;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemeFactory;
+
+public class NskRoboApplication extends wtf.uhoh.newsoftkeyboard.app.NskApplicationBase {
+  private ExternalDictionaryFactory mDictionaryFactory;
+  private QuickTextKeyFactory mQuickKeyFactory;
+  private KeyboardExtensionFactory mToolsKeyboardFactory;
+  private KeyboardExtensionFactory mBottomRowFactory;
+  private KeyboardExtensionFactory mTopRowFactory;
+  private KeyboardFactory mKeyboardFactory;
+  private KeyboardThemeFactory mThemeFactory;
+  private List<PublicNotice> mMockPublicNotices;
+
+  @Override
+  public void onCreate() {
+    mMockPublicNotices =
+        Arrays.asList(
+            Mockito.mock(OnKey.class), Mockito.mock(OnVisible.class), Mockito.mock(OnUiPage.class));
+    super.onCreate();
+    var pm = getPackageManager();
+    var spm = Shadows.shadowOf(pm);
+    try {
+      ServiceInfo imeService =
+          pm.getServiceInfo(new ComponentName(this, NewSoftKeyboardService.class), 0);
+      var testableImeService = new ServiceInfo(imeService);
+      testableImeService.name = TestableImeService.class.getName();
+      spm.addOrUpdateService(testableImeService);
+    } catch (PackageManager.NameNotFoundException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @NonNull
+  @Override
+  protected ExternalDictionaryFactory createExternalDictionaryFactory() {
+    return mDictionaryFactory = Mockito.spy(super.createExternalDictionaryFactory());
+  }
+
+  @NonNull
+  @Override
+  protected KeyboardExtensionFactory createBottomKeyboardExtensionFactory() {
+    return mBottomRowFactory = Mockito.spy(super.createBottomKeyboardExtensionFactory());
+  }
+
+  @NonNull
+  @Override
+  protected KeyboardExtensionFactory createToolsKeyboardExtensionFactory() {
+    return mToolsKeyboardFactory = Mockito.spy(super.createToolsKeyboardExtensionFactory());
+  }
+
+  @NonNull
+  @Override
+  protected KeyboardExtensionFactory createTopKeyboardExtensionFactory() {
+    return mTopRowFactory = Mockito.spy(super.createTopKeyboardExtensionFactory());
+  }
+
+  @NonNull
+  @Override
+  protected KeyboardFactory createKeyboardFactory() {
+    return mKeyboardFactory = Mockito.spy(super.createKeyboardFactory());
+  }
+
+  @NonNull
+  @Override
+  protected KeyboardThemeFactory createKeyboardThemeFactory() {
+    return mThemeFactory = Mockito.spy(super.createKeyboardThemeFactory());
+  }
+
+  @NonNull
+  @Override
+  protected QuickTextKeyFactory createQuickTextKeyFactory() {
+    return mQuickKeyFactory = Mockito.spy(super.createQuickTextKeyFactory());
+  }
+
+  public ExternalDictionaryFactory getSpiedDictionaryFactory() {
+    return mDictionaryFactory;
+  }
+
+  public QuickTextKeyFactory getSpiedQuickKeyFactory() {
+    return mQuickKeyFactory;
+  }
+
+  public KeyboardExtensionFactory getSpiedToolsKeyboardFactory() {
+    return mToolsKeyboardFactory;
+  }
+
+  public KeyboardExtensionFactory getSpiedBottomRowFactory() {
+    return mBottomRowFactory;
+  }
+
+  public KeyboardExtensionFactory getSpiedTopRowFactory() {
+    return mTopRowFactory;
+  }
+
+  public KeyboardFactory getSpiedKeyboardFactory() {
+    return mKeyboardFactory;
+  }
+
+  public KeyboardThemeFactory getSpiedThemeFactory() {
+    return mThemeFactory;
+  }
+
+  @Override
+  public List<PublicNotice> getPublicNotices() {
+    return Collections.unmodifiableList(mMockPublicNotices);
+  }
+
+  public List<PublicNotice> getPublicNoticesProduction() {
+    return super.getPublicNotices();
+  }
+
+  @Override
+  public void onTerminate() {
+    super.onTerminate();
+
+    try {
+      final Class<AppCompatDelegate> clazz = AppCompatDelegate.class;
+      final Field delegatesField = clazz.getDeclaredField("sActivityDelegates");
+      delegatesField.setAccessible(true);
+      ((Set<?>) delegatesField.get(null)).clear();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+}

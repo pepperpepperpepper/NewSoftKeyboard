@@ -142,7 +142,7 @@ static JNINativeMethod gMethods[] = {
         {"closeNative",          "(J)V",                                                    (void *) nativeime_ResourceBinaryDictionary_close},
         {"getSuggestionsNative", "(J[II[C[IIIII[II)I",                                      (void *) nativeime_ResourceBinaryDictionary_getSuggestions},
         {"isValidWordNative",    "(J[CI)Z",                                                 (void *) nativeime_ResourceBinaryDictionary_isValidWord},
-        {"getWordsNative",       "(JLcom/anysoftkeyboard/dictionaries/GetWordsCallback;)V", (void *) nativeime_ResourceBinaryDictionary_getWords}
+        {"getWordsNative",       "(JLwtf/uhoh/newsoftkeyboard/dictionaries/GetWordsCallback;)V", (void *) nativeime_ResourceBinaryDictionary_getWords}
 };
 
 static int registerNativeMethods(JNIEnv *env, const char *className,
@@ -164,7 +164,7 @@ static int registerNativeMethods(JNIEnv *env, const char *className,
 }
 
 static int registerNatives(JNIEnv *env) {
-    const char *const kClassPathName = "com/anysoftkeyboard/dictionaries/jni/ResourceBinaryDictionary";
+    const char *const kClassPathName = "wtf/uhoh/newsoftkeyboard/dictionaries/jni/ResourceBinaryDictionary";
     return registerNativeMethods(env,
                                  kClassPathName, gMethods, sizeof(gMethods) / sizeof(gMethods[0]));
 }
@@ -187,7 +187,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     }
 
     jclass getWordsCallbackClass = env->FindClass(
-            "com/anysoftkeyboard/dictionaries/GetWordsCallback");
+            "wtf/uhoh/newsoftkeyboard/dictionaries/GetWordsCallback");
     //void (char[][] words, int[] frequencies);
     sGetWordsCallbackMethodId = env->GetMethodID(getWordsCallbackClass, "onGetWordsFinished",
                                                  "([[C[I)V");

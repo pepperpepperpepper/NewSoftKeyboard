@@ -16,5 +16,5 @@ dependencies {
 }
 
 android {
-    namespace 'com.anysoftkeyboard.remote'
+    namespace 'wtf.uhoh.newsoftkeyboard.remote'
 }

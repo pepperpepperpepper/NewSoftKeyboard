@@ -1,0 +1,167 @@
+/*
+ * Copyright (c) 2013 Menny Even-Danan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package wtf.uhoh.newsoftkeyboard.app.keyboardextensions;
+
+import static wtf.uhoh.newsoftkeyboard.app.keyboardextensions.KeyboardExtension.TYPE_BOTTOM;
+import static wtf.uhoh.newsoftkeyboard.app.keyboardextensions.KeyboardExtension.TYPE_EXTENSION;
+import static wtf.uhoh.newsoftkeyboard.app.keyboardextensions.KeyboardExtension.TYPE_TOP;
+
+import android.content.Context;
+import android.util.AttributeSet;
+import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
+import java.util.Locale;
+import wtf.uhoh.newsoftkeyboard.BuildConfig;
+import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.addons.AddOn;
+import wtf.uhoh.newsoftkeyboard.addons.AddOnsFactory;
+import wtf.uhoh.newsoftkeyboard.addons.SingleAddOnsFactory;
+import wtf.uhoh.newsoftkeyboard.api.PluginActions;
+import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
+import wtf.uhoh.newsoftkeyboard.prefs.DirectBootAwareSharedPreferences;
+
+public class KeyboardExtensionFactory extends SingleAddOnsFactory<KeyboardExtension> {
+
+  protected static final String BASE_PREF_ID_PREFIX = "ext_kbd_enabled_";
+
+  public static final String BOTTOM_ROW_PREF_ID_PREFIX = BASE_PREF_ID_PREFIX + TYPE_BOTTOM + "_";
+  public static final String TOP_ROW_PREF_ID_PREFIX = BASE_PREF_ID_PREFIX + TYPE_TOP + "_";
+  public static final String EXT_PREF_ID_PREFIX = BASE_PREF_ID_PREFIX + TYPE_EXTENSION + "_";
+
+  private static final String XML_EXT_KEYBOARD_RES_ID_ATTRIBUTE = "extensionKeyboardResId";
+  private static final String XML_EXT_KEYBOARD_TYPE_ATTRIBUTE = "extensionKeyboardType";
+
+  static {
+    ensureGenericRowResourcesAreKept();
+  }
+
+  @KeyboardExtension.KeyboardExtensionType private final int mExtensionType;
+
+  public KeyboardExtensionFactory(
+      @NonNull Context context,
+      @StringRes int defaultAddOnId,
+      String prefIdPrefix,
+      int extensionType) {
+    super(
+        context,
+        DirectBootAwareSharedPreferences.create(context),
+        "NSK_EKF",
+        PluginActions.ACTION_EXTENSION_KEYBOARD_NEW,
+        PluginActions.METADATA_EXTENSION_KEYBOARD_NEW,
+        "ExtensionKeyboards",
+        "ExtensionKeyboard",
+        prefIdPrefix,
+        R.xml.extension_keyboards,
+        defaultAddOnId,
+        true,
+        BuildConfig.TESTING_BUILD,
+        new AddOnsFactory.ReceiverSpec(
+            PluginActions.ACTION_EXTENSION_KEYBOARD_ASK,
+            PluginActions.METADATA_EXTENSION_KEYBOARD_ASK));
+    mExtensionType = extensionType;
+  }
+
+  @Override
+  protected KeyboardExtension createConcreteAddOn(
+      Context hostAppContext,
+      Context packageContext,
+      int apiVersion,
+      CharSequence prefId,
+      CharSequence name,
+      CharSequence description,
+      boolean isHidden,
+      int sortIndex,
+      boolean hasUICard,
+      AttributeSet attrs) {
+    int keyboardResId =
+        attrs.getAttributeResourceValue(
+            null, XML_EXT_KEYBOARD_RES_ID_ATTRIBUTE, AddOn.INVALID_RES_ID);
+    if (keyboardResId == AddOn.INVALID_RES_ID) {
+      keyboardResId =
+          attrs.getAttributeIntValue(null, XML_EXT_KEYBOARD_RES_ID_ATTRIBUTE, AddOn.INVALID_RES_ID);
+    }
+    @KeyboardExtension.KeyboardExtensionType
+    int extensionType =
+        attrs.getAttributeResourceValue(
+            null, XML_EXT_KEYBOARD_TYPE_ATTRIBUTE, AddOn.INVALID_RES_ID);
+    //noinspection WrongConstant
+    if (extensionType != AddOn.INVALID_RES_ID) {
+      extensionType =
+          KeyboardExtension.ensureValidType(
+              packageContext.getResources().getInteger(extensionType));
+    } else {
+      //noinspection WrongConstant
+      extensionType =
+          attrs.getAttributeIntValue(null, XML_EXT_KEYBOARD_TYPE_ATTRIBUTE, AddOn.INVALID_RES_ID);
+    }
+    Logger.d(
+        mTag,
+        "Parsing Extension Keyboard! prefId %s, keyboardResId %d, type %d",
+        prefId,
+        keyboardResId,
+        extensionType);
+
+    //noinspection WrongConstant
+    if (extensionType == AddOn.INVALID_RES_ID) {
+      throw new RuntimeException(
+          String.format(
+              Locale.US,
+              "Missing details for creating Extension Keyboard! prefId %s"
+                  + " keyboardResId: %d, type: %d",
+              prefId,
+              keyboardResId,
+              extensionType));
+    } else {
+      if (extensionType == mExtensionType) {
+        return new KeyboardExtension(
+            hostAppContext,
+            packageContext,
+            apiVersion,
+            prefId,
+            name,
+            keyboardResId,
+            extensionType,
+            description,
+            isHidden,
+            sortIndex);
+      } else {
+        return null;
+      }
+    }
+  }
+
+  @KeyboardExtension.KeyboardExtensionType
+  public int getExtensionType() {
+    return mExtensionType;
+  }
+
+  private static void ensureGenericRowResourcesAreKept() {
+    if (BuildConfig.DEBUG) {
+      return;
+    }
+    final int sentinel =
+        R.xml.ext_kbd_top_row_dev
+            ^ R.xml.ext_kbd_top_row_dev_switcher
+            ^ R.xml.ext_kbd_bottom_row_none
+            ^ R.string.extension_kbd_top_dev
+            ^ R.string.extension_kbd_top_dev_switcher
+            ^ R.string.extension_kbd_bottom_none;
+    if (sentinel == Integer.MIN_VALUE) {
+      throw new AssertionError("Unreachable sentinel guard.");
+    }
+  }
+}

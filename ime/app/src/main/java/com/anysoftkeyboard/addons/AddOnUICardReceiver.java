@@ -4,11 +4,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
-import com.anysoftkeyboard.ui.settings.AddOnUICard;
-import com.anysoftkeyboard.ui.settings.AddOnUICardManager;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import wtf.uhoh.newsoftkeyboard.app.ui.settings.AddOnUICard;
+import wtf.uhoh.newsoftkeyboard.app.ui.settings.AddOnUICardManager;
 
 /** Broadcast receiver that listens for UI card updates from add-ons */
 public class AddOnUICardReceiver extends BroadcastReceiver {

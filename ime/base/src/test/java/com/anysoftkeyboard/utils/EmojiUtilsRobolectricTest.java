@@ -1,15 +1,15 @@
-package com.anysoftkeyboard.utils;
+package wtf.uhoh.newsoftkeyboard.utils;
 
 import android.graphics.Paint;
 import android.os.Build;
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.robolectric.annotation.Config;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 public class EmojiUtilsRobolectricTest {
 
   @Test

@@ -74,13 +74,13 @@ Signing (when available):
 - Run neural sentence sanity (neural manager):
   ```bash
   timeout 240s adb -s "$GENYMOTION_DEV" shell am instrument -w -r \
-    -e class com.anysoftkeyboard.dictionaries.presage.NeuralNonsenseSentenceInstrumentedTest#buildNonsenseSentenceFromNeuralPredictions \
+    -e class wtf.uhoh.newsoftkeyboard.app.dictionaries.neural.NeuralNonsenseSentenceInstrumentedTest#buildNonsenseSentenceFromNeuralPredictions \
     wtf.uhoh.newsoftkeyboard.test/androidx.test.runner.AndroidJUnitRunner
   ```
 - Run UI tap sentence test (end-to-end suggestions):
   ```bash
   timeout 420s adb -s "$GENYMOTION_DEV" shell am instrument -w -r \
-    -e class com.anysoftkeyboard.dictionaries.presage.NextWordSuggestionsUiAutomatorTest#composeNonsenseSentenceUsingOnlySuggestions \
+    -e class wtf.uhoh.newsoftkeyboard.app.dictionaries.presage.NextWordSuggestionsUiAutomatorTest#composeNonsenseSentenceUsingOnlySuggestions \
     wtf.uhoh.newsoftkeyboard.test/androidx.test.runner.AndroidJUnitRunner
   ```
 - Inspect sentence:

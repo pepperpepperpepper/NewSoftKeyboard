@@ -1,19 +1,19 @@
-package com.anysoftkeyboard.keyboards;
+package wtf.uhoh.newsoftkeyboard.app.keyboards;
 
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 
 import android.text.TextUtils;
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
-import com.menny.android.anysoftkeyboard.NskApplicationBase;
-import com.menny.android.anysoftkeyboard.R;
 import java.util.List;
 import java.util.Locale;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 public class LoadedKeyboardsVerificationTest {
 
   private KeyboardFactory mKeyboardFactory;

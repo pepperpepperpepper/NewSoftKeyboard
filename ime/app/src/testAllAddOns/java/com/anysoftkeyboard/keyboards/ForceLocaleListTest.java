@@ -1,21 +1,21 @@
-package com.anysoftkeyboard.keyboards;
+package wtf.uhoh.newsoftkeyboard.app.keyboards;
 
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 
 import android.text.TextUtils;
 import androidx.test.core.app.ApplicationProvider;
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
-import com.anysoftkeyboard.test.TestUtils;
-import com.anysoftkeyboard.utils.LocaleTools;
-import com.menny.android.anysoftkeyboard.NskApplicationBase;
-import com.menny.android.anysoftkeyboard.R;
 import java.util.Locale;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.annotation.Config;
+import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
+import wtf.uhoh.newsoftkeyboard.testing.TestUtils;
+import wtf.uhoh.newsoftkeyboard.utils.LocaleTools;
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 @Config(sdk = TestUtils.LATEST_STABLE_API_LEVEL)
 public class ForceLocaleListTest {
 

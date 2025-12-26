@@ -2,9 +2,9 @@ package wtf.uhoh.newsoftkeyboard.engine;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.anysoftkeyboard.dictionaries.PresagePredictionManager;
 import java.util.Arrays;
 import java.util.Collections;
+import wtf.uhoh.newsoftkeyboard.engine.presage.PresagePredictionManager;
 
 /** Adapter over PresagePredictionManager to conform to PredictionEngine. */
 public final class PresageEngineAdapter implements PredictionEngine {

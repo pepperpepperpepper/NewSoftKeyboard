@@ -78,7 +78,7 @@ android {
                 //not be stripped again.
                 //double-stripping causes crash stacktraces to look weird
                 //in play-store.
-                doNotStrip '**/anysoftkey*_jni.so'
+                doNotStrip '**/newsoftkeyboard_jnidictionaryv*.so'
             }
         }
 
@@ -95,7 +95,7 @@ android {
                 //not be stripped again.
                 //double-stripping causes crash stacktraces to look weird
                 //in play-store.
-                doNotStrip '**/anysoftkey*_jni.so'
+                doNotStrip '**/newsoftkeyboard_jnidictionaryv*.so'
             }
         }
 
@@ -110,7 +110,7 @@ android {
         it.java.srcDirs += 'src/debug/java'
         it.res.srcDirs += 'src/debug/res'
     }
-    namespace 'com.menny.android.anysoftkeyboard'
+    namespace 'wtf.uhoh.newsoftkeyboard'
     // Default to debug androidTest locally (keeps Genymotion smoke stable).
     // If signing credentials are available, prefer release androidTest (catches R8/shrinker issues).
     // Always allow override via TEST_BUILD_TYPE env var (e.g., 'debug'/'release').
@@ -387,7 +387,7 @@ afterEvaluate { proj ->
             project.exec { ignoreExitValue true; commandLine 'adb', '-s', dev, 'logcat', '-c' }
             project.exec {
                 commandLine 'adb', '-s', dev, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
-                        'com.anysoftkeyboard.dictionaries.presage.NextWordSuggestionsUiAutomatorTest#composeNonsenseSentenceUsingOnlySuggestions',
+                        'wtf.uhoh.newsoftkeyboard.app.dictionaries.presage.NextWordSuggestionsUiAutomatorTest#composeNonsenseSentenceUsingOnlySuggestions',
                         'wtf.uhoh.newsoftkeyboard.test/androidx.test.runner.AndroidJUnitRunner'
             }
             println '\nTip: adb -s ' + dev + ' logcat -d | grep NON_SENSE_SENTENCE='

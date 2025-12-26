@@ -13,7 +13,7 @@
      limitations under the License.
 -->
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
-    <style name="AnyKeyboardGestureTrailTheme">
+    <style name="NskKeyboardGestureTrailTheme">
         <item name="gestureTrailStartColor">#5555ddff</item>
         <item name="gestureTrailEndColor">#11116622</item>
         <item name="gestureTrailStartStrokeSize">8dp</item>
@@ -26,4 +26,6 @@
         <item name="gestureTrailShadowOffsetX">1dp</item>
         <item name="gestureTrailShadowOffsetY">1dp</item>
     </style>
+    <!-- Legacy name kept as a wrapper for compatibility. -->
+    <style name="AnyKeyboardGestureTrailTheme" parent="NskKeyboardGestureTrailTheme" />
 </resources>

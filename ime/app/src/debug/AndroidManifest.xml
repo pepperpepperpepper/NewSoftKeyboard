@@ -2,11 +2,11 @@
           xmlns:tools="http://schemas.android.com/tools">
 
     <application
-        android:name="com.anysoftkeyboard.debug.DebugAnyApplication"
+        android:name="wtf.uhoh.newsoftkeyboard.app.debug.DebugNskApplication"
         tools:replace="android:name" >
 
         <activity
-            android:name="com.anysoftkeyboard.debug.TestInputActivity"
+            android:name="wtf.uhoh.newsoftkeyboard.app.debug.TestInputActivity"
             android:exported="true"
             android:label="Keyboard Test Harness"
             android:windowSoftInputMode="adjustResize|stateVisible" />

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.anysoftkeyboard.quicktextkeys.ui.QuickTextPagerView xmlns:android="http://schemas.android.com/apk/res/android"
+<wtf.uhoh.newsoftkeyboard.app.quicktextkeys.ui.QuickTextPagerView xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/quick_text_pager_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -28,4 +28,4 @@
     </LinearLayout>
 
     <include layout="@layout/quick_text_general_actions" />
-</com.anysoftkeyboard.quicktextkeys.ui.QuickTextPagerView>
+</wtf.uhoh.newsoftkeyboard.app.quicktextkeys.ui.QuickTextPagerView>

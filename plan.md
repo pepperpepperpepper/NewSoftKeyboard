@@ -15,11 +15,11 @@ unowned “helpers everywhere”.
 
 If you’re unsure “where does this live?”, start here. The detailed rules and SoT map are below.
 
-- **IME runtime / session state** (`:ime:app` → `com.anysoftkeyboard.ime`)
+- **IME runtime / session state** (`:ime:app` → `wtf.uhoh.newsoftkeyboard.app.ime`)
   - Owns: editor session (`EditorInfo`/`InputConnection` routing), compose lifecycle, orchestrating feature controllers.
-- **Keyboard selection + modes** (`:ime:app` → `com.anysoftkeyboard.keyboards`)
+- **Keyboard selection + modes** (`:ime:app` → `wtf.uhoh.newsoftkeyboard.app.keyboards`)
   - Owns: current keyboard + mode resolution (`KeyboardSwitcher` is the only mode resolver).
-- **View/touch/render** (`:ime:app` → `com.anysoftkeyboard.keyboards.views`)
+- **View/touch/render** (`:ime:app` → `wtf.uhoh.newsoftkeyboard.app.keyboards.views`)
   - Owns: touch session state + rendering/layout math; talks upward via view-owned `Host` contracts only.
 - **Next-word candidates (engine-agnostic pipeline)** (`:ime:nextword`)
   - Owns: candidate orchestration/normalize/merge/fallback; engines accessed via `:engine-core` only.
@@ -56,8 +56,8 @@ obvious and shrinking `:ime:app` into a thin shell.
    - Decision (this plan): `:ime:nextword` owns **all engine-agnostic next-word suggestion plumbing** (legacy nextword + candidate
      normalization/merging/orchestration helpers).
    - Done (2025-12-19): moved next-word prediction orchestration out of `:ime:app` into `:ime:nextword`:
-     - Engine-agnostic pipeline helpers live in `com.anysoftkeyboard.nextword.pipeline`.
-     - Engine wiring/state lives in `com.anysoftkeyboard.nextword.prediction.NextWordPredictionEngines`.
+     - Engine-agnostic pipeline helpers live in `wtf.uhoh.newsoftkeyboard.nextword.pipeline`.
+     - Engine wiring/state lives in `wtf.uhoh.newsoftkeyboard.nextword.prediction.NextWordPredictionEngines`.
    - Definition of done:
      - No `wtf.uhoh.newsoftkeyboard.pipeline.*` classes remain in `:ime:app`.
      - `:ime:nextword` exposes the minimal “candidate pipeline” API used by `SuggestionsProvider`.
@@ -85,7 +85,7 @@ obvious and shrinking `:ime:app` into a thin shell.
      - `SuggestionsProvider` becomes a thin adapter: collect context tokens + call into a single owned orchestrator.
      - The orchestrator/pipeline lives outside `:ime:app` (owned by `:ime:nextword`) and talks to engines only via `:engine-core`.
    - Done (2025-12-20): moved `getNextWords` orchestration into `:ime:nextword`
-     (`com.anysoftkeyboard.nextword.pipeline.NextWordSuggestionsPipeline`).
+     (`wtf.uhoh.newsoftkeyboard.nextword.pipeline.NextWordSuggestionsPipeline`).
    - Action: slice-by-slice extraction until `SuggestionsProvider` is basically “prepare inputs + apply outputs”.
    - Definition of done:
      - Normalization/merging/fallback decisions live in the pipeline owner (not inside `SuggestionsProvider`).
@@ -122,23 +122,23 @@ obvious and shrinking `:ime:app` into a thin shell.
 6. **View code depends on IME runtime (reverse dependency)**
    - Status: **completed (2025-12-19)**
    - Previous symptom:
-     - `com.anysoftkeyboard.keyboards.views.CandidateView` imported `ImeSuggestionsController` and stored a direct service reference (`mService`).
-     - `KeyboardViewBase/KeyboardView/KeyboardViewContainerView` imported/implemented `InputViewBinder/InputViewActionsProvider` which lived under `com.anysoftkeyboard.ime`.
+     - `wtf.uhoh.newsoftkeyboard.app.keyboards.views.CandidateView` imported `ImeSuggestionsController` and stored a direct service reference (`mService`).
+     - `KeyboardViewBase/KeyboardView/KeyboardViewContainerView` imported/implemented `InputViewBinder/InputViewActionsProvider` which lived under `wtf.uhoh.newsoftkeyboard.app.ime`.
    - Why this matters: it creates “reverse” edges where view/touch/render code depends on IME runtime, making both sides harder to split and inviting “helpers” that bridge layers.
    - Decision (this plan): views depend only on **view-owned contracts**.
      - A view may talk “up” only via a narrow `Host` interface owned by the view package (or a dedicated view-contract package), not by importing IME service types.
    - Done (2025-12-19):
      - Added `CandidateViewHost` and updated `CandidateView` to depend only on that contract.
-     - Moved `InputViewBinder` and `InputViewActionsProvider` into `com.anysoftkeyboard.keyboards.views`.
+     - Moved `InputViewBinder` and `InputViewActionsProvider` into `wtf.uhoh.newsoftkeyboard.app.keyboards.views`.
    - Definition of done:
-     - No `com.anysoftkeyboard.keyboards.views.*` class imports `com.anysoftkeyboard.ime.*`.
+     - No `wtf.uhoh.newsoftkeyboard.app.keyboards.views.*` class imports `wtf.uhoh.newsoftkeyboard.app.ime.*`.
      - `CandidateView` is testable with a fake host (no service dependency).
 
 7. **NSK package hygiene: `wtf.uhoh.newsoftkeyboard.*` stays entrypoints-only** (done 2025-12-19)
    - Previous symptom: `wtf.uhoh.newsoftkeyboard.ime.*Host` contained IME/runtime wrapper implementations (not entrypoints).
    - Decision (this plan): `wtf.uhoh.newsoftkeyboard.*` is for branded entrypoints only (service/application/activity).
    - Action:
-     - Done (2025-12-19): moved `wtf.uhoh.newsoftkeyboard.ime.*Host` → `com.anysoftkeyboard.ime.hosts`.
+     - Done (2025-12-19): moved `wtf.uhoh.newsoftkeyboard.ime.*Host` → `wtf.uhoh.newsoftkeyboard.app.ime.hosts`.
      - Done (2025-12-19): moved `wtf.uhoh.newsoftkeyboard.pipeline.*` → `:ime:nextword` (Immediate Focus #1).
    - Definition of done:
      - `wtf.uhoh.newsoftkeyboard.*` contains only entrypoints (no “new logic lives here”).
@@ -151,15 +151,15 @@ This is the current “facts on the ground” snapshot that informed the focus l
 
 Top offenders (excluding tests; `BaseCharactersTable.java` is data-only):
 
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/KeyboardViewBase.java` (~799 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/ImeServiceBase.java` (~645 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/ime/ImeSuggestionsController.java` (~704 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java` (~620 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/PointerTracker.java` (~423 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardDefinition.java` (~472 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/views/KeyboardViewBase.java` (~799 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/ime/ImeServiceBase.java` (~645 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/ime/ImeSuggestionsController.java` (~704 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/KeyboardSwitcher.java` (~620 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/views/PointerTracker.java` (~423 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/KeyboardDefinition.java` (~472 LOC)
 
 - Done (2025-12-20): extracted `KeyboardRowBase`/`KeyboardKeyBase` out of `Keyboard.java` (keeping `Keyboard.Row/Key` wrappers)
-  and moved `KeyDrawableStateProvider` to `com.anysoftkeyboard.keyboards` (keyboard model no longer depends on `*.views` for key state).
+  and moved `KeyDrawableStateProvider` to `wtf.uhoh.newsoftkeyboard.app.keyboards` (keyboard model no longer depends on `*.views` for key state).
 - Done (2025-12-20): extracted `PointerKeySender` from `PointerTracker` so `PointerTracker` primarily owns per-pointer state
   transitions (down/move/up) and delegates “how to emit key events” to a single owned component.
 - Done (2025-12-24): introduced `KeyboardDefinition` as the keyboard model owner; migrated internal call-sites + tests off the
@@ -176,51 +176,51 @@ Top offenders (excluding tests; `BaseCharactersTable.java` is data-only):
 ### Helper sprawl (actual inventory)
 
 - Generic utility packages currently exist in two places:
-  - Done (2025-12-20): moved app-level `com.anysoftkeyboard.utils` files into `:ime:base` to eliminate the `:ime:app` utils dumping ground.
+  - Done (2025-12-20): moved app-level `wtf.uhoh.newsoftkeyboard.utils` files into `:ime:base` to eliminate the `:ime:app` utils dumping ground.
   - `ime/base/src/main/java/com/anysoftkeyboard/utils` (8 files:
     EmojiUtils/IMEUtil/LocaleTools/ModifierKeyState/Workarounds/XmlUtils/Triple/XmlWriter)
 - Done (2025-12-20): reduced root-package helper sprawl by moving former helpers (`DeleteActionHelper`,
-  `ModifierKeyEventHelper`, `SelectionEditHelper`, `SpecialWrapHelper`, `TerminalKeySender`) into `com.anysoftkeyboard.ime`,
-  and moving wiring hosts into `com.anysoftkeyboard.ime.hosts` (e.g., `Ime*Host` wrappers).
+  `ModifierKeyEventHelper`, `SelectionEditHelper`, `SpecialWrapHelper`, `TerminalKeySender`) into `wtf.uhoh.newsoftkeyboard.app.ime`,
+  and moving wiring hosts into `wtf.uhoh.newsoftkeyboard.app.ime.hosts` (e.g., `Ime*Host` wrappers).
 - Done (2025-12-20): shrank `ImeServiceBase` by removing large anonymous action/callback implementations; host wrappers now
   accept callback value objects and are wired via method references.
 - Done (2025-12-21): extracted `ImeServiceBase`’s `onCreate()` wiring into `ImeServiceInitializer` so the service is primarily
   a host/orchestrator and wiring changes don’t bloat the entrypoint file.
 - Done (2025-12-21): extracted crash-handler wiring (RxJava + default uncaught handler + Chewbacca setup) into
-  `com.anysoftkeyboard.crash.CrashHandlerInstaller` so `NskApplicationBase` stays an entrypoint host.
+  `wtf.uhoh.newsoftkeyboard.app.crash.CrashHandlerInstaller` so `NskApplicationBase` stays an entrypoint host.
 - Naming scan (signal only): there are currently ~46 production files named `*Utils/*Util/*Helper` across modules.
-  - Not all of these are “bad” (many are properly owned inside `com.anysoftkeyboard.ime.*` or `com.anysoftkeyboard.keyboards.views.*`),
+  - Not all of these are “bad” (many are properly owned inside `wtf.uhoh.newsoftkeyboard.app.ime.*` or `wtf.uhoh.newsoftkeyboard.app.keyboards.views.*`),
     but they are a strong attractor for “helper sprawl”.
   - Rule: keep these helpers **owned and local** (package-private or nested), and never use their existence to justify adding a new
     cross-layer/generic helper.
-- Done (2025-12-20): removed the empty helper attractor directory `ime/app/src/main/java/com/anysoftkeyboard/ime/helpers`.
+- Done (2025-12-20): removed the empty helper attractor directory `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/ime/helpers`.
 
 ### Cross-layer edges (resolved)
 
 - View layer importing IME runtime (resolved 2025-12-19):
   - `CandidateView → CandidateViewHost`
-  - `InputViewBinder/InputViewActionsProvider` moved to `com.anysoftkeyboard.keyboards.views`
+  - `InputViewBinder/InputViewActionsProvider` moved to `wtf.uhoh.newsoftkeyboard.app.keyboards.views`
 - Keyboard model importing view types (resolved 2025-12-21):
-  - `KeyboardSwitcher` now depends on `com.anysoftkeyboard.keyboards.ThemedKeyboardDimensProvider` instead of `InputViewBinder`
+  - `KeyboardSwitcher` now depends on `wtf.uhoh.newsoftkeyboard.app.keyboards.ThemedKeyboardDimensProvider` instead of `InputViewBinder`
     (keeps keyboard-switching code free of view-layer types).
 
 ### Dependency direction (spot checks)
 
 - Engine modules do not import IME runtime types (good boundary hygiene):
-  - `engine-core/engine-presage/engine-neural` contain no `import com.anysoftkeyboard.ime.*` and no `import com.anysoftkeyboard.ImeServiceBase`.
+  - `engine-core/engine-presage/engine-neural` contain no `import wtf.uhoh.newsoftkeyboard.app.ime.*` and no `import wtf.uhoh.newsoftkeyboard.app.ime.ImeServiceBase`.
 
 ### “App shell owns algorithms” (resolved)
 
-- Done (2025-12-19): moved the engine-agnostic next-word pipeline out of `:ime:app` into `:ime:nextword` (`com.anysoftkeyboard.nextword.pipeline`).
+- Done (2025-12-19): moved the engine-agnostic next-word pipeline out of `:ime:app` into `:ime:nextword` (`wtf.uhoh.newsoftkeyboard.nextword.pipeline`).
 
 ### “NSK package = entrypoints” (resolved)
 
-- Done (2025-12-19): moved `wtf.uhoh.newsoftkeyboard.ime.*Host` → `com.anysoftkeyboard.ime.hosts` so `wtf.uhoh.newsoftkeyboard.*` is entrypoints-only.
+- Done (2025-12-19): moved `wtf.uhoh.newsoftkeyboard.ime.*Host` → `wtf.uhoh.newsoftkeyboard.app.ime.hosts` so `wtf.uhoh.newsoftkeyboard.*` is entrypoints-only.
 
 ### “Dictionary ownership split” (note for later)
 
 - `:ime:dictionaries` currently owns the base dictionary interfaces (`Dictionary`, `WordComposer`, loader, etc.).
-- Many concrete dictionary implementations + orchestrators still live under `:ime:app` in `com.anysoftkeyboard.dictionaries.*`.
+- Many concrete dictionary implementations + orchestrators still live under `:ime:app` in `wtf.uhoh.newsoftkeyboard.app.dictionaries.*`.
 - This is not necessarily “wrong”, but it must be made explicit (either via module rename like `:ime:dictionaries-core` or via migration) to avoid “where does dictionary logic live?” ambiguity.
 
 ## Taxonomy (where things live)
@@ -250,16 +250,16 @@ obvious _within a single layer_, not if it becomes a cross-layer dumping ground.
 **High-level direction:** UI → IME runtime → (views + switching) → (engines + dictionaries) → base/prefs.  
 **Compatibility boundary:** add-on intents/meta-data live in `:api` and are consumed by discovery code.
 
-- **UI layer** (`com.anysoftkeyboard.ui.*`)
+- **UI layer** (`wtf.uhoh.newsoftkeyboard.app.ui.*`)
   - Owns: screens, settings UX, summaries, wiring to orchestrators.
   - Must not: implement engine/dictionary logic; keep work in owners below.
-- **IME runtime layer** (`com.anysoftkeyboard.ime.*`, `com.anysoftkeyboard.ImeServiceBase`)
+- **IME runtime layer** (`wtf.uhoh.newsoftkeyboard.app.ime.*`, `wtf.uhoh.newsoftkeyboard.app.ime.ImeServiceBase`)
   - Owns: lifecycle, editor state, input routing, high-level orchestration.
   - Must not: contain touch math/render code, or engine internals.
-- **Keyboard switching/model layer** (`com.anysoftkeyboard.keyboards.*`)
+- **Keyboard switching/model layer** (`wtf.uhoh.newsoftkeyboard.app.keyboards.*`)
   - Owns: keyboard selection, modes, model data (not rendering).
   - Must not: depend on Android view classes.
-- **View/touch/render layer** (`com.anysoftkeyboard.keyboards.views.*`)
+- **View/touch/render layer** (`wtf.uhoh.newsoftkeyboard.app.keyboards.views.*`)
   - Owns: dispatch, gesture timing, drawing/layout math.
   - Must not: depend on IME service types; communicate via narrow `Host` callbacks/data.
 - **Engines/dictionaries layer** (`:engine-*`, `:ime:dictionaries*`)
@@ -271,14 +271,16 @@ obvious _within a single layer_, not if it becomes a cross-layer dumping ground.
 
 ### Package Ownership (within `:ime:app`)
 
-- `wtf.uhoh.newsoftkeyboard.*` — NewSoftKeyboard branded entrypoints only (service/application/activity overlays). Any non-entrypoint
-  classes here are temporary and must be migrated (see Immediate Focus #1 and #7).
+- `wtf.uhoh.newsoftkeyboard.*` — NewSoftKeyboard branded entrypoints only (service/application/activity overlays) and thin
+  delegates/wiring.
+- `wtf.uhoh.newsoftkeyboard.app.*` — NewSoftKeyboard-owned internal subsystems that we intentionally keep out of the legacy
+  `com.anysoftkeyboard.*` namespace (e.g., crash/notices/theme/keyboardextensions/quicktext/dictionaries/prefs backup/settings UI).
 - `com.menny.android.anysoftkeyboard.*` — legacy entrypoints only (kept for upgrade stability and `askCompat`).
-- `com.anysoftkeyboard.ime.*` — IME runtime behavior (lifecycle, input routing, suggestions orchestration).
-- `com.anysoftkeyboard.keyboards.*` — keyboard model + switching; avoid UI here.
-- `com.anysoftkeyboard.keyboards.views.*` — view rendering + touch dispatch; keep “what to render” separate from “how to
+- `wtf.uhoh.newsoftkeyboard.app.ime.*` — IME runtime behavior (lifecycle, input routing, suggestions orchestration).
+- `wtf.uhoh.newsoftkeyboard.app.keyboards.*` — keyboard model + switching; avoid UI here.
+- `wtf.uhoh.newsoftkeyboard.app.keyboards.views.*` — view rendering + touch dispatch; keep “what to render” separate from “how to
   dispatch touch”.
-- `com.anysoftkeyboard.ui.*` — activities/fragments/settings; keep business logic out (push into module owners).
+- `wtf.uhoh.newsoftkeyboard.app.ui.*` — activities/fragments/settings; keep business logic out (push into module owners).
 
 ## Concept Ownership Map (make “who owns what” obvious)
 
@@ -286,19 +288,19 @@ This is the practical map used during refactors and extractions. If a new class 
 concepts, we should stop and decide ownership before writing code.
 
 - **IME lifecycle + editor state**
-  - Owner: `:ime:app` / `com.anysoftkeyboard.ime`
-  - Hosts: `com.anysoftkeyboard.ImeServiceBase` (service), `EditorStateTracker` (state), `InputConnectionRouter` (routing)
+  - Owner: `:ime:app` / `wtf.uhoh.newsoftkeyboard.app.ime`
+  - Hosts: `wtf.uhoh.newsoftkeyboard.app.ime.ImeServiceBase` (service), `EditorStateTracker` (state), `InputConnectionRouter` (routing)
   - Must not: reach into view rendering or engine implementations directly
 - **IME preferences (reactive primitives + feature binding)**
   - Owner: `:ime:prefs` (storage + reactive primitives), `:ime:app` (feature-specific binding)
   - Hosts: `RxSharedPrefs` (primitive), binders like `ImePrefsBinder` / `SuggestionSettingsController`
   - Must not: hide “real state” in scattered helpers that each interpret prefs differently
 - **Keyboard switching + mode resolution**
-  - Owner: `:ime:app` / `com.anysoftkeyboard.keyboards`
-  - Hosts: `KeyboardSwitcher` (+ provider classes under `com.anysoftkeyboard.keyboards.*`)
+  - Owner: `:ime:app` / `wtf.uhoh.newsoftkeyboard.app.keyboards`
+  - Hosts: `KeyboardSwitcher` (+ provider classes under `wtf.uhoh.newsoftkeyboard.app.keyboards.*`)
   - Must not: depend on Android view classes; expose narrow info needed by views
 - **Touch dispatch + gesture/timing**
-  - Owner: `:ime:app` / `com.anysoftkeyboard.keyboards.views`
+  - Owner: `:ime:app` / `wtf.uhoh.newsoftkeyboard.app.keyboards.views`
   - Hosts: `KeyboardViewBase`, `TouchDispatcher`, `PointerTracker` (low-level touch tracking)
   - Done (2025-12-21): extracted gesture-typing path state out of `PointerTracker` into
     `GestureTypingPathTracker`, making the touch pipeline’s “gesture typing vs. tap” seam explicit.
@@ -306,7 +308,7 @@ concepts, we should stop and decide ownership before writing code.
     `ExtensionKeyboardController` (thresholds, prefs wiring, popup-key setup) so the view stays a thin event host.
   - Must not: depend on IME service types; talk via a small `Host`/callback interface
 - **Rendering + layout math**
-  - Owner: `:ime:app` / `com.anysoftkeyboard.keyboards.views`
+  - Owner: `:ime:app` / `wtf.uhoh.newsoftkeyboard.app.keyboards.views`
   - Hosts: `KeyboardViewBase` and focused render components (e.g., dirty-region decisions, icon resolution, hint/name text)
   - Done (2025-12-21): extracted watermark state + drawing out of `KeyboardView` into `KeyboardWatermarks` so the view focuses on
     event wiring and delegates rendering details to a single owned component.
@@ -314,28 +316,28 @@ concepts, we should stop and decide ownership before writing code.
     visualization and the gesture-detector disablement rule live in one owner.
   - Must not: access preferences directly; consume a precomputed “render config”
 - **Suggestions orchestration (IME-side)**
-  - Owner: `:ime:app` / `com.anysoftkeyboard.ime`
+  - Owner: `:ime:app` / `wtf.uhoh.newsoftkeyboard.app.ime`
   - Hosts: `ImeSuggestionsController`, `SuggestionsProvider`
   - State SoT: `SuggestionsSessionState` (prediction/correction/selection expectations + dictionary-load state)
   - Must not: embed engine-specific logic or pipeline algorithms (normalization/merging/fallback belong below)
 - **Word composing state**
-  - Owner: `:ime:dictionaries` / `com.anysoftkeyboard.dictionaries`
+  - Owner: `:ime:dictionaries` / `wtf.uhoh.newsoftkeyboard.dictionaries`
   - Host: `WordComposer`
   - Must not: be duplicated inside IME runtime state
 - **Legacy next-word dictionaries (user/contacts)**
-  - Owner: `:ime:nextword` / `com.anysoftkeyboard.nextword`
+  - Owner: `:ime:nextword` / `wtf.uhoh.newsoftkeyboard.nextword`
   - Hosts: `NextWordDictionary`, `NextWordsStorage`, `NextWordSuggestions`, parsers/stats
   - Must not: know about Presage/Neural engines; these are legacy/engine-independent sources
 - **Engine-agnostic candidate pipeline (normalize/merge/orchestrate)**
   - Owner: `:ime:nextword`
-  - Hosts: `com.anysoftkeyboard.nextword.pipeline.*` (target home for `CandidateNormalizer`/`CandidateMerger`/`EngineOrchestrator`)
+  - Hosts: `wtf.uhoh.newsoftkeyboard.nextword.pipeline.*` (target home for `CandidateNormalizer`/`CandidateMerger`/`EngineOrchestrator`)
   - Must not: depend on engine implementations; talk to engines via `:engine-core` only
 - **Presage native binding boundary**
   - Owner: `:ime:suggestions:presage`
   - Hosts: JNI bridge, CMake build, vendored Presage sources
   - Must not: contain Java policy (model selection/URLs/settings belong in `:engine-presage`/`:ime:app`)
 - **Gesture typing**
-  - Owner: `:ime:app` / `com.anysoftkeyboard.ime` (session lifecycle), `:ime:gesturetyping` (algorithm)
+  - Owner: `:ime:app` / `wtf.uhoh.newsoftkeyboard.app.ime` (session lifecycle), `:ime:gesturetyping` (algorithm)
   - Hosts: `ImeWithGestureTyping` (enablement + detector lifecycle), `GestureTypingDetector` (algorithm state)
   - Must not: leak view/touch/render state into the algorithm owner
 - **Voice input**
@@ -368,7 +370,7 @@ concepts, we should stop and decide ownership before writing code.
 This is the “who owns state” table. If a feature doesn’t have one SoT, we create one and route all reads/writes through it.
 
 - **IME session/editor state**
-  - Current SoT: `ImeSessionState` (in `com.anysoftkeyboard.ime`) owns the current `EditorInfo` snapshot,
+  - Current SoT: `ImeSessionState` (in `wtf.uhoh.newsoftkeyboard.app.ime`) owns the current `EditorInfo` snapshot,
     `EditorStateTracker`, and `InputConnectionRouter`.
   - Done (2025-12-20): wired `ImeBase` lifecycle (`onStartInput`/`onFinishInput`/`onUpdateSelection`) to update
     `ImeSessionState`, so cursor/selection and InputConnection access flow through the session state.
@@ -414,7 +416,7 @@ This is the “who owns state” table. If a feature doesn’t have one SoT, we 
   - Migration rule: view talks upward via a narrow `Host` interface only (no IME/service imports).
 
 - **Gesture typing**
-  - Current SoT: `GestureTypingController` (in `com.anysoftkeyboard.ime.gesturetyping`) owns feature enablement,
+  - Current SoT: `GestureTypingController` (in `wtf.uhoh.newsoftkeyboard.app.ime.gesturetyping`) owns feature enablement,
     detector caching, and per-gesture timing/path state; `ImeWithGestureTyping` is the IME host.
   - Done (2025-12-21): extracted `GestureTypingController` and moved gesture-typing-only helpers
     (`ClearGestureStripActionProvider`, `WordListDictionaryListener`) into the feature-owned package so the host class is
@@ -489,7 +491,7 @@ This is the “who owns state” table. If a feature doesn’t have one SoT, we 
 
 ## Dependency Rules (to prevent cyclical ownership)
 
-- UI (`com.anysoftkeyboard.ui.*`) may depend on orchestrators/services, but not on implementation details inside engines.
+- UI (`wtf.uhoh.newsoftkeyboard.app.ui.*`) may depend on orchestrators/services, but not on implementation details inside engines.
 - Engines (`engine-*`) must not depend on `:ime:app` classes.
 - “View” code must not pull in IME service types directly; it talks to narrow `Host` interfaces.
 - Add-on compatibility is centralized in `:api` (`PluginActions`). No scattered action/meta-data strings.
@@ -553,7 +555,7 @@ everything into more helpers”; it’s to collapse ownership back into a few So
 
 ### End state (definition of done)
 
-- `:ime:app` has no generic `com.anysoftkeyboard.utils` dumping ground; app owns wiring/UI/runtime only.
+- `:ime:app` has no generic `wtf.uhoh.newsoftkeyboard.utils` dumping ground; app owns wiring/UI/runtime only.
 - Any remaining `utils` in base are small, dependency-clean primitives (no feature logic).
 - There is no `helpers` package whose contents belong to different concepts.
 - A reader can find any non-trivial logic by going to the concept owner (not by grepping for helper names).
@@ -566,7 +568,7 @@ everything into more helpers”; it’s to collapse ownership back into a few So
   (`.ime`, `.keyboards`, `.keyboards.views`, `.ui`) and narrow visibility. Done (2025-12-20): moved former root-package helpers
   (`DeleteActionHelper`, `SelectionEditHelper`, `ModifierKeyEventHelper`, `SpecialWrapHelper`, `TerminalKeySender`,
   `BackWordDeleter`, `LayoutSwitchAnimationListener`, `FullscreenExtractViewController`, `ImePrefsBinder`)
-  into `com.anysoftkeyboard.ime`.
+  into `wtf.uhoh.newsoftkeyboard.app.ime`.
 - **Single-use view helpers**: if a class only exists to implement a callback for a single owner, localize it so it does not become a
   reusable “helper attractor”.
   - Done (2025-12-20): inlined `ThemeAttributeLoader.Host` into `ThemeAttributeLoaderRunner` and removed the unused
@@ -606,19 +608,19 @@ LOC is only a signal. We do **not** treat ~400 LOC as “too big” by itself. W
 As of 2025-12-22 (excluding test files; `BaseCharactersTable.java` is data-only):
 
 - Watch list (largest):
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/KeyboardViewBase.java` (~799 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/ime/ImeSuggestionsController.java` (~704 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/ImeServiceBase.java` (~645 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardSwitcher.java` (~629 LOC)
-- `engine-neural/src/main/java/com/anysoftkeyboard/dictionaries/neural/NeuralPredictionManager.java` (~497 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/KeyboardDefinition.java` (~472 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/ime/gesturetyping/GestureTypingController.java` (~469 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/views/KeyboardViewBase.java` (~799 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/ime/ImeSuggestionsController.java` (~704 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/ime/ImeServiceBase.java` (~645 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/KeyboardSwitcher.java` (~629 LOC)
+- `engine-neural/src/main/java/wtf/uhoh/newsoftkeyboard/engine/neural/NeuralPredictionManager.java` (~497 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/KeyboardDefinition.java` (~472 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/ime/gesturetyping/GestureTypingController.java` (~469 LOC)
 - `ime/gesturetyping/src/main/java/com/anysoftkeyboard/gesturetyping/GestureTypingDetector.java` (~467 LOC)
 - `ime/dictionaries/src/main/java/com/anysoftkeyboard/dictionaries/BTreeDictionary.java` (~457 LOC)
 - `ime/releaseinfo/src/main/java/com/anysoftkeyboard/releaseinfo/VersionChangeLogs.java` (~456 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/Keyboard.java` (~451 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/Keyboard.java` (~451 LOC)
 - `ime/app/src/main/java/com/anysoftkeyboard/dictionaries/SuggestImpl.java` (~434 LOC)
-- `ime/app/src/main/java/com/anysoftkeyboard/keyboards/views/PointerTracker.java` (~423 LOC)
+- `ime/app/src/main/java/wtf/uhoh/newsoftkeyboard/app/keyboards/views/PointerTracker.java` (~423 LOC)
 - `ime/voiceime/src/main/java/com/google/android/voiceime/OpenAITranscriber.java` (~404 LOC)
 - `ime/app/src/main/java/com/anysoftkeyboard/ui/settings/AbstractAddOnsBrowserFragment.java` (~400 LOC)
 
@@ -632,7 +634,7 @@ As of 2025-12-22 (excluding test files; `BaseCharactersTable.java` is data-only)
   InputMethodService hook host.
 - Done (2025-12-22): extracted soft-input window layout parameter updates out of `ImeBase` into
   `SoftInputWindowLayoutUpdater` so the base service stays focused on session + view lifecycle.
-- Done (2025-12-22): extracted preferences auto-restore out of `NskApplicationBase` (legacy `AnyApplication` shim) into
+- Done (2025-12-22): extracted preferences auto-restore out of `NskApplicationBase` into
   `PrefsAutoRestorer` to keep the app entrypoint focused on app-wide wiring.
 - Done (2025-12-22): moved small suggestion-algorithm helpers (`AbbreviationSuggestionCallback`,
   `AutoTextSuggestionCallback`, `SuggestionWordMatcher`) from `:ime:app` to `:ime:dictionaries` so
@@ -656,12 +658,172 @@ Refresh counts:
 - Keep dual authorities minimal (FileProvider/prefs); do not rename exported authorities without a migration plan.
 - Keep `askCompat` flavor as the “max compatibility” build; `nsk` is the default.
 - Done (2025-12-24): migrated internal code + tests off the legacy `AnyApplication` type name to the owned
-  `NskApplicationBase`; `AnyApplication` remains only as a thin compatibility shim referenced by the legacy
-  manifest/application entrypoint.
+  `NskApplicationBase`, then removed the `AnyApplication` shim and updated the base manifest to reference
+  `NskApplicationBase` directly (flavors can still override the application entrypoint as needed).
+- Done (2025-12-25): moved `NskApplicationBase` ownership out of the legacy package:
+  internal code now depends on `wtf.uhoh.newsoftkeyboard.app.NskApplicationBase`, while the base manifest keeps
+  referencing the legacy wrapper `com.menny.android.anysoftkeyboard.NskApplicationBase` for compatibility/stability.
+- Done (2025-12-25): moved the launcher/settings entry activity logic into an owned implementation
+  (`wtf.uhoh.newsoftkeyboard.app.ui.settings.LauncherSettingsEntryActivity`) and kept both the branded and legacy
+  manifest entrypoints as thin wrappers for stability (`wtf.uhoh.newsoftkeyboard.NskLauncherSettingsActivity`,
+  `com.menny.android.anysoftkeyboard.LauncherSettingsActivity`).
+- Done (2025-12-25): moved remaining app UI tooling/support screens into the owned NSK UI namespace:
+  - Dev tools fragments/providers: `wtf.uhoh.newsoftkeyboard.app.ui.dev.*`
+  - Crash/voice support activities: `wtf.uhoh.newsoftkeyboard.app.ui.support.*`
+    Kept `activity-alias` entries for the legacy `com.anysoftkeyboard.ui.*` activity component names for upgrade safety.
+- Done (2025-12-25): moved IME debug state tracking (`ImeStateTracker`) into the owned namespace
+  `wtf.uhoh.newsoftkeyboard.app.debug` and updated the debug notices provider and androidTests accordingly.
+- Done (2025-12-25): moved IME service entrypoint logic out of the legacy `SoftKeyboard` type:
+  `wtf.uhoh.newsoftkeyboard.NewSoftKeyboardService` no longer depends on `com.menny.android.anysoftkeyboard.*`;
+  `ImeServiceBase` now owns the shared instance/debug-view access used by tests (`ImeServiceBase.getInstance()`),
+  while `com.menny.android.anysoftkeyboard.SoftKeyboard` remains as the legacy manifest entrypoint for `askCompat`.
+- Done (2025-12-25): moved legacy `com.menny.android.anysoftkeyboard.*` wrapper classes into the `askCompat`
+  source set so the default `nsk` build does not ship the legacy namespace, and migrated unit tests to target
+  `NewSoftKeyboardService`/`LauncherSettingsEntryActivity` instead of the legacy wrapper types.
+- Done (2025-12-25): introduced `NskRobolectricTestRunner`/`NskPlainTestRunner` and migrated test call-sites away from
+  `AnySoftKeyboard*TestRunner` naming; removed the legacy runner shims.
+- Done (2025-12-25): introduced `NskRoboApplication` and switched Robolectric configs to use it; removed the
+  `AnyRoboApplication` shim.
+- Done (2025-12-25): introduced `TestableImeService` and migrated tests away from the legacy `TestableAnySoftKeyboard`
+  name; removed the `TestableAnySoftKeyboard` shim.
+- Done (2025-12-25): introduced `ImeServiceBaseTest` and migrated tests away from the legacy `AnySoftKeyboardBaseTest`
+  name; removed the `AnySoftKeyboardBaseTest` shim.
+- Done (2025-12-25): switched `:ime:app` Gradle `namespace` to `wtf.uhoh.newsoftkeyboard` (NSK branding) and updated all
+  internal `R`/`BuildConfig` references accordingly. The base manifest now uses fully-qualified legacy component class
+  names (`com.menny.android.anysoftkeyboard.*`) so `askCompat` entrypoints remain stable even as we decouple namespace.
+- Done (2025-12-25): continued internal rename migration in unit tests:
+  - Renamed root `:ime:app` Robolectric tests away from the `AnySoftKeyboard*` prefix.
+  - Renamed `wtf.uhoh.newsoftkeyboard.app.ime` Robolectric tests away from the `AnySoftKeyboard*` prefix.
+  - Migrated tests to use `mImeServiceUnderTest`/`mImeServiceController` and removed the legacy `mAnySoftKeyboard*` aliases from
+    `ImeServiceBaseTest`.
+  - Renamed remaining legacy-package Robolectric tests away from `AnyApplication*` naming (`NskApplication*`).
+- Done (2025-12-25): renamed flavor-specific Application classes away from legacy `*AnyApplication` naming:
+  - Debug: `wtf.uhoh.newsoftkeyboard.app.debug.DebugNskApplication`
+  - All-add-ons: `wtf.uhoh.newsoftkeyboard.alladdons.AllAddOnsNskApplication`
+- Done (2025-12-25): continued internal de-ASK naming in unit tests by renaming the Robolectric shadow
+  `ShadowAskAudioManager` → `ShadowNskAudioManager` and cleaning up a few lingering `*AnySoftKeyboard*` local names
+  (`ImeServiceLifecycleTest`, `ImeServicePressEffectsTest`, `ImeServiceExtendingTest`).
+- Done (2025-12-26): moved Robolectric app/test scaffolding out of the legacy `com.menny.android.anysoftkeyboard` test package:
+  - `InputMethodManagerShadow`, `ShadowDictionaryAddOnAndBuilder`, `NskRoboApplication` now live in
+    `wtf.uhoh.newsoftkeyboard.app.testing`.
+  - Updated `robolectric.properties` shadows/application entries and all unit test imports.
+- Done (2025-12-26): moved the test-only IME harness into the owned test namespace:
+  - `TestableImeService` and `TestInputConnection` now live in `wtf.uhoh.newsoftkeyboard.app.testing`.
+  - Updated Robolectric shadows and unit tests to avoid hard-coded legacy class-name strings.
+- Done (2025-12-26): migrated remaining `:ime:app` unit tests out of the legacy `com.anysoftkeyboard` test package:
+  - IME behavioral tests now live under `wtf.uhoh.newsoftkeyboard.app.ime`.
+  - Keyboard/view tests now live under `wtf.uhoh.newsoftkeyboard.app.keyboards.*`.
+  - Shared test helpers (`AddOnTestUtils`, `ViewTestUtils`, `RobolectricFragment*TestCase`) now live under `wtf.uhoh.newsoftkeyboard.app.testing`.
+  - Compatibility-focused tests now live under `wtf.uhoh.newsoftkeyboard.compat`.
+- Done (2025-12-25): renamed internal add-on “host app” context variables away from `askContext`/`mAsk*` naming
+  (`hostAppContext`/`packageContext`), keeping the add-on compatibility contract (actions/meta-data/attrs/components)
+  unchanged.
+- Done (2025-12-25): migrated internal model store types to the NSK namespace by renaming the `:engine-models` Java
+  package from `com.anysoftkeyboard.engine.models` to `wtf.uhoh.newsoftkeyboard.engine.models` and updating all
+  call-sites (engines, UI, and tests). Add-on compatibility surfaces unchanged.
+- Done (2025-12-25): migrated prediction managers to the NSK engine namespace:
+  - `NeuralPredictionManager` + `Gpt2Tokenizer`: `com.anysoftkeyboard.dictionaries.neural` → `wtf.uhoh.newsoftkeyboard.engine.neural`
+  - `PresagePredictionManager`: `com.anysoftkeyboard.dictionaries` → `wtf.uhoh.newsoftkeyboard.engine.presage`
+    Updated engine module `namespace` values and all production/test call-sites. Add-on compatibility surfaces unchanged.
+- Done (2025-12-25): migrated the next-word module to the NSK namespace by renaming the `:ime:nextword` Java package from
+  `com.anysoftkeyboard.nextword` to `wtf.uhoh.newsoftkeyboard.nextword` and updating all production/test call-sites. Add-on
+  compatibility surfaces unchanged.
+- Done (2025-12-25): migrated overlay plumbing to the NSK namespace by renaming the `:ime:overlay` Java package from
+  `com.anysoftkeyboard.overlay` to `wtf.uhoh.newsoftkeyboard.overlay` and updating all production/test call-sites. Debug-only
+  overlay unit tests were moved to `src/testDebug` so they keep using debug-only test resources without breaking release unit tests.
+- Done (2025-12-25): migrated notification/permissions plumbing to the NSK namespace by renaming:
+  - `:ime:notification`: `com.anysoftkeyboard.notification` → `wtf.uhoh.newsoftkeyboard.notification`
+  - `:ime:permissions`: `com.anysoftkeyboard.permissions` → `wtf.uhoh.newsoftkeyboard.permissions`
+    Updated module `namespace` values and all production/test call-sites. Add-on compatibility surfaces unchanged.
+- Done (2025-12-25): migrated the prefs library module to the NSK namespace by renaming the `:ime:prefs` Java packages:
+  - `com.anysoftkeyboard.prefs` → `wtf.uhoh.newsoftkeyboard.prefs`
+  - `com.anysoftkeyboard.prefs.backup` → `wtf.uhoh.newsoftkeyboard.prefs.backup`
+    Updated module `namespace` values and all production/test call-sites. Add-on compatibility surfaces unchanged.
+- Done (2025-12-25): moved app-owned preferences backup/restore + animation-level utilities out of the legacy
+  `com.anysoftkeyboard.prefs` package to `wtf.uhoh.newsoftkeyboard.app.prefs` to avoid confusion with the renamed prefs library
+  module (`wtf.uhoh.newsoftkeyboard.prefs.*`). Add-on compatibility surfaces unchanged.
+- Done (2025-12-25): migrated the release-info module to the NSK namespace by renaming the `:ime:releaseinfo` Java package from
+  `com.anysoftkeyboard.releaseinfo` to `wtf.uhoh.newsoftkeyboard.releaseinfo` and updating the module `namespace`, app call-sites,
+  and navigation fragment references. Add-on compatibility surfaces unchanged.
+- Done (2025-12-25): migrated the remote insertion module to the NSK namespace by renaming the `:ime:remote` Java package from
+  `com.anysoftkeyboard.remote` to `wtf.uhoh.newsoftkeyboard.remote` and updating the module `namespace` and all production/test
+  call-sites. Kept `com.anysoftkeyboard.api.MediaInsertion` action strings stable for compatibility.
+- Done (2025-12-25): migrated crash-reporting plumbing to the NSK namespace by renaming the `:ime:chewbacca` Java package from
+  `com.anysoftkeyboard.chewbacca` to `wtf.uhoh.newsoftkeyboard.chewbacca` and updating the module `namespace` and app call-sites.
+- Done (2025-12-25): moved crash-handler wiring helper `CrashHandlerInstaller` to `wtf.uhoh.newsoftkeyboard.app.crash`
+  (entrypoints/manifests unchanged).
+- Done (2025-12-25): moved app-owned system observers out of legacy `com.anysoftkeyboard.android` and into
+  `wtf.uhoh.newsoftkeyboard.app.android` (`NightMode`, `PowerSaving`), updating production + test call-sites.
+- Done (2025-12-25): moved device-specific implementations out of legacy `com.anysoftkeyboard.devicespecific` and into
+  `wtf.uhoh.newsoftkeyboard.app.devicespecific`, updating production + test call-sites.
+- Done (2025-12-25): migrated the “public notices” subsystem to the NSK namespace by renaming the `:ime:app` Java package
+  `com.anysoftkeyboard.saywhat` → `wtf.uhoh.newsoftkeyboard.app.notices` and updating the IME service inheritance chain,
+  debug provider wiring, and unit/instrumented tests. External add-on compatibility surfaces unchanged.
+- Done (2025-12-25): migrated keyboard theme models/factory to the NSK app namespace by renaming the `:ime:app` Java package
+  `com.anysoftkeyboard.theme` → `wtf.uhoh.newsoftkeyboard.app.theme` and updating all production/test call-sites. External theme
+  contracts unchanged (resource entry-name mapping and `api` attrs remain stable).
+- Done (2025-12-25): migrated keyboard extension models/factory to the NSK app namespace by renaming the `:ime:app` Java package
+  `com.anysoftkeyboard.keyboardextensions` → `wtf.uhoh.newsoftkeyboard.app.keyboardextensions` and updating all production/test
+  call-sites. External add-on compatibility surfaces unchanged (intent actions/meta-data keys remain in `PluginActions`).
+- Done (2025-12-25): migrated quick-text keys UI/models to the NSK app namespace by renaming the `:ime:app` Java package
+  `com.anysoftkeyboard.quicktextkeys` → `wtf.uhoh.newsoftkeyboard.app.quicktextkeys` and updating navigation/layout references
+  and all production/test call-sites. External add-on compatibility surfaces unchanged (intent actions/meta-data keys remain in
+  `PluginActions`).
+- Done (2025-12-25): migrated app dictionary implementations/orchestrators to the NSK app namespace by renaming the `:ime:app` Java
+  package `com.anysoftkeyboard.dictionaries` → `wtf.uhoh.newsoftkeyboard.app.dictionaries` and updating all production/test
+  call-sites (plus release instrumentation hooks that referenced old test class names). External add-on compatibility surfaces
+  unchanged (intent actions/meta-data keys remain in `PluginActions`).
+- Done (2025-12-25): migrated reactive plumbing to the NSK namespace by renaming the `:ime:base-rx` Java package from
+  `com.anysoftkeyboard.rx` to `wtf.uhoh.newsoftkeyboard.rx` (including `TestRxSchedulers` in `:ime:base-test`) and updating all
+  production/test call-sites.
+- Done (2025-12-25): migrated test plumbing to the NSK testing namespace by renaming the `:ime:base-test` Java packages from
+  `com.anysoftkeyboard`/`com.anysoftkeyboard.test` to `wtf.uhoh.newsoftkeyboard.testing` and updating Robolectric configs
+  (shadows list) and all unit-test call-sites.
+- Done (2025-12-25): migrated shared base utilities to the NSK namespace by renaming:
+  - `com.anysoftkeyboard.base` → `wtf.uhoh.newsoftkeyboard.base`
+  - `com.anysoftkeyboard.base.utils` → `wtf.uhoh.newsoftkeyboard.base.utils`
+  - `com.anysoftkeyboard.utils` → `wtf.uhoh.newsoftkeyboard.utils`
+    Updated the `:ime:base` module `namespace` and all production/test call-sites.
+- Done (2025-12-25): migrated gesture typing plumbing to the NSK namespace by renaming the `:ime:gesturetyping` Java package from
+  `com.anysoftkeyboard.gesturetyping` to `wtf.uhoh.newsoftkeyboard.gesturetyping` and updating all production/test call-sites.
+- Done (2025-12-26): renamed the default gesture-trail theme style to remove legacy naming while keeping a wrapper for compatibility:
+  `AnyKeyboardGestureTrailTheme` → `NskKeyboardGestureTrailTheme` (legacy name still exists as a parent wrapper).
+- Done (2025-12-26): introduced NSK-prefixed base keyboard theme styles while keeping legacy wrappers:
+  - `AnyKeyboardBaseKeyIconTheme` → `NskKeyboardBaseKeyIconTheme` (legacy wrapper kept)
+  - `AnyKeyboardBaseTheme` → `NskKeyboardBaseTheme` (legacy wrapper kept)
+  - `AnyKeyboardPopupBaseTheme` → `NskKeyboardPopupBaseTheme` (legacy wrapper kept)
+- Done (2025-12-26): updated built-in themes to reference `NskKeyboard*` base styles, leaving `AnyKeyboard*` wrappers for
+  compatibility.
+- Done (2025-12-25): migrated add-on discovery plumbing to the NSK namespace by renaming the `:ime:addons` Java package from
+  `com.anysoftkeyboard.addons` to `wtf.uhoh.newsoftkeyboard.addons` and updating the module `namespace` and all production/test
+  call-sites. External add-on contracts unchanged (intent actions/meta-data/XML schema/attr resource entry names).
+- Done (2025-12-25): migrated fileprovider plumbing to the NSK namespace by renaming the `:ime:fileprovider` Java package from
+  `com.anysoftkeyboard.fileprovider` to `wtf.uhoh.newsoftkeyboard.fileprovider` and updating call-sites. FileProvider authorities
+  unchanged.
+- Done (2025-12-25): migrated dictionaries core plumbing to the NSK namespace by renaming the `:ime:dictionaries` Java package from
+  `com.anysoftkeyboard.dictionaries` to `wtf.uhoh.newsoftkeyboard.dictionaries` and updating app call-sites/tests. Updated JNI
+  registration strings in `:ime:dictionaries:jnidictionaryv1` and `:ime:dictionaries:jnidictionaryv2` so native bindings still
+  resolve the renamed classes.
+- Done (2025-12-25): migrated the Presage JNI helper package to the NSK namespace by renaming
+  `com.anysoftkeyboard.suggestions.presage.PresageNative` → `wtf.uhoh.newsoftkeyboard.suggestions.presage.PresageNative` and
+  updating JNI entrypoint symbol names accordingly.
+- Done (2025-12-26): renamed the Presage JNI shared library from `libanysoftkeyboard_presage.so` to
+  `libnewsoftkeyboard_presage.so` (internal only) and updated `PresageNative` to load the new library name.
+- Done (2025-12-26): renamed the dictionary JNI shared libraries from `libanysoftkey_jni.so`/`libanysoftkey2_jni.so` to
+  `libnewsoftkeyboard_jnidictionaryv1.so`/`libnewsoftkeyboard_jnidictionaryv2.so` and updated dictionary code to load the new
+  library names.
+- Done (2025-12-26): updated `:ime:app` packaging rules so release/canary `doNotStrip` matches the renamed dictionary JNI libraries
+  (`**/newsoftkeyboard_jnidictionaryv*.so`), preventing double-stripping.
+- Done (2025-12-25): migrated the remaining `:ime:app` runtime packages to the owned NSK app namespace by renaming:
+  - `com.anysoftkeyboard.ImeServiceBase` → `wtf.uhoh.newsoftkeyboard.app.ime.ImeServiceBase`
+  - `com.anysoftkeyboard.ime` → `wtf.uhoh.newsoftkeyboard.app.ime`
+  - `com.anysoftkeyboard.keyboards` → `wtf.uhoh.newsoftkeyboard.app.keyboards`
+  - `com.anysoftkeyboard.keyboards.views` → `wtf.uhoh.newsoftkeyboard.app.keyboards.views`
+    External add-on compatibility surfaces unchanged (kept `com.anysoftkeyboard.addons.AddOnUICardReceiver` stable).
 - Done (2025-12-21): removed unused legacy script `setup_anysoftkeyboard_english.sh`.
 - Done (2025-12-21): added CTS-style add-on discovery tests for dual namespaces:
-  - JVM: `com.anysoftkeyboard.compat.PluginDiscoveryCtsTest`
-  - Instrumented: `com.anysoftkeyboard.compat.PluginDiscoveryInstrumentedTest`
+  - JVM: `wtf.uhoh.newsoftkeyboard.compat.PluginDiscoveryCtsTest`
+  - Instrumented: `wtf.uhoh.newsoftkeyboard.compat.PluginDiscoveryInstrumentedTest`
 
 ### Prediction Quality
 
@@ -672,8 +834,8 @@ Refresh counts:
 - Done (2025-12-21): moved `GestureTypingDetector` into `:ime:gesturetyping` and decoupled it from the keyboard model
   (`Keyboard.Key`) via a narrow `GestureKey` interface. `:ime:app` provides adapters at the lifecycle host.
 - Done (2025-12-21): extracted the gesture-typing “commit/case/keyboard-adapter” slices into a single feature-owned package
-  (`com.anysoftkeyboard.ime.gesturetyping`), shrinking `ImeWithGestureTyping` while keeping ownership local (not generic helpers).
-- Done (2025-12-21): extracted `HardKeyboardAction`/`HardKeyboardTranslator` into `com.anysoftkeyboard.keyboards.physical`, removing
+  (`wtf.uhoh.newsoftkeyboard.app.ime.gesturetyping`), shrinking `ImeWithGestureTyping` while keeping ownership local (not generic helpers).
+- Done (2025-12-21): extracted `HardKeyboardAction`/`HardKeyboardTranslator` into `wtf.uhoh.newsoftkeyboard.app.keyboards.physical`, removing
   a keyboard-model → IME runtime dependency edge and keeping “physical keyboard translation” owned in one place.
 - Done (2025-12-21): moved `BTreeDictionary` into `:ime:dictionaries` (dictionary implementation no longer lives in `:ime:app`)
   and moved `maximum_dictionary_words_to_load` into `:ime:dictionaries` resources.

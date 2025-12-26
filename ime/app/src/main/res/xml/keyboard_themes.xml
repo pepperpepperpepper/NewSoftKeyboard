@@ -36,7 +36,7 @@
         themeRes="@style/AospLightTheme" />
     <KeyboardTheme
         description="@string/lean_dark_keyboard_theme_description"
-        iconsThemeRes="@style/AnyKeyboardBaseKeyIconTheme"
+        iconsThemeRes="@style/NskKeyboardBaseKeyIconTheme"
         id="ac8ea510-ca66-11e1-9b23-0800200c9a66"
         index="5"
         nameResId="@string/lean_dark_keyboard_theme_name"
@@ -44,7 +44,7 @@
         themeRes="@style/LeanDark" />
     <KeyboardTheme
         description="@string/light_plain_keyboard_theme_description"
-        iconsThemeRes="@style/AnyKeyboardBaseKeyIconTheme"
+        iconsThemeRes="@style/NskKeyboardBaseKeyIconTheme"
         id="79809d30-2919-4ae6-a9ec-94fd4bb6bd92"
         index="6"
         nameResId="@string/light_plain_keyboard_theme_name"
@@ -52,7 +52,7 @@
         themeRes="@style/PlainLightNewSoftKeyboard" />
     <KeyboardTheme
         description="@string/dark_plain_keyboard_theme_description"
-        iconsThemeRes="@style/AnyKeyboardBaseKeyIconTheme"
+        iconsThemeRes="@style/NskKeyboardBaseKeyIconTheme"
         id="55d9797c-850c-40a8-9a5d-7467b55bd537"
         index="7"
         nameResId="@string/dark_plain_keyboard_theme_name"
@@ -60,7 +60,7 @@
         themeRes="@style/PlainDarkNewSoftKeyboard" />
     <KeyboardTheme
         description="@string/blacktheme_keyboard_theme_description"
-        iconsThemeRes="@style/AnyKeyboardBaseKeyIconTheme"
+        iconsThemeRes="@style/NskKeyboardBaseKeyIconTheme"
         id="EC93C810-4FC5-4FC3-8CE4-1CDA44680A0D"
         index="8"
         nameResId="@string/blacktheme_keyboard_theme_name"
@@ -68,7 +68,7 @@
         themeRes="@style/PlainBlackNewSoftKeyboard" />
     <KeyboardTheme
         description="@string/lean_dark_keyboard_theme_description"
-        iconsThemeRes="@style/AnyKeyboardBaseKeyIconTheme"
+        iconsThemeRes="@style/NskKeyboardBaseKeyIconTheme"
         id="28860f10-cf16-11e1-9b23-0800200c9a66"
         index="9"
         nameResId="@string/lean_dark_2_keyboard_theme_name"
@@ -76,7 +76,7 @@
         themeRes="@style/LeanDark2" />
     <KeyboardTheme
         description="@string/lean_dark_big_keyboard_theme_description"
-        iconsThemeRes="@style/AnyKeyboardBaseKeyIconTheme"
+        iconsThemeRes="@style/NskKeyboardBaseKeyIconTheme"
         id="309a9770-f732-11e3-a3ac-0800200c9a66"
         index="10"
         nameResId="@string/lean_dark_big_keyboard_theme_name"
@@ -108,7 +108,7 @@
         themeRes="@style/LeanLightBig" />
     <KeyboardTheme
         description="@string/lean_dark_gray_keyboard_theme_description"
-        iconsThemeRes="@style/AnyKeyboardBaseKeyIconTheme"
+        iconsThemeRes="@style/NskKeyboardBaseKeyIconTheme"
         id="2fbea491-15f6-4b40-9259-06e21d9dba95"
         index="14"
         nameResId="@string/lean_dark_gray_keyboard_theme_name"
@@ -117,12 +117,12 @@
     <KeyboardTheme
         description=""
         hidden="true"
-        iconsThemeRes="@style/AnyKeyboardBaseKeyIconTheme"
+        iconsThemeRes="@style/NskKeyboardBaseKeyIconTheme"
         id="2a94cf8c-266c-47fd-8c8c-c9c57d28d7dc"
         index="0"
         nameResId="@string/default_values_keyboard_theme_name"
-        popupThemeRes="@style/AnyKeyboardPopupBaseTheme"
-        themeRes="@style/AnyKeyboardBaseTheme" />
+        popupThemeRes="@style/NskKeyboardPopupBaseTheme"
+        themeRes="@style/NskKeyboardBaseTheme" />
     <KeyboardTheme
         description="@string/yochees_dark_keyboard_theme_description"
         iconsThemeRes="@style/YocheesDarkKeyIconTheme"

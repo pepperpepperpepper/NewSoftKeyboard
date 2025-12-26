@@ -11,5 +11,5 @@ dependencies {
 }
 
 android {
-    namespace 'com.anysoftkeyboard.permissions'
+    namespace 'wtf.uhoh.newsoftkeyboard.permissions'
 }

@@ -146,7 +146,7 @@ static int registerNativeMethods(JNIEnv* env, const char* className,
 
 static int registerNatives(JNIEnv *env)
 {
-    const char* const kClassPathName = "com/anysoftkeyboard/dictionaries/jni/BinaryDictionary";
+    const char* const kClassPathName = "wtf/uhoh/newsoftkeyboard/dictionaries/jni/BinaryDictionary";
     jclass clazz;
 
     clazz = env->FindClass("java/io/FileDescriptor");

@@ -82,7 +82,7 @@
             android:persistent="true"
             android:dependency="@string/settings_key_openai_use_default_prompt" />
 
-        <com.anysoftkeyboard.ui.settings.OpenAIPromptEditTextPreference
+        <wtf.uhoh.newsoftkeyboard.app.ui.settings.OpenAIPromptEditTextPreference
             android:key="@string/settings_key_openai_prompt"
             android:title="@string/openai_prompt_title"
             android:summary="@string/openai_prompt_summary"

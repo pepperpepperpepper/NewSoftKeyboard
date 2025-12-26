@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/mainFragment"
-        android:name="com.anysoftkeyboard.ui.settings.MainFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainFragment"
         android:label="MainFragment" >
         <action
             android:id="@+id/action_mainFragment_to_aboutNewSoftKeyboardFragment"
@@ -53,7 +53,7 @@
     </fragment>
     <fragment
         android:id="@+id/languageSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.LanguageSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.LanguageSettingsFragment"
         android:label="LanguageSettingsFragment">
         <action
             android:id="@+id/action_languageSettingsFragment_to_keyboardAddOnBrowserFragment"
@@ -79,7 +79,7 @@
     </fragment>
     <fragment
         android:id="@+id/speechToTextSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.SpeechToTextSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.SpeechToTextSettingsFragment"
         android:label="@string/speech_to_text_settings_title" >
         <action
             android:id="@+id/action_speechToTextSettingsFragment_to_openAISpeechSettingsFragment"
@@ -98,15 +98,15 @@
     </fragment>
     <fragment
         android:id="@+id/openAISpeechSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.OpenAISpeechSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.OpenAISpeechSettingsFragment"
         android:label="@string/openai_speech_settings_title" />
     <fragment
         android:id="@+id/elevenLabsSpeechSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.ElevenLabsSpeechSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.ElevenLabsSpeechSettingsFragment"
         android:label="@string/elevenlabs_speech_settings_title" />
     <fragment
         android:id="@+id/userInterfaceSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.UserInterfaceSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.UserInterfaceSettingsFragment"
         android:label="UserInterfaceSettingsFragment" >
         <action
             android:id="@+id/action_userInterfaceSettingsFragment_to_keyboardThemeSelectorFragment"
@@ -132,7 +132,7 @@
     </fragment>
     <fragment
         android:id="@+id/gesturesSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.GesturesSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.GesturesSettingsFragment"
         android:label="GesturesSettingsFragment">
         <deepLink
             android:id="@+id/deepLink"
@@ -141,7 +141,7 @@
     </fragment>
     <fragment
         android:id="@+id/quickTextKeysBrowseFragment"
-        android:name="com.anysoftkeyboard.quicktextkeys.ui.QuickTextKeysBrowseFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.quicktextkeys.ui.QuickTextKeysBrowseFragment"
         android:label="QuickTextKeysBrowseFragment">
         <deepLink
             android:id="@+id/deepLink3"
@@ -157,7 +157,7 @@
     </fragment>
     <fragment
         android:id="@+id/aboutNewSoftKeyboardFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AboutNewSoftKeyboardFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.AboutNewSoftKeyboardFragment"
         android:label="AboutNewSoftKeyboardFragment" >
         <action
             android:id="@+id/action_aboutNewSoftKeyboardFragment_to_additionalSoftwareLicensesFragment"
@@ -169,7 +169,7 @@
     </fragment>
     <fragment
         android:id="@+id/mainTweaksFragment"
-        android:name="com.anysoftkeyboard.ui.settings.MainTweaksFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainTweaksFragment"
         android:label="MainTweaksFragment" >
         <action
             android:id="@+id/action_mainTweaksFragment_to_developerToolsFragment"
@@ -181,11 +181,11 @@
     </fragment>
     <fragment
         android:id="@+id/additionalSoftwareLicensesFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AboutNewSoftKeyboardFragment$AdditionalSoftwareLicensesFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.AboutNewSoftKeyboardFragment$AdditionalSoftwareLicensesFragment"
         android:label="AdditionalSoftwareLicensesFragment" />
     <fragment
         android:id="@+id/developerToolsFragment"
-        android:name="com.anysoftkeyboard.ui.dev.DeveloperToolsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.dev.DeveloperToolsFragment"
         android:label="DeveloperToolsFragment" >
         <deepLink
             android:id="@+id/deepLink_dev_tools"
@@ -201,7 +201,7 @@
     </fragment>
     <fragment
         android:id="@+id/keyboardAddOnBrowserFragment"
-        android:name="com.anysoftkeyboard.ui.settings.KeyboardAddOnBrowserFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.KeyboardAddOnBrowserFragment"
         android:label="KeyboardAddOnBrowserFragment">
         <deepLink
             android:id="@+id/deepLink4"
@@ -210,7 +210,7 @@
     </fragment>
     <fragment
         android:id="@+id/dictionariesFragment"
-        android:name="com.anysoftkeyboard.ui.settings.DictionariesFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.DictionariesFragment"
         android:label="DictionariesFragment" >
         <action
             android:id="@+id/action_dictionariesFragment_to_userDictionaryEditorFragment"
@@ -236,7 +236,7 @@
     </fragment>
     <fragment
         android:id="@+id/additionalLanguageSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AdditionalLanguageSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.AdditionalLanguageSettingsFragment"
         android:label="AdditionalLanguageSettingsFragment" >
         <action
             android:id="@+id/action_additionalLanguageSettingsFragment_to_languageTweaksFragment"
@@ -255,15 +255,15 @@
     </fragment>
     <fragment
         android:id="@+id/userDictionaryEditorFragment"
-        android:name="com.anysoftkeyboard.ui.settings.wordseditor.UserDictionaryEditorFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.wordseditor.UserDictionaryEditorFragment"
         android:label="UserDictionaryEditorFragment" />
     <fragment
         android:id="@+id/abbreviationDictionaryEditorFragment"
-        android:name="com.anysoftkeyboard.ui.settings.wordseditor.AbbreviationDictionaryEditorFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.wordseditor.AbbreviationDictionaryEditorFragment"
         android:label="AbbreviationDictionaryEditorFragment" />
     <fragment
         android:id="@+id/nextWordSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.NextWordSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.NextWordSettingsFragment"
         android:label="NextWordSettingsFragment" >
         <action
             android:id="@+id/action_nextWordSettingsFragment_to_presageModelsFragment"
@@ -275,15 +275,15 @@
     </fragment>
     <fragment
         android:id="@+id/presageModelsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.PresageModelsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.PresageModelsFragment"
         android:label="PresageModelsFragment" />
     <fragment
         android:id="@+id/languageTweaksFragment"
-        android:name="com.anysoftkeyboard.ui.settings.LanguageTweaksFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.LanguageTweaksFragment"
         android:label="LanguageTweaksFragment" />
     <fragment
         android:id="@+id/keyboardThemeSelectorFragment"
-        android:name="com.anysoftkeyboard.ui.settings.KeyboardThemeSelectorFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.KeyboardThemeSelectorFragment"
         android:label="KeyboardThemeSelectorFragment">
         <action
             android:id="@+id/action_keyboardThemeSelectorFragment_to_keyboardThemeTweaksFragment"
@@ -299,7 +299,7 @@
     </fragment>
     <fragment
         android:id="@+id/effectsSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.EffectsSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.EffectsSettingsFragment"
         android:label="EffectsSettingsFragment" >
         <action
             android:id="@+id/action_effectsSettingsFragment_to_powerSavingSettingsFragment"
@@ -318,7 +318,7 @@
     </fragment>
     <fragment
         android:id="@+id/additionalUiSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AdditionalUiSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.AdditionalUiSettingsFragment"
         android:label="AdditionalUiSettingsFragment" >
         <action
             android:id="@+id/action_additionalUiSettingsFragment_to_uiTweaksFragment"
@@ -351,42 +351,42 @@
     </fragment>
     <fragment
         android:id="@+id/keyboardThemeTweaksFragment"
-        android:name="com.anysoftkeyboard.ui.settings.KeyboardThemeTweaksFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.KeyboardThemeTweaksFragment"
         android:label="KeyboardThemeTweaksFragment" />
     <fragment
         android:id="@+id/powerSavingSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.PowerSavingSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.PowerSavingSettingsFragment"
         android:label="PowerSavingSettingsFragment" />
     <fragment
         android:id="@+id/nightModeSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.NightModeSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.NightModeSettingsFragment"
         android:label="NightModeSettingsFragment" />
     <fragment
         android:id="@+id/uiTweaksFragment"
-        android:name="com.anysoftkeyboard.ui.settings.UiTweaksFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.UiTweaksFragment"
         android:label="UiTweaksFragment" />
     <fragment
         android:id="@+id/extensionAddOnBrowserFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AdditionalUiSettingsFragment$ExtensionAddOnBrowserFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.AdditionalUiSettingsFragment$ExtensionAddOnBrowserFragment"
         android:label="ExtensionAddOnBrowserFragment" />
     <fragment
         android:id="@+id/topRowAddOnBrowserFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AdditionalUiSettingsFragment$TopRowAddOnBrowserFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.AdditionalUiSettingsFragment$TopRowAddOnBrowserFragment"
         android:label="TopRowAddOnBrowserFragment" />
     <fragment
         android:id="@+id/bottomRowAddOnBrowserFragment"
-        android:name="com.anysoftkeyboard.ui.settings.AdditionalUiSettingsFragment$BottomRowAddOnBrowserFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.AdditionalUiSettingsFragment$BottomRowAddOnBrowserFragment"
         android:label="BottomRowAddOnBrowserFragment" />
     <fragment
         android:id="@+id/quickTextSettingsFragment"
-        android:name="com.anysoftkeyboard.ui.settings.QuickTextSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.QuickTextSettingsFragment"
         android:label="QuickTextSettingsFragment" />
     <fragment
         android:id="@+id/logCatViewFragment"
-        android:name="com.anysoftkeyboard.ui.dev.LogCatViewFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.dev.LogCatViewFragment"
         android:label="LogCatViewFragment" />
     <fragment
         android:id="@+id/fullChangeLogFragment"
-        android:name="com.anysoftkeyboard.releaseinfo.ChangeLogFragment$FullChangeLogFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.releaseinfo.ChangeLogFragment$FullChangeLogFragment"
         android:label="FullChangeLogFragment" />
 </navigation>

@@ -1,0 +1,45 @@
+package wtf.uhoh.newsoftkeyboard.app.android;
+
+import android.content.Context;
+import androidx.annotation.BoolRes;
+import androidx.annotation.NonNull;
+import androidx.annotation.StringRes;
+import io.reactivex.Observable;
+import io.reactivex.annotations.CheckReturnValue;
+import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.prefs.RxSharedPrefs;
+
+public class NightMode {
+
+  @CheckReturnValue
+  @NonNull
+  public static Observable<Boolean> observeNightModeState(
+      @NonNull Context context, @StringRes int enablePrefResId, @BoolRes int defaultValueResId) {
+    final Observable<Boolean> nightMode =
+        ((NskApplicationBase) context.getApplicationContext()).getNightModeObservable();
+    final RxSharedPrefs prefs = NskApplicationBase.prefs(context);
+    return Observable.combineLatest(
+            prefs
+                .getString(
+                    R.string.settings_key_night_mode, R.string.settings_default_night_mode_value)
+                .asObservable(),
+            enablePrefResId == 0
+                ? Observable.just(true)
+                : prefs.getBoolean(enablePrefResId, defaultValueResId).asObservable(),
+            nightMode,
+            (nightModePref, enabledPref, nightModeState) -> {
+              if (!enabledPref) return false;
+
+              switch (nightModePref) {
+                case "never":
+                  return false;
+                case "always":
+                  return true;
+                default:
+                  return nightModeState;
+              }
+            })
+        .distinctUntilChanged();
+  }
+}

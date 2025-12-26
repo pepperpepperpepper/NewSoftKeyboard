@@ -16,5 +16,5 @@ dependencies {
 }
 
 android {
-    namespace 'com.anysoftkeyboard.prefs'
+    namespace 'wtf.uhoh.newsoftkeyboard.prefs'
 }

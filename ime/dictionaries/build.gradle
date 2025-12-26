@@ -14,5 +14,5 @@ android {
     buildFeatures {
         buildConfig = true
     }
-    namespace 'com.anysoftkeyboard.dictionaries'
+    namespace 'wtf.uhoh.newsoftkeyboard.dictionaries'
 }

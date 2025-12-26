@@ -17,7 +17,7 @@
 ** limitations under the License.
 */
 -->
-<com.anysoftkeyboard.keyboards.views.KeyboardViewContainerView
+<wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/AnyKeyboardContainerView"
@@ -27,17 +27,17 @@
     android:animateLayoutChanges="false"
     tools:ignore="UnusedAttribute">
 
-    <com.anysoftkeyboard.keyboards.views.CandidateView
+    <wtf.uhoh.newsoftkeyboard.app.keyboards.views.CandidateView
         android:id="@+id/candidate_view"
         android:layout_width="match_parent"
         android:layout_height="@dimen/candidate_strip_height"
         android:layout_margin="0px"
         android:padding="0px" />
 
-    <com.anysoftkeyboard.keyboards.views.KeyboardView
+    <wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardView
         android:id="@+id/AnyKeyboardMainView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="0px"
         android:padding="0px" />
-</com.anysoftkeyboard.keyboards.views.KeyboardViewContainerView>
+</wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView>

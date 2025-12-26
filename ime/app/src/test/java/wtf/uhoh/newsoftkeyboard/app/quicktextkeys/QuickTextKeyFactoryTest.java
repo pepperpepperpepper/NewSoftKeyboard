@@ -1,0 +1,109 @@
+package wtf.uhoh.newsoftkeyboard.app.quicktextkeys;
+
+import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
+
+import android.os.Build;
+import java.util.ArrayList;
+import java.util.List;
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.annotation.Config;
+import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
+
+@RunWith(NskRobolectricTestRunner.class)
+public class QuickTextKeyFactoryTest {
+  private static final String KEY_OUTPUT = "\uD83D\uDE03";
+
+  @Test
+  public void testDefaultOrder() {
+    List<QuickTextKey> orderAddOns =
+        NskApplicationBase.getQuickTextKeyFactory(getApplicationContext()).getEnabledAddOns();
+    Assert.assertEquals(17, orderAddOns.size());
+    Assert.assertEquals("698b8c20-19df-11e1-bddb-0800200c9a66", orderAddOns.get(0).getId());
+    Assert.assertEquals("085020ea-f496-4c0c-80cb-45ca50635c59", orderAddOns.get(15).getId());
+  }
+
+  @Test
+  @Config(sdk = Build.VERSION_CODES.LOLLIPOP_MR1)
+  public void testCanParseAddOneTypesOfOutputsApi22() {
+    List<QuickTextKey> addOns =
+        NskApplicationBase.getQuickTextKeyFactory(getApplicationContext()).getAllAddOns();
+
+    QuickTextKey emoticons = addOns.get(0);
+    Assert.assertEquals("698b8c20-19df-11e1-bddb-0800200c9a66", emoticons.getId());
+    Assert.assertEquals(KEY_OUTPUT, emoticons.getKeyOutputText().toString());
+    Assert.assertEquals(KEY_OUTPUT, emoticons.getKeyLabel().toString());
+  }
+
+  @Test
+  @Config(sdk = Build.VERSION_CODES.LOLLIPOP)
+  public void testCanParseAddOneTypesOfOutputsApi21() {
+    List<QuickTextKey> addOns =
+        NskApplicationBase.getQuickTextKeyFactory(getApplicationContext()).getAllAddOns();
+
+    QuickTextKey emoticons = addOns.get(0);
+    Assert.assertEquals("698b8c20-19df-11e1-bddb-0800200c9a66", emoticons.getId());
+    Assert.assertEquals(KEY_OUTPUT, emoticons.getKeyOutputText().toString());
+    Assert.assertEquals(KEY_OUTPUT, emoticons.getKeyLabel().toString());
+  }
+
+  @Test
+  @Config(sdk = Build.VERSION_CODES.N)
+  public void testCanParseAddOneTypesOfOutputsApi24() {
+    List<QuickTextKey> addOns =
+        NskApplicationBase.getQuickTextKeyFactory(getApplicationContext()).getAllAddOns();
+
+    QuickTextKey emoticons = addOns.get(0);
+    Assert.assertEquals("698b8c20-19df-11e1-bddb-0800200c9a66", emoticons.getId());
+    Assert.assertEquals(KEY_OUTPUT, emoticons.getKeyOutputText().toString());
+    Assert.assertEquals(KEY_OUTPUT, emoticons.getKeyLabel().toString());
+  }
+
+  @Test
+  public void testOrderStore() {
+    List<QuickTextKey> availableQuickKeys =
+        NskApplicationBase.getQuickTextKeyFactory(getApplicationContext()).getAllAddOns();
+
+    List<QuickTextKey> revisedQuickKeys = new ArrayList<>();
+    revisedQuickKeys.add(availableQuickKeys.get(10));
+    revisedQuickKeys.add(availableQuickKeys.get(1));
+    NskApplicationBase.getQuickTextKeyFactory(getApplicationContext())
+        .setAddOnsOrder(revisedQuickKeys);
+
+    List<QuickTextKey> orderAddOns =
+        NskApplicationBase.getQuickTextKeyFactory(getApplicationContext()).getEnabledAddOns();
+    Assert.assertEquals(17, orderAddOns.size());
+    Assert.assertEquals(revisedQuickKeys.get(0).getId(), orderAddOns.get(0).getId());
+    Assert.assertEquals(revisedQuickKeys.get(1).getId(), orderAddOns.get(1).getId());
+
+    revisedQuickKeys.clear();
+    revisedQuickKeys.add(availableQuickKeys.get(1));
+    revisedQuickKeys.add(availableQuickKeys.get(10));
+    revisedQuickKeys.add(availableQuickKeys.get(1));
+    revisedQuickKeys.add(availableQuickKeys.get(2));
+    NskApplicationBase.getQuickTextKeyFactory(getApplicationContext())
+        .setAddOnsOrder(revisedQuickKeys);
+
+    orderAddOns = NskApplicationBase.getQuickTextKeyFactory(getApplicationContext()).getAllAddOns();
+    Assert.assertEquals(17, orderAddOns.size());
+    Assert.assertEquals(revisedQuickKeys.get(0).getId(), orderAddOns.get(0).getId());
+    Assert.assertEquals(revisedQuickKeys.get(1).getId(), orderAddOns.get(1).getId());
+    // this is a repeat in the re-order, so it is not repeating in the final list
+    Assert.assertNotEquals(revisedQuickKeys.get(2).getId(), orderAddOns.get(2).getId());
+    Assert.assertEquals(revisedQuickKeys.get(3).getId(), orderAddOns.get(2).getId());
+    final String expected2ndId = orderAddOns.get(3).getId();
+
+    NskApplicationBase.getQuickTextKeyFactory(getApplicationContext())
+        .setAddOnEnabled(orderAddOns.get(0).getId(), false);
+    NskApplicationBase.getQuickTextKeyFactory(getApplicationContext())
+        .setAddOnEnabled(orderAddOns.get(2).getId(), false);
+
+    orderAddOns =
+        NskApplicationBase.getQuickTextKeyFactory(getApplicationContext()).getEnabledAddOns();
+    Assert.assertEquals(15, orderAddOns.size());
+    Assert.assertEquals(revisedQuickKeys.get(1).getId(), orderAddOns.get(0).getId());
+    Assert.assertEquals(expected2ndId, orderAddOns.get(1).getId());
+  }
+}

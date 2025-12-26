@@ -4,13 +4,13 @@ import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 
 import android.view.MotionEvent;
 import android.view.View;
-import com.anysoftkeyboard.AnySoftKeyboardRobolectricTestRunner;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 
-@RunWith(AnySoftKeyboardRobolectricTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 public class ScrollViewWithDisableTest {
 
   private ScrollViewWithDisable mUnderTest;

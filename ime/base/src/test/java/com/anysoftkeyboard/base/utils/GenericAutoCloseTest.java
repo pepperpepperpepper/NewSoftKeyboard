@@ -1,14 +1,14 @@
-package com.anysoftkeyboard.base.utils;
+package wtf.uhoh.newsoftkeyboard.base.utils;
 
 import android.view.inputmethod.InputConnection;
-import com.anysoftkeyboard.AnySoftKeyboardPlainTestRunner;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
+import wtf.uhoh.newsoftkeyboard.testing.NskPlainTestRunner;
 
-@RunWith(AnySoftKeyboardPlainTestRunner.class)
+@RunWith(NskPlainTestRunner.class)
 public class GenericAutoCloseTest {
 
   @Test

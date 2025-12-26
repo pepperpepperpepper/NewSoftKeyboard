@@ -61,31 +61,31 @@
         <module name="RegexpSinglelineJava">
             <property name="id" value="KeyboardExtensionFactoryCreation" />
             <property name="format" value="new KeyboardExtensionFactory" />
-            <property name="message" value="Only AnyApplication can do that!" />
+            <property name="message" value="Only NskApplicationBase can do that!" />
         </module>
 
         <module name="RegexpSinglelineJava">
             <property name="id" value="KeyboardFactoryCreation" />
             <property name="format" value="new KeyboardFactory" />
-            <property name="message" value="Only AnyApplication can do that!" />
+            <property name="message" value="Only NskApplicationBase can do that!" />
         </module>
 
         <module name="RegexpSinglelineJava">
             <property name="id" value="ExternalDictionaryFactoryCreation" />
             <property name="format" value="new ExternalDictionaryFactory" />
-            <property name="message" value="Only AnyApplication can do that!" />
+            <property name="message" value="Only NskApplicationBase can do that!" />
         </module>
 
         <module name="RegexpSinglelineJava">
             <property name="id" value="KeyboardThemeFactoryCreation" />
             <property name="format" value="new KeyboardThemeFactory" />
-            <property name="message" value="Only AnyApplication can do that!" />
+            <property name="message" value="Only NskApplicationBase can do that!" />
         </module>
 
         <module name="RegexpSinglelineJava">
             <property name="id" value="QuickTextKeyFactoryCreation" />
             <property name="format" value="new QuickTextKeyFactory" />
-            <property name="message" value="Only AnyApplication can do that!" />
+            <property name="message" value="Only NskApplicationBase can do that!" />
         </module>
 
         <module name="RegexpSinglelineJava">
@@ -119,10 +119,10 @@
         </module>
 
         <module name="RegexpSinglelineJava">
-            <property name="id" value="Use ASK test runner" />
+            <property name="id" value="Use NSK test runner" />
             <property name="format" value="RunWith(\s*RobolectricTestRunner.class\s*)" />
             <property name="message"
-                value="Don not use Robolectric test-runner, use AnySoftKeyboardRobolectricTestRunner or AnySoftKeyboardPlainTestRunner" />
+                value="Don not use Robolectric test-runner, use NskRobolectricTestRunner or NskPlainTestRunner" />
         </module>
 
         <module name="RegexpSinglelineJava">

@@ -1,1 +1,1 @@
--keep class com.anysoftkeyboard.engine.models.ModelDefinition { *; }
+-keep class wtf.uhoh.newsoftkeyboard.engine.models.ModelDefinition { *; }

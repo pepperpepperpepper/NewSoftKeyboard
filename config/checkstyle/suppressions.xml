@@ -12,21 +12,21 @@
 
     <suppress files="PermissionRequestHelper\.java" id="EasyPermissionOnlyUsingHelper" />
 
-    <suppress files="AnyApplication\.java" id="KeyboardExtensionFactoryCreation" />
+    <suppress files="NskApplicationBase\.java" id="KeyboardExtensionFactoryCreation" />
 
-    <suppress files="AnyApplication\.java" id="KeyboardFactoryCreation" />
+    <suppress files="NskApplicationBase\.java" id="KeyboardFactoryCreation" />
 
-    <suppress files="AnyApplication\.java" id="ExternalDictionaryFactoryCreation" />
+    <suppress files="NskApplicationBase\.java" id="ExternalDictionaryFactoryCreation" />
 
-    <suppress files="AnyApplication\.java" id="KeyboardThemeFactoryCreation" />
+    <suppress files="NskApplicationBase\.java" id="KeyboardThemeFactoryCreation" />
 
-    <suppress files="AnyApplication\.java" id="QuickTextKeyFactoryCreation" />
+    <suppress files="NskApplicationBase\.java" id="QuickTextKeyFactoryCreation" />
 
     <suppress files="RxSchedulers\.java" id="NotNativeRxSchedulers" />
 
     <suppress files="RxSchedulers\.java" id="NotAndroidRxSchedulers" />
 
-    <suppress files="AnyRoboApplication\.java" id="NotAndroidRxSchedulers" />
+    <suppress files="NskRoboApplication\.java" id="NotAndroidRxSchedulers" />
 
     <suppress files="RxProgressDialog\.java" id="UsingNativeDialog" />
     <suppress files="GeneralDialogController\.java" id="UsingSupportAlertDialog" />

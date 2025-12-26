@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:background="@drawable/keyboard_demo_shadow">
 
-        <com.anysoftkeyboard.keyboards.views.DemoKeyboardView
+        <wtf.uhoh.newsoftkeyboard.app.keyboards.views.DemoKeyboardView
             android:id="@+id/item_keyboard_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />

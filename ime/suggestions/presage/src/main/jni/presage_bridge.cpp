@@ -134,7 +134,7 @@ jobjectArray ToJavaStringArray(JNIEnv* env,
 }  // namespace
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_anysoftkeyboard_suggestions_presage_PresageNative_nativeOpenModel(
+Java_wtf_uhoh_newsoftkeyboard_suggestions_presage_PresageNative_nativeOpenModel(
     JNIEnv* env, jobject /*thiz*/, jstring model_path) {
   if (model_path == nullptr) return 0;
   const char* path_chars = env->GetStringUTFChars(model_path, nullptr);
@@ -167,7 +167,7 @@ Java_com_anysoftkeyboard_suggestions_presage_PresageNative_nativeOpenModel(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_anysoftkeyboard_suggestions_presage_PresageNative_nativeCloseModel(
+Java_wtf_uhoh_newsoftkeyboard_suggestions_presage_PresageNative_nativeCloseModel(
     JNIEnv* /*env*/, jobject /*thiz*/, jlong handle) {
   if (handle == 0) return;
   std::lock_guard<std::mutex> lock(g_mutex);
@@ -177,7 +177,7 @@ Java_com_anysoftkeyboard_suggestions_presage_PresageNative_nativeCloseModel(
 }
 
 extern "C" JNIEXPORT jfloat JNICALL
-Java_com_anysoftkeyboard_suggestions_presage_PresageNative_nativeScoreSequence(
+Java_wtf_uhoh_newsoftkeyboard_suggestions_presage_PresageNative_nativeScoreSequence(
     JNIEnv* env, jobject /*thiz*/, jlong handle, jobjectArray context, jstring candidate) {
   if (handle == 0 || candidate == nullptr) {
     return 0.f;
@@ -202,7 +202,7 @@ Java_com_anysoftkeyboard_suggestions_presage_PresageNative_nativeScoreSequence(
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_anysoftkeyboard_suggestions_presage_PresageNative_nativePredictNext(
+Java_wtf_uhoh_newsoftkeyboard_suggestions_presage_PresageNative_nativePredictNext(
     JNIEnv* env, jobject /*thiz*/, jlong handle, jobjectArray context, jint max_results) {
   if (handle == 0) {
     return env->NewObjectArray(0, env->FindClass("java/lang/String"), nullptr);
