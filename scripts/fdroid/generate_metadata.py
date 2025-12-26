@@ -1,169 +1,128 @@
 #!/usr/bin/env python3
+"""
+Generate metadata/wtf.uhoh.newsoftkeyboard.yml from the APKs present in repo/ and archive/.
 
-from __future__ import annotations
+The script is intentionally self contained and avoids extra dependencies. It:
+ - Scans repo/ and archive/ (following symlinks) for wtf.uhoh.newsoftkeyboard_*.apk
+ - Extracts versionCode + versionName via `aapt dump badging`
+ - Emits a minimal static metadata file with KeepAll/None modes
+ - Sets CurrentVersion/Code to $CURRENT_VERSION_CODE if provided, otherwise the highest code found
 
-import dataclasses
-import glob
+Usage:
+  CURRENT_VERSION_CODE=15086 ./scripts/fdroid/generate_metadata.py
+
+Prereqs: aapt in PATH (or set AAPT env to an explicit binary).
+Run from the fdroid repo root (/home/arch/fdroid).
+"""
+
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable
+
+PKG_NAME = "wtf.uhoh.newsoftkeyboard"
+METADATA_PATH = Path("metadata") / f"{PKG_NAME}.yml"
 
 
-@dataclasses.dataclass(frozen=True)
-class ApkInfo:
-    path: Path
-    version_code: int
-    version_name: str
-    mtime: float
+def find_aapt() -> str:
+    if os.environ.get("AAPT"):
+        return os.environ["AAPT"]
+    return subprocess.check_output(["which", "aapt"], text=True).strip()
 
 
-_PKG_RE = re.compile(
-    r"^package:\s+name='(?P<name>[^']+)'\s+versionCode='(?P<vc>[^']+)'\s+versionName='(?P<vn>[^']*)'"
-)
+def dump_badging(aapt: str, apk: Path) -> tuple[str, int]:
+    out = subprocess.check_output([aapt, "dump", "badging", str(apk)], text=True)
+    for line in out.splitlines():
+        if line.startswith("package:"):
+            tokens = line.split()
+            attrs = {}
+            for token in tokens[1:]:
+                if "=" in token:
+                    k, v = token.split("=", 1)
+                    attrs[k] = v.strip("'")
+            vc = int(attrs["versionCode"])
+            vn = attrs["versionName"]
+            return vn, vc
+    raise RuntimeError(f"version info not found in {apk}")
 
 
-def _run_aapt_badging(apk_path: Path) -> str:
-    try:
-        proc = subprocess.run(
-            ["aapt", "dump", "badging", str(apk_path)],
-            check=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-        return proc.stdout
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"aapt failed for {apk_path}: {e.stdout}") from e
+def collect_apks(root: Path) -> list[Path]:
+    apks: list[Path] = []
+    for base in ("repo", "archive"):
+        for apk in root.joinpath(base).rglob(f"{PKG_NAME}_*.apk"):
+            apks.append(apk.resolve())
+    return apks
 
 
-def _parse_apk_info(apk_path: Path) -> ApkInfo | None:
-    out = _run_aapt_badging(apk_path)
-    pkg_line = next((line for line in out.splitlines() if line.startswith("package: ")), None)
-    if pkg_line is None:
-        return None
-    m = _PKG_RE.match(pkg_line)
-    if not m:
-        return None
-    if m.group("name") != "wtf.uhoh.newsoftkeyboard":
-        return None
-    version_code = int(m.group("vc"))
-    version_name = m.group("vn") or ""
-    stat = apk_path.stat()
-    return ApkInfo(path=apk_path, version_code=version_code, version_name=version_name, mtime=stat.st_mtime)
-
-
-def _find_apks() -> Iterable[Path]:
-    patterns = [
-        "repo/wtf.uhoh.newsoftkeyboard_*.apk",
-        "archive/wtf.uhoh.newsoftkeyboard_*.apk",
+def write_metadata(entries: list[tuple[str, int]], current_code: int, current_name: str) -> None:
+    header = """Categories:
+- System
+License: Apache-2.0
+WebSite: https://fdroid.uh-oh.wtf
+SourceCode: https://github.com/pepperpepperpepper/NewSoftKeyboard
+IssueTracker: https://github.com/pepperpepperpepper/NewSoftKeyboard/issues
+Name: New Soft Keyboard
+Summary: Hard fork of AnySoftKeyboard focused on custom layouts and hidden-switch behavior.
+Description: |
+  New Soft Keyboard is a lean fork of AnySoftKeyboard that keeps plugin/add-on compatibility
+  while providing a slimmer APK and in-app downloadable language models.
+AuthorName: Uh-Oh WTF
+AutoUpdateMode: None
+UpdateCheckMode: None
+"""
+    body = [
+        f"CurrentVersion: {current_name}",
+        f"CurrentVersionCode: {current_code}",
+        "Builds: []",
     ]
-    for pattern in patterns:
-        for p in glob.glob(pattern):
-            yield Path(p)
-
-
-def _dedupe_by_version_code(apks: Iterable[ApkInfo]) -> list[ApkInfo]:
-    by_code: dict[int, ApkInfo] = {}
-    for apk in apks:
-        existing = by_code.get(apk.version_code)
-        if existing is None or apk.mtime > existing.mtime:
-            by_code[apk.version_code] = apk
-    return sorted(by_code.values(), key=lambda a: a.version_code, reverse=True)
-
-
-def _render_builds(apks: list[ApkInfo]) -> str:
-    if not apks:
-        return "Builds: []\n"
-    lines: list[str] = ["Builds:"]
-    for apk in apks:
-        lines.extend(
-            [
-                f"  - versionName: {apk.version_name}",
-                f"    versionCode: {apk.version_code}",
-                "    commit: main",
-                "    subdir: .",
-                "    gradle:",
-                "      - :ime:app:assembleRelease",
-                "    output: ime/app/build/outputs/apk/release/app-release.apk",
-            ]
-        )
-    return "\n".join(lines) + "\n"
-
-
-def _update_or_insert_line(text: str, key: str, value: str) -> str:
-    pattern = re.compile(rf"^{re.escape(key)}:.*$", re.MULTILINE)
-    replacement = f"{key}: {value}"
-    if pattern.search(text):
-        return pattern.sub(replacement, text, count=1)
-    # Insert near other top-level keys if possible.
-    return text.rstrip() + "\n" + replacement + "\n"
-
-
-def _replace_builds_block(text: str, builds_block: str) -> str:
-    # Replace everything from "Builds:" to EOF if present (our metadata keeps builds at the end).
-    m = re.search(r"^Builds:.*$", text, flags=re.MULTILINE)
-    if not m:
-        return text.rstrip() + "\n" + builds_block
-    start = m.start()
-    return text[:start].rstrip() + "\n" + builds_block
+    content = header + "\n".join(body) + "\n"
+    METADATA_PATH.write_text(content)
 
 
 def main() -> int:
-    metadata_path = Path("metadata/wtf.uhoh.newsoftkeyboard.yml")
-    if metadata_path.exists():
-        text = metadata_path.read_text(encoding="utf-8")
-    else:
-        # Minimal fallback if metadata was never created.
-        text = (
-            "Categories:\n"
-            "- System\n"
-            "License: Apache-2.0\n"
-            "SourceCode: https://github.com/pepperpepperpepper/NewSoftKeyboard\n"
-            "Name: New Soft Keyboard\n"
-            "Summary: NewSoftKeyboard (AnySoftKeyboard-compatible)\n"
-            "Description: |\n"
-            "  NewSoftKeyboard is a hard fork of AnySoftKeyboard with add-on compatibility.\n"
-            "AuthorName: Uh-Oh WTF\n"
-            "AutoUpdateMode: None\n"
-            "UpdateCheckMode: Static\n"
-            "ArchivePolicy: KeepAll\n"
-            "Builds: []\n"
-        )
+    root = Path.cwd()
+    if not (root / "repo").exists() or not (root / "archive").exists():
+        print("Run from fdroid repo root (needs repo/ and archive/).", file=sys.stderr)
+        return 1
 
-    apk_infos: list[ApkInfo] = []
-    for apk_path in _find_apks():
-        try:
-            info = _parse_apk_info(apk_path)
-        except Exception as e:
-            print(f"warn: {e}", file=sys.stderr)
-            continue
-        if info is not None:
-            apk_infos.append(info)
-
-    apks = _dedupe_by_version_code(apk_infos)
+    apks = collect_apks(root)
     if not apks:
-        raise SystemExit("No wtf.uhoh.newsoftkeyboard APKs found in repo/ or archive/.")
+        print("No APKs found in repo/ or archive/ for package.", file=sys.stderr)
+        return 1
 
-    current = apks[0]
-    text = _update_or_insert_line(text, "AutoUpdateMode", "None")
-    text = _update_or_insert_line(text, "UpdateCheckMode", "Static")
-    text = _update_or_insert_line(text, "ArchivePolicy", "KeepAll")
-    text = _update_or_insert_line(text, "CurrentVersion", current.version_name)
-    text = _update_or_insert_line(text, "CurrentVersionCode", str(current.version_code))
-    text = _replace_builds_block(text, _render_builds(apks))
+    aapt = find_aapt()
+    versions: list[tuple[str, int]] = []
+    for apk in sorted(apks):
+        vn, vc = dump_badging(aapt, apk)
+        versions.append((vn, vc))
 
-    metadata_path.parent.mkdir(parents=True, exist_ok=True)
-    metadata_path.write_text(text, encoding="utf-8")
+    # Deduplicate by versionCode (keep first occurrence).
+    seen = {}
+    for vn, vc in versions:
+        if vc not in seen:
+            seen[vc] = vn
+    pairs = sorted(seen.items(), key=lambda x: x[0])
 
-    print(
-        f"Updated {metadata_path} CurrentVersion={current.version_name} CurrentVersionCode={current.version_code} Builds={len(apks)}"
-    )
+    env_code = os.environ.get("CURRENT_VERSION_CODE")
+    if env_code:
+        current_code = int(env_code)
+        current_name = seen.get(current_code)
+        if current_name is None:
+            print(f"CURRENT_VERSION_CODE {current_code} not found in APK set.", file=sys.stderr)
+            return 1
+    else:
+        current_code = pairs[-1][0]
+        current_name = pairs[-1][1]
+
+    backup = METADATA_PATH.with_suffix(".yml.bak")
+    if METADATA_PATH.exists():
+        METADATA_PATH.replace(backup)
+        print(f"Backed up existing metadata to {backup}")
+
+    write_metadata(pairs, current_code, current_name)
+    print(f"Wrote {METADATA_PATH} with {len(pairs)} versions; CurrentVersionCode={current_code} ({current_name})")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
-
+    sys.exit(main())

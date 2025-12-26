@@ -63,16 +63,21 @@ from pathlib import Path
 import re
 gradle = Path("ime/app/build.gradle")
 text = gradle.read_text()
-vc_match = re.search(r"versionCode\s+(\d+)", text)
-vn_match = re.search(r'versionName\s+"([^"]+)"', text)
+vc_match = re.search(r"ext\.override_version_code\s*=\s*(\d+)", text)
+vn_match = re.search(r"ext\.override_version_name\s*=\s*['\"]([^'\"]+)['\"]", text)
 if not vc_match or not vn_match:
     raise SystemExit("version fields not found")
 vc = int(vc_match.group(1)) + 1
 vn_parts = vn_match.group(1).split(".")
 vn_parts[-1] = str(int(vn_parts[-1]) + 1)
 vn = ".".join(vn_parts)
-text = re.sub(r"versionCode\s+\d+", f"versionCode {vc}", text, count=1)
-text = re.sub(r'versionName\s+"[^"]+"', f'versionName "{vn}"', text, count=1)
+text = re.sub(r"ext\.override_version_code\s*=\s*\d+", f"ext.override_version_code = {vc}", text, count=1)
+text = re.sub(
+    r"ext\.override_version_name\s*=\s*['\"][^'\"]+['\"]",
+    f"ext.override_version_name = '{vn}'",
+    text,
+    count=1,
+)
 gradle.write_text(text)
 print(f"Bumped to versionCode={vc}, versionName={vn}")
 PY
@@ -82,13 +87,24 @@ log "Building signed release APK"
 GRADLE_USER_HOME=${GRADLE_USER_HOME:-/mnt/finished/.gradle} \
 KEY_STORE_FILE_PASSWORD=${KEY_STORE_FILE_PASSWORD:-$FDROID_KEYSTORE_PASS} \
 KEY_STORE_FILE_DEFAULT_ALIAS_PASSWORD=${KEY_STORE_FILE_DEFAULT_ALIAS_PASSWORD:-$FDROID_KEY_PASS} \
-./gradlew :ime:app:assembleRelease -x lint
+./gradlew :ime:app:assembleNskRelease -x lint
 
-apk_path="ime/app/build/outputs/apk/release/app-release.apk"
-[ -f "$apk_path" ] || fail "APK not found at $apk_path"
+apk_dir="ime/app/build/outputs/apk/nsk/release"
+apk_path="$(ls -1t "${apk_dir}"/*.apk 2>/dev/null | head -n 1 || true)"
+[ -f "$apk_path" ] || fail "APK not found under $apk_dir"
+
+pkg_line="$(aapt dump badging "$apk_path" | grep '^package: ' | head -n 1 || true)"
+[[ -n "$pkg_line" ]] || fail "Unable to read package info from $apk_path"
+version_code="$(echo "$pkg_line" | sed -n "s/.*versionCode='\\([^']*\\)'.*/\\1/p" | head -n 1)"
+version_name="$(echo "$pkg_line" | sed -n "s/.*versionName='\\([^']*\\)'.*/\\1/p" | head -n 1)"
+[[ -n "$version_code" ]] || fail "Unable to parse versionCode from aapt output"
+[[ -n "$version_name" ]] || fail "Unable to parse versionName from aapt output"
 
 log "Copying APK into repo/"
-cp "$apk_path" "${FDROID_DATA}/repo/wtf.uhoh.newsoftkeyboard_$(date +%s).apk"
+dest_apk="${FDROID_DATA}/repo/wtf.uhoh.newsoftkeyboard_${version_code}.apk"
+cp "$apk_path" "$dest_apk"
+ln -sf "repo/$(basename "$dest_apk")" "${FDROID_DATA}/wtf.uhoh.newsoftkeyboard.apk"
+log "Staged ${dest_apk} (versionName=${version_name})"
 
 log "Regenerating metadata from inventory"
 CURRENT_VERSION_CODE=
