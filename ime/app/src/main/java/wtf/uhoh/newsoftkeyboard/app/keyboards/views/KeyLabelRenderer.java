@@ -89,9 +89,11 @@ final class KeyLabelRenderer {
       textY = centerY - ((labelHeight - paint.descent()) / 2);
       translateX = textX - (layoutWidth / 2f);
       canvas.translate(translateX, textY);
+      final TextPaint layoutPaint = new TextPaint(paint);
+      layoutPaint.setTextAlign(Paint.Align.LEFT);
       StaticLayout labelText =
           new StaticLayout(
-              label, new TextPaint(paint), layoutWidth, Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+              label, layoutPaint, layoutWidth, Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
       labelText.draw(canvas);
     } else {
       textY = centerY + ((labelHeight - paint.descent()) / 2);
