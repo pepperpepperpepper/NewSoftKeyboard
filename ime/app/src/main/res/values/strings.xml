@@ -1161,6 +1161,10 @@
     <string name="settings_setup_wizard_title">Run setup wizard</string>
     <string name="settings_enable_keyboard_title">Enable keyboard</string>
     <string name="settings_set_default_keyboard_title">Set as default keyboard</string>
+    <string name="settings_fix_microphone_permission_title">Microphone permission needed</string>
+    <string name="settings_fix_microphone_permission_summary">Voice dictation is enabled, but microphone access is not granted.</string>
+    <string name="settings_fix_notification_permission_title">Notification permission needed</string>
+    <string name="settings_fix_notification_permission_summary">Crash notifications are enabled, but Android notifications are blocked.</string>
     <string name="settings_setup_action_opens_system_settings">Opens system settings</string>
     <string name="settings_setup_action_already_enabled">Already enabled</string>
     <string name="settings_setup_action_already_default">Already set as default</string>

@@ -27,6 +27,18 @@
             android:key="nav:set_default_keyboard"
             android:title="@string/settings_set_default_keyboard_title"
             app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="nav:fix_microphone_permission"
+            android:title="@string/settings_fix_microphone_permission_title"
+            android:summary="@string/settings_fix_microphone_permission_summary"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="nav:fix_notification_permission"
+            android:title="@string/settings_fix_notification_permission_title"
+            android:summary="@string/settings_fix_notification_permission_summary"
+            app:iconSpaceReserved="false" />
     </androidx.preference.PreferenceCategory>
 
     <androidx.preference.PreferenceCategory
@@ -79,4 +91,3 @@
             app:iconSpaceReserved="false" />
     </androidx.preference.PreferenceCategory>
 </androidx.preference.PreferenceScreen>
-

@@ -1,22 +1,30 @@
 package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
+import android.Manifest;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.navigation.Navigation;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import com.google.android.voiceime.backends.SpeechToTextBackendRegistry;
 import net.evendanan.pixel.UiUtils;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.ui.settings.setup.SetupSupport;
 import wtf.uhoh.newsoftkeyboard.app.ui.settings.setup.SetupWizardActivity;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
+import wtf.uhoh.newsoftkeyboard.permissions.PermissionRequestHelper;
 
 public class SettingsHomeFragment extends PreferenceFragmentCompat {
 
@@ -32,6 +40,7 @@ public class SettingsHomeFragment extends PreferenceFragmentCompat {
     super.onViewCreated(view, savedInstanceState);
     bindActions();
     refreshSetupSummaries();
+    refreshStatusRows();
   }
 
   @Override
@@ -44,6 +53,16 @@ public class SettingsHomeFragment extends PreferenceFragmentCompat {
   public void onResume() {
     super.onResume();
     refreshSetupSummaries();
+    refreshStatusRows();
+  }
+
+  @Override
+  public void onRequestPermissionsResult(
+      int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    PermissionRequestHelper.onRequestPermissionsResult(
+        requestCode, permissions, grantResults, this);
+    refreshStatusRows();
   }
 
   private void bindActions() {
@@ -57,6 +76,9 @@ public class SettingsHomeFragment extends PreferenceFragmentCompat {
 
     bindNav("nav:enable_keyboard", this::launchEnableKeyboardFlow);
     bindNav("nav:set_default_keyboard", this::launchSetDefaultKeyboardFlow);
+
+    bindNav("nav:fix_microphone_permission", this::requestMicrophonePermission);
+    bindNav("nav:fix_notification_permission", this::requestNotificationPermission);
 
     bindNav(
         "nav:category_keyboards_language_packs",
@@ -113,6 +135,85 @@ public class SettingsHomeFragment extends PreferenceFragmentCompat {
           SetupSupport.isThisKeyboardSetAsDefaultIME(context)
               ? R.string.settings_setup_action_already_default
               : R.string.settings_setup_action_opens_system_settings);
+    }
+  }
+
+  private void refreshStatusRows() {
+    final Context context = requireContext().getApplicationContext();
+
+    final Preference microphonePermission = findPreference("nav:fix_microphone_permission");
+    if (microphonePermission != null) {
+      final boolean visible = isSpeechToTextEnabled(context) && needsMicrophonePermission(context);
+      microphonePermission.setVisible(visible);
+    }
+
+    final Preference notificationPermission = findPreference("nav:fix_notification_permission");
+    if (notificationPermission != null) {
+      final boolean visible =
+          isCrashNotificationsEnabled(context) && needsNotificationPermission(context);
+      notificationPermission.setVisible(visible);
+    }
+  }
+
+  private boolean isSpeechToTextEnabled(@NonNull Context context) {
+    return SpeechToTextBackendRegistry.getSelectedBackend(context) != null;
+  }
+
+  private boolean needsMicrophonePermission(@NonNull Context context) {
+    return ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)
+        != PackageManager.PERMISSION_GRANTED;
+  }
+
+  private boolean isCrashNotificationsEnabled(@NonNull Context context) {
+    final boolean crashHandlerEnabled =
+        androidx.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            .getBoolean(
+                getString(R.string.settings_key_show_chewbacca),
+                getResources().getBoolean(R.bool.settings_default_show_chewbacca));
+    if (!crashHandlerEnabled) {
+      return false;
+    }
+    // Mirror the behavior in CrashHandlerInstaller: crash notifications are disabled for
+    // debug+testing builds.
+    return !wtf.uhoh.newsoftkeyboard.BuildConfig.TESTING_BUILD
+        || !wtf.uhoh.newsoftkeyboard.BuildConfig.DEBUG;
+  }
+
+  private boolean needsNotificationPermission(@NonNull Context context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      return ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+          != PackageManager.PERMISSION_GRANTED;
+    }
+    return !NotificationManagerCompat.from(context).areNotificationsEnabled();
+  }
+
+  private void requestMicrophonePermission() {
+    PermissionRequestHelper.check(this, PermissionRequestHelper.MICROPHONE_PERMISSION_REQUEST_CODE);
+  }
+
+  private void requestNotificationPermission() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      PermissionRequestHelper.check(
+          this, PermissionRequestHelper.NOTIFICATION_PERMISSION_REQUEST_CODE);
+      return;
+    }
+
+    final Context context = requireContext();
+    final Intent intent;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      intent = new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+      intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+    } else {
+      intent =
+          new Intent(
+              Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+              Uri.fromParts("package", context.getPackageName(), null));
+    }
+
+    try {
+      startActivity(intent);
+    } catch (ActivityNotFoundException notFoundException) {
+      Logger.w(TAG, notFoundException, "Device does not have an app notification settings screen.");
     }
   }
 

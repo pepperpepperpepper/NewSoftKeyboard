@@ -270,6 +270,9 @@ public class SettingsSearchFragment extends Fragment {
         new ActionTarget(R.id.elevenLabsSpeechSettingsFragment, TypeBadge.EDITOR, null));
 
     targets.put(
+        "nav:nextword_models",
+        new ActionTarget(R.id.presageModelsFragment, TypeBadge.MANAGER, null));
+    targets.put(
         context.getString(R.string.settings_key_manage_presage_models),
         new ActionTarget(R.id.presageModelsFragment, TypeBadge.MANAGER, null));
 
