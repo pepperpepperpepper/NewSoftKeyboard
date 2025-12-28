@@ -2,8 +2,17 @@ package wtf.uhoh.newsoftkeyboard.linuxhost;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.StandardProtocolFamily;
+import java.net.UnixDomainSocketAddress;
+import java.nio.channels.Channels;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -16,6 +25,7 @@ import java.util.OptionalInt;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -36,6 +46,7 @@ import wtf.uhoh.newsoftkeyboard.keyboard.core.parser.AskXmlKeyboardParser;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.session.KeyboardSession;
 import wtf.uhoh.newsoftkeyboard.linuxhost.fs.XdgPaths;
 import wtf.uhoh.newsoftkeyboard.linuxhost.output.StdoutJsonTextOutputBackend;
+import wtf.uhoh.newsoftkeyboard.linuxhost.output.UnixSocketJsonTextOutputBackend;
 import wtf.uhoh.newsoftkeyboard.linuxhost.output.XdotoolTextOutputBackend;
 import wtf.uhoh.newsoftkeyboard.linuxhost.packs.LinuxPackRepository;
 import wtf.uhoh.newsoftkeyboard.linuxhost.prefs.FilePrefsStore;
@@ -122,21 +133,31 @@ public final class LinuxHostMain {
     System.err.println("Commands:");
     System.err.println("  --list-packs");
     System.err.println("  --install-pack <pack-dir> [--force] [--allow-invalid]");
-    System.err.println("  --run <pack-dir-or-id> [keyboard-id] [--output=<editor|stdout|xdotool>]");
+    System.err.println(
+        "  --run <pack-dir-or-id> [keyboard-id] [--output=<editor|stdout|xdotool|ibus>]");
     System.err.println("       [--xdotool-window=<window-id>] [--xdotool-delay-ms=<n>]");
+    System.err.println(
+        "       [--ibus-socket=<socket-path>] [--ibus-control-socket=<socket-path>]"
+            + " [--no-ibus-activation]");
     System.err.println(
         "  --smoke <pack-dir-or-id> [keyboard-id] [--text=<text>] [--output=<stdout|xdotool>]");
     System.err.println();
     System.err.println("Config keys (prefs file):");
-    System.err.println("  output.mode=editor|stdout|xdotool");
+    System.err.println("  output.mode=editor|stdout|xdotool|ibus");
     System.err.println("  xdotool.window=<window-id>");
     System.err.println("  xdotool.delay_ms=<integer>");
+    System.err.println("  ibus.socket=<socket-path>");
+    System.err.println("  ibus.control_socket=<socket-path>");
+    System.err.println("  ibus.activation=true|false");
     System.err.println();
     System.err.println("Legacy usage (positional args):");
     System.err.println("  <pack-dir-or-id> [keyboard-id]");
     System.err.println();
     System.err.println("Default packs root: " + packsRoot);
     System.err.println("Override with NSK_PACKS_DIR=/path/to/packs");
+    System.err.println("Override ibus socket with NSK_IBUS_SOCKET=/path/to/ibus.sock");
+    System.err.println(
+        "Override ibus control socket with NSK_IBUS_CONTROL_SOCKET=/path/to/ibus.control.sock");
   }
 
   private static Path defaultPrefsFile(Map<String, String> environment) {
@@ -149,6 +170,28 @@ public final class LinuxHostMain {
         .resolve("prefs.properties")
         .toAbsolutePath()
         .normalize();
+  }
+
+  private static Path defaultIbusSocketPath(Map<String, String> environment) {
+    String override = environment.get("NSK_IBUS_SOCKET");
+    if (override != null && !override.isBlank()) {
+      return Paths.get(override).toAbsolutePath().normalize();
+    }
+    return XdgPaths.runtimeDir(environment)
+        .resolve(APP_ID)
+        .resolve("ibus.sock")
+        .toAbsolutePath()
+        .normalize();
+  }
+
+  private static Path deriveIbusControlSocketPath(Path ibusSocketPath) {
+    Objects.requireNonNull(ibusSocketPath);
+    String fileName = ibusSocketPath.getFileName().toString();
+    if (fileName.endsWith(".sock")) {
+      return ibusSocketPath.resolveSibling(
+          fileName.substring(0, fileName.length() - 4) + ".control.sock");
+    }
+    return ibusSocketPath.resolveSibling(fileName + ".control");
   }
 
   private static void printUsage(Path packsRoot, Path prefsFile) {
@@ -187,6 +230,26 @@ public final class LinuxHostMain {
         prefs.getString("output.mode").map(OutputMode::parseUnchecked).orElse(OutputMode.EDITOR);
     String xdotoolWindow = prefs.getString("xdotool.window").orElse(null);
     int xdotoolDelayMs = prefs.getInt("xdotool.delay_ms", 0);
+    boolean ibusActivation = prefs.getBoolean("ibus.activation", true);
+    Path ibusSocketPath =
+        prefs
+            .getString("ibus.socket")
+            .map(raw -> Paths.get(raw).toAbsolutePath().normalize())
+            .orElse(null);
+    if (ibusSocketPath == null) ibusSocketPath = defaultIbusSocketPath(System.getenv());
+    Path ibusControlSocketPath =
+        prefs
+            .getString("ibus.control_socket")
+            .map(raw -> Paths.get(raw).toAbsolutePath().normalize())
+            .orElse(null);
+    if (ibusControlSocketPath == null) {
+      String controlOverride = System.getenv().get("NSK_IBUS_CONTROL_SOCKET");
+      if (controlOverride != null && !controlOverride.isBlank()) {
+        ibusControlSocketPath = Paths.get(controlOverride).toAbsolutePath().normalize();
+      }
+    }
+    if (ibusControlSocketPath == null)
+      ibusControlSocketPath = deriveIbusControlSocketPath(ibusSocketPath);
 
     var positional = new ArrayList<String>();
     for (int i = 0; i < args.length; i++) {
@@ -207,6 +270,24 @@ public final class LinuxHostMain {
       } else if (arg.equals("--xdotool-delay-ms")) {
         if (i + 1 >= args.length) throw new IOException("Missing value for --xdotool-delay-ms");
         xdotoolDelayMs = parseIntArg("--xdotool-delay-ms", args[++i]);
+      } else if (arg.startsWith("--ibus-socket=")) {
+        ibusSocketPath =
+            Paths.get(arg.substring("--ibus-socket=".length())).toAbsolutePath().normalize();
+      } else if (arg.equals("--ibus-socket")) {
+        if (i + 1 >= args.length) throw new IOException("Missing value for --ibus-socket");
+        ibusSocketPath = Paths.get(args[++i]).toAbsolutePath().normalize();
+      } else if (arg.startsWith("--ibus-control-socket=")) {
+        ibusControlSocketPath =
+            Paths.get(arg.substring("--ibus-control-socket=".length()))
+                .toAbsolutePath()
+                .normalize();
+      } else if (arg.equals("--ibus-control-socket")) {
+        if (i + 1 >= args.length) throw new IOException("Missing value for --ibus-control-socket");
+        ibusControlSocketPath = Paths.get(args[++i]).toAbsolutePath().normalize();
+      } else if (arg.equals("--ibus-activation")) {
+        ibusActivation = true;
+      } else if (arg.equals("--no-ibus-activation")) {
+        ibusActivation = false;
       } else if (arg.startsWith("--")) {
         throw new IOException("Unknown option: " + arg);
       } else {
@@ -230,7 +311,10 @@ public final class LinuxHostMain {
         new OutputConfig(
             outputMode,
             Optional.ofNullable(xdotoolWindow).filter(s -> !s.isBlank()),
-            xdotoolDelayMs));
+            xdotoolDelayMs,
+            ibusSocketPath,
+            ibusControlSocketPath,
+            ibusActivation));
   }
 
   private static SmokeArgs parseSmokeArgs(
@@ -353,6 +437,10 @@ public final class LinuxHostMain {
     JFrame frame = new JFrame("NewSoftKeyboard (Linux host dev) — " + keyboardId);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.setLayout(new BorderLayout());
+    if (outputConfig.mode() == OutputMode.IBUS) {
+      frame.setFocusableWindowState(false);
+      frame.setAlwaysOnTop(true);
+    }
 
     JTextArea editor = new JTextArea(5, 60);
     editor.setEditable(false);
@@ -399,12 +487,37 @@ public final class LinuxHostMain {
     frame.add(keyboardPanel, BorderLayout.SOUTH);
     frame.pack();
     frame.setLocationRelativeTo(null);
-    frame.setVisible(true);
+    if (outputConfig.mode() == OutputMode.IBUS && outputConfig.ibusActivation()) {
+      System.err.println(
+          "IBus activation enabled: window will show/hide based on the focused text field.");
+      startIbusActivationListener(
+          outputConfig.ibusControlSocketPath(),
+          active ->
+              SwingUtilities.invokeLater(
+                  () -> {
+                    frame.setVisible(active);
+                    if (active) frame.toFront();
+                  }));
+      if (!requestIbusActivationStatus(outputConfig.ibusSocketPath())) {
+        System.err.println(
+            "Unable to query IBus engine status; leaving the window visible for debugging.");
+        frame.setVisible(true);
+      } else {
+        frame.setVisible(false);
+      }
+    } else {
+      frame.setVisible(true);
+    }
 
     editor.append("Loaded pack: " + packDir + "\n");
     editor.append("Keyboard id: " + keyboardId + "\n\n");
     editor.append("Output mode: " + outputConfig.mode().id() + "\n");
     outputConfig.xdotoolWindowId().ifPresent(id -> editor.append("xdotool window: " + id + "\n"));
+    if (outputConfig.mode() == OutputMode.IBUS) {
+      editor.append("ibus socket: " + outputConfig.ibusSocketPath() + "\n");
+      editor.append("ibus control socket: " + outputConfig.ibusControlSocketPath() + "\n");
+      editor.append("ibus activation: " + outputConfig.ibusActivation() + "\n");
+    }
     if (outputConfig.mode() == OutputMode.XDOTOOL) {
       editor.append("Tip: capture a target window id with: xdotool getactivewindow\n");
     }
@@ -435,6 +548,80 @@ public final class LinuxHostMain {
     }
   }
 
+  private static void startIbusActivationListener(
+      Path socketPath, Consumer<Boolean> onActiveChanged) {
+    Objects.requireNonNull(socketPath);
+    Objects.requireNonNull(onActiveChanged);
+    Thread thread =
+        new Thread(
+            () -> runIbusActivationServer(socketPath, onActiveChanged), "ibus-activation-listener");
+    thread.setDaemon(true);
+    thread.start();
+  }
+
+  private static void runIbusActivationServer(Path socketPath, Consumer<Boolean> onActiveChanged) {
+    try {
+      Files.createDirectories(socketPath.getParent());
+      Files.deleteIfExists(socketPath);
+    } catch (IOException e) {
+      System.err.println("Failed preparing ibus control socket path: " + socketPath + ": " + e);
+      return;
+    }
+
+    UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socketPath);
+    try (ServerSocketChannel server = ServerSocketChannel.open(StandardProtocolFamily.UNIX)) {
+      server.bind(address);
+      while (true) {
+        try (SocketChannel client = server.accept()) {
+          if (client == null) continue;
+          try (BufferedReader reader =
+              new BufferedReader(
+                  new InputStreamReader(Channels.newInputStream(client), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+              parseIbusControlLine(line).ifPresent(onActiveChanged);
+            }
+          }
+        } catch (IOException e) {
+          // Continue accepting new connections; this is a best-effort control channel.
+        }
+      }
+    } catch (IOException e) {
+      System.err.println("Failed binding ibus control socket: " + socketPath + ": " + e);
+    }
+  }
+
+  private static Optional<Boolean> parseIbusControlLine(String line) {
+    if (line == null) return Optional.empty();
+    String raw = line.trim();
+    if (raw.isEmpty()) return Optional.empty();
+    String compact = compactWhitespace(raw);
+    if (compact.contains("\"type\":\"activate\"")) return Optional.of(true);
+    if (compact.contains("\"type\":\"deactivate\"")) return Optional.of(false);
+    return Optional.empty();
+  }
+
+  private static String compactWhitespace(String raw) {
+    StringBuilder builder = new StringBuilder(raw.length());
+    for (int i = 0; i < raw.length(); i++) {
+      char c = raw.charAt(i);
+      if (Character.isWhitespace(c)) continue;
+      builder.append(c);
+    }
+    return builder.toString();
+  }
+
+  private static boolean requestIbusActivationStatus(Path ibusSocketPath) {
+    UnixDomainSocketAddress address = UnixDomainSocketAddress.of(ibusSocketPath);
+    try (SocketChannel channel = SocketChannel.open(address)) {
+      String payload = "{\"type\":\"status\"}\n";
+      channel.write(StandardCharsets.UTF_8.encode(payload));
+      return true;
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
   private static TextOutputBackend createExternalBackend(OutputConfig outputConfig) {
     return switch (outputConfig.mode()) {
       case EDITOR -> null;
@@ -442,6 +629,7 @@ public final class LinuxHostMain {
       case XDOTOOL ->
           new XdotoolTextOutputBackend(
               outputConfig.xdotoolWindowId(), outputConfig.xdotoolDelayMs());
+      case IBUS -> new UnixSocketJsonTextOutputBackend(outputConfig.ibusSocketPath());
     };
   }
 
@@ -502,7 +690,8 @@ public final class LinuxHostMain {
   private enum OutputMode {
     EDITOR("editor"),
     STDOUT("stdout"),
-    XDOTOOL("xdotool");
+    XDOTOOL("xdotool"),
+    IBUS("ibus");
 
     private final String id;
 
@@ -533,10 +722,17 @@ public final class LinuxHostMain {
   }
 
   private record OutputConfig(
-      OutputMode mode, Optional<String> xdotoolWindowId, int xdotoolDelayMs) {
+      OutputMode mode,
+      Optional<String> xdotoolWindowId,
+      int xdotoolDelayMs,
+      Path ibusSocketPath,
+      Path ibusControlSocketPath,
+      boolean ibusActivation) {
     private OutputConfig {
       Objects.requireNonNull(mode);
       Objects.requireNonNull(xdotoolWindowId);
+      Objects.requireNonNull(ibusSocketPath);
+      Objects.requireNonNull(ibusControlSocketPath);
     }
   }
 

@@ -36,6 +36,8 @@ build upstream AnySoftKeyboard as a dependency.
     - Override location with `NSK_PREFS_FILE=/path/to/prefs.properties`
   - Headless smoke (no UI, emits semantic actions):
     - `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :linux-host:run --args="--smoke keyboard-core/src/test/resources/fixtures/packs/basic_pack --text=abc --output=stdout"`
+  - X11 smoke (types into a real window under Xvfb using xdotool):
+    - `scripts/linux_smoke_x11.sh`
   - Convert an ASK/NSK add-on APK into a portable pack (uses `aapt2`):
     - keyboards only: `python3 scripts/convert_apk_to_pack.py --apk /path/to/addon.apk --output /tmp/nsk_addon_pack --with-default-theme --force`
     - keyboards + themes/icons: `python3 scripts/convert_apk_to_pack.py --apk /path/to/addon.apk --output /tmp/nsk_addon_pack --with-default-theme --include-themes --force`

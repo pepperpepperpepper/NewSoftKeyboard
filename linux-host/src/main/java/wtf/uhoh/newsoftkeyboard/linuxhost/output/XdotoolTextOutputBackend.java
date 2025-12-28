@@ -22,6 +22,7 @@ public final class XdotoolTextOutputBackend implements TextOutputBackend {
   @Override
   public void apply(List<SemanticAction> actions) {
     Objects.requireNonNull(actions);
+    activateWindowIfNeeded();
     StringBuilder pendingText = new StringBuilder();
 
     for (SemanticAction action : actions) {
@@ -35,6 +36,15 @@ public final class XdotoolTextOutputBackend implements TextOutputBackend {
     }
 
     flushPendingText(pendingText);
+  }
+
+  private void activateWindowIfNeeded() {
+    windowId.ifPresent(
+        id -> {
+          if (id.isBlank()) return;
+          // `xdotool type --window <id>` may still require focus; activate first for reliability.
+          run(List.of("xdotool", "windowactivate", "--sync", id));
+        });
   }
 
   private void flushPendingText(StringBuilder pendingText) {
