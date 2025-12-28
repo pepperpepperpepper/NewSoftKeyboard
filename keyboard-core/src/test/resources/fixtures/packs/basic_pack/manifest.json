@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "basic_pack",
+  "name": "Basic Pack",
+  "version": 1,
+  "keyboards": [
+    {
+      "id": "basic_keyboard",
+      "path": "keyboards/basic_keyboard.xml"
+    }
+  ],
+  "themes": [
+    {
+      "id": "basic_theme",
+      "path": "themes/basic_theme.xml"
+    }
+  ]
+}

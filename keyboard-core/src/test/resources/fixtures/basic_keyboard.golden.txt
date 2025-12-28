@@ -1,0 +1,4 @@
+CommitText[text=A]
+CommitText[text=b]
+CommitText[text= ]
+DeleteBackward[count=1]

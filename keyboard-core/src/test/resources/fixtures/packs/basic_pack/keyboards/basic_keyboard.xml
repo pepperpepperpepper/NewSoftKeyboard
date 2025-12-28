@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Keyboard xmlns:android="http://schemas.android.com/apk/res/android">
+    <Row>
+        <Key android:codes="97" android:keyLabel="a"/>
+        <Key android:codes="98" android:keyLabel="b"/>
+        <Key android:codes="-1" android:keyLabel="Shift"/>
+        <Key android:codes="99" android:keyLabel="c"/>
+        <Key android:codes="-5" android:keyLabel="Del"/>
+    </Row>
+</Keyboard>

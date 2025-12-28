@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<KeyboardTheme>
+    <Color name="keyboardBackground" value="#0000ff"/>
+    <Icon name="delete" path="icons/delete.png"/>
+</KeyboardTheme>
