@@ -59,3 +59,7 @@ fdroid/.env
 
 # local fdroid publish backups
 backups/
+
+# python
+__pycache__/
+*.pyc

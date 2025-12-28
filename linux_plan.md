@@ -478,7 +478,8 @@ Implemented in:
 ### 11.4 Transition tooling (only if Gate C2 is active)
 
 - [ ] Export built-in Android keyboards/themes → deterministic pack output
-- [ ] Convert ASK add-on APK → pack (Mike Rozoff is the first validation target)
+  - Note: keyboard layouts are exportable today via `scripts/convert_apk_to_pack.py` against the built APK; theme conversion remains TODO.
+- [x] Convert ASK add-on APK → pack (keyboard layouts only; theme/icons still TODO) (2025-12-28)
 - [x] Add pack validator (required files, paths resolve, reproducible mapping) (2025-12-28)
 
 Implemented in:
@@ -489,10 +490,15 @@ Implemented in:
 
 Available tooling:
 
-- Source-tree → pack exporter (no Android runtime deps; does not decode compiled AXML from built APKs yet):
+- Source-tree → pack exporter (no Android runtime deps):
   - `scripts/export_keyboard_pack.py`
   - Example (export one language pack’s layouts):
     - `python3 scripts/export_keyboard_pack.py --source addons/languages/hebrew/pack/src/main/res/xml --output /tmp/nsk_hebrew_pack --with-default-theme --force`
+
+- APK → pack exporter (uses `aapt2`, exports `res/xml/*` layouts whose root tag is `<Keyboard/>`):
+  - `scripts/convert_apk_to_pack.py`
+  - Example:
+    - `python3 scripts/convert_apk_to_pack.py --apk /path/to/addon.apk --output /tmp/nsk_addon_pack --with-default-theme --force`
 
 ### 11.5 Linux host MVP (thin adapter)
 
