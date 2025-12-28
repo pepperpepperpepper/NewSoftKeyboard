@@ -120,13 +120,26 @@ public class ExternalKeyboardTest {
     Assert.assertEquals(KeyCodes.SHIFT, shiftKey.getPrimaryCode());
     Assert.assertTrue(shiftKey.isFunctional());
     Assert.assertArrayEquals(
-        provider.KEY_STATE_FUNCTIONAL_NORMAL, shiftKey.getCurrentDrawableState(provider));
+        new int[] {1, android.R.attr.state_checkable}, shiftKey.getCurrentDrawableState(provider));
     shiftKey.onPressed();
     Assert.assertArrayEquals(
-        provider.KEY_STATE_FUNCTIONAL_PRESSED, shiftKey.getCurrentDrawableState(provider));
+        new int[] {1, android.R.attr.state_pressed, android.R.attr.state_checkable},
+        shiftKey.getCurrentDrawableState(provider));
     shiftKey.onReleased();
     Assert.assertArrayEquals(
-        provider.KEY_STATE_FUNCTIONAL_NORMAL, shiftKey.getCurrentDrawableState(provider));
+        new int[] {1, android.R.attr.state_checkable}, shiftKey.getCurrentDrawableState(provider));
+
+    keyboard.setShifted(true);
+    Assert.assertArrayEquals(
+        new int[] {1, android.R.attr.state_pressed, android.R.attr.state_checkable},
+        shiftKey.getCurrentDrawableState(provider));
+    keyboard.setShifted(false);
+
+    keyboard.setShiftLocked(true);
+    Assert.assertArrayEquals(
+        new int[] {1, android.R.attr.state_checked, android.R.attr.state_checkable},
+        shiftKey.getCurrentDrawableState(provider));
+    keyboard.setShiftLocked(false);
 
     // enter
     KeyboardKey enterKey = (KeyboardKey) keyboard.getKeys().get(keyboard.getKeys().size() - 1);

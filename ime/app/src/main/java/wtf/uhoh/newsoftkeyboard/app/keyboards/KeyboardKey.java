@@ -231,6 +231,17 @@ public class KeyboardKey extends Keyboard.Key {
   public int[] getCurrentDrawableState(KeyDrawableStateProvider provider) {
     final KeyboardDefinition parentKeyboard = (KeyboardDefinition) row.mParent;
     final int primaryCode = getPrimaryCode();
+    if (primaryCode == KeyCodes.SHIFT || primaryCode == KeyCodes.SHIFT_LOCK) {
+      if (parentKeyboard.isShiftLocked()) {
+        return ensureCheckableState(
+            pressed ? provider.KEY_STATE_FUNCTIONAL_ON_PRESSED : provider.KEY_STATE_FUNCTIONAL_ON);
+      }
+      if (parentKeyboard.isShifted()) {
+        return ensureCheckableState(provider.KEY_STATE_FUNCTIONAL_PRESSED);
+      }
+      return ensureCheckableState(
+          pressed ? provider.KEY_STATE_FUNCTIONAL_PRESSED : provider.KEY_STATE_FUNCTIONAL_NORMAL);
+    }
     if (primaryCode == KeyCodes.CTRL) {
       if (parentKeyboard.isControlActive()) {
         return ensureCheckableState(
