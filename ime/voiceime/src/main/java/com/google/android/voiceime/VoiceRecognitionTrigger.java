@@ -237,6 +237,19 @@ public class VoiceRecognitionTrigger {
     return false;
   }
 
+  public boolean retryLastTranscription() {
+    if (mTrigger instanceof ThirdPartySpeechTrigger) {
+      return ((ThirdPartySpeechTrigger) mTrigger).retryLastTranscription();
+    }
+    return false;
+  }
+
+  public void discardPendingTranscription() {
+    if (mTrigger instanceof ThirdPartySpeechTrigger) {
+      ((ThirdPartySpeechTrigger) mTrigger).discardPendingTranscription();
+    }
+  }
+
   /**
    * Sets the callback for recording state changes.
    *

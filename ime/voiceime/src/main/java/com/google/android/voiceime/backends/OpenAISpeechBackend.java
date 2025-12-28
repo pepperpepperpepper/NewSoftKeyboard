@@ -197,11 +197,7 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
 
           @Override
           public void onError(@NonNull String errorMessage) {
-            try {
-              callback.onError(errorMessage);
-            } finally {
-              cleanup();
-            }
+            callback.onError(errorMessage);
           }
         };
 

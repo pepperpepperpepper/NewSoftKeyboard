@@ -19,6 +19,8 @@ package wtf.uhoh.newsoftkeyboard.app.ime;
 import android.content.Intent;
 import android.os.IBinder;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.widget.Toast;
@@ -89,6 +91,7 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
   private VoiceImeController voiceImeController;
   private VoiceStatusRenderer voiceStatusRenderer = new VoiceStatusRenderer();
   private VoiceUiHelper voiceUiHelper;
+  private boolean keepScreenOnForVoiceInput;
   private final FullscreenModeDecider fullscreenModeDecider = new FullscreenModeDecider();
   private final FullscreenExtractViewController fullscreenExtractViewController =
       new FullscreenExtractViewController();
@@ -230,6 +233,7 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
   @Override
   public void onDestroy() {
     Logger.i(TAG, "ImeServiceBase has been destroyed! Cleaning resources..");
+    updateKeepScreenOnForVoiceInput(VoiceInputState.IDLE);
     if (packageBroadcastRegistrar != null) {
       packageBroadcastRegistrar.unregister();
     }
@@ -345,10 +349,30 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
   void updateSpaceBarRecordingStatus(boolean isRecording) {
     voiceUiHelper.updateSpaceBarRecordingStatus(
         isRecording, getCurrentAlphabetKeyboard(), getInputView());
+    updateKeepScreenOnForVoiceInput(voiceImeController.getCurrentState());
   }
 
   void updateVoiceInputStatus(VoiceInputState newState) {
     voiceUiHelper.updateVoiceInputStatus(newState, getCurrentAlphabetKeyboard(), getInputView());
+    updateKeepScreenOnForVoiceInput(newState);
+  }
+
+  private void updateKeepScreenOnForVoiceInput(@NonNull VoiceInputState voiceInputState) {
+    final boolean keepScreenOn =
+        voiceInputState == VoiceInputState.RECORDING || voiceInputState == VoiceInputState.WAITING;
+    if (keepScreenOn == keepScreenOnForVoiceInput) {
+      return;
+    }
+    keepScreenOnForVoiceInput = keepScreenOn;
+    final Window window = getWindow().getWindow();
+    if (window == null) {
+      return;
+    }
+    if (keepScreenOn) {
+      window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    } else {
+      window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+    }
   }
 
   void handleEmojiSearchRequest() {

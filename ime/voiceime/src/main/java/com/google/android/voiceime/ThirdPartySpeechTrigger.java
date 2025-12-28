@@ -44,7 +44,8 @@ public class ThirdPartySpeechTrigger implements Trigger {
   private String mRecordedAudioFilename;
   private String mAudioMediaType;
 
-  private boolean mIsRecording = false;
+  private volatile boolean mIsRecording = false;
+  private volatile boolean mIsTranscribing = false;
 
   /** Callback interface for recording state changes */
   public interface RecordingStateCallback {
@@ -176,6 +177,11 @@ public class ThirdPartySpeechTrigger implements Trigger {
     if (mIsRecording) {
       stopRecording();
     } else {
+      if (mIsTranscribing) {
+        showError("Transcription in progress. Please wait.");
+        return;
+      }
+      cleanupAudioFile();
       setupAudioFormat();
       startRecording();
     }
@@ -218,6 +224,10 @@ public class ThirdPartySpeechTrigger implements Trigger {
   }
 
   private void startTranscription() {
+    if (mIsTranscribing) {
+      Log.w(TAG, "Already transcribing, ignoring startTranscription request.");
+      return;
+    }
     File audioFile = new File(mRecordedAudioFilename);
     if (!audioFile.exists()) {
       showError("Audio file not found: " + audioFile.getAbsolutePath());
@@ -228,41 +238,57 @@ public class ThirdPartySpeechTrigger implements Trigger {
       return;
     }
 
-    mBackend.startTranscription(
-        mInputMethodService,
-        mSharedPreferences,
-        audioFile,
-        mAudioMediaType,
-        new TranscriptionResultCallback() {
-          @Override
-          public void onTranscriptionStarted() {
-            notifyTranscriptionStateChanged(true);
-          }
+    mIsTranscribing = true;
+    try {
+      mBackend.startTranscription(
+          mInputMethodService,
+          mSharedPreferences,
+          audioFile,
+          mAudioMediaType,
+          new TranscriptionResultCallback() {
+            @Override
+            public void onTranscriptionStarted() {
+              runOnMainThread(() -> notifyTranscriptionStateChanged(true));
+            }
 
-          @Override
-          public void onSuccess(@NonNull String text) {
-            notifyTranscriptionStateChanged(false);
-            onTranscriptionResult(text);
-          }
+            @Override
+            public void onSuccess(@NonNull String text) {
+              runOnMainThread(
+                  () -> {
+                    mIsTranscribing = false;
+                    notifyTranscriptionStateChanged(false);
+                    onTranscriptionResult(text);
+                  });
+            }
 
-          @Override
-          public void onError(@NonNull String errorMessage) {
+            @Override
+            public void onError(@NonNull String errorMessage) {
+              runOnMainThread(
+                  () -> {
+                    mIsTranscribing = false;
+                    notifyTranscriptionStateChanged(false);
+                    notifyTranscriptionError(errorMessage);
+                  });
+            }
+          });
+    } catch (RuntimeException runtimeException) {
+      final String message =
+          runtimeException.getMessage() != null
+              ? runtimeException.getMessage()
+              : "Failed to start transcription.";
+      runOnMainThread(
+          () -> {
+            mIsTranscribing = false;
             notifyTranscriptionStateChanged(false);
-            notifyTranscriptionError(errorMessage);
-            onTranscriptionError(errorMessage);
-          }
-        });
+            notifyTranscriptionError(message);
+          });
+    }
   }
 
   private void onTranscriptionResult(String result) {
     mLastRecognitionResult = result;
     commitResult();
     notifyTextWritten(result);
-    cleanupAudioFile();
-  }
-
-  private void onTranscriptionError(String error) {
-    showError(error);
     cleanupAudioFile();
   }
 
@@ -324,12 +350,33 @@ public class ThirdPartySpeechTrigger implements Trigger {
     return mIsRecording;
   }
 
+  public boolean retryLastTranscription() {
+    if (mIsRecording || mIsTranscribing || mRecordedAudioFilename == null) {
+      return false;
+    }
+    startTranscription();
+    return mIsTranscribing;
+  }
+
+  public void discardPendingTranscription() {
+    cleanupAudioFile();
+  }
+
   @Override
   public void onStartInputView() {
     mLastRecognitionResult = null;
     mIsRecording = false;
+    mIsTranscribing = false;
     notifyRecordingStateChanged(false);
     mAudioRecorderManager.stopRecording();
     cleanupAudioFile();
+  }
+
+  private void runOnMainThread(@NonNull Runnable action) {
+    if (Looper.myLooper() == Looper.getMainLooper()) {
+      action.run();
+    } else {
+      mMainHandler.post(action);
+    }
   }
 }
