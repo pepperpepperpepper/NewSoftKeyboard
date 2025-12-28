@@ -496,7 +496,14 @@ Available tooling:
 
 ### 11.5 Linux host MVP (thin adapter)
 
+- [x] Add a Linux dev host (A0.3 normal window) which loads a pack and routes clicks → core (2025-12-28)
 - [ ] Implement Linux `PrefsStore` + pack install locations
 - [ ] Implement `TextOutputBackend` for Gate A (A1 first)
-- [ ] Implement Linux UI host: rendering + touch routing → core
+- [ ] Implement Gate A0.1 activation (compositor-managed) for production
 - [ ] Add Tier 4 smoke and document how to run it locally
+
+Implemented in:
+
+- Dev host module (normal app window): `linux-host/`
+- Run the demo against the fixture pack:
+  - `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :linux-host:run --args="keyboard-core/src/test/resources/fixtures/packs/basic_pack"`

@@ -1,0 +1,16 @@
+apply plugin: 'application'
+
+apply from: "${rootDir}/gradle/errorprone.gradle"
+
+dependencies {
+    implementation project(':keyboard-core')
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+application {
+    mainClass = 'wtf.uhoh.newsoftkeyboard.linuxhost.LinuxHostMain'
+}

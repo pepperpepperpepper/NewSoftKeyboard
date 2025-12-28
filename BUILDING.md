@@ -25,6 +25,7 @@ build upstream AnySoftKeyboard as a dependency.
 
 - Debug app (default `nsk` flavor): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :ime:app:assembleNskDebug`
 - Unit tests (portable keyboard core, no Android SDK required): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :keyboard-core:test`
+- Desktop (Linux dev host, normal window): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :linux-host:run --args="keyboard-core/src/test/resources/fixtures/packs/basic_pack"`
 - AndroidTest APK:
   - debug (recommended for Genymotion): `GRADLE_USER_HOME=/mnt/finished/.gradle TEST_BUILD_TYPE=debug ./gradlew :ime:app:assembleNskDebugAndroidTest -x lint`
   - release (only if you intend to run release instrumentation): `GRADLE_USER_HOME=/mnt/finished/.gradle TEST_BUILD_TYPE=release ./gradlew :ime:app:assembleAndroidTest -x lint`
