@@ -26,6 +26,16 @@ build upstream AnySoftKeyboard as a dependency.
 - Debug app (default `nsk` flavor): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :ime:app:assembleNskDebug`
 - Unit tests (portable keyboard core, no Android SDK required): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :keyboard-core:test`
 - Desktop (Linux dev host, normal window): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :linux-host:run --args="keyboard-core/src/test/resources/fixtures/packs/basic_pack"`
+  - Optional output modes:
+    - stdout (JSON lines): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :linux-host:run --args="keyboard-core/src/test/resources/fixtures/packs/basic_pack --output=stdout"`
+    - X11 `xdotool` (types into a target window id): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :linux-host:run --args="keyboard-core/src/test/resources/fixtures/packs/basic_pack --output=xdotool --xdotool-window=$(xdotool getactivewindow)"`
+  - Optional config via prefs file (defaults to `$XDG_CONFIG_HOME/newsoftkeyboard/prefs.properties`):
+    - `output.mode=editor|stdout|xdotool`
+    - `xdotool.window=<window-id>`
+    - `xdotool.delay_ms=<integer>`
+    - Override location with `NSK_PREFS_FILE=/path/to/prefs.properties`
+  - Headless smoke (no UI, emits semantic actions):
+    - `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :linux-host:run --args="--smoke keyboard-core/src/test/resources/fixtures/packs/basic_pack --text=abc --output=stdout"`
 - AndroidTest APK:
   - debug (recommended for Genymotion): `GRADLE_USER_HOME=/mnt/finished/.gradle TEST_BUILD_TYPE=debug ./gradlew :ime:app:assembleNskDebugAndroidTest -x lint`
   - release (only if you intend to run release instrumentation): `GRADLE_USER_HOME=/mnt/finished/.gradle TEST_BUILD_TYPE=release ./gradlew :ime:app:assembleAndroidTest -x lint`

@@ -497,8 +497,9 @@ Available tooling:
 ### 11.5 Linux host MVP (thin adapter)
 
 - [x] Add a Linux dev host (A0.3 normal window) which loads a pack and routes clicks → core (2025-12-28)
-- [ ] Implement Linux `PrefsStore` + pack install locations
+- [x] Implement Linux `PrefsStore` (read-only) + pack install locations (2025-12-28)
 - [ ] Implement `TextOutputBackend` for Gate A (A1 first)
+  - [x] Dev backends: stdout (JSONL) + X11 `xdotool` (A3-ish) (2025-12-28)
 - [ ] Implement Gate A0.1 activation (compositor-managed) for production
 - [ ] Add Tier 4 smoke and document how to run it locally
 
@@ -507,3 +508,15 @@ Implemented in:
 - Dev host module (normal app window): `linux-host/`
 - Run the demo against the fixture pack:
   - `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :linux-host:run --args="keyboard-core/src/test/resources/fixtures/packs/basic_pack"`
+- Linux pack repository + install/list commands (XDG + env overrides):
+  - `linux-host/src/main/java/wtf/uhoh/newsoftkeyboard/linuxhost/packs/LinuxPackRepository.java`
+  - `linux-host/src/main/java/wtf/uhoh/newsoftkeyboard/linuxhost/fs/XdgPaths.java`
+  - `NSK_PACKS_DIR`, `NSK_PREFS_FILE`
+- Linux prefs (read-only file store):
+  - `linux-host/src/main/java/wtf/uhoh/newsoftkeyboard/linuxhost/prefs/FilePrefsStore.java`
+  - Keys: `output.mode`, `xdotool.window`, `xdotool.delay_ms`
+- Dev output backends:
+  - `linux-host/src/main/java/wtf/uhoh/newsoftkeyboard/linuxhost/output/StdoutJsonTextOutputBackend.java`
+  - `linux-host/src/main/java/wtf/uhoh/newsoftkeyboard/linuxhost/output/XdotoolTextOutputBackend.java`
+- Headless smoke (no UI) which runs the session and emits actions:
+  - `./gradlew :linux-host:run --args="--smoke keyboard-core/src/test/resources/fixtures/packs/basic_pack --text=abc --output=stdout"`

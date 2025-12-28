@@ -6,9 +6,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -21,25 +28,241 @@ import wtf.uhoh.newsoftkeyboard.keyboard.core.KeyboardModel;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.KeyboardRow;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.actions.EditorAction;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.actions.SemanticAction;
+import wtf.uhoh.newsoftkeyboard.keyboard.core.adapters.TextOutputBackend;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.packs.FileSystemKeyboardPackLoader;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.packs.KeyboardPack;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.packs.PackEntry;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.parser.AskXmlKeyboardParser;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.session.KeyboardSession;
+import wtf.uhoh.newsoftkeyboard.linuxhost.fs.XdgPaths;
+import wtf.uhoh.newsoftkeyboard.linuxhost.output.StdoutJsonTextOutputBackend;
+import wtf.uhoh.newsoftkeyboard.linuxhost.output.XdotoolTextOutputBackend;
+import wtf.uhoh.newsoftkeyboard.linuxhost.packs.LinuxPackRepository;
+import wtf.uhoh.newsoftkeyboard.linuxhost.prefs.FilePrefsStore;
 
 public final class LinuxHostMain {
+  private static final String APP_ID = "newsoftkeyboard";
+
   private LinuxHostMain() {}
 
   public static void main(String[] args) throws Exception {
-    if (args.length < 1) {
-      System.err.println("Usage: :linux-host:run --args=\"<pack-dir> [keyboard-id]\"");
+    Map<String, String> env = System.getenv();
+    Path packsRoot = defaultPacksRoot(env);
+    Path prefsFile = defaultPrefsFile(env);
+    var prefs = FilePrefsStore.load(prefsFile);
+    var packRepository = new LinuxPackRepository(packsRoot);
+
+    if (args.length == 0) {
+      printUsage(packsRoot, prefsFile);
       System.exit(2);
       return;
     }
 
-    Path packDir = Paths.get(args[0]).toAbsolutePath().normalize();
-    String keyboardId = args.length >= 2 ? args[1] : null;
+    // Backwards-compatible positional args: <pack-dir-or-id> [keyboard-id]
+    if (!args[0].startsWith("--")) {
+      var parsed = parseRunArgs(packRepository, prefs, args);
+      runInteractive(parsed.packDir(), parsed.keyboardId(), parsed.outputConfig());
+      return;
+    }
 
+    switch (args[0]) {
+      case "--list-packs" -> listPacks(packRepository);
+      case "--install-pack" -> {
+        if (args.length < 2) {
+          System.err.println("Missing argument: --install-pack <pack-dir>");
+          System.exit(2);
+          return;
+        }
+        boolean force = Arrays.asList(args).contains("--force");
+        boolean allowInvalid = Arrays.asList(args).contains("--allow-invalid");
+        installPack(
+            packRepository, Path.of(args[1]).toAbsolutePath().normalize(), force, allowInvalid);
+      }
+      case "--run" -> {
+        if (args.length < 2) {
+          System.err.println("Missing argument: --run <pack-dir-or-id> [keyboard-id]");
+          System.exit(2);
+          return;
+        }
+        var parsed = parseRunArgs(packRepository, prefs, Arrays.copyOfRange(args, 1, args.length));
+        runInteractive(parsed.packDir(), parsed.keyboardId(), parsed.outputConfig());
+      }
+      case "--smoke" -> {
+        if (args.length < 2) {
+          System.err.println("Missing argument: --smoke <pack-dir-or-id> [keyboard-id]");
+          System.exit(2);
+          return;
+        }
+        var parsed =
+            parseSmokeArgs(packRepository, prefs, Arrays.copyOfRange(args, 1, args.length));
+        runSmoke(parsed.packDir(), parsed.keyboardId(), parsed.outputConfig(), parsed.text());
+      }
+      default -> {
+        printUsage(packsRoot, prefsFile);
+        System.exit(2);
+      }
+    }
+  }
+
+  private static Path defaultPacksRoot(Map<String, String> environment) {
+    String override = environment.get("NSK_PACKS_DIR");
+    if (override != null && !override.isBlank()) {
+      return Paths.get(override).toAbsolutePath().normalize();
+    }
+    return XdgPaths.dataHome(environment)
+        .resolve(APP_ID)
+        .resolve("packs")
+        .toAbsolutePath()
+        .normalize();
+  }
+
+  private static void printUsage(Path packsRoot) {
+    System.err.println("NewSoftKeyboard Linux dev host");
+    System.err.println();
+    System.err.println("Commands:");
+    System.err.println("  --list-packs");
+    System.err.println("  --install-pack <pack-dir> [--force] [--allow-invalid]");
+    System.err.println("  --run <pack-dir-or-id> [keyboard-id] [--output=<editor|stdout|xdotool>]");
+    System.err.println("       [--xdotool-window=<window-id>] [--xdotool-delay-ms=<n>]");
+    System.err.println(
+        "  --smoke <pack-dir-or-id> [keyboard-id] [--text=<text>] [--output=<stdout|xdotool>]");
+    System.err.println();
+    System.err.println("Config keys (prefs file):");
+    System.err.println("  output.mode=editor|stdout|xdotool");
+    System.err.println("  xdotool.window=<window-id>");
+    System.err.println("  xdotool.delay_ms=<integer>");
+    System.err.println();
+    System.err.println("Legacy usage (positional args):");
+    System.err.println("  <pack-dir-or-id> [keyboard-id]");
+    System.err.println();
+    System.err.println("Default packs root: " + packsRoot);
+    System.err.println("Override with NSK_PACKS_DIR=/path/to/packs");
+  }
+
+  private static Path defaultPrefsFile(Map<String, String> environment) {
+    String override = environment.get("NSK_PREFS_FILE");
+    if (override != null && !override.isBlank()) {
+      return Paths.get(override).toAbsolutePath().normalize();
+    }
+    return XdgPaths.configHome(environment)
+        .resolve(APP_ID)
+        .resolve("prefs.properties")
+        .toAbsolutePath()
+        .normalize();
+  }
+
+  private static void printUsage(Path packsRoot, Path prefsFile) {
+    printUsage(packsRoot);
+    System.err.println("Default prefs file: " + prefsFile);
+    System.err.println("Override with NSK_PREFS_FILE=/path/to/prefs.properties");
+  }
+
+  private static void listPacks(LinuxPackRepository packRepository) throws IOException {
+    List<LinuxPackRepository.InstalledPack> packs = packRepository.listInstalledPacks();
+    if (packs.isEmpty()) {
+      System.out.println("No packs installed in " + packRepository.packsRoot());
+      return;
+    }
+    System.out.println("Installed packs (" + packRepository.packsRoot() + "):");
+    for (LinuxPackRepository.InstalledPack pack : packs) {
+      System.out.println("- " + pack.id() + " (" + pack.name() + "): " + pack.dir());
+    }
+  }
+
+  private static void installPack(
+      LinuxPackRepository packRepository, Path sourceDir, boolean force, boolean allowInvalid)
+      throws IOException {
+    var result = packRepository.installPack(sourceDir, force, allowInvalid);
+    if (!result.success()) {
+      System.err.println(result.error().orElse("Unknown install error"));
+      System.exit(1);
+      return;
+    }
+    System.out.println("Installed pack at: " + result.installedDir().orElseThrow());
+  }
+
+  private static RunArgs parseRunArgs(
+      LinuxPackRepository packRepository, FilePrefsStore prefs, String[] args) throws IOException {
+    OutputMode outputMode =
+        prefs.getString("output.mode").map(OutputMode::parseUnchecked).orElse(OutputMode.EDITOR);
+    String xdotoolWindow = prefs.getString("xdotool.window").orElse(null);
+    int xdotoolDelayMs = prefs.getInt("xdotool.delay_ms", 0);
+
+    var positional = new ArrayList<String>();
+    for (int i = 0; i < args.length; i++) {
+      String arg = args[i];
+      if (arg.startsWith("--output=")) {
+        outputMode = OutputMode.parse(arg.substring("--output=".length()));
+      } else if (arg.equals("--output")) {
+        if (i + 1 >= args.length) throw new IOException("Missing value for --output");
+        outputMode = OutputMode.parse(args[++i]);
+      } else if (arg.startsWith("--xdotool-window=")) {
+        xdotoolWindow = arg.substring("--xdotool-window=".length()).trim();
+      } else if (arg.equals("--xdotool-window")) {
+        if (i + 1 >= args.length) throw new IOException("Missing value for --xdotool-window");
+        xdotoolWindow = args[++i].trim();
+      } else if (arg.startsWith("--xdotool-delay-ms=")) {
+        xdotoolDelayMs =
+            parseIntArg("--xdotool-delay-ms", arg.substring("--xdotool-delay-ms=".length()));
+      } else if (arg.equals("--xdotool-delay-ms")) {
+        if (i + 1 >= args.length) throw new IOException("Missing value for --xdotool-delay-ms");
+        xdotoolDelayMs = parseIntArg("--xdotool-delay-ms", args[++i]);
+      } else if (arg.startsWith("--")) {
+        throw new IOException("Unknown option: " + arg);
+      } else {
+        positional.add(arg);
+      }
+    }
+
+    if (positional.isEmpty()) {
+      throw new IOException("Missing required argument: <pack-dir-or-id>");
+    }
+    if (positional.size() > 2) {
+      throw new IOException(
+          "Too many positional arguments. Expected: <pack-dir-or-id> [keyboard-id]");
+    }
+
+    Path packDir = packRepository.resolvePackDir(positional.get(0));
+    String keyboardId = positional.size() == 2 ? positional.get(1) : null;
+    return new RunArgs(
+        packDir,
+        keyboardId,
+        new OutputConfig(
+            outputMode,
+            Optional.ofNullable(xdotoolWindow).filter(s -> !s.isBlank()),
+            xdotoolDelayMs));
+  }
+
+  private static SmokeArgs parseSmokeArgs(
+      LinuxPackRepository packRepository, FilePrefsStore prefs, String[] args) throws IOException {
+    String text = "abc";
+    var remainingArgs = new ArrayList<String>();
+    for (int i = 0; i < args.length; i++) {
+      String arg = args[i];
+      if (arg.startsWith("--text=")) {
+        text = arg.substring("--text=".length());
+      } else if (arg.equals("--text")) {
+        if (i + 1 >= args.length) throw new IOException("Missing value for --text");
+        text = args[++i];
+      } else {
+        remainingArgs.add(arg);
+      }
+    }
+
+    RunArgs parsed = parseRunArgs(packRepository, prefs, remainingArgs.toArray(String[]::new));
+    return new SmokeArgs(parsed.packDir(), parsed.keyboardId(), parsed.outputConfig(), text);
+  }
+
+  private static int parseIntArg(String flagName, String raw) throws IOException {
+    try {
+      return Integer.parseInt(raw.trim());
+    } catch (NumberFormatException e) {
+      throw new IOException("Invalid integer for " + flagName + ": " + raw, e);
+    }
+  }
+
+  private static void runInteractive(Path packDir, String keyboardId, OutputConfig outputConfig)
+      throws IOException {
     KeyboardPack pack = FileSystemKeyboardPackLoader.loadPack(packDir);
     PackEntry keyboardEntry = selectKeyboard(pack, keyboardId);
 
@@ -49,7 +272,57 @@ public final class LinuxHostMain {
     }
 
     var session = new KeyboardSession(model);
-    SwingUtilities.invokeLater(() -> createAndShowUi(packDir, keyboardEntry.id(), model, session));
+    SwingUtilities.invokeLater(
+        () -> createAndShowUi(packDir, keyboardEntry.id(), model, session, outputConfig));
+  }
+
+  private static void runSmoke(
+      Path packDir, String keyboardId, OutputConfig outputConfig, String text) throws IOException {
+    KeyboardPack pack = FileSystemKeyboardPackLoader.loadPack(packDir);
+    PackEntry keyboardEntry = selectKeyboard(pack, keyboardId);
+
+    KeyboardModel model;
+    try (InputStream inputStream = pack.source().open(keyboardEntry.path().value())) {
+      model = AskXmlKeyboardParser.parse(inputStream);
+    }
+
+    var session = new KeyboardSession(model);
+    TextOutputBackend backend = createExternalBackend(outputConfig);
+    if (backend == null) backend = new StdoutJsonTextOutputBackend();
+
+    for (int i = 0; i < text.length(); i++) {
+      String token = String.valueOf(text.charAt(i));
+      var position =
+          findKeyByLabel(model, token)
+              .orElseThrow(
+                  () ->
+                      new IOException(
+                          "No key found with label '"
+                              + token
+                              + "' in keyboard "
+                              + keyboardEntry.id()));
+      backend.apply(session.pressKey(position.rowIndex(), position.keyIndex()));
+    }
+  }
+
+  private static Optional<KeyPosition> findKeyByLabel(KeyboardModel model, String label) {
+    String needle = label.trim();
+    if (needle.isEmpty()) return Optional.empty();
+
+    List<KeyboardRow> rows = model.rows();
+    for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
+      List<KeySpec> keys = rows.get(rowIndex).keys();
+      for (int keyIndex = 0; keyIndex < keys.size(); keyIndex++) {
+        Optional<String> keyLabel =
+            keys.get(keyIndex).label().map(String::trim).filter(s -> !s.isEmpty());
+        if (keyLabel.isEmpty()) continue;
+        String keyValue = keyLabel.get();
+        if (keyValue.equals(needle) || keyValue.equalsIgnoreCase(needle)) {
+          return Optional.of(new KeyPosition(rowIndex, keyIndex));
+        }
+      }
+    }
+    return Optional.empty();
   }
 
   private static PackEntry selectKeyboard(KeyboardPack pack, String keyboardId) throws IOException {
@@ -58,7 +331,7 @@ public final class LinuxHostMain {
       throw new IOException("Pack has no keyboards: " + pack.manifest().id());
     }
 
-    if (keyboardId == null || keyboardId.isBlank()) return keyboards.getFirst();
+    if (keyboardId == null || keyboardId.isBlank()) return keyboards.get(0);
 
     for (PackEntry entry : keyboards) {
       if (keyboardId.equals(entry.id())) return entry;
@@ -72,7 +345,11 @@ public final class LinuxHostMain {
   }
 
   private static void createAndShowUi(
-      Path packDir, String keyboardId, KeyboardModel model, KeyboardSession session) {
+      Path packDir,
+      String keyboardId,
+      KeyboardModel model,
+      KeyboardSession session,
+      OutputConfig outputConfig) {
     JFrame frame = new JFrame("NewSoftKeyboard (Linux host dev) — " + keyboardId);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.setLayout(new BorderLayout());
@@ -80,6 +357,12 @@ public final class LinuxHostMain {
     JTextArea editor = new JTextArea(5, 60);
     editor.setEditable(false);
     frame.add(new JScrollPane(editor), BorderLayout.CENTER);
+
+    TextOutputBackend externalBackend = createExternalBackend(outputConfig);
+    ExecutorService externalExecutor =
+        outputConfig.mode() == OutputMode.XDOTOOL
+            ? Executors.newSingleThreadExecutor(r -> new Thread(r, "xdotool-output"))
+            : null;
 
     JPanel keyboardPanel = new JPanel();
     keyboardPanel.setLayout(new javax.swing.BoxLayout(keyboardPanel, javax.swing.BoxLayout.Y_AXIS));
@@ -96,7 +379,17 @@ public final class LinuxHostMain {
         final int finalRowIndex = rowIndex;
         final int finalKeyIndex = keyIndex;
         button.addActionListener(
-            e -> applyActions(editor, session.pressKey(finalRowIndex, finalKeyIndex)));
+            e -> {
+              List<SemanticAction> actions = session.pressKey(finalRowIndex, finalKeyIndex);
+              // Always echo locally (helps debug even when outputting elsewhere).
+              applyActions(editor, actions);
+              if (externalBackend == null) return;
+              if (externalExecutor != null) {
+                var ignored = externalExecutor.submit(() -> externalBackend.apply(actions));
+              } else {
+                externalBackend.apply(actions);
+              }
+            });
         rowPanel.add(button);
       }
 
@@ -110,6 +403,46 @@ public final class LinuxHostMain {
 
     editor.append("Loaded pack: " + packDir + "\n");
     editor.append("Keyboard id: " + keyboardId + "\n\n");
+    editor.append("Output mode: " + outputConfig.mode().id() + "\n");
+    outputConfig.xdotoolWindowId().ifPresent(id -> editor.append("xdotool window: " + id + "\n"));
+    if (outputConfig.mode() == OutputMode.XDOTOOL) {
+      editor.append("Tip: capture a target window id with: xdotool getactivewindow\n");
+    }
+    editor.append("\n");
+
+    if (externalExecutor != null) {
+      frame.addWindowListener(
+          new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+              shutdownExecutor(externalExecutor);
+            }
+
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+              shutdownExecutor(externalExecutor);
+            }
+          });
+    }
+  }
+
+  private static void shutdownExecutor(ExecutorService executor) {
+    executor.shutdownNow();
+    try {
+      executor.awaitTermination(2, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private static TextOutputBackend createExternalBackend(OutputConfig outputConfig) {
+    return switch (outputConfig.mode()) {
+      case EDITOR -> null;
+      case STDOUT -> new StdoutJsonTextOutputBackend();
+      case XDOTOOL ->
+          new XdotoolTextOutputBackend(
+              outputConfig.xdotoolWindowId(), outputConfig.xdotoolDelayMs());
+    };
   }
 
   private static String displayLabel(KeySpec keySpec) {
@@ -165,4 +498,63 @@ public final class LinuxHostMain {
       case NEXT, DONE -> editor.append("\n");
     }
   }
+
+  private enum OutputMode {
+    EDITOR("editor"),
+    STDOUT("stdout"),
+    XDOTOOL("xdotool");
+
+    private final String id;
+
+    OutputMode(String id) {
+      this.id = id;
+    }
+
+    String id() {
+      return id;
+    }
+
+    static OutputMode parse(String raw) throws IOException {
+      String value = raw.trim().toLowerCase(java.util.Locale.ROOT);
+      for (OutputMode mode : values()) {
+        if (mode.id.equals(value)) return mode;
+      }
+      throw new IOException("Unsupported output mode: " + raw);
+    }
+
+    static OutputMode parseUnchecked(String raw) {
+      if (raw == null) return EDITOR;
+      String value = raw.trim().toLowerCase(java.util.Locale.ROOT);
+      for (OutputMode mode : values()) {
+        if (mode.id.equals(value)) return mode;
+      }
+      return EDITOR;
+    }
+  }
+
+  private record OutputConfig(
+      OutputMode mode, Optional<String> xdotoolWindowId, int xdotoolDelayMs) {
+    private OutputConfig {
+      Objects.requireNonNull(mode);
+      Objects.requireNonNull(xdotoolWindowId);
+    }
+  }
+
+  private record RunArgs(Path packDir, String keyboardId, OutputConfig outputConfig) {
+    private RunArgs {
+      Objects.requireNonNull(packDir);
+      Objects.requireNonNull(outputConfig);
+    }
+  }
+
+  private record SmokeArgs(
+      Path packDir, String keyboardId, OutputConfig outputConfig, String text) {
+    private SmokeArgs {
+      Objects.requireNonNull(packDir);
+      Objects.requireNonNull(outputConfig);
+      Objects.requireNonNull(text);
+    }
+  }
+
+  private record KeyPosition(int rowIndex, int keyIndex) {}
 }

@@ -47,7 +47,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Exports ASK/NSK keyboard XML (source tree) into a portable NewSoftKeyboard pack directory."
     )
-    parser.add_argument("--source", required=True, help="Directory containing *.xml keyboard files to export.")
+    parser.add_argument(
+        "--source",
+        required=True,
+        action="append",
+        help="Directory containing *.xml keyboard files to export (repeatable).",
+    )
     parser.add_argument("--output", required=True, help="Output pack directory (will be created).")
     parser.add_argument("--pack-id", default=None, help="Pack id (default: output directory name).")
     parser.add_argument("--name", default=None, help="Pack display name (default: pack-id).")
@@ -60,12 +65,15 @@ def main() -> int:
     parser.add_argument("--force", action="store_true", help="Delete the output directory if it already exists.")
     args = parser.parse_args()
 
-    source_dir = Path(args.source).expanduser().resolve()
     output_dir = Path(args.output).expanduser().resolve()
 
-    if not source_dir.is_dir():
-        print(f"Source directory does not exist: {source_dir}", file=sys.stderr)
-        return 2
+    source_dirs: list[Path] = []
+    for raw_source in args.source:
+        source_dir = Path(raw_source).expanduser().resolve()
+        if not source_dir.is_dir():
+            print(f"Source directory does not exist: {source_dir}", file=sys.stderr)
+            return 2
+        source_dirs.append(source_dir)
 
     if output_dir.exists():
         if not args.force:
@@ -83,16 +91,29 @@ def main() -> int:
     themes_dir = output_dir / "themes"
 
     keyboard_entries: list[PackEntry] = []
-    for xml_path in sorted(source_dir.rglob("*.xml")):
-        if not _is_keyboard_xml(xml_path):
-            continue
-        dest_name = xml_path.name
-        dest_path = keyboards_dir / dest_name
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        dest_path.write_bytes(xml_path.read_bytes())
-        keyboard_entries.append(
-            PackEntry(entry_id=xml_path.stem, relative_path=f"keyboards/{dest_name}")
-        )
+    used_entry_ids: set[str] = set()
+    used_dest_names: set[str] = set()
+    for source_dir in source_dirs:
+        for xml_path in sorted(source_dir.rglob("*.xml")):
+            if not _is_keyboard_xml(xml_path):
+                continue
+
+            dest_name = xml_path.name
+            if dest_name in used_dest_names:
+                dest_name = f"{source_dir.name}_{dest_name}"
+            used_dest_names.add(dest_name)
+
+            entry_id = xml_path.stem
+            if entry_id in used_entry_ids:
+                entry_id = f"{source_dir.name}_{entry_id}"
+            used_entry_ids.add(entry_id)
+
+            dest_path = keyboards_dir / dest_name
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            dest_path.write_bytes(xml_path.read_bytes())
+            keyboard_entries.append(
+                PackEntry(entry_id=entry_id, relative_path=f"keyboards/{dest_name}")
+            )
 
     if not keyboard_entries:
         print(f"No <Keyboard/> XML files found under: {source_dir}", file=sys.stderr)
