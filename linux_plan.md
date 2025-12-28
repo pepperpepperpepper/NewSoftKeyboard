@@ -477,9 +477,8 @@ Implemented in:
 
 ### 11.4 Transition tooling (only if Gate C2 is active)
 
-- [ ] Export built-in Android keyboards/themes → deterministic pack output
-  - Note: keyboard layouts are exportable today via `scripts/convert_apk_to_pack.py` against the built APK; theme conversion remains TODO.
-- [x] Convert ASK add-on APK → pack (keyboard layouts only; theme/icons still TODO) (2025-12-28)
+- [x] Export built-in Android keyboards/themes → deterministic pack output (2025-12-28)
+- [x] Convert ASK add-on APK → pack (keyboards + themes; exports referenced drawables) (2025-12-28)
 - [x] Add pack validator (required files, paths resolve, reproducible mapping) (2025-12-28)
 
 Implemented in:
@@ -498,7 +497,7 @@ Available tooling:
 - APK → pack exporter (uses `aapt2`, exports `res/xml/*` layouts whose root tag is `<Keyboard/>`):
   - `scripts/convert_apk_to_pack.py`
   - Example:
-    - `python3 scripts/convert_apk_to_pack.py --apk /path/to/addon.apk --output /tmp/nsk_addon_pack --with-default-theme --force`
+    - `python3 scripts/convert_apk_to_pack.py --apk /path/to/addon.apk --output /tmp/nsk_addon_pack --with-default-theme --include-themes --force`
 
 ### 11.5 Linux host MVP (thin adapter)
 

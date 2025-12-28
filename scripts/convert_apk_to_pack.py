@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
@@ -17,6 +18,13 @@ class XmlNode:
     attrs: dict[str, str] = field(default_factory=dict)
     children: list["XmlNode"] = field(default_factory=list)
     text: Optional[str] = None
+
+
+@dataclass
+class StyleDef:
+    name: str
+    parent: Optional[str]
+    items: dict[str, str] = field(default_factory=dict)
 
 
 def _run(cmd: list[str]) -> str:
@@ -191,9 +199,164 @@ def _list_xml_resource_names(aapt2_path: str, apk_path: Path) -> list[str]:
     return sorted(names)
 
 
+def _parse_aapt2_resources_dump(
+    output: str,
+) -> tuple[dict[str, str], dict[str, str], dict[str, StyleDef]]:
+    id_to_name: dict[str, str] = {}
+    colors: dict[str, str] = {}
+    styles: dict[str, StyleDef] = {}
+
+    current_color: Optional[str] = None
+    current_style: Optional[StyleDef] = None
+
+    resource_pattern = re.compile(r"^resource\s+(0x[0-9a-fA-F]+)\s+(\w+)/([^\s]+)$")
+    color_value_pattern = re.compile(r"^\(\)\s+(#[0-9a-fA-F]{6,8})$")
+    style_header_parent_pattern = re.compile(r"parent=(style/[^\s]+)")
+
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        match = resource_pattern.match(line)
+        if match:
+            current_color = None
+            current_style = None
+
+            res_id, res_type, res_name = match.group(1), match.group(2), match.group(3)
+            full_name = f"{res_type}/{res_name}"
+            id_to_name[res_id] = full_name
+
+            if res_type == "color":
+                current_color = full_name
+            elif res_type == "style":
+                current_style = StyleDef(name=full_name, parent=None)
+                styles[full_name] = current_style
+            continue
+
+        if current_color:
+            match = color_value_pattern.match(line)
+            if match:
+                colors[current_color] = match.group(1).lower()
+                current_color = None
+            continue
+
+        if current_style:
+            if "(style)" in line:
+                match = style_header_parent_pattern.search(line)
+                if match:
+                    current_style.parent = match.group(1)
+                continue
+
+            if "=" in line:
+                key, value = line.split("=", 1)
+                key = key.split("(", 1)[0].strip()
+                value = value.strip()
+                if key:
+                    current_style.items[key] = value
+            continue
+
+    return id_to_name, colors, styles
+
+
+def _resolve_style_items(style_name: str, styles: dict[str, StyleDef]) -> dict[str, str]:
+    cache: dict[str, dict[str, str]] = {}
+
+    def resolve(name: str) -> dict[str, str]:
+        if name in cache:
+            return cache[name]
+        style = styles.get(name)
+        if style is None:
+            cache[name] = {}
+            return cache[name]
+
+        items: dict[str, str] = {}
+        if style.parent:
+            items.update(resolve(style.parent))
+        items.update(style.items)
+        cache[name] = items
+        return items
+
+    return resolve(style_name)
+
+
+def _build_drawable_index(zip_names: list[str]) -> dict[str, list[str]]:
+    drawable_index: dict[str, list[str]] = {}
+    pattern = re.compile(r"^res/drawable[^/]*/([A-Za-z0-9_]+)\.([A-Za-z0-9]+)$")
+    for name in zip_names:
+        match = pattern.match(name)
+        if match:
+            drawable_name, ext = match.group(1), match.group(2).lower()
+            if ext not in {"png", "webp", "xml", "jpg", "jpeg"}:
+                continue
+            drawable_index.setdefault(drawable_name, []).append(name)
+    return drawable_index
+
+
+def _drawable_rank(zip_path: str) -> int:
+    # Prefer nodpi or higher density assets.
+    folder = zip_path.split("/", 2)[1] if zip_path.startswith("res/") else ""
+    density_rank = 0
+    if "nodpi" in folder:
+        density_rank = 100
+    elif "xxxhdpi" in folder:
+        density_rank = 90
+    elif "xxhdpi" in folder:
+        density_rank = 80
+    elif "xhdpi" in folder:
+        density_rank = 70
+    elif "hdpi" in folder:
+        density_rank = 60
+    elif "mdpi" in folder:
+        density_rank = 50
+    elif "ldpi" in folder:
+        density_rank = 40
+
+    ext = zip_path.rsplit(".", 1)[1].lower()
+    ext_rank = {"png": 3, "webp": 2, "jpg": 2, "jpeg": 2, "xml": 1}.get(ext, 0)
+    return density_rank * 10 + ext_rank
+
+
+def _extract_drawable(
+    apk_path: Path,
+    aapt2_path: str,
+    zip_file: zipfile.ZipFile,
+    drawable_index: dict[str, list[str]],
+    drawable_ref: str,
+    icons_dir: Path,
+    extracted: dict[str, str],
+) -> Optional[str]:
+    if not drawable_ref.startswith("@drawable/"):
+        return None
+
+    drawable_name = drawable_ref.split("/", 1)[1].strip()
+    if not drawable_name:
+        return None
+    if drawable_name in extracted:
+        return extracted[drawable_name]
+
+    candidates = drawable_index.get(drawable_name, [])
+    if not candidates:
+        return None
+    best = sorted(candidates, key=_drawable_rank, reverse=True)[0]
+    ext = best.rsplit(".", 1)[1].lower()
+
+    icons_dir.mkdir(parents=True, exist_ok=True)
+    out_name = f"{drawable_name}.{ext}"
+    out_path = icons_dir / out_name
+
+    if ext == "xml":
+        xmltree = _run([aapt2_path, "dump", "xmltree", str(apk_path), "--file", best])
+        root, xmlns = _parse_aapt2_xmltree(xmltree)
+        out_path.write_text(_write_xml(root, xmlns), encoding="utf-8")
+    else:
+        out_path.write_bytes(zip_file.read(best))
+
+    rel_path = f"icons/{out_name}"
+    extracted[drawable_name] = rel_path
+    return rel_path
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Converts a compiled Android APK's res/xml Keyboard layouts into a portable NewSoftKeyboard pack."
+        description="Converts a compiled Android APK's keyboard layouts (and optionally themes) into a portable NewSoftKeyboard pack."
     )
     parser.add_argument("--apk", required=True, help="Path to the APK.")
     parser.add_argument("--output", required=True, help="Output pack directory (will be created).")
@@ -205,6 +368,11 @@ def main() -> int:
         "--with-default-theme",
         action="store_true",
         help="Write a minimal default theme under themes/default.xml and add it to the manifest.",
+    )
+    parser.add_argument(
+        "--include-themes",
+        action="store_true",
+        help="Export themes by converting <KeyboardThemes/> listings and their referenced style resources.",
     )
     parser.add_argument(
         "--force",
@@ -243,20 +411,37 @@ def main() -> int:
     keyboards_dir.mkdir(parents=True, exist_ok=True)
     themes_dir.mkdir(parents=True, exist_ok=True)
 
+    id_to_name: dict[str, str] = {}
+    colors: dict[str, str] = {}
+    styles: dict[str, StyleDef] = {}
+    drawable_index: dict[str, list[str]] = {}
+
+    if args.include_themes:
+        resources_dump = _run([aapt2_path, "dump", "resources", str(apk_path)])
+        id_to_name, colors, styles = _parse_aapt2_resources_dump(resources_dump)
+
+        with zipfile.ZipFile(apk_path, "r") as apk_zip:
+            drawable_index = _build_drawable_index(apk_zip.namelist())
+
     keyboard_entries: list[dict[str, str]] = []
+    theme_listing_roots: list[XmlNode] = []
     for name in xml_names:
         apk_file = f"res/xml/{name}.xml"
         try:
             xmltree = _run([aapt2_path, "dump", "xmltree", str(apk_path), "--file", apk_file])
         except RuntimeError:
             continue
+
         root, xmlns = _parse_aapt2_xmltree(xmltree)
-        if root.name != "Keyboard":
+        if root.name == "Keyboard":
+            out_path = keyboards_dir / f"{name}.xml"
+            out_path.write_text(_write_xml(root, xmlns), encoding="utf-8")
+            keyboard_entries.append({"id": name, "path": f"keyboards/{name}.xml"})
             continue
 
-        out_path = keyboards_dir / f"{name}.xml"
-        out_path.write_text(_write_xml(root, xmlns), encoding="utf-8")
-        keyboard_entries.append({"id": name, "path": f"keyboards/{name}.xml"})
+        if args.include_themes and root.name == "KeyboardThemes":
+            theme_listing_roots.append(root)
+            continue
 
     if not keyboard_entries:
         print("No <Keyboard/> layouts found under res/xml in the APK.", file=sys.stderr)
@@ -274,6 +459,99 @@ def main() -> int:
             encoding="utf-8",
         )
         theme_entries.append({"id": "default", "path": "themes/default.xml"})
+
+    if args.include_themes and theme_listing_roots:
+        extracted_drawables: dict[str, str] = {}
+        style_cache: dict[str, dict[str, str]] = {}
+
+        def resolve_style(style_name: str) -> dict[str, str]:
+            if style_name in style_cache:
+                return style_cache[style_name]
+            style_cache[style_name] = {}
+            merged = _resolve_style_items(style_name, styles)
+            style_cache[style_name] = merged
+            return merged
+
+        def to_safe_filename(raw: str) -> str:
+            cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", raw.strip())
+            return cleaned if cleaned else "theme"
+
+        with zipfile.ZipFile(apk_path, "r") as apk_zip:
+            for listing_root in theme_listing_roots:
+                for theme_node in listing_root.children:
+                    if theme_node.name != "KeyboardTheme":
+                        continue
+
+                    theme_id = theme_node.attrs.get("id") or "theme"
+                    theme_res = theme_node.attrs.get("themeRes")
+                    icon_res = theme_node.attrs.get("iconsThemeRes")
+                    if not theme_res:
+                        continue
+
+                    theme_style = id_to_name.get(theme_res.lstrip("@"))
+                    icon_style = id_to_name.get(icon_res.lstrip("@")) if icon_res else None
+                    if not theme_style or not theme_style.startswith("style/"):
+                        continue
+
+                    colors_out: dict[str, str] = {}
+                    icons_out: dict[str, str] = {}
+
+                    for key, value in resolve_style(theme_style).items():
+                        logical = "keyboardBackground" if key == "0x010100d4" else key
+                        if value.startswith("@color/"):
+                            resolved = colors.get("color/" + value.split("/", 1)[1])
+                            if resolved:
+                                colors_out[logical] = resolved
+                        elif value.startswith("#"):
+                            colors_out[logical] = value.lower()
+                        elif value.startswith("@drawable/"):
+                            extracted = _extract_drawable(
+                                apk_path,
+                                aapt2_path,
+                                apk_zip,
+                                drawable_index,
+                                value,
+                                output_dir / "icons",
+                                extracted_drawables,
+                            )
+                            if extracted:
+                                icons_out[logical] = extracted
+
+                    if icon_style and icon_style.startswith("style/"):
+                        for key, value in resolve_style(icon_style).items():
+                            if not value.startswith("@drawable/"):
+                                continue
+                            extracted = _extract_drawable(
+                                apk_path,
+                                aapt2_path,
+                                apk_zip,
+                                drawable_index,
+                                value,
+                                output_dir / "icons",
+                                extracted_drawables,
+                            )
+                            if extracted:
+                                icons_out[key] = extracted
+
+                    if not colors_out and not icons_out:
+                        continue
+
+                    file_name = to_safe_filename(theme_id) + ".xml"
+                    theme_path = themes_dir / file_name
+                    if theme_path.exists():
+                        # avoid collisions if duplicate IDs appear
+                        theme_path = themes_dir / (to_safe_filename(theme_id) + "_2.xml")
+                        file_name = theme_path.name
+
+                    theme_xml_lines = ['<?xml version="1.0" encoding="utf-8"?>', "<KeyboardTheme>"]
+                    for name, value in sorted(colors_out.items()):
+                        theme_xml_lines.append(f'  <Color name="{name}" value="{value}"/>')
+                    for name, path in sorted(icons_out.items()):
+                        theme_xml_lines.append(f'  <Icon name="{name}" path="{path}"/>')
+                    theme_xml_lines.append("</KeyboardTheme>")
+                    theme_path.write_text("\n".join(theme_xml_lines) + "\n", encoding="utf-8")
+
+                    theme_entries.append({"id": theme_id, "path": f"themes/{file_name}"})
 
     manifest = {
         "schemaVersion": 1,
