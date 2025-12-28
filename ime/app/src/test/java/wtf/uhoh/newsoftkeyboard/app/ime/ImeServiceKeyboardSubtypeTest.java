@@ -63,9 +63,6 @@ public class ImeServiceKeyboardSubtypeTest extends ImeServiceBaseTest {
     Assert.assertNotNull(reportedSubtypes);
     Assert.assertTrue(
         "Expected multiple stock keyboards to be bundled", keyboardBuilders.size() >= 10);
-    for (KeyboardAddOnAndBuilder builder : keyboardBuilders) {
-      Assert.assertNotEquals("mike-rozoff-main-001", builder.getId());
-    }
     int expectedSubtypeCount = 0;
     for (KeyboardAddOnAndBuilder builder : keyboardBuilders) {
       if (!TextUtils.isEmpty(builder.getKeyboardLocale())) {

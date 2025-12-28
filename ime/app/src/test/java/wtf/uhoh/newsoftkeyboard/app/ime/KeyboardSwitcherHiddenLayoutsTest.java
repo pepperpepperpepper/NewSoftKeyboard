@@ -21,9 +21,9 @@ import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 @RunWith(NskRobolectricTestRunner.class)
 public class KeyboardSwitcherHiddenLayoutsTest extends ImeServiceBaseTest {
 
-  private static final String ROZOFF_MAIN_ID = "mike-rozoff-main-001";
-  private static final String ROZOFF_SYMBOLS_ID = "mike-rozoff-symbols-001";
-  private static final String ROZOFF_SYMBOLS_EXT_ID = "mike-rozoff-symbols-ext-001";
+  private static final String TEST_MAIN_ID = "test-hidden-main-001";
+  private static final String TEST_SYMBOLS_ID = "test-hidden-symbols-001";
+  private static final String TEST_SYMBOLS_EXT_ID = "test-hidden-symbols-ext-001";
   private final List<String> mInjectedAddOnIds = new ArrayList<>();
   private KeyboardFactory mKeyboardFactory;
 
@@ -37,7 +37,7 @@ public class KeyboardSwitcherHiddenLayoutsTest extends ImeServiceBaseTest {
     registerHiddenKeyboard(
         mKeyboardFactory,
         createBuilder(
-            ROZOFF_MAIN_ID,
+            TEST_MAIN_ID,
             "Mike Rozoff Layout",
             R.xml.test_hidden_keyboard_main,
             /* hidden= */ false,
@@ -45,7 +45,7 @@ public class KeyboardSwitcherHiddenLayoutsTest extends ImeServiceBaseTest {
     registerHiddenKeyboard(
         mKeyboardFactory,
         createBuilder(
-            ROZOFF_SYMBOLS_ID,
+            TEST_SYMBOLS_ID,
             "Mike Rozoff Symbols",
             R.xml.test_hidden_keyboard_symbols,
             /* hidden= */ true,
@@ -53,7 +53,7 @@ public class KeyboardSwitcherHiddenLayoutsTest extends ImeServiceBaseTest {
     registerHiddenKeyboard(
         mKeyboardFactory,
         createBuilder(
-            ROZOFF_SYMBOLS_EXT_ID,
+            TEST_SYMBOLS_EXT_ID,
             "Mike Rozoff Symbols Extended",
             R.xml.test_hidden_keyboard_symbols_extended,
             /* hidden= */ true,
@@ -65,48 +65,48 @@ public class KeyboardSwitcherHiddenLayoutsTest extends ImeServiceBaseTest {
 
     assertIdPresence(
         switcher.getEnabledKeyboardsBuilders(),
-        ROZOFF_SYMBOLS_ID,
+        TEST_SYMBOLS_ID,
         false,
         "symbols layout must stay out of cycle");
     assertIdPresence(
         switcher.getEnabledKeyboardsBuilders(),
-        ROZOFF_SYMBOLS_EXT_ID,
+        TEST_SYMBOLS_EXT_ID,
         false,
         "extended symbols layout must stay out of cycle");
 
     final EditorInfo editorInfo = mImeServiceUnderTest.getCurrentInputEditorInfo();
 
-    KeyboardDefinition mainKeyboard = switcher.showAlphabetKeyboardById(editorInfo, ROZOFF_MAIN_ID);
+    KeyboardDefinition mainKeyboard = switcher.showAlphabetKeyboardById(editorInfo, TEST_MAIN_ID);
     Assert.assertNotNull(mainKeyboard);
-    Assert.assertEquals(ROZOFF_MAIN_ID, mainKeyboard.getKeyboardAddOn().getId());
+    Assert.assertEquals(TEST_MAIN_ID, mainKeyboard.getKeyboardAddOn().getId());
 
     KeyboardDefinition symbolsKeyboard =
-        switcher.showAlphabetKeyboardById(editorInfo, ROZOFF_SYMBOLS_ID);
+        switcher.showAlphabetKeyboardById(editorInfo, TEST_SYMBOLS_ID);
     Assert.assertNotNull(symbolsKeyboard);
-    Assert.assertEquals(ROZOFF_SYMBOLS_ID, symbolsKeyboard.getKeyboardAddOn().getId());
+    Assert.assertEquals(TEST_SYMBOLS_ID, symbolsKeyboard.getKeyboardAddOn().getId());
 
     KeyboardDefinition extendedKeyboard =
-        switcher.showAlphabetKeyboardById(editorInfo, ROZOFF_SYMBOLS_EXT_ID);
+        switcher.showAlphabetKeyboardById(editorInfo, TEST_SYMBOLS_EXT_ID);
     Assert.assertNotNull(extendedKeyboard);
-    Assert.assertEquals(ROZOFF_SYMBOLS_EXT_ID, extendedKeyboard.getKeyboardAddOn().getId());
+    Assert.assertEquals(TEST_SYMBOLS_EXT_ID, extendedKeyboard.getKeyboardAddOn().getId());
 
     // Ensure hidden keyboards remain out of the regular cycle list after direct activation.
     assertIdPresence(
         switcher.getEnabledKeyboardsBuilders(),
-        ROZOFF_SYMBOLS_ID,
+        TEST_SYMBOLS_ID,
         false,
         "direct show must not add hidden keyboard to cycle");
     assertIdPresence(
         switcher.getEnabledKeyboardsBuilders(),
-        ROZOFF_SYMBOLS_EXT_ID,
+        TEST_SYMBOLS_EXT_ID,
         false,
         "direct show must not add hidden keyboard to cycle");
 
     // Switching back to the main layout should still work via direct id.
     KeyboardDefinition restoredMainKeyboard =
-        switcher.showAlphabetKeyboardById(editorInfo, ROZOFF_MAIN_ID);
+        switcher.showAlphabetKeyboardById(editorInfo, TEST_MAIN_ID);
     Assert.assertNotNull(restoredMainKeyboard);
-    Assert.assertEquals(ROZOFF_MAIN_ID, restoredMainKeyboard.getKeyboardAddOn().getId());
+    Assert.assertEquals(TEST_MAIN_ID, restoredMainKeyboard.getKeyboardAddOn().getId());
   }
 
   private static void assertIdPresence(

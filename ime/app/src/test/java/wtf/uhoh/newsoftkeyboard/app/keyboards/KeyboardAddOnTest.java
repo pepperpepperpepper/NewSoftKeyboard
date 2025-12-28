@@ -20,6 +20,9 @@ public class KeyboardAddOnTest {
 
   private static final String ASK_ENGLISH_1_ID = "c7535083-4fe6-49dc-81aa-c5438a1a343a";
   private static final String ASK_ENGLISH_16_KEYS_ID = "12335055-4aa6-49dc-8456-c7d38a1a5123";
+  private static final String MIKE_ROZOFF_MAIN_ID = "mike-rozoff-main-001";
+  private static final String MIKE_ROZOFF_SYMBOLS_ID = "mike-rozoff-symbols-001";
+  private static final String MIKE_ROZOFF_SYMBOLS_EXT_ID = "mike-rozoff-symbols-ext-001";
 
   @Test
   public void testGetKeyboardDefaultEnabled() throws Exception {
@@ -55,7 +58,18 @@ public class KeyboardAddOnTest {
     Assert.assertTrue(keyboardsEnabled.get(ASK_ENGLISH_1_ID));
     Assert.assertTrue(keyboardsEnabled.containsKey(ASK_ENGLISH_16_KEYS_ID));
     Assert.assertFalse(keyboardsEnabled.get(ASK_ENGLISH_16_KEYS_ID));
-    Assert.assertFalse(keyboardsEnabled.containsKey("mike-rozoff-main-001"));
+    Assert.assertTrue(keyboardsEnabled.containsKey(MIKE_ROZOFF_MAIN_ID));
+    Assert.assertFalse(keyboardsEnabled.get(MIKE_ROZOFF_MAIN_ID));
+    Assert.assertFalse(keyboardsEnabled.containsKey(MIKE_ROZOFF_SYMBOLS_ID));
+    Assert.assertFalse(keyboardsEnabled.containsKey(MIKE_ROZOFF_SYMBOLS_EXT_ID));
+
+    // Hidden layouts should still be accessible by ID for in-layout switching.
+    Assert.assertNotNull(
+        NskApplicationBase.getKeyboardFactory(getApplicationContext())
+            .getAddOnById(MIKE_ROZOFF_SYMBOLS_ID));
+    Assert.assertNotNull(
+        NskApplicationBase.getKeyboardFactory(getApplicationContext())
+            .getAddOnById(MIKE_ROZOFF_SYMBOLS_EXT_ID));
   }
 
   private KeyboardAddOnAndBuilder getKeyboardFromFactory(String id) {

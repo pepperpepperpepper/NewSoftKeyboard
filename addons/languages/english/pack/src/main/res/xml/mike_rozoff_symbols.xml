@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:ask="http://schemas.android.com/apk/res-auto"
+    android:keyWidth="10%p"
+    android:keyHeight="@integer/key_normal_height">
+
+    <!-- Row 1: Numbers 1-0 (no long press options) -->
+    <Row android:rowEdgeFlags="top">
+        <Key android:keyLabel="1" android:codes="49" android:keyEdgeFlags="left" />
+        <Key android:keyLabel="2" android:codes="50" />
+        <Key android:keyLabel="3" android:codes="51" />
+        <Key android:keyLabel="4" android:codes="52" />
+        <Key android:keyLabel="5" android:codes="53" />
+        <Key android:keyLabel="6" android:codes="54" />
+        <Key android:keyLabel="7" android:codes="55" />
+        <Key android:keyLabel="8" android:codes="56" />
+        <Key android:keyLabel="9" android:codes="57" />
+        <Key android:keyLabel="0" android:codes="48" android:keyEdgeFlags="right" />
+    </Row>
+
+    <!-- Row 2: @ # $ & _ - ( ) = % (no long press options) -->
+    <Row>
+        <Key android:keyLabel="@" android:codes="64" android:keyEdgeFlags="left" />
+        <Key android:keyLabel="#" android:codes="35" />
+        <Key android:keyLabel="$" android:codes="36" />
+        <Key android:keyLabel="&amp;" android:codes="38" />
+        <Key android:keyLabel="_" android:codes="95" />
+        <Key android:keyLabel="-" android:codes="45" />
+        <Key android:keyLabel="(" android:codes="40" />
+        <Key android:keyLabel=")" android:codes="41" />
+        <Key android:keyLabel="=" android:codes="61" />
+        <Key android:keyLabel="%" android:codes="37" android:keyEdgeFlags="right" />
+    </Row>
+
+    <!-- Row 3: switch-to-ext, ", *, ', :, /, !, ?, +, backspace -->
+    <Row>
+        <Key
+            android:keyLabel="{=&amp;"
+            android:codes="@integer/key_code_custom_keyboard_switch"
+            android:keyEdgeFlags="left"
+            ask:extra_key_data="mike-rozoff-symbols-ext-001"
+            ask:hintLabel="" />
+        <Key android:keyLabel="&quot;" android:codes="34" />
+        <Key android:keyLabel="*" android:codes="42" />
+        <Key android:keyLabel="'" android:codes="39" />
+        <Key android:keyLabel=":" android:codes="58" />
+        <Key android:keyLabel="/" android:codes="47" />
+        <Key android:keyLabel="!" android:codes="33" />
+        <Key android:keyLabel="?" android:codes="63" />
+        <Key android:keyLabel="+" android:codes="43" />
+        <Key
+            android:keyWidth="10%p"
+            android:codes="-5"
+            android:keyEdgeFlags="right"
+            android:isRepeatable="true" />
+    </Row>
+
+    <!-- Row 4: ABC, comma, spacebar, period, enter -->
+    <Row>
+        <Key
+            android:keyLabel="ABC"
+            android:keyWidth="15%p"
+            android:codes="@integer/key_code_custom_keyboard_switch"
+            android:keyEdgeFlags="left"
+            ask:extra_key_data="mike-rozoff-main-001"
+            ask:hintLabel="" />
+        <Key android:keyLabel="," android:keyWidth="10%p" android:codes="44" />
+        <Key android:keyLabel="␣" android:keyWidth="45%p" android:codes="32" android:isModifier="true" />
+        <Key android:keyLabel="." android:keyWidth="10%p" android:codes="46" />
+        <Key android:keyWidth="15%p" android:codes="@integer/key_code_enter" android:keyEdgeFlags="right" />
+    </Row>
+
+    <!-- Row 5: Arrow keys -->
+    <Row android:rowEdgeFlags="bottom">
+        <Key
+            android:codes="@integer/key_code_arrow_up"
+            android:keyWidth="25%p"
+            android:keyHeight="35dp"
+            android:isRepeatable="true"
+            android:keyEdgeFlags="left" />
+        <Key
+            android:codes="@integer/key_code_arrow_down"
+            android:keyWidth="25%p"
+            android:keyHeight="35dp"
+            android:isRepeatable="true" />
+        <Key
+            android:codes="@integer/key_code_arrow_left"
+            android:keyWidth="25%p"
+            android:keyHeight="35dp"
+            android:isRepeatable="true" />
+        <Key
+            android:codes="@integer/key_code_arrow_right"
+            android:keyWidth="25%p"
+            android:keyHeight="35dp"
+            android:isRepeatable="true"
+            android:keyEdgeFlags="right" />
+    </Row>
+
+</Keyboard>
