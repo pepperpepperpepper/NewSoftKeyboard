@@ -12,20 +12,22 @@
 
 - Enable S3 **Versioning** and **MFA delete** on `fdroid-uh-oh-wtf`.
 - Add lifecycle rule: expire non-current object versions after 180–365 days; never expire current.
-- Before each deploy, refuse to run if versioning is disabled.
+- Before each deploy, refuse to run if versioning is disabled (the publish script checks this; bypass only with `SKIP_VERSIONING_CHECK=1`).
 
 ## Metadata Strategy
 
-- Use `UpdateCheckMode: Static` and `ArchivePolicy: KeepAll` in `metadata/wtf.uhoh.newsoftkeyboard.yml`.
-- Generate metadata from the actual APK inventory via a script (no manual edits). Store script at `scripts/fdroid/generate_metadata.py`.
-- Script logic: scan repo+archive for `wtf.uhoh.newsoftkeyboard_*.apk`, extract versionCode/versionName with `aapt`, emit a build block per APK, set `CurrentVersion/Code` to the highest code.
-- Keep `AutoUpdateMode: None`.
+- Generate metadata from the actual APK inventory via a script (no manual edits). Script: `scripts/fdroid/generate_metadata.py`.
+- Script logic: scan repo+archive for `wtf.uhoh.newsoftkeyboard_*.apk`, extract versionCode/versionName with `aapt`, set `CurrentVersion/Code` to the highest code (or `$CURRENT_VERSION_CODE` if provided).
+- Metadata is intentionally minimal (this repo is distributed as APKs, not rebuilt by F-Droid):
+  - `AutoUpdateMode: None`
+  - `UpdateCheckMode: None`
+  - `Builds: []`
 
 ## Safer Deploy Flow
 
 1. Sync **from S3 to staging**: `aws s3 sync s3://fdroid-uh-oh-wtf/repo/ repo/` and same for `archive/`.
 2. Run metadata generator on staging files.
-3. Run `fdroid update --create-metadata` in a temp dir (not in live repo).
+3. Run `fdroid update --create-metadata` in the local staging dir (`$FDROID_DATA`), never directly against S3.
 4. Validate counts:
    - Total APKs found >= expected_min (configurable, e.g., 7 or 40).
    - CurrentVersion matches build.gradle override.
@@ -46,9 +48,8 @@
 
 ## Operational Guardrails
 
-- Never run `fdroid update` directly on the live repo; always via staging script.
-- Require `AWS_PROFILE` or env vars and a confirmation prompt before pushing to S3.
-- Log the list of APKs being indexed and the resulting CurrentVersion/Code each run.
+- Never run `fdroid update` directly on S3; always via the staging script.
+- Prefer running `DRY_RUN=1 fdroid/scripts/publish.sh` before a real publish to validate build + indexing without touching S3.
 
 ## Optional
 
@@ -65,8 +66,13 @@
 ## One-Command Publish (canonical)
 
 - Script: `fdroid/scripts/publish.sh`
-- Prereqs: `fdroid/.env` (copy from `.env.example`), `aapt`, `aws`, `/home/arch/fdroid-env/bin/fdroid`.
+- Prereqs: env file + `aapt` + `aws` + `/home/arch/fdroid-env/bin/fdroid`.
 - Data dir default: `FDROID_DATA=/home/arch/fdroid` (overridable).
+- Env file resolution (first match wins):
+  - `$ENV_FILE` or `$FDROID_ENV_FILE`
+  - `<repo>/fdroid/.env` (git-ignored; recommended)
+  - `$FDROID_DATA/.env`
+  - `$HOME/fdroid/.env`
 - Flow (automated):
   1. source `.env`, guard envs
   2. sync from S3 (repo/archive)
@@ -78,6 +84,9 @@
   8. backup repo+archive+metadata
   9. sync back to S3, invalidate CloudFront
   10. optional git commit (skip with `SKIP_COMMIT=1`)
+- Safety switches:
+  - Refuses to overwrite an existing `wtf.uhoh.newsoftkeyboard_<versionCode>.apk` unless `ALLOW_OVERWRITE=1`.
+  - `DRY_RUN=1` runs everything up through `fdroid update` + validation + backup, but skips S3 sync, CloudFront invalidation, and git commit.
 
 ## Keystore / Signing Reference
 
@@ -90,11 +99,11 @@
 - Alias: `fdroidrepo`
 - Environment variables used by Gradle signing:
   - Store password: `FDROID_KEYSTORE_PASS` / `FDROID_KEY_STORE_PASS` or `KEY_STORE_FILE_PASSWORD`
-  - Alias/key password: `FDROID_KEY_ALIAS_PASS` or `FDROID_KEY_PASS` (legacy) or `KEY_STORE_FILE_DEFAULT_ALIAS_PASSWORD`
+  - Alias/key password: `FDROID_KEY_ALIAS_PASS` (preferred) or `FDROID_KEY_PASS` (legacy) or `KEY_STORE_FILE_DEFAULT_ALIAS_PASSWORD`
   - Optional alias override: `FDROID_KEY_ALIAS` (defaults to `fdroidrepo`)
 - AWS / bucket: `FDROID_AWS_BUCKET`, `FDROID_AWS_ACCESS_KEY_ID`, `FDROID_AWS_SECRET_KEY`
 - Guard step before running `fdroid update`:
-  - `fdroid/scripts/fdroid/check_keystore_env.sh` verifies these envs are set and non-empty; run it before any update/deploy.
+  - `scripts/fdroid/check_keystore_env.sh` verifies these envs are set and non-empty; the publish script runs it automatically.
 - Local secret storage:
   - Real values live in `fdroid/.env` (git-ignored); source it with `set -a && source fdroid/.env && set +a`.
   - `fdroid/.env.example` lists required keys for new machines.
