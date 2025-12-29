@@ -741,7 +741,7 @@
         trailing space.
     </string>
     <string name="should_swap_punctuation_and_space_on_summary">Moves punctuation before a trailing
-        space (for example, "word ." → "word.").
+        space (e.g., "word ." → "word.").
     </string>
 
     <string name="initial_quick_text_tab_title">Initial group</string>
