@@ -80,6 +80,7 @@ public final class ImeServiceInitializer {
                 new ImeVoiceInputCallbacks.Callbacks(
                     updateVoiceKeyState, updateSpaceBarRecordingStatus, updateVoiceInputStatus),
                 voiceRecognitionTrigger::retryLastTranscription,
+                voiceRecognitionTrigger::savePendingRecording,
                 voiceRecognitionTrigger::discardPendingTranscription));
 
     final InputViewLifecycleHandler inputViewLifecycleHandler =

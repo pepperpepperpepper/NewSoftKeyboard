@@ -27,6 +27,7 @@ import androidx.annotation.NonNull;
 import com.google.android.voiceime.backends.SpeechToTextBackend;
 import com.google.android.voiceime.backends.SpeechToTextBackendRegistry;
 import com.google.android.voiceime.backends.TranscriptionResultCallback;
+import com.google.android.voiceime.utils.SpeechToTextFileUtils;
 import java.io.File;
 
 /** Trigger that delegates speech recognition to a configurable third-party backend. */
@@ -43,6 +44,7 @@ public class ThirdPartySpeechTrigger implements Trigger {
   private String mLastRecognitionResult;
   private String mRecordedAudioFilename;
   private String mAudioMediaType;
+  private volatile boolean mHasPendingRecording;
 
   private volatile boolean mIsRecording = false;
   private volatile boolean mIsTranscribing = false;
@@ -181,6 +183,8 @@ public class ThirdPartySpeechTrigger implements Trigger {
         showError("Transcription in progress. Please wait.");
         return;
       }
+      mLastRecognitionResult = null;
+      mHasPendingRecording = false;
       cleanupAudioFile();
       setupAudioFormat();
       startRecording();
@@ -231,13 +235,17 @@ public class ThirdPartySpeechTrigger implements Trigger {
     File audioFile = new File(mRecordedAudioFilename);
     if (!audioFile.exists()) {
       showError("Audio file not found: " + audioFile.getAbsolutePath());
+      mHasPendingRecording = false;
       return;
     }
     if (audioFile.length() == 0) {
       showError("Audio file is empty");
+      mHasPendingRecording = false;
+      cleanupAudioFile();
       return;
     }
 
+    mHasPendingRecording = true;
     mIsTranscribing = true;
     try {
       mBackend.startTranscription(
@@ -287,14 +295,19 @@ public class ThirdPartySpeechTrigger implements Trigger {
 
   private void onTranscriptionResult(String result) {
     mLastRecognitionResult = result;
-    commitResult();
-    notifyTextWritten(result);
-    cleanupAudioFile();
+    if (commitResult()) {
+      notifyTextWritten(result);
+      mHasPendingRecording = false;
+      cleanupAudioFile();
+      return;
+    }
+
+    notifyTranscriptionError("Unable to insert transcription into the current app.");
   }
 
-  private void commitResult() {
+  private boolean commitResult() {
     if (mLastRecognitionResult == null) {
-      return;
+      return false;
     }
 
     try {
@@ -302,23 +315,26 @@ public class ThirdPartySpeechTrigger implements Trigger {
           mInputMethodService.getCurrentInputConnection();
       if (conn == null) {
         Log.w(TAG, "No input connection available");
-        return;
+        return false;
       }
 
       if (!conn.beginBatchEdit()) {
         Log.w(TAG, "Could not begin batch edit");
-        return;
+        return false;
       }
 
       try {
-        conn.commitText(mLastRecognitionResult, 1);
-        mLastRecognitionResult = null;
+        if (conn.commitText(mLastRecognitionResult, 1)) {
+          mLastRecognitionResult = null;
+          return true;
+        }
       } finally {
         conn.endBatchEdit();
       }
     } catch (Exception e) {
       Log.e(TAG, "Error committing transcription result", e);
     }
+    return false;
   }
 
   private void cleanupAudioFile() {
@@ -346,6 +362,14 @@ public class ThirdPartySpeechTrigger implements Trigger {
                 .show());
   }
 
+  private void showToast(@NonNull String message) {
+    mMainHandler.post(
+        () ->
+            android.widget.Toast.makeText(
+                    mInputMethodService, message, android.widget.Toast.LENGTH_LONG)
+                .show());
+  }
+
   public boolean isRecording() {
     return mIsRecording;
   }
@@ -354,22 +378,73 @@ public class ThirdPartySpeechTrigger implements Trigger {
     if (mIsRecording || mIsTranscribing || mRecordedAudioFilename == null) {
       return false;
     }
+    if (mLastRecognitionResult != null) {
+      if (commitResult()) {
+        mHasPendingRecording = false;
+        cleanupAudioFile();
+        return true;
+      }
+      return false;
+    }
     startTranscription();
     return mIsTranscribing;
   }
 
+  public boolean savePendingRecording() {
+    if (mRecordedAudioFilename == null) {
+      return false;
+    }
+    File source = new File(mRecordedAudioFilename);
+    if (!source.exists() || source.length() == 0) {
+      return false;
+    }
+
+    File externalFilesDir = mInputMethodService.getExternalFilesDir(null);
+    if (externalFilesDir == null) {
+      showError("Unable to access external files directory.");
+      return false;
+    }
+
+    File recordingsDir = new File(externalFilesDir, "voice_recordings");
+    if (!recordingsDir.exists() && !recordingsDir.mkdirs()) {
+      showError("Unable to create voice recordings directory.");
+      return false;
+    }
+
+    String extension = "m4a";
+    int dotIndex = source.getName().lastIndexOf('.');
+    if (dotIndex > 0 && dotIndex < source.getName().length() - 1) {
+      extension = source.getName().substring(dotIndex + 1);
+    }
+
+    File copied =
+        SpeechToTextFileUtils.copyToDirectory(
+            source, recordingsDir.getAbsolutePath(), "voice_recording", extension);
+    if (copied == null) {
+      showError("Failed to save voice recording.");
+      return false;
+    }
+
+    showToast("Saved voice recording to: " + copied.getAbsolutePath());
+    return true;
+  }
+
   public void discardPendingTranscription() {
+    mLastRecognitionResult = null;
+    mHasPendingRecording = false;
     cleanupAudioFile();
   }
 
   @Override
   public void onStartInputView() {
-    mLastRecognitionResult = null;
     mIsRecording = false;
     mIsTranscribing = false;
     notifyRecordingStateChanged(false);
     mAudioRecorderManager.stopRecording();
-    cleanupAudioFile();
+    if (!mHasPendingRecording) {
+      mLastRecognitionResult = null;
+      cleanupAudioFile();
+    }
   }
 
   private void runOnMainThread(@NonNull Runnable action) {

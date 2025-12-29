@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
 import android.text.style.ClickableSpan;
 import android.view.LayoutInflater;
@@ -99,7 +100,8 @@ public class MainFragment extends Fragment {
                     .navigate(MainFragmentDirections.actionMainFragmentToFullChangeLogFragment()));
     latestChangeLogCard.addView(latestChangeLogCardContent);
     View testingView = view.findViewById(R.id.testing_build_message);
-    testingView.setVisibility(mTestingBuild ? View.VISIBLE : View.GONE);
+    final boolean hasTestingMessage = !TextUtils.isEmpty(getString(R.string.beta_tester_message));
+    testingView.setVisibility(mTestingBuild && hasTestingMessage ? View.VISIBLE : View.GONE);
     mDemoKeyboardView = view.findViewById(R.id.demo_keyboard_view);
     mNoNotificationPermissionView =
         view.findViewById(R.id.no_notifications_permission_click_here_root);

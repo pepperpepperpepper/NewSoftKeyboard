@@ -244,6 +244,13 @@ public class VoiceRecognitionTrigger {
     return false;
   }
 
+  public boolean savePendingRecording() {
+    if (mTrigger instanceof ThirdPartySpeechTrigger) {
+      return ((ThirdPartySpeechTrigger) mTrigger).savePendingRecording();
+    }
+    return false;
+  }
+
   public void discardPendingTranscription() {
     if (mTrigger instanceof ThirdPartySpeechTrigger) {
       ((ThirdPartySpeechTrigger) mTrigger).discardPendingTranscription();

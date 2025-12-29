@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -96,8 +97,11 @@ public class MainFragmentTest extends RobolectricFragmentTestCase<MainFragment> 
         .commitNow();
     ensureAllScheduledJobsAreDone();
 
+    final boolean hasTestingMessage =
+        !TextUtils.isEmpty(fragment.getString(R.string.beta_tester_message));
     Assert.assertEquals(
-        View.VISIBLE, fragment.getView().findViewById(R.id.testing_build_message).getVisibility());
+        hasTestingMessage ? View.VISIBLE : View.GONE,
+        fragment.getView().findViewById(R.id.testing_build_message).getVisibility());
   }
 
   @Test

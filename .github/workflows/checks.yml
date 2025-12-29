@@ -205,6 +205,36 @@ jobs:
         with:
           name: tests-build-logging-${{ matrix.shard_variant }}
           path: build/build-logging
+  linux-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5.0.0
+      - uses: actions/setup-java@v4.7.1
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            dbus-x11 \
+            ibus \
+            libglib2.0-bin \
+            openbox \
+            python3-gi \
+            gir1.2-gtk-3.0 \
+            gir1.2-ibus-1.0 \
+            ripgrep \
+            xterm \
+            xdotool \
+            xvfb
+      - name: install IBus engine (dev)
+        run: bash scripts/install_ibus_engine.sh
+      - name: smoke (X11)
+        run: bash scripts/linux_smoke_x11.sh
+      - name: smoke (IBus)
+        run: bash scripts/linux_smoke_ibus.sh
   deploy-dry-run:
     runs-on: ubuntu-24.04
     container: ghcr.io/menny/android:1.21.2

@@ -150,58 +150,7 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
       }
     }
 
-    final File originalRecording = audioFile;
-    final File uploadFile = fileForUpload;
-    final boolean hasCopyDestination =
-        destinationPreference != null && !destinationPreference.isEmpty();
-    final boolean copySucceeded = hasCopyDestination && uploadFile != originalRecording;
-    final boolean retainOriginalRecording = hasCopyDestination && !copySucceeded;
-    final boolean retainUploadFile = copySucceeded;
-
-    TranscriptionResultCallback managedCallback =
-        new TranscriptionResultCallback() {
-          private boolean cleaned;
-
-          private void cleanup() {
-            if (cleaned) {
-              return;
-            }
-            cleaned = true;
-            if (!retainOriginalRecording) {
-              deleteQuietly(originalRecording, "original recording");
-            } else {
-              Log.d(
-                  TAG,
-                  "Keeping original recording "
-                      + originalRecording.getAbsolutePath()
-                      + " because copy destination is set but copy failed.");
-            }
-            if (!retainUploadFile && uploadFile != originalRecording) {
-              deleteQuietly(uploadFile, "copied recording");
-            }
-          }
-
-          @Override
-          public void onTranscriptionStarted() {
-            callback.onTranscriptionStarted();
-          }
-
-          @Override
-          public void onSuccess(@NonNull String text) {
-            try {
-              callback.onSuccess(text);
-            } finally {
-              cleanup();
-            }
-          }
-
-          @Override
-          public void onError(@NonNull String errorMessage) {
-            callback.onError(errorMessage);
-          }
-        };
-
-    managedCallback.onTranscriptionStarted();
+    callback.onTranscriptionStarted();
     try {
       mTranscriber.startAsync(
           context,
@@ -222,17 +171,17 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
           new OpenAITranscriber.TranscriptionCallback() {
             @Override
             public void onResult(String result) {
-              managedCallback.onSuccess(result);
+              callback.onSuccess(result);
             }
 
             @Override
             public void onError(String error) {
-              managedCallback.onError(error);
+              callback.onError(error);
             }
           });
     } catch (RuntimeException runtimeException) {
       Log.e(TAG, "Failed to start OpenAI transcription", runtimeException);
-      managedCallback.onError(
+      callback.onError(
           runtimeException.getMessage() != null
               ? runtimeException.getMessage()
               : context.getString(R.string.openai_error_transcription_failed));
@@ -273,16 +222,5 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
       return strategy;
     }
     return "none";
-  }
-
-  private static void deleteQuietly(@NonNull File file, @NonNull String label) {
-    if (!file.exists()) {
-      return;
-    }
-    if (file.delete()) {
-      Log.d(TAG, "Deleted " + label + ": " + file.getAbsolutePath());
-    } else {
-      Log.w(TAG, "Failed to delete " + label + ": " + file.getAbsolutePath());
-    }
   }
 }

@@ -25,6 +25,7 @@ import java.util.OptionalInt;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -56,7 +57,22 @@ public final class LinuxHostMain {
 
   private LinuxHostMain() {}
 
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
+    try {
+      mainInternal(args);
+    } catch (IOException e) {
+      System.err.println(e.getMessage());
+      System.exit(1);
+    } catch (RuntimeException e) {
+      System.err.println(e.getMessage());
+      System.exit(1);
+    } catch (Exception e) {
+      e.printStackTrace(System.err);
+      System.exit(1);
+    }
+  }
+
+  private static void mainInternal(String[] args) throws Exception {
     Map<String, String> env = System.getenv();
     Path packsRoot = defaultPacksRoot(env);
     Path prefsFile = defaultPrefsFile(env);
@@ -385,7 +401,14 @@ public final class LinuxHostMain {
                               + token
                               + "' in keyboard "
                               + keyboardEntry.id()));
-      backend.apply(session.pressKey(position.rowIndex(), position.keyIndex()));
+      try {
+        backend.apply(session.pressKey(position.rowIndex(), position.keyIndex()));
+      } catch (RuntimeException e) {
+        if (outputConfig.mode() == OutputMode.IBUS) {
+          throw new IOException(formatIbusOutputError(outputConfig.ibusSocketPath(), e), e);
+        }
+        throw e;
+      }
     }
   }
 
@@ -446,7 +469,7 @@ public final class LinuxHostMain {
     editor.setEditable(false);
     frame.add(new JScrollPane(editor), BorderLayout.CENTER);
 
-    TextOutputBackend externalBackend = createExternalBackend(outputConfig);
+    var externalBackendRef = new AtomicReference<>(createExternalBackend(outputConfig));
     ExecutorService externalExecutor =
         outputConfig.mode() == OutputMode.XDOTOOL
             ? Executors.newSingleThreadExecutor(r -> new Thread(r, "xdotool-output"))
@@ -471,11 +494,27 @@ public final class LinuxHostMain {
               List<SemanticAction> actions = session.pressKey(finalRowIndex, finalKeyIndex);
               // Always echo locally (helps debug even when outputting elsewhere).
               applyActions(editor, actions);
+              TextOutputBackend externalBackend = externalBackendRef.get();
               if (externalBackend == null) return;
               if (externalExecutor != null) {
-                var ignored = externalExecutor.submit(() -> externalBackend.apply(actions));
+                var ignored =
+                    externalExecutor.submit(
+                        () -> {
+                          try {
+                            externalBackend.apply(actions);
+                          } catch (RuntimeException ex) {
+                            System.err.println(ex.getMessage());
+                          }
+                        });
               } else {
-                externalBackend.apply(actions);
+                try {
+                  externalBackend.apply(actions);
+                } catch (RuntimeException ex) {
+                  String message = formatIbusOutputError(outputConfig.ibusSocketPath(), ex);
+                  editor.append("\n\nERROR: " + message + "\n");
+                  System.err.println(message);
+                  externalBackendRef.set(null);
+                }
               }
             });
         rowPanel.add(button);
@@ -490,15 +529,19 @@ public final class LinuxHostMain {
     if (outputConfig.mode() == OutputMode.IBUS && outputConfig.ibusActivation()) {
       System.err.println(
           "IBus activation enabled: window will show/hide based on the focused text field.");
-      startIbusActivationListener(
-          outputConfig.ibusControlSocketPath(),
-          active ->
-              SwingUtilities.invokeLater(
-                  () -> {
-                    frame.setVisible(active);
-                    if (active) frame.toFront();
-                  }));
-      if (!requestIbusActivationStatus(outputConfig.ibusSocketPath())) {
+      boolean activationListenerStarted =
+          startIbusActivationListener(
+              outputConfig.ibusControlSocketPath(),
+              active ->
+                  SwingUtilities.invokeLater(
+                      () -> {
+                        frame.setVisible(active);
+                        if (active) frame.toFront();
+                      }));
+      if (!activationListenerStarted) {
+        System.err.println("Unable to bind IBus activation socket; leaving the window visible.");
+        frame.setVisible(true);
+      } else if (!requestIbusActivationStatus(outputConfig.ibusSocketPath())) {
         System.err.println(
             "Unable to query IBus engine status; leaving the window visible for debugging.");
         frame.setVisible(true);
@@ -548,29 +591,32 @@ public final class LinuxHostMain {
     }
   }
 
-  private static void startIbusActivationListener(
+  private static boolean startIbusActivationListener(
       Path socketPath, Consumer<Boolean> onActiveChanged) {
     Objects.requireNonNull(socketPath);
     Objects.requireNonNull(onActiveChanged);
-    Thread thread =
-        new Thread(
-            () -> runIbusActivationServer(socketPath, onActiveChanged), "ibus-activation-listener");
-    thread.setDaemon(true);
-    thread.start();
-  }
-
-  private static void runIbusActivationServer(Path socketPath, Consumer<Boolean> onActiveChanged) {
+    ServerSocketChannel server;
     try {
       Files.createDirectories(socketPath.getParent());
       Files.deleteIfExists(socketPath);
-    } catch (IOException e) {
-      System.err.println("Failed preparing ibus control socket path: " + socketPath + ": " + e);
-      return;
-    }
-
-    UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socketPath);
-    try (ServerSocketChannel server = ServerSocketChannel.open(StandardProtocolFamily.UNIX)) {
+      UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socketPath);
+      server = ServerSocketChannel.open(StandardProtocolFamily.UNIX);
       server.bind(address);
+    } catch (IOException e) {
+      System.err.println("Failed binding ibus control socket: " + socketPath + ": " + e);
+      return false;
+    }
+    Thread thread =
+        new Thread(
+            () -> runIbusActivationServer(server, onActiveChanged), "ibus-activation-listener");
+    thread.setDaemon(true);
+    thread.start();
+    return true;
+  }
+
+  private static void runIbusActivationServer(
+      ServerSocketChannel server, Consumer<Boolean> onActiveChanged) {
+    try (ServerSocketChannel serverChannel = server) {
       while (true) {
         try (SocketChannel client = server.accept()) {
           if (client == null) continue;
@@ -587,8 +633,24 @@ public final class LinuxHostMain {
         }
       }
     } catch (IOException e) {
-      System.err.println("Failed binding ibus control socket: " + socketPath + ": " + e);
+      // Best-effort channel; if it dies the OSK still works without activation.
     }
+  }
+
+  private static String formatIbusOutputError(Path socketPath, RuntimeException exception) {
+    Objects.requireNonNull(socketPath);
+    StringBuilder builder = new StringBuilder();
+    builder.append("IBus output failed. Unable to reach engine socket: ").append(socketPath);
+    builder.append("\n");
+    builder.append("Ensure the NewSoftKeyboard IBus engine is running and registered.");
+    builder.append("\n");
+    builder.append("Override the socket with NSK_IBUS_SOCKET=/path/to/ibus.sock.");
+    String cause = exception.getMessage();
+    if (cause != null && !cause.isBlank()) {
+      builder.append("\n");
+      builder.append("Details: ").append(cause);
+    }
+    return builder.toString();
   }
 
   private static Optional<Boolean> parseIbusControlLine(String line) {

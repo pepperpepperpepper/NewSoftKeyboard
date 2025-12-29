@@ -44,6 +44,7 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
   @NonNull private final ImeServiceBase service;
   @NonNull private final Callbacks callbacks;
   @NonNull private final BooleanSupplier retryLastTranscription;
+  @NonNull private final BooleanSupplier savePendingRecording;
   @NonNull private final Runnable discardPendingTranscription;
   @Nullable private AlertDialog currentErrorDialog;
 
@@ -51,10 +52,12 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
       @NonNull ImeServiceBase service,
       @NonNull Callbacks callbacks,
       @NonNull BooleanSupplier retryLastTranscription,
+      @NonNull BooleanSupplier savePendingRecording,
       @NonNull Runnable discardPendingTranscription) {
     this.service = service;
     this.callbacks = callbacks;
     this.retryLastTranscription = retryLastTranscription;
+    this.savePendingRecording = savePendingRecording;
     this.discardPendingTranscription = discardPendingTranscription;
   }
 
@@ -80,23 +83,50 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
         new AlertDialog.Builder(service, R.style.Theme_NskAlertDialog);
     builder.setTitle("Voice transcription failed");
     builder.setMessage(error + "\n\nTry again?");
-    builder.setPositiveButton(
-        "Try again",
-        (dialog, which) -> {
-          dialog.dismiss();
-          if (!retryLastTranscription.getAsBoolean()) {
-            android.widget.Toast.makeText(service, error, android.widget.Toast.LENGTH_LONG).show();
-          }
-        });
-    builder.setNegativeButton(
-        android.R.string.cancel,
-        (dialog, which) -> {
-          dialog.dismiss();
-          discardPendingTranscription.run();
-        });
+    builder.setPositiveButton("Try again", null);
+    builder.setNeutralButton("Save recording", null);
+    builder.setNegativeButton(android.R.string.cancel, null);
     builder.setOnCancelListener(dialog -> discardPendingTranscription.run());
 
     final AlertDialog dialog = builder.create();
+    dialog.setOnShowListener(
+        dialogInterface -> {
+          final android.widget.Button retryButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+          if (retryButton != null) {
+            retryButton.setOnClickListener(
+                v -> {
+                  if (retryLastTranscription.getAsBoolean()) {
+                    dialog.dismiss();
+                  } else {
+                    android.widget.Toast.makeText(service, error, android.widget.Toast.LENGTH_LONG)
+                        .show();
+                  }
+                });
+          }
+
+          final android.widget.Button saveButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+          if (saveButton != null) {
+            saveButton.setOnClickListener(
+                v -> {
+                  if (!savePendingRecording.getAsBoolean()) {
+                    android.widget.Toast.makeText(
+                            service,
+                            "No recording available to save.",
+                            android.widget.Toast.LENGTH_LONG)
+                        .show();
+                  }
+                });
+          }
+
+          final android.widget.Button discardButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+          if (discardButton != null) {
+            discardButton.setOnClickListener(
+                v -> {
+                  discardPendingTranscription.run();
+                  dialog.dismiss();
+                });
+          }
+        });
     dialog.setOnDismissListener(dialogInterface -> currentErrorDialog = null);
     if (attachDialogToImeWindow(dialog)) {
       dialog.show();

@@ -23,8 +23,10 @@ import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
+import androidx.core.text.HtmlCompat;
 import java.util.Locale;
 import wtf.uhoh.newsoftkeyboard.base.utils.CompatUtils;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
@@ -38,6 +40,10 @@ public class TesterNotification {
 
   public static void showDragonsIfNeeded(
       Context context, NotificationDriver notifier, boolean tester) {
+    final CharSequence message = context.getText(R.string.beta_tester_message);
+    if (TextUtils.isEmpty(message)) {
+      return;
+    }
     if (tester && firstTestersTimeVersionLoaded(context)) {
       Logger.i(TAG, "TESTERS VERSION added");
 
@@ -55,7 +61,7 @@ public class TesterNotification {
                   NotificationIds.Tester,
                   R.drawable.ic_notification_debug_version,
                   R.string.ime_name)
-              .setContentText(context.getText(R.string.notification_text_testers))
+              .setContentText(getNotificationSummary(message))
               .setContentIntent(contentIntent)
               .setColor(
                   ContextCompat.getColor(context, R.color.notification_background_debug_version))
@@ -65,6 +71,18 @@ public class TesterNotification {
         markTutorialShown(context);
       }
     }
+  }
+
+  private static String getNotificationSummary(@NonNull CharSequence message) {
+    final String plain =
+        HtmlCompat.fromHtml(message.toString(), HtmlCompat.FROM_HTML_MODE_LEGACY).toString().trim();
+    if (TextUtils.isEmpty(plain)) {
+      return "";
+    }
+
+    final int newlineIndex = plain.indexOf('\n');
+    final String firstLine = newlineIndex >= 0 ? plain.substring(0, newlineIndex) : plain;
+    return firstLine.trim();
   }
 
   private static String getPrefsValue(@NonNull Context context) {

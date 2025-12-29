@@ -60,8 +60,7 @@
 
         </FrameLayout>
 
-        <!-- this box will be should shown
-         only if the build type is not release -->
+        <!-- Shown only when beta_tester_message is non-empty and this is a testing build. -->
         <androidx.cardview.widget.CardView
             android:id="@+id/testing_build_message"
             android:layout_width="match_parent"

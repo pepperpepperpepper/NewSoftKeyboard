@@ -9,23 +9,26 @@
     - Component XML: `/usr/share/ibus/component/newsoftkeyboard.xml`
   - Followed by: `ibus write-cache` (best-effort) and `ibus restart`.
 
-- [ ] Add uninstall script (symmetry with install):
-  - Remove wrapper + component XML.
-  - Re-run `ibus write-cache` and restart IBus.
+- [x] Add uninstall script (symmetry with install):
+  - `scripts/uninstall_ibus_engine.sh`
+  - Removes wrapper + component XML.
+  - Re-runs `ibus write-cache` and restarts IBus (best-effort).
 
-- [ ] Improve installer robustness:
+- [x] Improve installer robustness:
   - Confirm required runtime deps (`ibus`, `python-gobject`, `gtk3`) with clear error messages.
-  - Add `--dry-run` and `--force` flags (optional).
+  - Add `--dry-run` and `--force` flags.
 
 ## Runtime hardening
 
-- [ ] Make `--output=ibus` fail fast with a clear message when sockets can’t bind/connect.
-- [ ] Document the activation/control socket env vars in one place:
+- [x] Make `--output=ibus` fail fast with a clear message when sockets can’t bind/connect.
+- [x] Document the activation/control socket env vars in one place:
   - `NSK_IBUS_SOCKET`
   - `NSK_IBUS_CONTROL_SOCKET`
+  - Docs: `docs/linux.md`
 
 ## CI / smoke coverage
 
-- [ ] Add CI job(s) to run:
+- [x] Add CI job(s) to run:
   - `bash scripts/linux_smoke_x11.sh`
   - `bash scripts/linux_smoke_ibus.sh`
+  - GitHub Actions: `.github/workflows/checks.yml`
