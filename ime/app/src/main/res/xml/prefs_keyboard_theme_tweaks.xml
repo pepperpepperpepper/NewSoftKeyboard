@@ -4,6 +4,11 @@
     android:key="keyboard_theme_tweak_group"
     android:title="@string/keyboard_theme_tweak_group">
 
+    <Preference
+        android:key="nav:keyboard_theme_wallpaper_customization"
+        android:title="@string/keyboard_theme_wallpaper_customization_title"
+        android:summary="@string/keyboard_theme_wallpaper_customization_summary" />
+
     <androidx.preference.CheckBoxPreference
         android:defaultValue="@bool/settings_default_key_press_shows_preview_popup"
         android:key="@string/settings_key_key_press_shows_preview_popup"

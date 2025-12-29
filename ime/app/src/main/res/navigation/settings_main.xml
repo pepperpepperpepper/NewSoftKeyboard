@@ -409,6 +409,10 @@
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.KeyboardThemeTweaksFragment"
         android:label="KeyboardThemeTweaksFragment" />
     <fragment
+        android:id="@+id/keyboardThemeCustomizationFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.KeyboardThemeCustomizationFragment"
+        android:label="KeyboardThemeCustomizationFragment" />
+    <fragment
         android:id="@+id/powerSavingSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.PowerSavingSettingsFragment"
         android:label="PowerSavingSettingsFragment" />

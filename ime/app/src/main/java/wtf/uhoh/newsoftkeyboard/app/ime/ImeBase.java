@@ -207,7 +207,6 @@ public abstract class ImeBase extends InputMethodService implements OnKeyboardAc
             TAG,
             () -> {
               mInputViewContainer = createInputViewContainer();
-              mInputViewContainer.setBackgroundResource(R.drawable.nsk_wallpaper);
             });
 
     mInputView = mInputViewContainer.getStandardKeyboardView();

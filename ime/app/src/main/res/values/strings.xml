@@ -36,6 +36,33 @@
     <string name="search_market_for_quick_key_addons">Get more <i>Quick-Text</i> add-ons at the app store…</string>
     
     <string name="keyboard_theme_tweak_group">Tweaks</string>
+    <string name="keyboard_theme_wallpaper_customization_title">Background photo (current theme)</string>
+    <string name="keyboard_theme_wallpaper_customization_summary">Pick a background photo behind the keyboard for the currently selected theme.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_title">Pick background photo</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_summary">Choose a photo from your gallery to show behind the keyboard.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_summary_invalid">Previous background photo could not be loaded. Tap to choose a new one.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_summary_set">Background photo is set. Tap to change it.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_summary_saving">Saving background photo…</string>
+    <string name="keyboard_theme_wallpaper_customization_dim_title">Dim background</string>
+    <string name="keyboard_theme_wallpaper_customization_dim_summary">Increase dimming to keep key labels readable.</string>
+    <string name="keyboard_theme_wallpaper_customization_reset_title">Reset background photo</string>
+    <string name="keyboard_theme_wallpaper_customization_reset_summary">Remove the photo and use the theme’s default background.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_toast">Background photo saved for this theme.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_failed_toast">Could not save that photo. Please try a different image.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_failed_title">Could not save background photo</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_failed_permission">New Soft Keyboard does not have permission to read that file. Try a different photo.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_failed_too_large">That photo is too large to process on this device. Try a smaller image.</string>
+    <string name="keyboard_theme_wallpaper_customization_pick_failed_generic">Could not read that photo. Try a different image.</string>
+    <string name="keyboard_theme_wallpaper_customization_reset_toast">Background photo removed for this theme.</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_title">Apply to all themes</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_summary">Copy this background photo to every keyboard theme (overwrites existing theme photos).</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_dialog_title">Apply background photo to all themes</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_dialog_message">This will replace any existing theme background photos. Continue?</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_dialog_apply">Apply</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_pick_first_toast">Pick a background photo for this theme first.</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_toast_success">Applied background photo to %d themes.</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_toast_partial">Applied to %1$d themes; %2$d failed.</string>
+    <string name="keyboard_theme_wallpaper_customization_apply_to_all_toast_failed">Could not apply background photo to other themes.</string>
     <string name="delete_button">Delete</string>
 
     <!-- Indicates that a word has been added to the dictionary -->

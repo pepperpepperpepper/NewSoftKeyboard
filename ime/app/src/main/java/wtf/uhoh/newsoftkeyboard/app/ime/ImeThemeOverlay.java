@@ -2,6 +2,7 @@ package wtf.uhoh.newsoftkeyboard.app.ime;
 
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import androidx.annotation.NonNull;
@@ -13,6 +14,8 @@ import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemeFactory;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperResolver;
 import wtf.uhoh.newsoftkeyboard.base.utils.CompatUtils;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlayData;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlayDataImpl;
@@ -20,6 +23,7 @@ import wtf.uhoh.newsoftkeyboard.overlay.OverlayDataNormalizer;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlayDataOverrider;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlyDataCreator;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlyDataCreatorForAndroid;
+import wtf.uhoh.newsoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 import wtf.uhoh.newsoftkeyboard.rx.GenericOnError;
 
 public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
@@ -28,6 +32,20 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
   private OverlyDataCreator mOverlyDataCreator;
   private String mLastOverlayPackage = "";
   protected KeyboardTheme mCurrentTheme;
+  private KeyboardWallpaperResolver keyboardWallpaperResolver;
+  private SharedPreferences mWallpaperPrefsNotToUse;
+  private final SharedPreferences.OnSharedPreferenceChangeListener mWallpaperPrefListener =
+      (ignored, key) -> {
+        final KeyboardTheme theme = mCurrentTheme;
+        final KeyboardViewContainerView inputViewContainer = getInputViewContainer();
+        if (theme == null || inputViewContainer == null || key == null) return;
+
+        final String themeId = theme.getId();
+        if (key.equals(KeyboardWallpaperOverrideStore.dimKey(themeId))
+            || key.equals(KeyboardWallpaperOverrideStore.changeKey(themeId))) {
+          inputViewContainer.post(() -> applyKeyboardWallpaper(inputViewContainer));
+        }
+      };
 
   private static Map<String, OverlayData> createOverridesForOverlays() {
     return Collections.emptyMap();
@@ -49,6 +67,9 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
     super.onCreate();
     mApplyRemoteAppColors = isApplyRemoteAppColorsEnabled();
     mOverlyDataCreator = createOverlayDataCreator();
+    keyboardWallpaperResolver = new KeyboardWallpaperResolver(this);
+    mWallpaperPrefsNotToUse = DirectBootAwareSharedPreferences.create(this);
+    mWallpaperPrefsNotToUse.registerOnSharedPreferenceChangeListener(mWallpaperPrefListener);
 
     addDisposable(
         KeyboardThemeFactory.observeCurrentTheme(getApplicationContext())
@@ -72,6 +93,15 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
                 GenericOnError.onError("settings_key_apply_remote_app_colors")));
   }
 
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+    if (mWallpaperPrefsNotToUse != null) {
+      mWallpaperPrefsNotToUse.unregisterOnSharedPreferenceChangeListener(mWallpaperPrefListener);
+      mWallpaperPrefsNotToUse = null;
+    }
+  }
+
   protected void onThemeChanged(@NonNull KeyboardTheme theme) {
     mCurrentTheme = theme;
 
@@ -83,6 +113,7 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
     if (inputViewContainer != null) {
       inputViewContainer.setKeyboardTheme(mCurrentTheme);
       inputViewContainer.setThemeOverlay(mCurrentOverlayData);
+      applyKeyboardWallpaper(inputViewContainer);
     }
   }
 
@@ -117,6 +148,10 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
     super.onStartInputView(info, restarting);
 
     applyThemeOverlay(info);
+    final KeyboardViewContainerView inputViewContainer = getInputViewContainer();
+    if (inputViewContainer != null) {
+      applyKeyboardWallpaper(inputViewContainer);
+    }
   }
 
   protected void applyThemeOverlay(EditorInfo info) {
@@ -154,8 +189,13 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
     final KeyboardViewContainerView inputViewContainer = getInputViewContainer();
     inputViewContainer.setKeyboardTheme(mCurrentTheme);
     inputViewContainer.setThemeOverlay(mCurrentOverlayData);
+    applyKeyboardWallpaper(inputViewContainer);
 
     return view;
+  }
+
+  private void applyKeyboardWallpaper(@NonNull KeyboardViewContainerView inputViewContainer) {
+    inputViewContainer.setBackground(keyboardWallpaperResolver.resolveImeWallpaper(mCurrentTheme));
   }
 
   private static class EmptyOverlayData extends OverlayDataImpl {

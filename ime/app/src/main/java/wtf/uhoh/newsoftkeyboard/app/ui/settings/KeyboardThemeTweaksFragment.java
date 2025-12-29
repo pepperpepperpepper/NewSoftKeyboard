@@ -17,12 +17,33 @@
 package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
 import android.os.Bundle;
+import android.view.View;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.navigation.Navigation;
+import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import wtf.uhoh.newsoftkeyboard.R;
 
 public class KeyboardThemeTweaksFragment extends PreferenceFragmentCompat {
+  private static final String KEY_WALLPAPER_CUSTOMIZATION =
+      "nav:keyboard_theme_wallpaper_customization";
+
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     addPreferencesFromResource(R.xml.prefs_keyboard_theme_tweaks);
+  }
+
+  @Override
+  public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+    final Preference wallpaper = findPreference(KEY_WALLPAPER_CUSTOMIZATION);
+    if (wallpaper != null) {
+      wallpaper.setOnPreferenceClickListener(
+          ignored -> {
+            Navigation.findNavController(view).navigate(R.id.keyboardThemeCustomizationFragment);
+            return true;
+          });
+    }
   }
 }
