@@ -736,11 +736,12 @@
     
     
 
-    <string name="should_swap_punctuation_and_space_title">Swap punctuation and space</string>
-    <string name="should_swap_punctuation_and_space_off_summary">Do not swap space and
-        punctuation.
+    <string name="should_swap_punctuation_and_space_title">Smart spacing around punctuation</string>
+    <string name="should_swap_punctuation_and_space_off_summary">Does not move punctuation before a
+        trailing space.
     </string>
-    <string name="should_swap_punctuation_and_space_on_summary">Swap auto-space and punctuation.
+    <string name="should_swap_punctuation_and_space_on_summary">Moves punctuation before a trailing
+        space (for example, "word ." → "word.").
     </string>
 
     <string name="initial_quick_text_tab_title">Initial group</string>
