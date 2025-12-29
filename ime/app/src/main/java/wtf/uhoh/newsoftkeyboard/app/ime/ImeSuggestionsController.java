@@ -383,6 +383,7 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
   }
 
   public boolean isSpaceSwapCharacter(int primaryCode) {
+    if (!mSwapPunctuationAndSpace) return false;
     return spaceSwapDecider.isSpaceSwapCharacter(
         primaryCode, mFrenchSpacePunctuationBehavior, suggestionsSessionState.sentenceSeparators);
   }

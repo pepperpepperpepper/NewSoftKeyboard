@@ -375,10 +375,31 @@ public class ImeServiceGimmicksTest extends ImeServiceBaseTest {
     Assert.assertEquals("he'll ", inputConnection.getCurrentTextInInputConnection());
     // typing punctuation
     mImeServiceUnderTest.simulateKeyPress(',');
-    Assert.assertEquals("he'll, ", inputConnection.getCurrentTextInInputConnection());
+    Assert.assertEquals("he'll ,", inputConnection.getCurrentTextInInputConnection());
 
     mImeServiceUnderTest.simulateKeyPress('h');
-    Assert.assertEquals("he'll, h", inputConnection.getCurrentTextInInputConnection());
+    Assert.assertEquals("he'll ,h", inputConnection.getCurrentTextInInputConnection());
+  }
+
+  @Test
+  public void testDoNotSwapPunctuationInManualDotPrefixIfSwapPrefDisabled() {
+    SharedPrefsHelper.setPrefsValue(
+        getApplicationContext()
+            .getString(R.string.settings_key_bool_should_swap_punctuation_and_space),
+        false);
+    final TestInputConnection inputConnection = getCurrentTestInputConnection();
+
+    mImeServiceUnderTest.simulateTextTyping("cd");
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.SPACE);
+    Assert.assertTrue(inputConnection.getCurrentTextInInputConnection().endsWith(" "));
+
+    // User intended a dot-prefixed token (e.g. ".ssh"). With swap disabled we should not reorder to
+    // "cd. ssh".
+    mImeServiceUnderTest.simulateKeyPress('.');
+    Assert.assertTrue(inputConnection.getCurrentTextInInputConnection().endsWith(" ."));
+
+    mImeServiceUnderTest.simulateTextTyping("ssh");
+    Assert.assertTrue(inputConnection.getCurrentTextInInputConnection().endsWith(".ssh"));
   }
 
   @Test
