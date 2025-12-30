@@ -6,12 +6,15 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import androidx.annotation.NonNull;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,6 +26,17 @@ public class KeyboardWallpaperOverrideStore {
   private static final String PREF_DIM_PREFIX = "photo_wallpaper_dim::";
   private static final String PREF_CHANGE_PREFIX = "photo_wallpaper_change::";
   private static final String PREF_INVALID_PREFIX = "photo_wallpaper_invalid::";
+  private static final String PREF_MODE_PREFIX = "photo_wallpaper_mode::";
+  private static final String PREF_KEY_ALPHA_PREFIX = "photo_wallpaper_key_alpha::";
+  private static final String PREF_ROTATION_PREFIX = "photo_wallpaper_rotation::";
+  private static final String PREF_MATCH_KEY_SHAPE_PREFIX = "photo_wallpaper_match_key_shape::";
+  private static final String PREF_IMPORT_HIGH_QUALITY = "photo_wallpaper_import_high_quality";
+
+  public static final int WALLPAPER_MODE_BACKGROUND_ONLY = 0;
+  public static final int WALLPAPER_MODE_BACKGROUND_KEY_TINT = 1;
+  public static final int WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE = 2;
+
+  public static final int DEFAULT_KEY_ALPHA_PERCENT = 20;
 
   private final Context appContext;
   private final SharedPreferences prefs;
@@ -47,12 +61,82 @@ public class KeyboardWallpaperOverrideStore {
     return PREF_INVALID_PREFIX + themeId;
   }
 
+  @NonNull
+  public static String modeKey(@NonNull String themeId) {
+    return PREF_MODE_PREFIX + themeId;
+  }
+
+  @NonNull
+  public static String keyAlphaKey(@NonNull String themeId) {
+    return PREF_KEY_ALPHA_PREFIX + themeId;
+  }
+
+  @NonNull
+  public static String rotationKey(@NonNull String themeId) {
+    return PREF_ROTATION_PREFIX + themeId;
+  }
+
+  @NonNull
+  public static String matchKeyShapeKey(@NonNull String themeId) {
+    return PREF_MATCH_KEY_SHAPE_PREFIX + themeId;
+  }
+
   public int getDimPercent(@NonNull String themeId) {
     return prefs.getInt(dimKey(themeId), 0);
   }
 
   public void setDimPercent(@NonNull String themeId, int dimPercent) {
     prefs.edit().putInt(dimKey(themeId), clampPercent(dimPercent)).apply();
+  }
+
+  public int getWallpaperMode(@NonNull String themeId) {
+    return normalizeMode(prefs.getInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_ONLY));
+  }
+
+  public void setWallpaperMode(@NonNull String themeId, int mode) {
+    final SharedPreferences.Editor editor = prefs.edit();
+    editor.putInt(modeKey(themeId), normalizeMode(mode));
+    markWallpaperChanged(themeId, editor);
+    editor.apply();
+  }
+
+  public int getKeyAlphaPercent(@NonNull String themeId) {
+    return clampPercent(prefs.getInt(keyAlphaKey(themeId), DEFAULT_KEY_ALPHA_PERCENT));
+  }
+
+  public void setKeyAlphaPercent(@NonNull String themeId, int alphaPercent) {
+    final SharedPreferences.Editor editor = prefs.edit();
+    editor.putInt(keyAlphaKey(themeId), clampPercent(alphaPercent));
+    markWallpaperChanged(themeId, editor);
+    editor.apply();
+  }
+
+  public int getWallpaperRotationDegrees(@NonNull String themeId) {
+    return normalizeRotationDegrees(prefs.getInt(rotationKey(themeId), 0));
+  }
+
+  public void setWallpaperRotationDegrees(@NonNull String themeId, int rotationDegrees) {
+    final SharedPreferences.Editor editor = prefs.edit();
+    editor.putInt(rotationKey(themeId), normalizeRotationDegrees(rotationDegrees));
+    markWallpaperChanged(themeId, editor);
+    editor.apply();
+  }
+
+  public void rotateWallpaperClockwise90(@NonNull String themeId) {
+    final int current = getWallpaperRotationDegrees(themeId);
+    final int next = (current + 90) % 360;
+    setWallpaperRotationDegrees(themeId, next);
+  }
+
+  public boolean isMatchKeyShapeEnabled(@NonNull String themeId) {
+    return prefs.getBoolean(matchKeyShapeKey(themeId), false);
+  }
+
+  public void setMatchKeyShapeEnabled(@NonNull String themeId, boolean enabled) {
+    final SharedPreferences.Editor editor = prefs.edit();
+    editor.putBoolean(matchKeyShapeKey(themeId), enabled);
+    markWallpaperChanged(themeId, editor);
+    editor.apply();
   }
 
   public boolean isWallpaperInvalid(@NonNull String themeId) {
@@ -68,6 +152,14 @@ public class KeyboardWallpaperOverrideStore {
 
   public int getWallpaperChangeToken(@NonNull String themeId) {
     return prefs.getInt(changeKey(themeId), 0);
+  }
+
+  public boolean isHighQualityImportEnabled() {
+    return prefs.getBoolean(PREF_IMPORT_HIGH_QUALITY, false);
+  }
+
+  public void setHighQualityImportEnabled(boolean enabled) {
+    prefs.edit().putBoolean(PREF_IMPORT_HIGH_QUALITY, enabled).apply();
   }
 
   private void markWallpaperChanged(@NonNull String themeId) {
@@ -90,6 +182,10 @@ public class KeyboardWallpaperOverrideStore {
     file.delete();
     final SharedPreferences.Editor editor = prefs.edit();
     editor.remove(dimKey(themeId));
+    editor.remove(modeKey(themeId));
+    editor.remove(keyAlphaKey(themeId));
+    editor.remove(rotationKey(themeId));
+    editor.remove(matchKeyShapeKey(themeId));
     editor.remove(invalidKey(themeId));
     markWallpaperChanged(themeId, editor);
     editor.apply();
@@ -109,6 +205,10 @@ public class KeyboardWallpaperOverrideStore {
 
     final SharedPreferences.Editor editor = prefs.edit();
     editor.putInt(dimKey(targetThemeId), getDimPercent(sourceThemeId));
+    editor.putInt(modeKey(targetThemeId), getWallpaperMode(sourceThemeId));
+    editor.putInt(keyAlphaKey(targetThemeId), getKeyAlphaPercent(sourceThemeId));
+    editor.putInt(rotationKey(targetThemeId), getWallpaperRotationDegrees(sourceThemeId));
+    editor.putBoolean(matchKeyShapeKey(targetThemeId), isMatchKeyShapeEnabled(sourceThemeId));
     editor.remove(invalidKey(targetThemeId));
     markWallpaperChanged(targetThemeId, editor);
     editor.apply();
@@ -147,6 +247,7 @@ public class KeyboardWallpaperOverrideStore {
       @NonNull String themeId, @NonNull Uri sourceUri, int maxWidth, int maxHeight)
       throws IOException {
     final ContentResolver resolver = appContext.getContentResolver();
+    final int exifRotationDegrees = readExifRotationDegrees(resolver, sourceUri);
     final Bitmap decoded =
         decodeDownscaledBitmap(resolver, sourceUri, Math.max(1, maxWidth), Math.max(1, maxHeight));
     if (decoded == null) {
@@ -156,7 +257,8 @@ public class KeyboardWallpaperOverrideStore {
     final File target = getWallpaperFile(themeId);
     final FileOutputStream output = new FileOutputStream(target);
     try {
-      if (!decoded.compress(Bitmap.CompressFormat.WEBP, 90, output)) {
+      final int quality = isHighQualityImportEnabled() ? 100 : 90;
+      if (!decoded.compress(Bitmap.CompressFormat.WEBP, quality, output)) {
         throw new IOException("Failed to write wallpaper for theme " + themeId);
       }
     } finally {
@@ -170,8 +272,46 @@ public class KeyboardWallpaperOverrideStore {
 
     final SharedPreferences.Editor editor = prefs.edit();
     editor.remove(invalidKey(themeId));
+    if (exifRotationDegrees != 0) {
+      editor.putInt(rotationKey(themeId), exifRotationDegrees);
+    } else {
+      editor.remove(rotationKey(themeId));
+    }
     markWallpaperChanged(themeId, editor);
     editor.apply();
+  }
+
+  private static int readExifRotationDegrees(@NonNull ContentResolver resolver, @NonNull Uri uri) {
+    // Best-effort: framework ExifInterface exists from API 24+. Use reflection so we don't risk
+    // class-verification issues on older Android versions.
+    if (Build.VERSION.SDK_INT < 24) return 0;
+
+    try (InputStream in = resolver.openInputStream(uri)) {
+      if (in == null) return 0;
+
+      final Class<?> exifClass = Class.forName("android.media.ExifInterface");
+      final Constructor<?> ctor = exifClass.getConstructor(InputStream.class);
+      final Object exif = ctor.newInstance(in);
+
+      final Method getAttributeInt =
+          exifClass.getMethod("getAttributeInt", String.class, int.class);
+      final int orientation = (int) getAttributeInt.invoke(exif, "Orientation", 1 /*normal*/);
+      switch (orientation) {
+        case 3: // ORIENTATION_ROTATE_180
+        case 4: // ORIENTATION_FLIP_VERTICAL (mirror unsupported; keep rotation)
+          return 180;
+        case 6: // ORIENTATION_ROTATE_90
+        case 5: // ORIENTATION_TRANSPOSE (mirror unsupported; keep rotation)
+          return 90;
+        case 8: // ORIENTATION_ROTATE_270
+        case 7: // ORIENTATION_TRANSVERSE (mirror unsupported; keep rotation)
+          return 270;
+        default:
+          return 0;
+      }
+    } catch (Exception ignored) {
+      return 0;
+    }
   }
 
   private static Bitmap decodeDownscaledBitmap(
@@ -252,6 +392,30 @@ public class KeyboardWallpaperOverrideStore {
     if (value < 0) return 0;
     if (value > 100) return 100;
     return value;
+  }
+
+  private static int normalizeMode(int mode) {
+    switch (mode) {
+      case WALLPAPER_MODE_BACKGROUND_KEY_TINT:
+      case WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE:
+      case WALLPAPER_MODE_BACKGROUND_ONLY:
+        return mode;
+      default:
+        return WALLPAPER_MODE_BACKGROUND_ONLY;
+    }
+  }
+
+  public static int normalizeRotationDegrees(int rotationDegrees) {
+    final int normalized = ((rotationDegrees % 360) + 360) % 360;
+    switch (normalized) {
+      case 0:
+      case 90:
+      case 180:
+      case 270:
+        return normalized;
+      default:
+        return 0;
+    }
   }
 
   private static String hashToFileName(@NonNull String raw) {

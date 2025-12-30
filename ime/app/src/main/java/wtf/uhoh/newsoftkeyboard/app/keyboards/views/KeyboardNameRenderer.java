@@ -1,7 +1,6 @@
 package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
 import android.graphics.Paint;
-import android.graphics.Paint.FontMetrics;
 import android.graphics.Typeface;
 import android.text.TextUtils;
 
@@ -12,8 +11,6 @@ import android.text.TextUtils;
  * paint/metrics for drawing it.
  */
 final class KeyboardNameRenderer {
-
-  private FontMetrics keyboardNameFontMetrics;
 
   CharSequence applyKeyboardNameIfNeeded(
       CharSequence currentLabel,
@@ -26,12 +23,8 @@ final class KeyboardNameRenderer {
     return currentLabel;
   }
 
-  FontMetrics preparePaintForKeyboardName(Paint paint, float textSize) {
+  void preparePaintForKeyboardName(Paint paint, float textSize) {
     paint.setTextSize(textSize);
     paint.setTypeface(Typeface.DEFAULT_BOLD);
-    if (keyboardNameFontMetrics == null) {
-      keyboardNameFontMetrics = paint.getFontMetrics();
-    }
-    return keyboardNameFontMetrics;
   }
 }

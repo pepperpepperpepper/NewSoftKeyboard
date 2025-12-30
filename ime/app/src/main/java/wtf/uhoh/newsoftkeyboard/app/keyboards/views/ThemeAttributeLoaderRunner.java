@@ -1,16 +1,24 @@
 package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
+import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
 import java.util.HashSet;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperResolver;
 import wtf.uhoh.newsoftkeyboard.overlay.ThemeOverlayCombiner;
 import wtf.uhoh.newsoftkeyboard.overlay.ThemeResourcesHolder;
 
 /** Applies theme attributes with overlay-aware host wiring. */
 final class ThemeAttributeLoaderRunner {
+
+  private final KeyboardWallpaperResolver keyboardWallpaperResolver;
+
+  ThemeAttributeLoaderRunner(@NonNull Context context) {
+    keyboardWallpaperResolver = new KeyboardWallpaperResolver(context);
+  }
 
   void applyThemeAttributes(
       KeyboardViewBase host, ThemeOverlayCombiner overlayCombiner, KeyboardTheme theme) {
@@ -19,6 +27,11 @@ final class ThemeAttributeLoaderRunner {
     ThemeAttributeLoader themeAttributeLoader =
         new ThemeAttributeLoader(new HostImpl(host, overlayCombiner));
     themeAttributeLoader.loadThemeAttributes(theme, doneAttrs, padding);
+
+    final Drawable photoOverride = keyboardWallpaperResolver.resolvePhotoOverrideIfAny(theme);
+    if (photoOverride != null) {
+      host.setBackground(photoOverride);
+    }
   }
 
   private static final class HostImpl implements ThemeAttributeLoader.Host {

@@ -65,6 +65,7 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
   @Override
   public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
+    insertCustomizeRow(view);
     mSelectedKeyboardView = view.findViewById(R.id.demo_keyboard_view);
 
     mApplyPrefs =
@@ -101,6 +102,25 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
         .findViewById(R.id.theme_app_demo_whatsapp)
         .setOnClickListener(this::onDemoAppClicked);
     demoAppsRoot.findViewById(R.id.theme_app_demo_gmail).setOnClickListener(this::onDemoAppClicked);
+  }
+
+  private void insertCustomizeRow(@NonNull View view) {
+    final ViewGroup root = view.findViewById(R.id.add_on_selection_root);
+    if (root == null) return;
+
+    final View listForeground = view.findViewById(R.id.list_foreground);
+    final int listIndex = listForeground != null ? root.indexOfChild(listForeground) : -1;
+    if (listIndex < 0) return;
+
+    final View customizeRow =
+        getLayoutInflater().inflate(R.layout.keyboard_theme_selector_customize_row, root, false);
+    customizeRow.setOnClickListener(
+        ignored ->
+            Navigation.findNavController(view)
+                .navigate(
+                    KeyboardThemeSelectorFragmentDirections
+                        .actionKeyboardThemeSelectorFragmentToKeyboardThemeTweaksFragment()));
+    root.addView(customizeRow, listIndex);
   }
 
   private void onDemoAppClicked(View view) {

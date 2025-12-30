@@ -32,6 +32,8 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
   private OverlyDataCreator mOverlyDataCreator;
   private String mLastOverlayPackage = "";
   protected KeyboardTheme mCurrentTheme;
+  private boolean mApplyRemoteAppColors;
+  @NonNull private OverlayData mCurrentOverlayData = INVALID_OVERLAY_DATA;
   private KeyboardWallpaperResolver keyboardWallpaperResolver;
   private SharedPreferences mWallpaperPrefsNotToUse;
   private final SharedPreferences.OnSharedPreferenceChangeListener mWallpaperPrefListener =
@@ -43,16 +45,19 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
         final String themeId = theme.getId();
         if (key.equals(KeyboardWallpaperOverrideStore.dimKey(themeId))
             || key.equals(KeyboardWallpaperOverrideStore.changeKey(themeId))) {
-          inputViewContainer.post(() -> applyKeyboardWallpaper(inputViewContainer));
+          inputViewContainer.post(
+              () -> {
+                applyKeyboardWallpaper(inputViewContainer);
+                // Re-apply theme to update photo background/dim on the actual keyboard view.
+                inputViewContainer.setKeyboardTheme(theme);
+                inputViewContainer.setThemeOverlay(mCurrentOverlayData);
+              });
         }
       };
 
   private static Map<String, OverlayData> createOverridesForOverlays() {
     return Collections.emptyMap();
   }
-
-  private boolean mApplyRemoteAppColors;
-  @NonNull private OverlayData mCurrentOverlayData = INVALID_OVERLAY_DATA;
 
   private boolean isApplyRemoteAppColorsEnabled() {
     return prefs()
@@ -195,7 +200,8 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
   }
 
   private void applyKeyboardWallpaper(@NonNull KeyboardViewContainerView inputViewContainer) {
-    inputViewContainer.setBackground(keyboardWallpaperResolver.resolveImeWallpaper(mCurrentTheme));
+    inputViewContainer.setBackground(
+        keyboardWallpaperResolver.resolveThemeWallpaperOrFallback(mCurrentTheme));
   }
 
   private static class EmptyOverlayData extends OverlayDataImpl {

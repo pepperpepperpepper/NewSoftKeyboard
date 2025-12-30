@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-permission android:name="wtf.uhoh.newsoftkeyboard.permission.INTERNAL_TEST_HARNESS" />
+
     <application>
         <!-- Test-only add-on receiver to verify discovery under legacy namespaces used by real add-on packs. -->
         <receiver

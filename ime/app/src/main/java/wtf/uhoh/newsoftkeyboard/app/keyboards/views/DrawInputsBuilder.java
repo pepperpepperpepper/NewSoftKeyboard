@@ -7,6 +7,8 @@ import java.util.Locale;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyDrawableStateProvider;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperResolver;
 import wtf.uhoh.newsoftkeyboard.overlay.ThemeOverlayCombiner;
 import wtf.uhoh.newsoftkeyboard.overlay.ThemeResourcesHolder;
 
@@ -14,6 +16,7 @@ import wtf.uhoh.newsoftkeyboard.overlay.ThemeResourcesHolder;
 final class DrawInputsBuilder {
 
   private final ThemeOverlayCombiner themeOverlayCombiner;
+  private final KeyboardWallpaperResolver keyboardWallpaperResolver;
   private final DrawDecisions drawDecisions;
   private final HintLayoutCalculator hintLayoutCalculator;
   private final KeyboardNameHintController keyboardNameHintController;
@@ -21,11 +24,13 @@ final class DrawInputsBuilder {
 
   DrawInputsBuilder(
       ThemeOverlayCombiner themeOverlayCombiner,
+      KeyboardWallpaperResolver keyboardWallpaperResolver,
       DrawDecisions drawDecisions,
       HintLayoutCalculator hintLayoutCalculator,
       KeyboardNameHintController keyboardNameHintController,
       DirtyRegionDecider dirtyRegionDecider) {
     this.themeOverlayCombiner = themeOverlayCombiner;
+    this.keyboardWallpaperResolver = keyboardWallpaperResolver;
     this.drawDecisions = drawDecisions;
     this.hintLayoutCalculator = hintLayoutCalculator;
     this.keyboardNameHintController = keyboardNameHintController;
@@ -35,11 +40,13 @@ final class DrawInputsBuilder {
   DrawInputs build(
       Canvas canvas,
       Rect dirtyRect,
+      @Nullable KeyboardTheme theme,
       KeyboardDefinition keyboard,
       CharSequence keyboardName,
       Keyboard.Key[] keys,
       @Nullable Keyboard.Key invalidKey,
       Rect clipRegion,
+      Rect keyboardViewBounds,
       int paddingLeft,
       int paddingTop,
       float keyboardNameTextSize,
@@ -77,6 +84,9 @@ final class DrawInputsBuilder {
         dirtyRegionDecider.shouldDrawSingleKey(
             canvas, invalidKey, clipRegion, paddingLeft, paddingTop);
 
+    final KeyboardWallpaperResolver.KeyFaceOverlay keyFaceOverlay =
+        keyboardWallpaperResolver.resolveKeyFaceOverlay(theme, keyboardViewBounds);
+
     return new DrawInputs(
         keyboard,
         keyboardName,
@@ -108,6 +118,9 @@ final class DrawInputsBuilder {
         textCaseType,
         keyDetector,
         keyTextSize,
+        keyFaceOverlay.mode(),
+        keyFaceOverlay.matchKeyShape(),
+        keyFaceOverlay.paint(),
         drawableStatesProvider);
   }
 }

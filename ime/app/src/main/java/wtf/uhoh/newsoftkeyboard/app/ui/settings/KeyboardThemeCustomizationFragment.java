@@ -1,5 +1,6 @@
 package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -9,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.preference.CheckBoxPreference;
+import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
@@ -22,6 +25,7 @@ import java.util.List;
 import net.evendanan.pixel.UiUtils;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.app.debug.TestInputActivity;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
 import wtf.uhoh.newsoftkeyboard.rx.RxSchedulers;
@@ -34,7 +38,13 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
   private Disposable previewDisposable;
 
   private Preference pickPhotoPref;
+  private CheckBoxPreference highQualityImportPref;
   private SeekBarPreference dimPref;
+  private ListPreference wallpaperModePref;
+  private SeekBarPreference keyOpacityPref;
+  private CheckBoxPreference matchKeyShapePref;
+  private Preference tryNowPref;
+  private Preference rotatePhotoPref;
   private Preference resetPref;
   private Preference applyToAllPref;
 
@@ -66,6 +76,37 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
         });
     background.addPreference(pickPhotoPref);
 
+    highQualityImportPref = new CheckBoxPreference(context);
+    highQualityImportPref.setTitle(
+        R.string.keyboard_theme_wallpaper_customization_high_quality_title);
+    highQualityImportPref.setSummary(
+        R.string.keyboard_theme_wallpaper_customization_high_quality_summary);
+    highQualityImportPref.setChecked(wallpaperStore.isHighQualityImportEnabled());
+    highQualityImportPref.setOnPreferenceChangeListener(
+        (ignored, newValue) -> {
+          wallpaperStore.setHighQualityImportEnabled(Boolean.TRUE.equals(newValue));
+          return true;
+        });
+    background.addPreference(highQualityImportPref);
+
+    rotatePhotoPref = new Preference(context);
+    rotatePhotoPref.setTitle(R.string.keyboard_theme_wallpaper_customization_rotate_title);
+    rotatePhotoPref.setSummary(R.string.keyboard_theme_wallpaper_customization_rotate_summary);
+    rotatePhotoPref.setOnPreferenceClickListener(
+        ignored -> {
+          final KeyboardTheme theme = getCurrentTheme();
+          if (theme == null) return true;
+          wallpaperStore.rotateWallpaperClockwise90(theme.getId());
+          Toast.makeText(
+                  context,
+                  R.string.keyboard_theme_wallpaper_customization_rotate_toast,
+                  Toast.LENGTH_SHORT)
+              .show();
+          refreshState();
+          return true;
+        });
+    background.addPreference(rotatePhotoPref);
+
     dimPref = new SeekBarPreference(context);
     dimPref.setTitle(R.string.keyboard_theme_wallpaper_customization_dim_title);
     dimPref.setSummary(R.string.keyboard_theme_wallpaper_customization_dim_summary);
@@ -80,6 +121,84 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
           return true;
         });
     background.addPreference(dimPref);
+
+    wallpaperModePref = new ListPreference(context);
+    wallpaperModePref.setTitle(R.string.keyboard_theme_wallpaper_customization_mode_title);
+    final CharSequence wallpaperModeSummaryBase =
+        getText(R.string.keyboard_theme_wallpaper_customization_mode_summary);
+    wallpaperModePref.setSummaryProvider(
+        pref -> {
+          if (!(pref instanceof ListPreference lp)) return wallpaperModeSummaryBase;
+          final CharSequence entry = lp.getEntry();
+          if (entry == null) return wallpaperModeSummaryBase;
+          return wallpaperModeSummaryBase + "\n" + entry;
+        });
+    wallpaperModePref.setEntries(
+        new CharSequence[] {
+          getString(R.string.keyboard_theme_wallpaper_customization_mode_background_only),
+          getString(R.string.keyboard_theme_wallpaper_customization_mode_background_key_tint),
+          getString(R.string.keyboard_theme_wallpaper_customization_mode_background_key_texture)
+        });
+    wallpaperModePref.setEntryValues(new CharSequence[] {"0", "1", "2"});
+    wallpaperModePref.setOnPreferenceChangeListener(
+        (ignored, newValue) -> {
+          final KeyboardTheme theme = getCurrentTheme();
+          if (theme == null) return false;
+          try {
+            wallpaperStore.setWallpaperMode(
+                theme.getId(), Integer.parseInt(String.valueOf(newValue)));
+            refreshState();
+            return true;
+          } catch (NumberFormatException e) {
+            return false;
+          }
+        });
+    background.addPreference(wallpaperModePref);
+
+    keyOpacityPref = new SeekBarPreference(context);
+    keyOpacityPref.setTitle(R.string.keyboard_theme_wallpaper_customization_key_opacity_title);
+    final CharSequence keyOpacitySummaryBase =
+        getText(R.string.keyboard_theme_wallpaper_customization_key_opacity_summary);
+    keyOpacityPref.setSummaryProvider(
+        pref -> {
+          if (!(pref instanceof SeekBarPreference seek)) return keyOpacitySummaryBase;
+          return keyOpacitySummaryBase + "\n" + seek.getValue() + "%";
+        });
+    keyOpacityPref.setMin(0);
+    keyOpacityPref.setMax(100);
+    keyOpacityPref.setShowSeekBarValue(true);
+    keyOpacityPref.setOnPreferenceChangeListener(
+        (ignored, newValue) -> {
+          final KeyboardTheme theme = getCurrentTheme();
+          if (theme == null) return false;
+          wallpaperStore.setKeyAlphaPercent(theme.getId(), (Integer) newValue);
+          return true;
+        });
+    background.addPreference(keyOpacityPref);
+
+    matchKeyShapePref = new CheckBoxPreference(context);
+    matchKeyShapePref.setTitle(
+        R.string.keyboard_theme_wallpaper_customization_match_key_shape_title);
+    matchKeyShapePref.setSummary(
+        R.string.keyboard_theme_wallpaper_customization_match_key_shape_summary);
+    matchKeyShapePref.setOnPreferenceChangeListener(
+        (ignored, newValue) -> {
+          final KeyboardTheme theme = getCurrentTheme();
+          if (theme == null) return false;
+          wallpaperStore.setMatchKeyShapeEnabled(theme.getId(), Boolean.TRUE.equals(newValue));
+          return true;
+        });
+    background.addPreference(matchKeyShapePref);
+
+    tryNowPref = new Preference(context);
+    tryNowPref.setTitle(R.string.keyboard_theme_wallpaper_customization_try_now_title);
+    tryNowPref.setSummary(R.string.keyboard_theme_wallpaper_customization_try_now_summary);
+    tryNowPref.setOnPreferenceClickListener(
+        ignored -> {
+          startActivity(new Intent(context, TestInputActivity.class));
+          return true;
+        });
+    background.addPreference(tryNowPref);
 
     resetPref = new Preference(context);
     resetPref.setTitle(R.string.keyboard_theme_wallpaper_customization_reset_title);
@@ -176,11 +295,17 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
     if (theme == null) return;
 
     final String themeId = theme.getId();
+    final boolean importInProgress = importDisposable != null && !importDisposable.isDisposed();
     final boolean hasPhoto = wallpaperStore.hasWallpaper(themeId);
     final boolean isInvalid = wallpaperStore.isWallpaperInvalid(themeId);
     final int dim = wallpaperStore.getDimPercent(themeId);
+    final int mode = wallpaperStore.getWallpaperMode(themeId);
+    final int keyOpacityPercent = wallpaperStore.getKeyAlphaPercent(themeId);
+    final int rotationDegrees = wallpaperStore.getWallpaperRotationDegrees(themeId);
+    final boolean matchKeyShape = wallpaperStore.isMatchKeyShapeEnabled(themeId);
 
     if (pickPhotoPref != null) {
+      pickPhotoPref.setEnabled(!importInProgress);
       pickPhotoPref.setSummary(
           getString(
               isInvalid
@@ -189,24 +314,68 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
                       ? R.string.keyboard_theme_wallpaper_customization_pick_summary_set
                       : R.string.keyboard_theme_wallpaper_customization_pick_summary));
     }
-    refreshPhotoPreview(themeId, hasPhoto, isInvalid, dim);
+    refreshPhotoPreview(themeId, hasPhoto, isInvalid, dim, rotationDegrees);
+
+    if (highQualityImportPref != null) {
+      highQualityImportPref.setChecked(wallpaperStore.isHighQualityImportEnabled());
+      highQualityImportPref.setEnabled(!importInProgress);
+    }
 
     if (dimPref != null) {
-      dimPref.setEnabled(hasPhoto && !isInvalid);
+      dimPref.setEnabled(hasPhoto && !isInvalid && !importInProgress);
       dimPref.setValue(dim);
     }
 
+    if (rotatePhotoPref != null) {
+      final boolean enabled = hasPhoto && !isInvalid && !importInProgress;
+      rotatePhotoPref.setEnabled(enabled);
+      rotatePhotoPref.setVisible(enabled);
+    }
+
+    if (wallpaperModePref != null) {
+      final boolean enabled = hasPhoto && !isInvalid && !importInProgress;
+      wallpaperModePref.setEnabled(enabled);
+      wallpaperModePref.setVisible(enabled);
+      wallpaperModePref.setValue(String.valueOf(mode));
+    }
+
+    if (keyOpacityPref != null) {
+      final boolean enabled =
+          hasPhoto
+              && !isInvalid
+              && !importInProgress
+              && mode != KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY;
+      keyOpacityPref.setEnabled(enabled);
+      keyOpacityPref.setVisible(enabled);
+      keyOpacityPref.setValue(keyOpacityPercent);
+    }
+
+    if (matchKeyShapePref != null) {
+      final boolean enabled =
+          hasPhoto
+              && !isInvalid
+              && !importInProgress
+              && mode == KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE;
+      matchKeyShapePref.setEnabled(enabled);
+      matchKeyShapePref.setVisible(enabled);
+      matchKeyShapePref.setChecked(matchKeyShape);
+    }
+
     if (resetPref != null) {
-      resetPref.setEnabled(hasPhoto || isInvalid || dim > 0);
+      resetPref.setEnabled(!importInProgress && (hasPhoto || isInvalid || dim > 0));
     }
 
     if (applyToAllPref != null) {
-      applyToAllPref.setEnabled(hasPhoto && !isInvalid);
+      applyToAllPref.setEnabled(!importInProgress && hasPhoto && !isInvalid);
     }
   }
 
   private void refreshPhotoPreview(
-      @NonNull String themeId, boolean hasPhoto, boolean isInvalid, int dimPercent) {
+      @NonNull String themeId,
+      boolean hasPhoto,
+      boolean isInvalid,
+      int dimPercent,
+      int rotationDegrees) {
     if (pickPhotoPref == null) return;
 
     if (!hasPhoto || isInvalid) {
@@ -234,14 +403,16 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
 
     final var context = requireContext();
     final float density = context.getResources().getDisplayMetrics().density;
-    final int sizePx = Math.max(48, Math.round(48f * density));
+    final int sizePx = Math.max(64, Math.round(64f * density));
     final int clampedDim = Math.max(0, Math.min(100, dimPercent));
+    final int normalizedRotation =
+        KeyboardWallpaperOverrideStore.normalizeRotationDegrees(rotationDegrees);
 
     previewDisposable =
         Single.fromCallable(
                 () ->
                     KeyboardWallpaperPreview.create(
-                        context.getResources(), file, sizePx, clampedDim))
+                        context.getResources(), file, sizePx, clampedDim, normalizedRotation))
             .subscribeOn(RxSchedulers.background())
             .observeOn(RxSchedulers.mainThread())
             .subscribe(
@@ -282,6 +453,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
       pickPhotoPref.setEnabled(false);
       pickPhotoPref.setSummary(R.string.keyboard_theme_wallpaper_customization_pick_summary_saving);
     }
+    if (highQualityImportPref != null) highQualityImportPref.setEnabled(false);
     if (dimPref != null) dimPref.setEnabled(false);
     if (resetPref != null) resetPref.setEnabled(false);
     if (applyToAllPref != null) applyToAllPref.setEnabled(false);
@@ -430,20 +602,42 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
         @NonNull android.content.res.Resources resources,
         @NonNull File file,
         int targetSizePx,
-        int dimPercent) {
+        int dimPercent,
+        int rotationDegrees) {
       final android.graphics.Bitmap bitmap = decodeSquareThumbnail(file, targetSizePx);
       if (bitmap == null) return null;
 
+      final android.graphics.Bitmap rotated = rotateBitmap(bitmap, rotationDegrees);
+      if (rotated != bitmap) bitmap.recycle();
+
       if (dimPercent > 0) {
-        final android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+        final android.graphics.Canvas canvas = new android.graphics.Canvas(rotated);
         final android.graphics.Paint paint = new android.graphics.Paint();
         paint.setColor(android.graphics.Color.BLACK);
         paint.setAlpha(Math.round(255f * (dimPercent / 100f)));
-        canvas.drawRect(0, 0, bitmap.getWidth(), bitmap.getHeight(), paint);
+        canvas.drawRect(0, 0, rotated.getWidth(), rotated.getHeight(), paint);
       }
 
       return new KeyboardWallpaperPreview(
-          new android.graphics.drawable.BitmapDrawable(resources, bitmap));
+          new android.graphics.drawable.BitmapDrawable(resources, rotated));
+    }
+
+    @NonNull
+    private static android.graphics.Bitmap rotateBitmap(
+        @NonNull android.graphics.Bitmap bitmap, int rotationDegrees) {
+      final int rotation = KeyboardWallpaperOverrideStore.normalizeRotationDegrees(rotationDegrees);
+      if (rotation == 0) return bitmap;
+
+      final android.graphics.Matrix matrix = new android.graphics.Matrix();
+      matrix.postRotate(rotation);
+      try {
+        final android.graphics.Bitmap rotated =
+            android.graphics.Bitmap.createBitmap(
+                bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        return rotated != null ? rotated : bitmap;
+      } catch (OutOfMemoryError oom) {
+        return bitmap;
+      }
     }
 
     @Nullable

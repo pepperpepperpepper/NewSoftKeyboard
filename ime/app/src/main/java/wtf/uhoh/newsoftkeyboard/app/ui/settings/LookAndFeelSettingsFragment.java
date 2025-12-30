@@ -21,6 +21,7 @@ import wtf.uhoh.newsoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
 
   private static final String KEY_THEME_SELECTOR = "nav:theme_selector";
+  private static final String KEY_KEYBOARD_WALLPAPER = "nav:keyboard_theme_wallpaper_customization";
   private static final String KEY_NIGHT_MODE_SETTINGS = "nav:night_mode_settings";
 
   private static final String KEY_TOOLBAR_TOP_ROW = "nav:toolbar_top_row_selector";
@@ -37,6 +38,7 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
     bindNav(KEY_THEME_SELECTOR, R.id.keyboardThemeSelectorFragment);
+    bindNav(KEY_KEYBOARD_WALLPAPER, R.id.keyboardThemeCustomizationFragment);
     bindNav(KEY_NIGHT_MODE_SETTINGS, R.id.nightModeSettingsFragment);
     bindNav(KEY_TOOLBAR_TOP_ROW, R.id.topRowAddOnBrowserFragment);
     bindNav(KEY_TOOLBAR_SWIPE_ROW, R.id.extensionAddOnBrowserFragment);

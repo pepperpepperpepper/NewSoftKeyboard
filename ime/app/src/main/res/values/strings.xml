@@ -36,6 +36,8 @@
     <string name="search_market_for_quick_key_addons">Get more <i>Quick-Text</i> add-ons at the app store…</string>
     
     <string name="keyboard_theme_tweak_group">Tweaks</string>
+    <string name="keyboard_theme_customize_current_title">Customize current theme</string>
+    <string name="keyboard_theme_customize_current_summary">Wallpaper, key previews, and size.</string>
     <string name="keyboard_theme_wallpaper_customization_title">Background photo (current theme)</string>
     <string name="keyboard_theme_wallpaper_customization_summary">Pick a background photo behind the keyboard for the currently selected theme.</string>
     <string name="keyboard_theme_wallpaper_customization_pick_title">Pick background photo</string>
@@ -43,8 +45,23 @@
     <string name="keyboard_theme_wallpaper_customization_pick_summary_invalid">Previous background photo could not be loaded. Tap to choose a new one.</string>
     <string name="keyboard_theme_wallpaper_customization_pick_summary_set">Background photo is set. Tap to change it.</string>
     <string name="keyboard_theme_wallpaper_customization_pick_summary_saving">Saving background photo…</string>
+    <string name="keyboard_theme_wallpaper_customization_rotate_title">Rotate photo</string>
+    <string name="keyboard_theme_wallpaper_customization_rotate_summary">Rotate the selected photo 90° clockwise.</string>
+    <string name="keyboard_theme_wallpaper_customization_high_quality_title">High quality (larger file)</string>
+    <string name="keyboard_theme_wallpaper_customization_high_quality_summary">Improves photo quality (especially gradients), but uses more storage. Applies the next time you pick a photo.</string>
     <string name="keyboard_theme_wallpaper_customization_dim_title">Dim background</string>
     <string name="keyboard_theme_wallpaper_customization_dim_summary">Increase dimming to keep key labels readable.</string>
+    <string name="keyboard_theme_wallpaper_customization_mode_title">Wallpaper mode</string>
+    <string name="keyboard_theme_wallpaper_customization_mode_summary">Choose how the photo is applied to the keyboard.</string>
+    <string name="keyboard_theme_wallpaper_customization_mode_background_only">Background only</string>
+    <string name="keyboard_theme_wallpaper_customization_mode_background_key_tint">Background + key tint</string>
+    <string name="keyboard_theme_wallpaper_customization_mode_background_key_texture">Background + key texture</string>
+    <string name="keyboard_theme_wallpaper_customization_key_opacity_title">Key opacity</string>
+    <string name="keyboard_theme_wallpaper_customization_key_opacity_summary">Control how strong the photo appears on key faces.</string>
+    <string name="keyboard_theme_wallpaper_customization_match_key_shape_title">Match key shape (slower)</string>
+    <string name="keyboard_theme_wallpaper_customization_match_key_shape_summary">Clip the photo texture to match the theme’s key background shape. May impact performance.</string>
+    <string name="keyboard_theme_wallpaper_customization_try_now_title">Try now</string>
+    <string name="keyboard_theme_wallpaper_customization_try_now_summary">Open a preview field to test the keyboard with this theme.</string>
     <string name="keyboard_theme_wallpaper_customization_reset_title">Reset background photo</string>
     <string name="keyboard_theme_wallpaper_customization_reset_summary">Remove the photo and use the theme’s default background.</string>
     <string name="keyboard_theme_wallpaper_customization_pick_toast">Background photo saved for this theme.</string>
@@ -53,6 +70,7 @@
     <string name="keyboard_theme_wallpaper_customization_pick_failed_permission">New Soft Keyboard does not have permission to read that file. Try a different photo.</string>
     <string name="keyboard_theme_wallpaper_customization_pick_failed_too_large">That photo is too large to process on this device. Try a smaller image.</string>
     <string name="keyboard_theme_wallpaper_customization_pick_failed_generic">Could not read that photo. Try a different image.</string>
+    <string name="keyboard_theme_wallpaper_customization_rotate_toast">Rotated background photo.</string>
     <string name="keyboard_theme_wallpaper_customization_reset_toast">Background photo removed for this theme.</string>
     <string name="keyboard_theme_wallpaper_customization_apply_to_all_title">Apply to all themes</string>
     <string name="keyboard_theme_wallpaper_customization_apply_to_all_summary">Copy this background photo to every keyboard theme (overwrites existing theme photos).</string>

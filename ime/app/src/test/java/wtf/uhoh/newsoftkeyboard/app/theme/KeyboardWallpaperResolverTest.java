@@ -1,17 +1,22 @@
 package wtf.uhoh.newsoftkeyboard.app.theme;
 
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.Arrays;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import wtf.uhoh.newsoftkeyboard.R;
@@ -87,6 +92,100 @@ public class KeyboardWallpaperResolverTest {
 
     assertTrue(store.isWallpaperInvalid(themeId));
     assertFalse(store.hasWallpaper(themeId));
+  }
+
+  @Test
+  public void testResolvesKeyFaceOverlayWhenEnabled() throws Exception {
+    final Context context = getApplicationContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final KeyboardWallpaperResolver resolver = new KeyboardWallpaperResolver(context);
+
+    final String themeId = "test-theme-key-overlay";
+    final KeyboardTheme theme = createLocalTheme(context, themeId);
+
+    writeSmallBitmap(store.getWallpaperFile(themeId), Color.RED);
+    store.setWallpaperMode(
+        themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
+    store.setKeyAlphaPercent(themeId, 25);
+    store.setDimPercent(themeId, 10);
+
+    final Rect viewBounds = new Rect(0, 0, 480, 320);
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds);
+
+    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT, overlay.mode());
+    assertNotNull(overlay.paint());
+    assertFalse(overlay.matchKeyShape());
+
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds);
+    assertSame(overlay, overlay2);
+    assertSame(overlay.paint(), overlay2.paint());
+  }
+
+  @Test
+  public void testKeyFaceOverlayReportsMatchKeyShapeWhenEnabledAndTextureMode() throws Exception {
+    final Context context = getApplicationContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final KeyboardWallpaperResolver resolver = new KeyboardWallpaperResolver(context);
+
+    final String themeId = "test-theme-key-overlay-mask";
+    final KeyboardTheme theme = createLocalTheme(context, themeId);
+
+    writeSmallBitmap(store.getWallpaperFile(themeId), Color.MAGENTA);
+    store.setWallpaperMode(
+        themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE);
+    store.setKeyAlphaPercent(themeId, 25);
+    store.setMatchKeyShapeEnabled(themeId, true);
+
+    final Rect viewBounds = new Rect(0, 0, 480, 320);
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds);
+
+    assertEquals(
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE, overlay.mode());
+    assertNotNull(overlay.paint());
+    assertTrue(overlay.matchKeyShape());
+  }
+
+  @Test
+  public void testKeyFaceOverlayShaderMatrixUpdatesWhenRotationChanges() throws Exception {
+    final Context context = getApplicationContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final KeyboardWallpaperResolver resolver = new KeyboardWallpaperResolver(context);
+
+    final String themeId = "test-theme-key-overlay-rotate";
+    final KeyboardTheme theme = createLocalTheme(context, themeId);
+
+    writeSmallBitmap(store.getWallpaperFile(themeId), Color.GREEN);
+    store.setWallpaperMode(
+        themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
+    store.setKeyAlphaPercent(themeId, 25);
+
+    final Rect viewBounds = new Rect(0, 0, 480, 320);
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds);
+    assertNotNull(overlay.paint());
+    assertNotNull(overlay.paint().getShader());
+
+    final Matrix m1 = new Matrix();
+    overlay.paint().getShader().getLocalMatrix(m1);
+    final float[] v1 = new float[9];
+    m1.getValues(v1);
+
+    store.setWallpaperRotationDegrees(themeId, 90);
+
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds);
+    assertNotNull(overlay2.paint());
+    assertNotNull(overlay2.paint().getShader());
+
+    final Matrix m2 = new Matrix();
+    overlay2.paint().getShader().getLocalMatrix(m2);
+    final float[] v2 = new float[9];
+    m2.getValues(v2);
+
+    assertFalse(Arrays.equals(v1, v2));
   }
 
   private static KeyboardTheme createLocalTheme(Context context, String themeId) {

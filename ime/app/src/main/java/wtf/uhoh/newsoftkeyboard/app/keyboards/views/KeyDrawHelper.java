@@ -3,10 +3,12 @@ package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.api.KeyCodes;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardKey;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
 
 /**
  * Renders keys for {@link KeyboardViewBase}. Keeps the heavy draw loop out of the view class while
@@ -100,6 +102,39 @@ final class KeyDrawHelper {
       canvas.translate(key.x + inputs.kbdPaddingLeft, key.y + inputs.kbdPaddingTop);
       inputs.keyBackground.draw(canvas);
 
+      if (inputs.keyFaceWallpaperOverlayPaint != null) {
+        switch (inputs.keyFaceWallpaperOverlayMode) {
+          case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT:
+            canvas.drawRect(0f, 0f, key.width, key.height, inputs.keyFaceWallpaperOverlayPaint);
+            break;
+          case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE:
+            if (inputs.keyFaceWallpaperOverlayMatchKeyShape) {
+              drawKeyTextureOverlayWithMask(
+                  canvas,
+                  inputs.keyBackground,
+                  key.width,
+                  key.height,
+                  inputs.keyFaceWallpaperOverlayPaint);
+            } else {
+              final float radius =
+                  KeyBackgroundCornerRadiusResolver.resolveCornerRadiusOrFallback(
+                      inputs.keyBackground, key.width, key.height);
+              canvas.drawRoundRect(
+                  0f,
+                  0f,
+                  key.width,
+                  key.height,
+                  radius,
+                  radius,
+                  inputs.keyFaceWallpaperOverlayPaint);
+            }
+            break;
+          case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY:
+          default:
+            break;
+        }
+      }
+
       label =
           keyIconDrawer.drawIconIfNeeded(
               canvas,
@@ -128,7 +163,8 @@ final class KeyDrawHelper {
             keyTextPaintSetter,
             labelTextPaintSetter,
             (p, l, width) ->
-                labelPaintConfigurator.adjustTextSizeForLabel(p, l, width, inputs.keyTextSize),
+                labelPaintConfigurator.adjustTextSizeForLabel(
+                    p, l, width, keyIsSpace ? inputs.keyboardNameTextSize : inputs.keyTextSize),
             inputs.shadowRadius,
             inputs.shadowOffsetX,
             inputs.shadowOffsetY,
@@ -158,5 +194,27 @@ final class KeyDrawHelper {
 
       canvas.translate(-key.x - inputs.kbdPaddingLeft, -key.y - inputs.kbdPaddingTop);
     }
+  }
+
+  private static void drawKeyTextureOverlayWithMask(
+      @NonNull Canvas canvas,
+      @NonNull Drawable keyBackground,
+      int keyWidth,
+      int keyHeight,
+      @NonNull Paint overlayPaint) {
+    final var mask =
+        KeyBackgroundAlphaMaskCache.resolveAlphaMask(keyBackground, keyWidth, keyHeight);
+    if (mask == null) {
+      final float radius =
+          KeyBackgroundCornerRadiusResolver.resolveCornerRadiusOrFallback(
+              keyBackground, keyWidth, keyHeight);
+      canvas.drawRoundRect(0f, 0f, keyWidth, keyHeight, radius, radius, overlayPaint);
+      return;
+    }
+
+    final int saveCount = canvas.saveLayer(0f, 0f, keyWidth, keyHeight, null);
+    canvas.drawRect(0f, 0f, keyWidth, keyHeight, overlayPaint);
+    canvas.drawBitmap(mask, 0f, 0f, KeyBackgroundAlphaMaskCache.dstInPaint());
+    canvas.restoreToCount(saveCount);
   }
 }

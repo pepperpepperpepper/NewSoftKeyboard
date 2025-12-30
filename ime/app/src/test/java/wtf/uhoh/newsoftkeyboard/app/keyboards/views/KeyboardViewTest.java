@@ -18,16 +18,19 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.LayerDrawable;
 import android.view.MotionEvent;
 import android.widget.PopupWindow;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.test.core.app.ApplicationProvider;
 import com.anysoftkeyboard.api.KeyCodes;
+import java.io.FileOutputStream;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Assert;
@@ -47,6 +50,8 @@ import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardKey;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.extradraw.ExtraDraw;
 import wtf.uhoh.newsoftkeyboard.app.testing.ViewTestUtils;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemeFactory;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
+import wtf.uhoh.newsoftkeyboard.overlay.OverlayDataImpl;
 import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 import wtf.uhoh.newsoftkeyboard.testing.SharedPrefsHelper;
 
@@ -204,6 +209,36 @@ public class KeyboardViewTest extends KeyboardViewWithMiniKeyboardTest {
   public void testThemeIsNotSetInConstructor() {
     Assert.assertNull(
         new KeyboardView(mViewUnderTest.getContext(), null).getLastSetKeyboardTheme());
+  }
+
+  @Test
+  public void testWallpaperPhotoOverrideIsAppliedToKeyboardBackground() throws Exception {
+    final Context context = mViewUnderTest.getContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final KeyboardThemeFactory keyboardThemeFactory =
+        NskApplicationBase.getKeyboardThemeFactory(context);
+    final var theme = keyboardThemeFactory.getEnabledAddOn();
+    final String themeId = theme.getId();
+
+    store.clear(themeId);
+    mViewUnderTest.setKeyboardTheme(theme);
+    final Drawable baseBackground = mViewUnderTest.getBackground();
+    Assert.assertNotNull(baseBackground);
+
+    final Bitmap bitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
+    bitmap.eraseColor(Color.RED);
+    try (FileOutputStream out = new FileOutputStream(store.getWallpaperFile(themeId))) {
+      Assert.assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out));
+    } finally {
+      bitmap.recycle();
+    }
+    store.setDimPercent(themeId, 50);
+
+    // Force a theme re-apply without switching themes (theme is reference-equality cached).
+    mViewUnderTest.setThemeOverlay(new OverlayDataImpl());
+    final Drawable overrideBackground = mViewUnderTest.getBackground();
+    Assert.assertNotNull(overrideBackground);
+    Assert.assertTrue(overrideBackground instanceof LayerDrawable);
   }
 
   @Test

@@ -2,7 +2,6 @@ package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Paint.FontMetrics;
 import android.graphics.Rect;
 import android.text.Layout.Alignment;
 import android.text.Spanned;
@@ -26,9 +25,6 @@ final class KeyLabelRenderer {
     float adjust(Paint paint, CharSequence label, int width);
   }
 
-  private FontMetrics textFontMetrics;
-  private FontMetrics labelFontMetrics;
-
   void drawLabel(
       Canvas canvas,
       Paint paint,
@@ -46,27 +42,23 @@ final class KeyLabelRenderer {
       float shadowOffsetX,
       float shadowOffsetY,
       int shadowColor) {
-    final FontMetrics fm;
     if (keyIsSpace) {
-      fm = keyboardNameRenderer.preparePaintForKeyboardName(paint, keyboardNameTextSize);
+      keyboardNameRenderer.preparePaintForKeyboardName(paint, keyboardNameTextSize);
     } else if (label.length() > 1 && key.getCodesCount() < 2) {
       labelTextPaintSetter.setPaintForLabelText(paint);
-      if (labelFontMetrics == null) labelFontMetrics = paint.getFontMetrics();
-      fm = labelFontMetrics;
     } else {
       keyTextPaintSetter.setPaintToKeyText(paint);
-      if (textFontMetrics == null) textFontMetrics = paint.getFontMetrics();
-      fm = textFontMetrics;
     }
 
     if (EmojiUtils.isLabelOfEmoji(label)) {
       paint.setTextSize(1.35f * paint.getTextSize());
     }
 
-    final float labelHeight = -fm.top;
     paint.setShadowLayer(shadowRadius, shadowOffsetX, shadowOffsetY, shadowColor);
 
     final float textWidth = textSizeAdjuster.adjust(paint, label, key.width);
+    final Paint.FontMetrics fm = paint.getFontMetrics();
+    final float labelHeight = -fm.top;
 
     final float centerY =
         keyBackgroundPadding.top

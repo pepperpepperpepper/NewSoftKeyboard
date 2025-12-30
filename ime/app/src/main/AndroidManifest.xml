@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <permission
+        android:name="wtf.uhoh.newsoftkeyboard.permission.INTERNAL_TEST_HARNESS"
+        android:protectionLevel="signature" />
+
     <supports-screens
         android:anyDensity="true"
         android:largeScreens="true"
@@ -11,6 +15,7 @@
     <!-- http://d.android.com/guide/practices/screens_support.html read about legacy. -->
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="wtf.uhoh.newsoftkeyboard.permission.INTERNAL_TEST_HARNESS" />
     <!-- required for the user dictionary (long press a word in the suggestions bar) -->
     <uses-permission android:name="android.permission.READ_USER_DICTIONARY" />
     <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY" />

@@ -8,6 +8,7 @@ import io.reactivex.disposables.CompositeDisposable;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.preview.PreviewPopupTheme;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperResolver;
 import wtf.uhoh.newsoftkeyboard.overlay.ThemeOverlayCombiner;
 import wtf.uhoh.newsoftkeyboard.prefs.RxSharedPrefs;
 import wtf.uhoh.newsoftkeyboard.rx.GenericOnError;
@@ -68,6 +69,7 @@ final class KeyboardViewBaseInitializer {
     DrawInputsBuilder drawInputsBuilder =
         new DrawInputsBuilder(
             themeOverlayCombiner,
+            new KeyboardWallpaperResolver(context),
             drawDecisions,
             hintLayoutCalculator,
             keyboardNameHintController,

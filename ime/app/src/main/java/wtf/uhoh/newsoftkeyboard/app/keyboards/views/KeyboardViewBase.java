@@ -141,8 +141,7 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
   private final KeyLookup keyLookup = new KeyLookup();
   private final InputResetter inputResetter;
   private final KeyboardMeasureHelper keyboardMeasureHelper = new KeyboardMeasureHelper();
-  private final ThemeAttributeLoaderRunner themeAttributeLoaderRunner =
-      new ThemeAttributeLoaderRunner();
+  private final ThemeAttributeLoaderRunner themeAttributeLoaderRunner;
   private final ImeActionTypeResolver imeActionTypeResolver = new ImeActionTypeResolver();
   private final NextKeyboardNameResolver nextKeyboardNameResolver = new NextKeyboardNameResolver();
   private final KeyTextStyleState keyTextStyleState = new KeyTextStyleState();
@@ -161,6 +160,7 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
 
     mDisplayDensity = getResources().getDisplayMetrics().density;
     mDefaultAddOn = new DefaultAddOn(context, context);
+    themeAttributeLoaderRunner = new ThemeAttributeLoaderRunner(context);
 
     final KeyboardViewBaseInitializer.Result init =
         KeyboardViewBaseInitializer.initialize(
@@ -510,10 +510,13 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
     }
     keyboardDrawCoordinator.draw(
         canvas,
+        keyboardThemeController.lastSetTheme(),
         keyboardRenderState.keyboard,
         keyboardRenderState.keys,
         keyboardRenderState.drawableStatesProvider,
         keyboardRenderState.keyboardName,
+        getWidth(),
+        getHeight(),
         getPaddingLeft(),
         getPaddingTop());
   }

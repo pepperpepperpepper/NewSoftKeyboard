@@ -1,6 +1,7 @@
 package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
 import android.content.res.ColorStateList;
+import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
 import java.util.Locale;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyDrawableStateProvider;
@@ -40,6 +41,9 @@ final class DrawInputs {
   final int textCaseType;
   final KeyDetector keyDetector;
   final float keyTextSize;
+  final int keyFaceWallpaperOverlayMode;
+  final boolean keyFaceWallpaperOverlayMatchKeyShape;
+  final Paint keyFaceWallpaperOverlayPaint;
   final KeyDrawableStateProvider drawableStatesProvider;
 
   DrawInputs(
@@ -73,6 +77,9 @@ final class DrawInputs {
       int textCaseType,
       KeyDetector keyDetector,
       float keyTextSize,
+      int keyFaceWallpaperOverlayMode,
+      boolean keyFaceWallpaperOverlayMatchKeyShape,
+      Paint keyFaceWallpaperOverlayPaint,
       KeyDrawableStateProvider drawableStatesProvider) {
     this.keyboard = keyboard;
     this.keyboardName = keyboardName;
@@ -104,6 +111,9 @@ final class DrawInputs {
     this.textCaseType = textCaseType;
     this.keyDetector = keyDetector;
     this.keyTextSize = keyTextSize;
+    this.keyFaceWallpaperOverlayMode = keyFaceWallpaperOverlayMode;
+    this.keyFaceWallpaperOverlayMatchKeyShape = keyFaceWallpaperOverlayMatchKeyShape;
+    this.keyFaceWallpaperOverlayPaint = keyFaceWallpaperOverlayPaint;
     this.drawableStatesProvider = drawableStatesProvider;
   }
 }
