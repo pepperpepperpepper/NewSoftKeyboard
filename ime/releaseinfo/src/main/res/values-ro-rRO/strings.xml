@@ -4,6 +4,5 @@
     <string name="change_log_card_version_title_template">\u0020\u0020Ultimele modificări pentru<xliff:g id="name">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020v<xliff:g id="code">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_url">Mai mult:\u0020<xliff:g id="url">%s</xliff:g></string>
-    <string name="notification_text_testers">Aceasta este o versiune beta. Folosește-o cu grijă!</string>
     <string name="testers_version">Pentru testori!</string>
 </resources>

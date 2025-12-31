@@ -12,7 +12,6 @@
         %s</ns1:g>\u0020\u0020
     </string>
     <string name="change_log_url">Gehiago:\u0020<ns1:g id="url">%s</ns1:g></string>
-    <string name="notification_text_testers">Hau beta bertsio bat da, kontuz ibili!</string>
     <string name="testers_version">Probetarako konpilazioa!</string>
     <string name="language_root_tile">Hizkuntza</string>
     <string name="language_keyboards_settings_tile">Gaitu teklatuak eta hizkuntzak.</string>

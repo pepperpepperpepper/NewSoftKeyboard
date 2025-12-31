@@ -9,7 +9,6 @@
     <string name="how_to_pointer_title">Dobrodošli v New Soft Keyboard</string>
     <string name="change_log_card_version_title_template">\u0020\u0020Zadnje spremembe za v<ns1:g id="name">%s</ns1:g>\u0020\u0020</string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020v<ns1:g id="code">%s</ns1:g>\u0020\u0020</string>
-    <string name="notification_text_testers">To je različica beta. Bodite previdni pri uporabi!</string>
     <string name="testers_version">Izgradnja za preizkuševalce!</string>
     
     

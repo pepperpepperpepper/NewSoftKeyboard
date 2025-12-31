@@ -8,7 +8,6 @@
     <string name="change_log_card_version_title_template">\u0020\u0020Ultime modifiche per v. <xliff:g id="name">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020V <xliff:g id="code">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_url">Di più:\u0020<xliff:g id="url">%s</xliff:g></string>
-    <string name="notification_text_testers">Questa è una versione beta. Utilizzare con cautela!</string>
     <string name="testers_version">Build Tester!</string>
     <string name="language_root_tile">Lingua</string>
     <string name="language_keyboards_settings_tile">Abilita tastiere e lingue.</string>

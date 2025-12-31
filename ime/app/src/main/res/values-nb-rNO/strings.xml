@@ -10,7 +10,6 @@
     <string name="change_log_url">Mer:\u0020
         <xliff:g id="url">%s</xliff:g>
     </string>
-    <string name="notification_text_testers">Dette er en beta-versjon. Bruk med forsiktighet!</string>
     <string name="testers_version">Testversjon!</string>
     <string name="language_root_tile">Språk</string>
     <string name="language_keyboards_settings_tile">Aktiver tastaturer og språk.</string>

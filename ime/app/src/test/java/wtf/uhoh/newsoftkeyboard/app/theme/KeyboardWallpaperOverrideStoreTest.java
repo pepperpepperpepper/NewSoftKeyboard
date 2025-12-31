@@ -278,5 +278,37 @@ public class KeyboardWallpaperOverrideStoreTest {
     assertEquals(
         KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE,
         store.getWallpaperMode(themeId));
+    assertEquals(60, store.getKeyAlphaPercent(themeId));
+  }
+
+  @Test
+  public void testImportFromUriMigratesOldBackgroundOnlyModeToVisibleDefault() throws Exception {
+    final Context context = getApplicationContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final String themeId = "test-theme-import-migrate-background-only";
+
+    store.clear(themeId);
+    store.setWallpaperMode(themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY);
+    assertEquals(
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY,
+        store.getWallpaperMode(themeId));
+    assertFalse(store.hasWallpaper(themeId));
+
+    final File sourceFile = new File(context.getCacheDir(), "nsk_wallpaper_source_migrate.png");
+    final Bitmap bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888);
+    bitmap.eraseColor(Color.RED);
+    try (FileOutputStream out = new FileOutputStream(sourceFile)) {
+      assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out));
+    } finally {
+      bitmap.recycle();
+    }
+
+    store.importFromUri(themeId, Uri.fromFile(sourceFile), 64, 64);
+
+    assertTrue(store.hasWallpaper(themeId));
+    assertEquals(
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE,
+        store.getWallpaperMode(themeId));
+    assertEquals(60, store.getKeyAlphaPercent(themeId));
   }
 }

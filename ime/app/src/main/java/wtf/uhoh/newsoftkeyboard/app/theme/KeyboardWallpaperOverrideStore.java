@@ -260,11 +260,16 @@ public class KeyboardWallpaperOverrideStore {
     }
 
     final File target = getWallpaperFile(themeId);
+    final boolean hadExistingWallpaper = target.isFile();
     final FileOutputStream output = new FileOutputStream(target);
     try {
       final int quality = isHighQualityImportEnabled() ? 100 : 90;
-      if (!decoded.compress(Bitmap.CompressFormat.WEBP, quality, output)) {
-        throw new IOException("Failed to write wallpaper for theme " + themeId);
+      try {
+        if (!decoded.compress(Bitmap.CompressFormat.WEBP, quality, output)) {
+          throw new IOException("Failed to write wallpaper for theme " + themeId);
+        }
+      } catch (OutOfMemoryError oom) {
+        throw new IOException("Out of memory while encoding wallpaper for theme " + themeId, oom);
       }
     } finally {
       try {
@@ -279,8 +284,19 @@ public class KeyboardWallpaperOverrideStore {
     editor.remove(invalidKey(themeId));
     // Default to a visible mode when a user first imports a wallpaper, since many themes have an
     // opaque keyboard background and "background only" would appear to do nothing.
-    if (!prefs.contains(modeKey(themeId))) {
+    //
+    // Also: if an older build persisted "background only" before any wallpaper existed, treat the
+    // first import as a migration and still default to a visible mode.
+    if (!prefs.contains(modeKey(themeId))
+        || (!hadExistingWallpaper
+            && normalizeMode(prefs.getInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_ONLY))
+                == WALLPAPER_MODE_BACKGROUND_ONLY)) {
       editor.putInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE);
+    }
+    // When importing a wallpaper for the first time, default the key overlay opacity to a visible
+    // value so the photo doesn't appear "invisible" on opaque themes.
+    if (!hadExistingWallpaper && !prefs.contains(keyAlphaKey(themeId))) {
+      editor.putInt(keyAlphaKey(themeId), 60);
     }
     if (exifRotationDegrees != 0) {
       editor.putInt(rotationKey(themeId), exifRotationDegrees);

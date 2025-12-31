@@ -6,7 +6,6 @@
     <string name="change_log_url">עוד:\u0020
         <xliff:g id="url">%s</xliff:g>
     </string>
-    <string name="notification_text_testers">זוהי גירסת ביתא. השתמש בזהירות!</string>
     <string name="testers_version">גירסת בדיקות!</string>
     <string name="language_root_tile">שפה</string>
     <string name="language_keyboards_settings_tile">בחר שפות ומקלדות.</string>

@@ -8,10 +8,13 @@ import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.espresso.contrib.RecyclerViewActions;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import wtf.uhoh.newsoftkeyboard.R;
@@ -20,9 +23,18 @@ import wtf.uhoh.newsoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 @RunWith(AndroidJUnit4.class)
 public class GenericRowsInstrumentedTest {
 
+  private ActivityScenario<MainSettingsActivity> scenario;
+
   private void navigateToLookAndFeelSettings() {
-    ActivityScenario<MainSettingsActivity> scenario =
-        ActivityScenario.launch(MainSettingsActivity.class);
+    if (scenario != null) {
+      scenario.close();
+      scenario = null;
+    }
+    final var targetContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+    final Intent intent =
+        new Intent(targetContext, MainSettingsActivity.class)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    scenario = ActivityScenario.launch(intent);
     scenario.onActivity(
         activity -> {
           final SharedPreferences prefs = DirectBootAwareSharedPreferences.create(activity);
@@ -34,6 +46,14 @@ public class GenericRowsInstrumentedTest {
           androidx.navigation.Navigation.findNavController(activity, R.id.nav_host_fragment)
               .navigate(R.id.lookAndFeelSettingsFragment);
         });
+  }
+
+  @After
+  public void tearDown() {
+    if (scenario != null) {
+      scenario.close();
+      scenario = null;
+    }
   }
 
   @Test

@@ -12,7 +12,6 @@
     <string name="change_log_card_version_title_template">\u0020\u0020Guherandinên herî dawî ji bo v<ns1:g id="name">%s</ns1:g>\u0020\u0020</string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020v<ns1:g id="code">%s</ns1:g>\u0020\u0020</string>
     <string name="change_log_url">Zêde:\u0020<ns1:g id="url">%s</ns1:g></string>
-    <string name="notification_text_testers">Ev versîyona beta ye. Bi hişyarî bi kar bîne!</string>
     <string name="testers_version">Testker ava dikin!</string>
     <string name="language_root_tile">Ziman</string>
     <string name="language_keyboards_settings_tile">Klavye û zimanan çalak bikin.</string>

@@ -12,7 +12,6 @@
     </string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020v<xliff:g id="code">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_url">ვრცლად:\u0020<xliff:g id="url">%s</xliff:g></string>
-    <string name="notification_text_testers">ეს საცდელი ვერსიაა. გამოიყენეთ სიფრთხილით!</string>
     <string name="testers_version">საცდელი ანაწყობი!</string>
     <string name="language_root_tile">ენა</string>
     <string name="language_keyboards_settings_tile">კლავიატურების და ენების ჩართვა.</string>

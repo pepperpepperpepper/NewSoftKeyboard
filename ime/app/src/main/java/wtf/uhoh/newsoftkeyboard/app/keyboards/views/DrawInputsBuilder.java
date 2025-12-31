@@ -88,11 +88,14 @@ final class DrawInputsBuilder {
     final KeyboardWallpaperResolver.KeyFaceOverlay keyFaceOverlay =
         keyboardWallpaperResolver.resolveKeyFaceOverlay(theme, keyboardViewBounds);
 
+    final float effectiveKeyboardNameTextSize =
+        keyboardNameTextSize > 1f ? keyboardNameTextSize : keyTextSize;
+
     return new DrawInputs(
         keyboard,
         keyboardName,
         spacebarVoiceBadgeText,
-        keyboardNameHintController.shouldShowKeyboardName() && keyboardNameTextSize > 1f,
+        keyboardNameHintController.shouldShowKeyboardName() && effectiveKeyboardNameTextSize > 1f,
         hintTextSize > 1 && keyboardNameHintController.shouldShowHints(),
         keyboard != null && keyboard.isShifted(),
         keyboard != null ? keyboard.getLocale() : Locale.getDefault(),
@@ -108,7 +111,7 @@ final class DrawInputsBuilder {
         drawSingleKey,
         paddingLeft,
         paddingTop,
-        keyboardNameTextSize,
+        effectiveKeyboardNameTextSize,
         hintTextSize,
         hintTextSizeMultiplier,
         alwaysUseDrawText,

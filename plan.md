@@ -657,6 +657,8 @@ Refresh counts:
 - Continue pruning ASK-only resources/strings/tasks while keeping compatibility shims (actions/meta-data/queries).
 - Keep dual authorities minimal (FileProvider/prefs); do not rename exported authorities without a migration plan.
 - Keep `askCompat` flavor as the “max compatibility” build; `nsk` is the default.
+- Done (2025-12-31): removed unused “beta testers” promo string resources (`notification_text_testers`) from
+  `:ime:app` and `:ime:releaseinfo` to reduce legacy clutter (no runtime call-sites remained).
 - Done (2025-12-24): migrated internal code + tests off the legacy `AnyApplication` type name to the owned
   `NskApplicationBase`, then removed the `AnyApplication` shim and updated the base manifest to reference
   `NskApplicationBase` directly (flavors can still override the application entrypoint as needed).

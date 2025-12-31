@@ -4,6 +4,5 @@
     <string name="change_log_card_version_title_template">\u0020\u0020آخر التغييرات لـ v<xliff:g id="name">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020v<xliff:g id="code">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_url">المزيد:\u0020<xliff:g id="url">%s</xliff:g></string>
-    <string name="notification_text_testers">هذه نسخة تجريبية. استخدمها بحذر!</string>
     <string name="testers_version">نسخة تجريبية!</string>
 </resources>

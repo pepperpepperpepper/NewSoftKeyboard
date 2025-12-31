@@ -10,7 +10,6 @@
     <string name="change_log_card_version_title_template">\u0020\u0020Muudatused versioonis<xliff:g id="name">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020v<xliff:g id="code">%s</xliff:g>\u0020\u0020</string>
     <string name="change_log_url">Rohkem infot veebis:\u0020<xliff:g id="url">%s</xliff:g></string>
-    <string name="notification_text_testers">Ettevaatust, kasutate programmi beeta versiooni! </string>
     <string name="testers_version">Testkasutajate versioon. </string>
     <string name="language_root_tile">Keel</string>
     <string name="language_keyboards_settings_tile">Luba klaviatuurid ja keeled. </string>

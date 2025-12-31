@@ -15,7 +15,6 @@
     <string name="change_log_url">Viac:\u0020
         <xliff:g id="url">%s</xliff:g>
     </string>
-    <string name="notification_text_testers">Toto je beta verzia. Používajte opatrne!</string>
     <string name="testers_version">Verzia pre testerov!</string>
     <string name="language_root_tile">Jazyk</string>
     <string name="language_keyboards_settings_tile">Povoliť klávesnice a jazyky.</string>

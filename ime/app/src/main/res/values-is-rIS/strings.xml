@@ -10,7 +10,6 @@
     <string name="change_log_card_version_title_template">\u0020\u0020Nýjustu breytingar fyrir útgáfu <ns1:g id="name">%s</ns1:g>\u0020\u0020</string>
     <string name="change_log_entry_header_template_without_name">\u0020\u0020v<ns1:g id="code">%s</ns1:g>\u0020\u0020</string>
     <string name="change_log_url">Meira:\u0020<ns1:g id="url">%s</ns1:g></string>
-    <string name="notification_text_testers">Þetta er beta-útgáfa. Notist með varúð!</string>
     <string name="testers_version">Byggt fyrir prófara!</string>
     <string name="language_root_tile">Tungumál</string>
     <string name="language_keyboards_settings_tile">Virkjaðu lyklaborð og tungumál.</string>

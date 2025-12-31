@@ -17,7 +17,6 @@
     </string>
     <string name="change_log_url">        <ns1:g id="url">%s</ns1:g>
     </string>
-    <string name="notification_text_testers">ئەمە وەشانی تاقیکارییە، بە ووریاییەوە بەکاری بهێنە!</string>
     <string name="testers_version">وەشانی تاقیکاری!</string>
     <string name="language_root_tile">تەختەکلیل</string>
     <string name="language_keyboards_settings_tile">تەختەکلیەکان و شێوازی نووسین</string>

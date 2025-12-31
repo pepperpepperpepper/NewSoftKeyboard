@@ -1,5 +1,7 @@
 package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
+import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -49,16 +51,24 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
   private Preference applyToAllPref;
 
   @Override
+  public void onAttach(@NonNull Context context) {
+    super.onAttach(context);
+    wallpaperStore = new KeyboardWallpaperOverrideStore(context);
+  }
+
+  @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    wallpaperStore = new KeyboardWallpaperOverrideStore(requireContext());
     pickWallpaperLauncher =
         registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::onPhotoPicked);
+    super.onCreate(savedInstanceState);
   }
 
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     final var context = requireContext();
+    if (wallpaperStore == null) {
+      wallpaperStore = new KeyboardWallpaperOverrideStore(context);
+    }
     final PreferenceScreen screen = getPreferenceManager().createPreferenceScreen(context);
     setPreferenceScreen(screen);
 
@@ -71,7 +81,17 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
     pickPhotoPref.setSummary(R.string.keyboard_theme_wallpaper_customization_pick_summary);
     pickPhotoPref.setOnPreferenceClickListener(
         ignored -> {
-          pickWallpaperLauncher.launch(new String[] {"image/*"});
+          if (pickWallpaperLauncher == null) {
+            showPickFailedDialog(new IllegalStateException("Wallpaper picker is not available."));
+            refreshState();
+            return true;
+          }
+          try {
+            pickWallpaperLauncher.launch(new String[] {"image/*"});
+          } catch (ActivityNotFoundException e) {
+            showPickFailedDialog(e);
+            refreshState();
+          }
           return true;
         });
     background.addPreference(pickPhotoPref);
@@ -287,7 +307,9 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
 
   @Nullable
   private KeyboardTheme getCurrentTheme() {
-    return NskApplicationBase.getKeyboardThemeFactory(requireContext()).getEnabledAddOn();
+    final var context = getContext();
+    if (context == null) return null;
+    return NskApplicationBase.getKeyboardThemeFactory(context).getEnabledAddOn();
   }
 
   private void refreshState() {
@@ -401,7 +423,8 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
       previewDisposable = null;
     }
 
-    final var context = requireContext();
+    final var context = getContext();
+    if (context == null) return;
     final float density = context.getResources().getDisplayMetrics().density;
     final int sizePx = Math.max(64, Math.round(64f * density));
     final int clampedDim = Math.max(0, Math.min(100, dimPercent));
@@ -436,11 +459,14 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
   private void onPhotoPicked(@Nullable Uri uri) {
     if (uri == null) return;
 
+    final var context = getContext();
+    if (context == null) return;
+
     final KeyboardTheme theme = getCurrentTheme();
     if (theme == null) return;
 
     final String themeId = theme.getId();
-    final var metrics = requireContext().getResources().getDisplayMetrics();
+    final var metrics = context.getResources().getDisplayMetrics();
     final int maxSize =
         Math.max(2048, Math.min(4096, Math.max(metrics.widthPixels, metrics.heightPixels)));
 
@@ -470,7 +496,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
                 ignored -> {
                   if (!isAdded()) return;
                   Toast.makeText(
-                          requireContext(),
+                          context,
                           R.string.keyboard_theme_wallpaper_customization_pick_toast,
                           Toast.LENGTH_SHORT)
                       .show();
@@ -484,8 +510,13 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
   }
 
   private void showPickFailedDialog(@NonNull Throwable error) {
+    final var context = getContext();
+    if (context == null) return;
+
     final int messageResId;
-    if (error instanceof SecurityException) {
+    if (error instanceof ActivityNotFoundException) {
+      messageResId = R.string.keyboard_theme_wallpaper_customization_pick_failed_no_picker;
+    } else if (error instanceof SecurityException) {
       messageResId = R.string.keyboard_theme_wallpaper_customization_pick_failed_permission;
     } else if (error.getCause() instanceof OutOfMemoryError) {
       messageResId = R.string.keyboard_theme_wallpaper_customization_pick_failed_too_large;
@@ -493,7 +524,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
       messageResId = R.string.keyboard_theme_wallpaper_customization_pick_failed_generic;
     }
 
-    new AlertDialog.Builder(requireContext())
+    new AlertDialog.Builder(context)
         .setTitle(R.string.keyboard_theme_wallpaper_customization_pick_failed_title)
         .setMessage(messageResId)
         .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())

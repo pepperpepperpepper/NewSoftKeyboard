@@ -10,7 +10,6 @@
     <string name="change_log_url">Plus :\u0020
         <ns1:g id="url">%s</ns1:g>
     </string>
-    <string name="notification_text_testers">Ceci est une version bêta. À utiliser avec prudence !</string>
     <string name="testers_version">Version testeurs !</string>
     <string name="language_root_tile">Langue</string>
     <string name="language_keyboards_settings_tile">Activer les claviers et langues</string>

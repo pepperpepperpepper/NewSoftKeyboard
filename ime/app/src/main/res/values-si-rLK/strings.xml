@@ -10,7 +10,6 @@
     <string name="how_to_pointer_title">New Soft Keyboard වෙත සාදරයෙන් පිළිගනිමු</string>
     <string name="change_log_card_version_title_template">\u0020\u0020v<xliff:g id="name">%s</xliff:g>\u0020\u0020සඳහා නවතම වෙනස්කම්</string>
     <string name="change_log_url">තවත්:\u0020<xliff:g id="url">%s</xliff:g></string>
-    <string name="notification_text_testers">මෙය බීටා අනුවාදයකි. පරිස්සමෙන් භාවිතා කරන්න!</string>
     <string name="testers_version">පරීක්ෂකයින් ගොඩනඟයි!</string>
     <string name="language_root_tile">භාෂාව</string>
     <string name="language_keyboards_settings_tile">යතුරුපුවරු සහ භාෂා සබල කරන්න.</string>

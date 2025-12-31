@@ -51,6 +51,7 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
   @Nullable private AlertDialog currentErrorDialog;
   @Nullable private VoiceErrorStripActionProvider currentErrorStripAction;
   private boolean restoreStripVisibilityAfterError = false;
+  @NonNull private VoiceInputState currentVoiceState = VoiceInputState.IDLE;
 
   public ImeVoiceInputCallbacks(
       @NonNull ImeServiceBase service,
@@ -77,6 +78,7 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
 
   @Override
   public void updateVoiceInputStatus(VoiceInputState state) {
+    currentVoiceState = state;
     callbacks.updateVoiceInputStatus(state);
     if (state != VoiceInputState.ERROR) {
       dismissErrorUi();
@@ -108,7 +110,10 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
                 discardPendingTranscription.run();
                 callbacks.updateVoiceInputStatus(VoiceInputState.IDLE);
               },
-              this::dismissErrorStripAction);
+              () -> {
+                dismissErrorStripAction();
+                clearVoiceErrorVisualStateIfNeeded();
+              });
       container.addStripAction(currentErrorStripAction, true);
       return;
     }
@@ -120,7 +125,11 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
     builder.setPositiveButton(R.string.voice_error_retry, null);
     builder.setNeutralButton(R.string.voice_error_save, null);
     builder.setNegativeButton(R.string.voice_error_discard, null);
-    builder.setOnCancelListener(dialog -> discardPendingTranscription.run());
+    builder.setOnCancelListener(
+        dialog -> {
+          discardPendingTranscription.run();
+          clearVoiceErrorVisualStateIfNeeded();
+        });
 
     final AlertDialog dialog = builder.create();
     dialog.setOnShowListener(
@@ -130,6 +139,7 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
             retryButton.setOnClickListener(
                 v -> {
                   if (retryLastTranscription.getAsBoolean()) {
+                    clearVoiceErrorVisualStateIfNeeded();
                     dialog.dismiss();
                   } else {
                     // keep the dialog open; caller will see the original error message
@@ -152,6 +162,7 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
             discardButton.setOnClickListener(
                 v -> {
                   discardPendingTranscription.run();
+                  clearVoiceErrorVisualStateIfNeeded();
                   dialog.dismiss();
                 });
           }
@@ -242,5 +253,11 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
     window.setAttributes(lp);
     window.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
     return true;
+  }
+
+  private void clearVoiceErrorVisualStateIfNeeded() {
+    if (currentVoiceState != VoiceInputState.ERROR) return;
+    currentVoiceState = VoiceInputState.IDLE;
+    callbacks.updateVoiceInputStatus(VoiceInputState.IDLE);
   }
 }
