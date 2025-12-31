@@ -1,6 +1,5 @@
 package wtf.uhoh.newsoftkeyboard.app.ime;
 
-import android.view.View;
 import androidx.annotation.Nullable;
 import com.google.android.voiceime.VoiceImeController;
 import com.google.android.voiceime.VoiceImeController.VoiceInputState;
@@ -21,30 +20,20 @@ public final class VoiceUiHelper {
 
   public void updateVoiceKeyState(
       @Nullable KeyboardDefinition currentKeyboard, @Nullable InputViewBinder view) {
-    voiceStatusRenderer.updateVoiceKeyState(
-        currentKeyboard, voiceImeController.isRecording(), asViewOrNull(view));
+    voiceStatusRenderer.updateVoiceKeyState(voiceImeController.isRecording(), view);
   }
 
   public void updateSpaceBarRecordingStatus(
       boolean isRecording,
       @Nullable KeyboardDefinition currentKeyboard,
       @Nullable InputViewBinder view) {
-    if (isRecording) {
-      updateVoiceInputStatus(VoiceInputState.RECORDING, currentKeyboard, view);
-    } else if (voiceStatusRenderer.getCurrentState() != VoiceInputState.WAITING) {
-      updateVoiceInputStatus(VoiceInputState.IDLE, currentKeyboard, view);
-    }
+    voiceStatusRenderer.updateSpaceBarRecordingStatus(isRecording, view);
   }
 
   public void updateVoiceInputStatus(
       VoiceInputState newState,
       @Nullable KeyboardDefinition currentKeyboard,
       @Nullable InputViewBinder view) {
-    voiceStatusRenderer.updateVoiceInputStatus(currentKeyboard, asViewOrNull(view), newState);
-  }
-
-  @Nullable
-  private View asViewOrNull(@Nullable InputViewBinder binder) {
-    return binder instanceof View ? (View) binder : null;
+    voiceStatusRenderer.updateVoiceInputStatus(view, newState);
   }
 }

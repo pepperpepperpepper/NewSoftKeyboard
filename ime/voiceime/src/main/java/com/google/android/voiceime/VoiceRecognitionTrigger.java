@@ -219,11 +219,7 @@ public class VoiceRecognitionTrigger {
 
     // The trigger is refreshed as the system may have changed in the meanwhile.
     mTrigger = getTrigger();
-
-    // Ensure callback is preserved after trigger refresh
-    if (mRecordingStateCallback != null) {
-      setRecordingStateCallback(mRecordingStateCallback);
-    }
+    applyCallbacksToThirdPartyTrigger();
   }
 
   /**

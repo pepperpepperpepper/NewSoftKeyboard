@@ -82,6 +82,10 @@
     <string name="openai_error_api_error">OpenAI API error: %s</string>
     <string name="openai_error_recording_failed">Audio recording failed. Please try again.</string>
     <string name="openai_error_transcription_failed">Speech transcription failed. Please try again.</string>
+
+    <!-- Speech-to-Text generic error messages -->
+    <string name="speech_to_text_error_save_recording_failed">Failed to save voice recording.</string>
+    <string name="speech_to_text_error_insert_failed">Unable to insert transcription into the current app.</string>
     
     <!-- OpenAI Status Messages -->
     <string name="openai_status_recording">Recording audio...</string>

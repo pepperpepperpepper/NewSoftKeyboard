@@ -159,7 +159,7 @@ public class ThirdPartySpeechTrigger implements Trigger {
             startTranscription();
           } else if (errorMessage != null) {
             Log.e(TAG, "Recording failed: " + errorMessage);
-            showError(errorMessage);
+            reportError(errorMessage);
           }
         });
 
@@ -180,7 +180,7 @@ public class ThirdPartySpeechTrigger implements Trigger {
       stopRecording();
     } else {
       if (mIsTranscribing) {
-        showError("Transcription in progress. Please wait.");
+        Log.w(TAG, "Transcription in progress. Ignoring new voice trigger.");
         return;
       }
       mLastRecognitionResult = null;
@@ -203,7 +203,7 @@ public class ThirdPartySpeechTrigger implements Trigger {
 
   private void startRecording() {
     if (!mAudioRecorderManager.hasPermissions()) {
-      showError(mInputMethodService.getString(R.string.openai_error_microphone_permission));
+      reportError(mInputMethodService.getString(R.string.openai_error_microphone_permission));
       return;
     }
 
@@ -215,7 +215,7 @@ public class ThirdPartySpeechTrigger implements Trigger {
       Log.d(TAG, "Started recording to: " + mRecordedAudioFilename);
     } catch (Exception e) {
       Log.e(TAG, "Error starting recording", e);
-      showError(mInputMethodService.getString(R.string.openai_error_recording_failed));
+      reportError(mInputMethodService.getString(R.string.openai_error_recording_failed));
     }
   }
 
@@ -234,12 +234,14 @@ public class ThirdPartySpeechTrigger implements Trigger {
     }
     File audioFile = new File(mRecordedAudioFilename);
     if (!audioFile.exists()) {
-      showError("Audio file not found: " + audioFile.getAbsolutePath());
+      Log.e(TAG, "Audio file not found: " + audioFile.getAbsolutePath());
+      reportError(mInputMethodService.getString(R.string.openai_error_recording_failed));
       mHasPendingRecording = false;
       return;
     }
     if (audioFile.length() == 0) {
-      showError("Audio file is empty");
+      Log.e(TAG, "Audio file is empty");
+      reportError(mInputMethodService.getString(R.string.openai_error_recording_failed));
       mHasPendingRecording = false;
       cleanupAudioFile();
       return;
@@ -302,7 +304,8 @@ public class ThirdPartySpeechTrigger implements Trigger {
       return;
     }
 
-    notifyTranscriptionError("Unable to insert transcription into the current app.");
+    notifyTranscriptionError(
+        mInputMethodService.getString(R.string.speech_to_text_error_insert_failed));
   }
 
   private boolean commitResult() {
@@ -353,21 +356,9 @@ public class ThirdPartySpeechTrigger implements Trigger {
     }
   }
 
-  private void showError(String message) {
+  private void reportError(@NonNull String message) {
     Log.e(TAG, "Error: " + message);
-    mMainHandler.post(
-        () ->
-            android.widget.Toast.makeText(
-                    mInputMethodService, message, android.widget.Toast.LENGTH_LONG)
-                .show());
-  }
-
-  private void showToast(@NonNull String message) {
-    mMainHandler.post(
-        () ->
-            android.widget.Toast.makeText(
-                    mInputMethodService, message, android.widget.Toast.LENGTH_LONG)
-                .show());
+    runOnMainThread(() -> notifyTranscriptionError(message));
   }
 
   public boolean isRecording() {
@@ -401,13 +392,15 @@ public class ThirdPartySpeechTrigger implements Trigger {
 
     File externalFilesDir = mInputMethodService.getExternalFilesDir(null);
     if (externalFilesDir == null) {
-      showError("Unable to access external files directory.");
+      reportError(
+          mInputMethodService.getString(R.string.speech_to_text_error_save_recording_failed));
       return false;
     }
 
     File recordingsDir = new File(externalFilesDir, "voice_recordings");
     if (!recordingsDir.exists() && !recordingsDir.mkdirs()) {
-      showError("Unable to create voice recordings directory.");
+      reportError(
+          mInputMethodService.getString(R.string.speech_to_text_error_save_recording_failed));
       return false;
     }
 
@@ -421,11 +414,11 @@ public class ThirdPartySpeechTrigger implements Trigger {
         SpeechToTextFileUtils.copyToDirectory(
             source, recordingsDir.getAbsolutePath(), "voice_recording", extension);
     if (copied == null) {
-      showError("Failed to save voice recording.");
+      reportError(
+          mInputMethodService.getString(R.string.speech_to_text_error_save_recording_failed));
       return false;
     }
 
-    showToast("Saved voice recording to: " + copied.getAbsolutePath());
     return true;
   }
 

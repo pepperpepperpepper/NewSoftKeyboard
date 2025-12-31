@@ -1,9 +1,13 @@
 package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.text.TextPaint;
+import android.text.TextUtils;
 import androidx.annotation.NonNull;
 import com.anysoftkeyboard.api.KeyCodes;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
@@ -28,6 +32,10 @@ final class KeyDrawHelper {
   private final KeyLabelRenderer.KeyTextPaintSetter keyTextPaintSetter;
   private final KeyLabelRenderer.LabelTextPaintSetter labelTextPaintSetter;
   private final KeyIconDrawer.KeyLabelGuesser keyLabelGuesser;
+  private final Paint voiceBadgeBackgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+  private final TextPaint voiceBadgeTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+  private final RectF voiceBadgeRect = new RectF();
+  private final Paint.FontMetrics voiceBadgeFontMetrics = new Paint.FontMetrics();
 
   KeyDrawHelper(
       Paint paint,
@@ -54,6 +62,11 @@ final class KeyDrawHelper {
     this.keyTextPaintSetter = keyTextPaintSetter;
     this.labelTextPaintSetter = labelTextPaintSetter;
     this.keyLabelGuesser = keyLabelGuesser;
+
+    voiceBadgeBackgroundPaint.setColor(Color.argb(160, 0, 0, 0));
+    voiceBadgeTextPaint.setColor(Color.WHITE);
+    voiceBadgeTextPaint.setTextAlign(Paint.Align.CENTER);
+    voiceBadgeTextPaint.setFakeBoldText(true);
   }
 
   void drawKeys(@NonNull Canvas canvas, Rect dirtyRect, DrawInputs inputs) {
@@ -192,8 +205,42 @@ final class KeyDrawHelper {
         paint.setTextAlign(oldAlign);
       }
 
+      if (keyIsSpace && inputs.spacebarVoiceBadgeText != null) {
+        drawSpacebarVoiceBadge(canvas, key, inputs.spacebarVoiceBadgeText);
+      }
+
       canvas.translate(-key.x - inputs.kbdPaddingLeft, -key.y - inputs.kbdPaddingTop);
     }
+  }
+
+  private void drawSpacebarVoiceBadge(
+      @NonNull Canvas canvas, @NonNull KeyboardKey key, @NonNull CharSequence rawText) {
+    final float margin = Math.max(2f, key.height * 0.06f);
+    final float badgeHeight = Math.max(12f, key.height * 0.28f);
+    final float maxBadgeWidth = Math.max(24f, key.width * 0.5f);
+    final float textSize = badgeHeight * 0.55f;
+
+    voiceBadgeTextPaint.setTextSize(textSize);
+    final String text =
+        TextUtils.ellipsize(
+                rawText, voiceBadgeTextPaint, maxBadgeWidth - badgeHeight, TextUtils.TruncateAt.END)
+            .toString();
+    final float textWidth = voiceBadgeTextPaint.measureText(text);
+    final float badgeWidth = Math.min(maxBadgeWidth, textWidth + badgeHeight);
+
+    final float right = key.width - margin;
+    final float left = Math.max(margin, right - badgeWidth);
+    final float top = margin;
+    final float bottom = top + badgeHeight;
+
+    voiceBadgeRect.set(left, top, right, bottom);
+    final float radius = badgeHeight / 2f;
+    canvas.drawRoundRect(voiceBadgeRect, radius, radius, voiceBadgeBackgroundPaint);
+
+    voiceBadgeTextPaint.getFontMetrics(voiceBadgeFontMetrics);
+    final float textCenterY =
+        top + (badgeHeight - voiceBadgeFontMetrics.ascent - voiceBadgeFontMetrics.descent) / 2f;
+    canvas.drawText(text, voiceBadgeRect.centerX(), textCenterY, voiceBadgeTextPaint);
   }
 
   private static void drawKeyTextureOverlayWithMask(

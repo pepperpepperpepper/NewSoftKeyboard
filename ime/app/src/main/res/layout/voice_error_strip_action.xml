@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/voice_error_root"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/candidate_strip_height"
+    android:layout_gravity="center_vertical"
+    android:background="@drawable/strip_action_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingLeft="8dp"
+    android:paddingRight="8dp"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp">
+
+    <TextView
+        android:id="@+id/voice_error_message"
+        style="@style/Nsk.Text.SuggestionsAction.Small"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:text="@string/voice_error_default_message" />
+
+    <TextView
+        android:id="@+id/voice_error_retry"
+        style="@style/Nsk.Text.SuggestionsAction.Small"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:text="@string/voice_error_retry" />
+
+    <TextView
+        android:id="@+id/voice_error_save"
+        style="@style/Nsk.Text.SuggestionsAction.Small"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:text="@string/voice_error_save" />
+
+    <TextView
+        android:id="@+id/voice_error_discard"
+        style="@style/Nsk.Text.SuggestionsAction.Small"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingLeft="8dp"
+        android:paddingRight="8dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:text="@string/voice_error_discard" />
+</LinearLayout>
+

@@ -1147,6 +1147,20 @@
     <string name="openai_status_recording">Recording audio...</string>
     <string name="openai_status_processing">Processing audio...</string>
     <string name="openai_status_transcribing">Transcribing with OpenAI...</string>
+
+    <!-- Voice status badges (spacebar) -->
+    <string name="voice_spacebar_badge_recording">Recording</string>
+    <string name="voice_spacebar_badge_waiting">Waiting</string>
+    <string name="voice_spacebar_badge_error">Error</string>
+
+    <!-- Voice transcription error strip -->
+    <string name="voice_error_default_message">Voice transcription failed</string>
+    <string name="voice_error_retry">Retry</string>
+    <string name="voice_error_save">Save</string>
+    <string name="voice_error_discard">Discard</string>
+    <string name="voice_error_saved">Saved</string>
+    <string name="voice_error_retry_failed">Retry failed.</string>
+    <string name="voice_error_no_recording_to_save">No recording to save.</string>
     
     <!-- OpenAI Settings Menu -->
     <string name="speech_recognition_group">Speech Recognition</string>

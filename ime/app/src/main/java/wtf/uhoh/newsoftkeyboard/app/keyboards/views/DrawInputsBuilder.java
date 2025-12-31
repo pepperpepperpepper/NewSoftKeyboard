@@ -43,6 +43,7 @@ final class DrawInputsBuilder {
       @Nullable KeyboardTheme theme,
       KeyboardDefinition keyboard,
       CharSequence keyboardName,
+      @Nullable CharSequence spacebarVoiceBadgeText,
       Keyboard.Key[] keys,
       @Nullable Keyboard.Key invalidKey,
       Rect clipRegion,
@@ -90,6 +91,7 @@ final class DrawInputsBuilder {
     return new DrawInputs(
         keyboard,
         keyboardName,
+        spacebarVoiceBadgeText,
         keyboardNameHintController.shouldShowKeyboardName() && keyboardNameTextSize > 1f,
         hintTextSize > 1 && keyboardNameHintController.shouldShowHints(),
         keyboard != null && keyboard.isShifted(),

@@ -7,6 +7,9 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.net.Uri;
 import java.io.File;
 import java.io.FileOutputStream;
 import org.junit.Test;
@@ -61,6 +64,29 @@ public class KeyboardWallpaperOverrideStoreTest {
         themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
     assertEquals(
         KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT,
+        store.getWallpaperMode(themeId));
+  }
+
+  @Test
+  public void testWallpaperModeDefaultsToVisibleOptionWhenWallpaperExists() throws Exception {
+    final Context context = getApplicationContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final String themeId = "test-theme-mode-default-visible";
+
+    store.clear(themeId);
+    assertEquals(
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY,
+        store.getWallpaperMode(themeId));
+
+    final File file = store.getWallpaperFile(themeId);
+    assertTrue(file.getParentFile().isDirectory() || file.getParentFile().mkdirs());
+    try (FileOutputStream out = new FileOutputStream(file)) {
+      out.write(new byte[] {0, 1, 2});
+    }
+    assertTrue(store.hasWallpaper(themeId));
+
+    assertEquals(
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE,
         store.getWallpaperMode(themeId));
   }
 
@@ -224,5 +250,33 @@ public class KeyboardWallpaperOverrideStoreTest {
     store.setMatchKeyShapeEnabled(themeId, true);
     assertTrue(store.isMatchKeyShapeEnabled(themeId));
     assertEquals(tokenBefore + 1, store.getWallpaperChangeToken(themeId));
+  }
+
+  @Test
+  public void testImportFromUriSetsVisibleDefaultMode() throws Exception {
+    final Context context = getApplicationContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final String themeId = "test-theme-import-default-mode";
+
+    store.clear(themeId);
+    assertEquals(
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY,
+        store.getWallpaperMode(themeId));
+
+    final File sourceFile = new File(context.getCacheDir(), "nsk_wallpaper_source.png");
+    final Bitmap bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888);
+    bitmap.eraseColor(Color.BLUE);
+    try (FileOutputStream out = new FileOutputStream(sourceFile)) {
+      assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out));
+    } finally {
+      bitmap.recycle();
+    }
+
+    store.importFromUri(themeId, Uri.fromFile(sourceFile), 64, 64);
+
+    assertTrue(store.hasWallpaper(themeId));
+    assertEquals(
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE,
+        store.getWallpaperMode(themeId));
   }
 }

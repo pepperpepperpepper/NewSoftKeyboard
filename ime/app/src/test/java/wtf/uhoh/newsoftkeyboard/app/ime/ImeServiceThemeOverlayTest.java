@@ -3,6 +3,7 @@ package wtf.uhoh.newsoftkeyboard.app.ime;
 import android.content.ComponentName;
 import android.view.inputmethod.EditorInfo;
 import androidx.test.core.app.ApplicationProvider;
+import java.lang.reflect.Field;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -11,6 +12,7 @@ import org.mockito.Mockito;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.android.PowerSavingTest;
 import wtf.uhoh.newsoftkeyboard.app.testing.TestableImeService;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperResolver;
 import wtf.uhoh.newsoftkeyboard.app.ui.settings.MainSettingsActivity;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlayData;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlyDataCreator;
@@ -186,6 +188,22 @@ public class ImeServiceThemeOverlayTest extends ImeServiceBaseTest {
     Assert.assertEquals(0xFF000000, powerSaving.getPrimaryColor());
     Assert.assertEquals(0xFF000000, powerSaving.getPrimaryDarkColor());
     Assert.assertEquals(0xFF888888, powerSaving.getPrimaryTextColor());
+  }
+
+  @Test
+  public void testAppliesImeWallpaperResolverSoPhotoOverridesCanWork() throws Exception {
+    final KeyboardWallpaperResolver spyResolver =
+        Mockito.spy(new KeyboardWallpaperResolver(ApplicationProvider.getApplicationContext()));
+
+    final Field resolverField = ImeThemeOverlay.class.getDeclaredField("keyboardWallpaperResolver");
+    resolverField.setAccessible(true);
+    resolverField.set(mImeServiceUnderTest, spyResolver);
+
+    simulateFinishInputFlow();
+    simulateOnStartInputFlow();
+
+    Mockito.verify(spyResolver, Mockito.atLeastOnce()).resolveImeWallpaper(Mockito.any());
+    Mockito.verify(spyResolver, Mockito.never()).resolveThemeWallpaperOrFallback(Mockito.any());
   }
 
   private OverlayData captureOverlay() {

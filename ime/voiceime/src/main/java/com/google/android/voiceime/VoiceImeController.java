@@ -56,6 +56,13 @@ public final class VoiceImeController {
   }
 
   public void onStartInputView() {
+    postToMainThread(
+        () -> {
+          isRecording = false;
+          emitState(VoiceInputState.IDLE);
+          host.updateVoiceKeyState();
+          host.updateSpaceBarRecordingStatus(false);
+        });
     trigger.onStartInputView();
   }
 
@@ -70,9 +77,11 @@ public final class VoiceImeController {
                 () -> {
                   this.isRecording = isRecording;
                   if (isRecording) {
-                    updateState(VoiceInputState.RECORDING);
+                    emitState(VoiceInputState.RECORDING);
                   } else if (currentState == VoiceInputState.RECORDING) {
-                    updateState(VoiceInputState.IDLE);
+                    // Avoid "RECORDING → IDLE → WAITING" flicker: recording stop implies we're
+                    // about to start transcription, or immediately hit an error.
+                    emitState(VoiceInputState.WAITING);
                   }
                   host.updateVoiceKeyState();
                   host.updateSpaceBarRecordingStatus(isRecording);
@@ -81,28 +90,28 @@ public final class VoiceImeController {
     trigger.setTranscriptionStateCallback(
         isTranscribing ->
             postToMainThread(
-                () ->
-                    host.updateVoiceInputStatus(
-                        updateState(
-                            isTranscribing ? VoiceInputState.WAITING : VoiceInputState.IDLE))));
+                () -> {
+                  if (isTranscribing) {
+                    emitState(VoiceInputState.WAITING);
+                  } else {
+                    // Do not emit IDLE here. Third-party triggers fire:
+                    //   transcribing=false → (text written | error)
+                    // and transitioning to IDLE would create UI flicker.
+                  }
+                }));
 
     trigger.setTranscriptionErrorCallback(
         error ->
             postToMainThread(
                 () -> {
-                  host.updateVoiceInputStatus(updateState(VoiceInputState.ERROR));
+                  emitState(VoiceInputState.ERROR);
                   host.onVoiceError(error);
                 }));
 
     trigger.setRecordingEndedCallback(
-        () ->
-            postToMainThread(
-                () -> host.updateVoiceInputStatus(updateState(VoiceInputState.WAITING))));
+        () -> postToMainThread(() -> emitState(VoiceInputState.WAITING)));
 
-    trigger.setTextWrittenCallback(
-        text -> {
-          // No-op by default; keep callback connected so triggers don't hold stale references.
-        });
+    trigger.setTextWrittenCallback(text -> postToMainThread(() -> emitState(VoiceInputState.IDLE)));
   }
 
   private void postToMainThread(@NonNull Runnable action) {
@@ -114,8 +123,10 @@ public final class VoiceImeController {
   }
 
   @NonNull
-  private VoiceInputState updateState(@NonNull VoiceInputState newState) {
+  private VoiceInputState emitState(@NonNull VoiceInputState newState) {
+    if (currentState == newState) return currentState;
     currentState = newState;
+    host.updateVoiceInputStatus(newState);
     return newState;
   }
 }

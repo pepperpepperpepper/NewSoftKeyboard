@@ -200,8 +200,7 @@ public abstract class ImeThemeOverlay extends ImeKeyboardTagsSearcher {
   }
 
   private void applyKeyboardWallpaper(@NonNull KeyboardViewContainerView inputViewContainer) {
-    inputViewContainer.setBackground(
-        keyboardWallpaperResolver.resolveThemeWallpaperOrFallback(mCurrentTheme));
+    inputViewContainer.setBackground(keyboardWallpaperResolver.resolveImeWallpaper(mCurrentTheme));
   }
 
   private static class EmptyOverlayData extends OverlayDataImpl {

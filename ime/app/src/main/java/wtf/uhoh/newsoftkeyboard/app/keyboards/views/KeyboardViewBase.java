@@ -30,6 +30,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import com.anysoftkeyboard.api.KeyCodes;
+import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 import io.reactivex.disposables.CompositeDisposable;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.R;
@@ -118,6 +119,7 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
 
   private final ViewStyleState viewStyleState = new ViewStyleState();
   private final KeyShadowStyle keyShadowStyle = new KeyShadowStyle();
+  private final VoiceStatusBadgeState voiceStatusBadgeState = new VoiceStatusBadgeState();
   private final KeyPreviewManagerFacade keyPreviewManager = new KeyPreviewManagerFacade();
 
   private final KeyboardNameHintController keyboardNameHintController =
@@ -454,6 +456,13 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
         getKeyboard(), active, locked, this::invalidateAllKeys);
   }
 
+  @Override
+  public void setVoiceInputState(@NonNull VoiceInputState state) {
+    if (voiceStatusBadgeState.setState(state, getContext())) {
+      invalidateAllKeys();
+    }
+  }
+
   /**
    * When enabled, calls to {@link OnKeyboardActionListener#onKey} will include key mCodes for
    * adjacent keys. When disabled, only the primary key code will be reported.
@@ -515,6 +524,7 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
         keyboardRenderState.keys,
         keyboardRenderState.drawableStatesProvider,
         keyboardRenderState.keyboardName,
+        voiceStatusBadgeState.badgeText(),
         getWidth(),
         getHeight(),
         getPaddingLeft(),

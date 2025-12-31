@@ -1,59 +1,45 @@
 package wtf.uhoh.newsoftkeyboard.app.ime;
 
-import com.anysoftkeyboard.api.KeyCodes;
 import com.google.android.voiceime.VoiceImeController.VoiceInputState;
-import java.util.List;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
-import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
-import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.InputViewBinder;
 import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 
 @RunWith(NskRobolectricTestRunner.class)
 public class VoiceStatusRendererTest {
 
   @Test
-  public void testRestoresSpaceLabelAfterVoiceStatusEnds() {
-    KeyboardDefinition keyboard = Mockito.mock(KeyboardDefinition.class);
-    Mockito.when(keyboard.getKeyboardId()).thenReturn("kbd-1");
+  public void testUpdateVoiceInputStatusUpdatesViewState() {
+    final InputViewBinder inputView = Mockito.mock(InputViewBinder.class);
+    final VoiceStatusRenderer renderer = new VoiceStatusRenderer();
 
-    Keyboard.Key spaceKey = Mockito.mock(Keyboard.Key.class);
-    Mockito.when(spaceKey.getPrimaryCode()).thenReturn(KeyCodes.SPACE);
-    spaceKey.label = "Original Space";
+    renderer.updateVoiceInputStatus(inputView, VoiceInputState.RECORDING);
+    Mockito.verify(inputView).setVoiceInputState(VoiceInputState.RECORDING);
 
-    Mockito.when(keyboard.getKeys()).thenReturn(List.of(spaceKey));
+    renderer.updateVoiceInputStatus(inputView, VoiceInputState.RECORDING);
+    Mockito.verify(inputView, Mockito.times(1)).setVoiceInputState(VoiceInputState.RECORDING);
 
-    VoiceStatusRenderer renderer = new VoiceStatusRenderer();
+    renderer.updateVoiceInputStatus(inputView, VoiceInputState.WAITING);
+    Mockito.verify(inputView).setVoiceInputState(VoiceInputState.WAITING);
 
-    renderer.updateVoiceInputStatus(keyboard, null, VoiceInputState.RECORDING);
-    Assert.assertEquals("Recording", spaceKey.label);
-
-    renderer.updateVoiceInputStatus(keyboard, null, VoiceInputState.WAITING);
-    Assert.assertEquals("Waiting", spaceKey.label);
-
-    renderer.updateVoiceInputStatus(keyboard, null, VoiceInputState.IDLE);
-    Assert.assertEquals("Original Space", spaceKey.label);
+    renderer.updateVoiceInputStatus(inputView, VoiceInputState.IDLE);
+    Mockito.verify(inputView).setVoiceInputState(VoiceInputState.IDLE);
   }
 
   @Test
-  public void testRestoresNullSpaceLabelAfterVoiceStatusEnds() {
-    KeyboardDefinition keyboard = Mockito.mock(KeyboardDefinition.class);
-    Mockito.when(keyboard.getKeyboardId()).thenReturn("kbd-2");
+  public void testUpdateVoiceKeyStateUpdatesViewState() {
+    final InputViewBinder inputView = Mockito.mock(InputViewBinder.class);
+    final VoiceStatusRenderer renderer = new VoiceStatusRenderer();
 
-    Keyboard.Key spaceKey = Mockito.mock(Keyboard.Key.class);
-    Mockito.when(spaceKey.getPrimaryCode()).thenReturn(KeyCodes.SPACE);
-    spaceKey.label = null;
+    renderer.updateVoiceKeyState(true, inputView);
+    Mockito.verify(inputView).setVoice(true, false);
 
-    Mockito.when(keyboard.getKeys()).thenReturn(List.of(spaceKey));
+    renderer.updateVoiceKeyState(false, inputView);
+    Mockito.verify(inputView).setVoice(false, false);
 
-    VoiceStatusRenderer renderer = new VoiceStatusRenderer();
-
-    renderer.updateVoiceInputStatus(keyboard, null, VoiceInputState.RECORDING);
-    Assert.assertEquals("Recording", spaceKey.label);
-
-    renderer.updateVoiceInputStatus(keyboard, null, VoiceInputState.IDLE);
-    Assert.assertNull(spaceKey.label);
+    Assert.assertEquals(VoiceInputState.IDLE, renderer.getCurrentState());
   }
 }

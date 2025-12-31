@@ -90,7 +90,12 @@ public class KeyboardWallpaperOverrideStore {
   }
 
   public int getWallpaperMode(@NonNull String themeId) {
-    return normalizeMode(prefs.getInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_ONLY));
+    final boolean hasModeOverride = prefs.contains(modeKey(themeId));
+    final int defaultMode =
+        hasModeOverride || !hasWallpaper(themeId)
+            ? WALLPAPER_MODE_BACKGROUND_ONLY
+            : WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE;
+    return normalizeMode(prefs.getInt(modeKey(themeId), defaultMode));
   }
 
   public void setWallpaperMode(@NonNull String themeId, int mode) {
@@ -272,6 +277,11 @@ public class KeyboardWallpaperOverrideStore {
 
     final SharedPreferences.Editor editor = prefs.edit();
     editor.remove(invalidKey(themeId));
+    // Default to a visible mode when a user first imports a wallpaper, since many themes have an
+    // opaque keyboard background and "background only" would appear to do nothing.
+    if (!prefs.contains(modeKey(themeId))) {
+      editor.putInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE);
+    }
     if (exifRotationDegrees != 0) {
       editor.putInt(rotationKey(themeId), exifRotationDegrees);
     } else {

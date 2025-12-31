@@ -2,6 +2,7 @@ package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
 import android.graphics.drawable.Drawable;
 import androidx.annotation.NonNull;
+import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.ThemedKeyboardDimensProvider;
@@ -69,6 +70,9 @@ public interface InputViewBinder
    * @return true if the voice key state changed, false if there was no change
    */
   boolean setVoice(boolean active, boolean locked);
+
+  /** Sets the current voice-input state so the view can render status feedback. */
+  void setVoiceInputState(@NonNull VoiceInputState state);
 
   /**
    * Called when the user requests input-view reset

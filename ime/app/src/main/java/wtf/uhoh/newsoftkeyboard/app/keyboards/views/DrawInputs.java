@@ -3,6 +3,7 @@ package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 import android.content.res.ColorStateList;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
+import androidx.annotation.Nullable;
 import java.util.Locale;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyDrawableStateProvider;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
@@ -13,6 +14,7 @@ import wtf.uhoh.newsoftkeyboard.overlay.ThemeResourcesHolder;
 final class DrawInputs {
   final KeyboardDefinition keyboard;
   final CharSequence keyboardName;
+  @Nullable final CharSequence spacebarVoiceBadgeText;
   final boolean drawKeyboardNameText;
   final boolean drawHintText;
   final boolean keyboardShifted;
@@ -49,6 +51,7 @@ final class DrawInputs {
   DrawInputs(
       KeyboardDefinition keyboard,
       CharSequence keyboardName,
+      @Nullable CharSequence spacebarVoiceBadgeText,
       boolean drawKeyboardNameText,
       boolean drawHintText,
       boolean keyboardShifted,
@@ -83,6 +86,7 @@ final class DrawInputs {
       KeyDrawableStateProvider drawableStatesProvider) {
     this.keyboard = keyboard;
     this.keyboardName = keyboardName;
+    this.spacebarVoiceBadgeText = spacebarVoiceBadgeText;
     this.drawKeyboardNameText = drawKeyboardNameText;
     this.drawHintText = drawHintText;
     this.keyboardShifted = keyboardShifted;

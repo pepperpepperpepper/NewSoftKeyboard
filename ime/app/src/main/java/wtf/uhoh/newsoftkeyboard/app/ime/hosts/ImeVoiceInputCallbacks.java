@@ -9,8 +9,10 @@ import androidx.appcompat.app.AlertDialog;
 import com.google.android.voiceime.VoiceImeController;
 import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 import java.util.function.BooleanSupplier;
+import wtf.uhoh.newsoftkeyboard.BuildConfig;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.ime.ImeServiceBase;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView;
 
 public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCallbacks {
 
@@ -47,6 +49,8 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
   @NonNull private final BooleanSupplier savePendingRecording;
   @NonNull private final Runnable discardPendingTranscription;
   @Nullable private AlertDialog currentErrorDialog;
+  @Nullable private VoiceErrorStripActionProvider currentErrorStripAction;
+  private boolean restoreStripVisibilityAfterError = false;
 
   public ImeVoiceInputCallbacks(
       @NonNull ImeServiceBase service,
@@ -74,18 +78,48 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
   @Override
   public void updateVoiceInputStatus(VoiceInputState state) {
     callbacks.updateVoiceInputStatus(state);
+    if (state != VoiceInputState.ERROR) {
+      dismissErrorUi();
+    }
   }
 
   @Override
   public void onVoiceError(@NonNull String error) {
-    dismissErrorDialog();
+    dismissErrorUi();
+
+    final String displayMessage = resolveUserVisibleErrorMessage(error);
+    final String messageToShow =
+        BuildConfig.DEBUG ? appendRawErrorIfUseful(displayMessage, error) : displayMessage;
+
+    final KeyboardViewContainerView container = service.getInputViewContainer();
+    if (container != null) {
+      restoreStripVisibilityAfterError =
+          container.getCandidateView() != null
+              && container.getCandidateView().getVisibility() != View.VISIBLE;
+      container.setActionsStripVisibility(true);
+
+      currentErrorStripAction =
+          new VoiceErrorStripActionProvider(
+              service,
+              messageToShow,
+              retryLastTranscription,
+              savePendingRecording,
+              () -> {
+                discardPendingTranscription.run();
+                callbacks.updateVoiceInputStatus(VoiceInputState.IDLE);
+              },
+              this::dismissErrorStripAction);
+      container.addStripAction(currentErrorStripAction, true);
+      return;
+    }
+
     final AlertDialog.Builder builder =
         new AlertDialog.Builder(service, R.style.Theme_NskAlertDialog);
-    builder.setTitle("Voice transcription failed");
-    builder.setMessage(error + "\n\nTry again?");
-    builder.setPositiveButton("Try again", null);
-    builder.setNeutralButton("Save recording", null);
-    builder.setNegativeButton(android.R.string.cancel, null);
+    builder.setTitle(R.string.voice_error_default_message);
+    builder.setMessage(messageToShow);
+    builder.setPositiveButton(R.string.voice_error_retry, null);
+    builder.setNeutralButton(R.string.voice_error_save, null);
+    builder.setNegativeButton(R.string.voice_error_discard, null);
     builder.setOnCancelListener(dialog -> discardPendingTranscription.run());
 
     final AlertDialog dialog = builder.create();
@@ -98,8 +132,7 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
                   if (retryLastTranscription.getAsBoolean()) {
                     dialog.dismiss();
                   } else {
-                    android.widget.Toast.makeText(service, error, android.widget.Toast.LENGTH_LONG)
-                        .show();
+                    // keep the dialog open; caller will see the original error message
                   }
                 });
           }
@@ -109,11 +142,7 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
             saveButton.setOnClickListener(
                 v -> {
                   if (!savePendingRecording.getAsBoolean()) {
-                    android.widget.Toast.makeText(
-                            service,
-                            "No recording available to save.",
-                            android.widget.Toast.LENGTH_LONG)
-                        .show();
+                    // keep the dialog open; caller can choose discard
                   }
                 });
           }
@@ -132,8 +161,49 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
       dialog.show();
       currentErrorDialog = dialog;
     } else {
-      android.widget.Toast.makeText(service, error, android.widget.Toast.LENGTH_LONG).show();
+      // If we can't attach to the IME window, avoid showing a toast from the IME service.
     }
+  }
+
+  @NonNull
+  private String resolveUserVisibleErrorMessage(@NonNull String rawError) {
+    final String trimmed = rawError.trim();
+    if (trimmed.isEmpty()) {
+      return service.getString(R.string.voice_error_default_message);
+    }
+
+    // Allow-list known error strings that already come from our own resources (localized).
+    // For everything else, show a short localized message and keep details in logs.
+    if (trimmed.equals(service.getString(R.string.openai_error_api_key_unset))
+        || trimmed.equals(service.getString(R.string.openai_error_microphone_permission))
+        || trimmed.equals(service.getString(R.string.openai_error_endpoint_unset))
+        || trimmed.equals(service.getString(R.string.openai_error_network))
+        || trimmed.equals(service.getString(R.string.openai_error_recording_failed))
+        || trimmed.equals(service.getString(R.string.openai_error_transcription_failed))
+        || trimmed.equals(service.getString(R.string.speech_to_text_error_save_recording_failed))
+        || trimmed.equals(service.getString(R.string.speech_to_text_error_insert_failed))) {
+      return trimmed;
+    }
+
+    return service.getString(R.string.voice_error_default_message);
+  }
+
+  @NonNull
+  private static String appendRawErrorIfUseful(
+      @NonNull String userMessage, @NonNull String rawError) {
+    final String trimmed = rawError.trim();
+    if (trimmed.isEmpty() || userMessage.equals(trimmed)) return userMessage;
+    // Keep it short to avoid destroying the IME strip layout.
+    final String singleLine = trimmed.replace('\n', ' ').replace('\r', ' ').trim();
+    final int maxLen = 140;
+    final String compact =
+        singleLine.length() <= maxLen ? singleLine : singleLine.substring(0, maxLen) + "…";
+    return userMessage + "\n" + compact;
+  }
+
+  private void dismissErrorUi() {
+    dismissErrorDialog();
+    dismissErrorStripAction();
   }
 
   private void dismissErrorDialog() {
@@ -142,6 +212,19 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
       currentErrorDialog = null;
       dialog.dismiss();
     }
+  }
+
+  private void dismissErrorStripAction() {
+    final KeyboardViewContainerView container = service.getInputViewContainer();
+    final VoiceErrorStripActionProvider provider = currentErrorStripAction;
+    currentErrorStripAction = null;
+    if (container != null && provider != null) {
+      container.removeStripAction(provider);
+      if (restoreStripVisibilityAfterError) {
+        container.setActionsStripVisibility(false);
+      }
+    }
+    restoreStripVisibilityAfterError = false;
   }
 
   private boolean attachDialogToImeWindow(@NonNull AlertDialog dialog) {
