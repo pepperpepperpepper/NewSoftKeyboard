@@ -1,6 +1,6 @@
 # Fixing Plan (Living) — Wallpaper Picker + Spacebar + Voice STT Feedback
 
-_Last updated: 2025-12-31_
+_Last updated: 2026-01-01_
 
 This document is the **single living plan** for the current user-visible regressions around:
 
@@ -13,7 +13,7 @@ This file **absorbs and replaces** `feedback-plan.md` to avoid the “two TODOs�
 
 ## 0) Current shipped context
 
-- Latest published build (F-Droid): `13.8.51` (`versionCode 15102`)
+- Latest published build (F-Droid): `13.8.52` (`versionCode 15103`)
 - Regressions reported on real device (Pixel Fold): settings crash + spacebar state issues
 - Emulator note: Genymotion previously showed an ANR symptom in the same settings area (not a clean stack trace yet)
 
@@ -30,9 +30,9 @@ This is important so we don’t “plan” work that already exists.
   - `VoiceStatusRenderer` forwards state to `InputViewBinder`/`KeyboardViewBase`.
   - `KeyDrawHelper` draws the badge when `DrawInputs.spacebarVoiceBadgeText != null`.
 
-## 0.2) Status update (2025-12-31) — what changed since this plan was written
+## 0.2) Status update (2026-01-01) — what changed since this plan was written
 
-### Code changes applied (uncommitted as of now)
+### Code changes applied (shipped)
 
 **Wallpaper picker crash hardening**
 
@@ -118,6 +118,24 @@ Also note:
 
 - (A) Reproduce with a real Java stack trace (`AndroidRuntime FATAL EXCEPTION`).
 - (B) Fix the crash/ANR **without changing add-on behavior** and without requiring network.
+
+### 1.2) Crash when changing “Wallpaper mode”
+
+**User-facing symptom**
+
+- After importing a background photo and changing **Wallpaper mode**, the keyboard may crash even though the
+  wallpaper effect appears to apply.
+
+**Hypothesis**
+
+- Some devices/renderers can crash or OOM when using `Canvas.saveLayer(...)` + PorterDuff `DST_IN` masking in the
+  hot draw loop (particularly with per-key masked overlays).
+
+**Immediate mitigation (implemented)**
+
+- `KeyDrawHelper.drawKeyTextureOverlayWithMask(...)` now wraps the masked-overlay path in a defensive
+  `try/catch(RuntimeException | OutOfMemoryError)` and falls back to the simpler rounded-rect overlay instead of
+  crashing the IME.
 
 **Data we need (highest priority)**
 

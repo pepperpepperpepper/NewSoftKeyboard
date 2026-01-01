@@ -259,9 +259,18 @@ final class KeyDrawHelper {
       return;
     }
 
-    final int saveCount = canvas.saveLayer(0f, 0f, keyWidth, keyHeight, null);
-    canvas.drawRect(0f, 0f, keyWidth, keyHeight, overlayPaint);
-    canvas.drawBitmap(mask, 0f, 0f, KeyBackgroundAlphaMaskCache.dstInPaint());
-    canvas.restoreToCount(saveCount);
+    try {
+      final int saveCount = canvas.saveLayer(0f, 0f, keyWidth, keyHeight, null);
+      canvas.drawRect(0f, 0f, keyWidth, keyHeight, overlayPaint);
+      canvas.drawBitmap(mask, 0f, 0f, KeyBackgroundAlphaMaskCache.dstInPaint());
+      canvas.restoreToCount(saveCount);
+    } catch (RuntimeException | OutOfMemoryError e) {
+      // Worst case this feature should gracefully degrade. Some renderers/devices have issues with
+      // saveLayer + xfer modes. Fall back to a rounded-rect overlay instead of crashing the IME.
+      final float radius =
+          KeyBackgroundCornerRadiusResolver.resolveCornerRadiusOrFallback(
+              keyBackground, keyWidth, keyHeight);
+      canvas.drawRoundRect(0f, 0f, keyWidth, keyHeight, radius, radius, overlayPaint);
+    }
   }
 }
