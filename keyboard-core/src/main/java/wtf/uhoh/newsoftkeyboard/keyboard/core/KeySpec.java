@@ -1,36 +1,39 @@
 package wtf.uhoh.newsoftkeyboard.keyboard.core;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 public final class KeySpec {
   private final List<KeyCode> codes;
-  private final Optional<String> label;
-  private final Optional<String> popupCharacters;
+  private final String label;
+  private final String popupCharacters;
   private final Map<String, String> rawAttributes;
 
   public KeySpec(
       List<KeyCode> codes,
-      Optional<String> label,
-      Optional<String> popupCharacters,
+      String label,
+      String popupCharacters,
       Map<String, String> rawAttributes) {
-    this.codes = List.copyOf(Objects.requireNonNull(codes));
-    this.label = Objects.requireNonNull(label);
-    this.popupCharacters = Objects.requireNonNull(popupCharacters);
-    this.rawAttributes = Map.copyOf(Objects.requireNonNull(rawAttributes));
+    this.codes = Collections.unmodifiableList(new ArrayList<>(Objects.requireNonNull(codes)));
+    this.label = label;
+    this.popupCharacters = popupCharacters;
+    this.rawAttributes =
+        Collections.unmodifiableMap(new HashMap<>(Objects.requireNonNull(rawAttributes)));
   }
 
   public List<KeyCode> codes() {
     return codes;
   }
 
-  public Optional<String> label() {
+  public String label() {
     return label;
   }
 
-  public Optional<String> popupCharacters() {
+  public String popupCharacters() {
     return popupCharacters;
   }
 

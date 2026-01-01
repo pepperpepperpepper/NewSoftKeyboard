@@ -212,6 +212,53 @@ def _parse_aapt2_resources_dump(
     resource_pattern = re.compile(r"^resource\s+(0x[0-9a-fA-F]+)\s+(\w+)/([^\s]+)$")
     color_value_pattern = re.compile(r"^\(\)\s+(#[0-9a-fA-F]{6,8})$")
     style_header_parent_pattern = re.compile(r"parent=(style/[^\s]+)")
+    style_item_key_pattern = re.compile(r"^(0x[0-9a-fA-F]+)\s*(?:\(([^)]+)\))?$")
+
+    def normalize_style_item_key(raw: str) -> str:
+        # aapt2 dump resources style item keys typically look like:
+        #   0x010100d4(android:background)
+        #   0x7f040123(wtf.uhoh.newsoftkeyboard:attr/keyTextColor)
+        # Sometimes the key is just the numeric id. We try to turn these into stable attribute names.
+        raw_key = raw.strip()
+        if not raw_key:
+            return ""
+
+        match = style_item_key_pattern.match(raw_key)
+        res_id = match.group(1).lower() if match else None
+        display = match.group(2) if match else None
+
+        is_android_attr = False
+        if display:
+            display_lower = display.lower()
+            is_android_attr = display_lower.startswith("android:") or display_lower.startswith(
+                "android."
+            )
+
+        candidate = (display or "").strip()
+        if not candidate:
+            if res_id:
+                candidate = id_to_name.get(res_id) or id_to_name.get(res_id.lower()) or res_id
+            else:
+                candidate = raw_key
+
+        simplified = candidate
+        if "R.attr." in simplified:
+            simplified = simplified.rsplit("R.attr.", 1)[1]
+        if ":attr/" in simplified:
+            simplified = simplified.split(":attr/", 1)[1]
+        if simplified.startswith("attr/"):
+            simplified = simplified.split("/", 1)[1]
+        if "/attr/" in simplified:
+            simplified = simplified.split("/attr/", 1)[1]
+        if "/" in simplified:
+            simplified = simplified.rsplit("/", 1)[1]
+        if ":" in simplified:
+            simplified = simplified.split(":", 1)[1]
+
+        if res_id == "0x010100d4" or (is_android_attr and simplified == "background"):
+            return "keyboardBackground"
+
+        return simplified.strip()
 
     for raw_line in output.splitlines():
         line = raw_line.strip()
@@ -220,7 +267,7 @@ def _parse_aapt2_resources_dump(
             current_color = None
             current_style = None
 
-            res_id, res_type, res_name = match.group(1), match.group(2), match.group(3)
+            res_id, res_type, res_name = match.group(1).lower(), match.group(2), match.group(3)
             full_name = f"{res_type}/{res_name}"
             id_to_name[res_id] = full_name
 
@@ -238,19 +285,19 @@ def _parse_aapt2_resources_dump(
                 current_color = None
             continue
 
-        if current_style:
-            if "(style)" in line:
-                match = style_header_parent_pattern.search(line)
-                if match:
-                    current_style.parent = match.group(1)
-                continue
+            if current_style:
+                if "(style)" in line:
+                    match = style_header_parent_pattern.search(line)
+                    if match:
+                        current_style.parent = match.group(1)
+                    continue
 
-            if "=" in line:
-                key, value = line.split("=", 1)
-                key = key.split("(", 1)[0].strip()
-                value = value.strip()
-                if key:
-                    current_style.items[key] = value
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    key = normalize_style_item_key(key)
+                    value = value.strip()
+                    if key:
+                        current_style.items[key] = value
             continue
 
     return id_to_name, colors, styles
@@ -488,8 +535,8 @@ def main() -> int:
                     if not theme_res:
                         continue
 
-                    theme_style = id_to_name.get(theme_res.lstrip("@"))
-                    icon_style = id_to_name.get(icon_res.lstrip("@")) if icon_res else None
+                    theme_style = id_to_name.get(theme_res.lstrip("@").lower())
+                    icon_style = id_to_name.get(icon_res.lstrip("@").lower()) if icon_res else None
                     if not theme_style or not theme_style.startswith("style/"):
                         continue
 

@@ -34,6 +34,8 @@ import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.addons.AddOn;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.PressVibrator;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.PackKeyboardDefinition;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.PopupKeyboard;
 import wtf.uhoh.newsoftkeyboard.app.prefs.AnimationsLevel;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
@@ -114,9 +116,10 @@ public class KeyboardViewWithMiniKeyboard extends SizeSensitiveKeyboardView {
     return super.isShifted();
   }
 
-  private void setupMiniKeyboardContainer(
+  private boolean setupMiniKeyboardContainer(
       @NonNull AddOn keyboardAddOn, @NonNull Keyboard.Key popupKey, boolean isSticky) {
-    final PopupKeyboard keyboard = createPopupKeyboardForKey(keyboardAddOn, popupKey);
+    final KeyboardDefinition keyboard = createPopupKeyboardForKey(keyboardAddOn, popupKey);
+    if (keyboard == null) return false;
 
     if (isSticky) {
       // using the vertical correction this keyboard has, since the input should behave
@@ -131,10 +134,11 @@ public class KeyboardViewWithMiniKeyboard extends SizeSensitiveKeyboardView {
     mMiniKeyboard.measure(
         MeasureSpec.makeMeasureSpec(getWidth(), MeasureSpec.AT_MOST),
         MeasureSpec.makeMeasureSpec(getHeight(), MeasureSpec.AT_MOST));
+    return true;
   }
 
-  @NonNull
-  protected PopupKeyboard createPopupKeyboardForKey(
+  @Nullable
+  protected KeyboardDefinition createPopupKeyboardForKey(
       @NonNull AddOn keyboardAddOn, @NonNull Keyboard.Key popupKey) {
     if (popupKey.popupCharacters != null) {
       // in this case, we must use ASK's context to inflate views and XMLs
@@ -144,23 +148,36 @@ public class KeyboardViewWithMiniKeyboard extends SizeSensitiveKeyboardView {
           popupKey.popupCharacters,
           mMiniKeyboard.getThemedKeyboardDimens(),
           "");
-    } else {
-      Logger.d(
-          "CRUSHER",
-          "popupKey.externalResourcePopupLayout is %s. keyboard is %s, local is %s",
-          popupKey.externalResourcePopupLayout,
-          keyboardAddOn.getPackageContext().getPackageName(),
-          getContext().getApplicationContext().getPackageName());
-
-      return new PopupKeyboard(
-          popupKey.externalResourcePopupLayout ? keyboardAddOn : mDefaultAddOn,
-          getContext().getApplicationContext(),
-          popupKey.popupResId,
-          mMiniKeyboard.getThemedKeyboardDimens(),
-          "",
-          null,
-          null);
     }
+
+    if (popupKey.popupKeyboardPackPath != null
+        && !popupKey.popupKeyboardPackPath.trim().isEmpty()) {
+      KeyboardDefinition currentKeyboard = getKeyboard();
+      if (currentKeyboard instanceof PackKeyboardDefinition packKeyboard) {
+        KeyboardDefinition keyboard =
+            packKeyboard.tryCreatePopupKeyboard(
+                popupKey.popupKeyboardPackPath, mMiniKeyboard.getThemedKeyboardDimens());
+        if (keyboard != null) return keyboard;
+      }
+    }
+
+    if (popupKey.popupResId == 0) return null;
+
+    Logger.d(
+        "CRUSHER",
+        "popupKey.externalResourcePopupLayout is %s. keyboard is %s, local is %s",
+        popupKey.externalResourcePopupLayout,
+        keyboardAddOn.getPackageContext().getPackageName(),
+        getContext().getApplicationContext().getPackageName());
+
+    return new PopupKeyboard(
+        popupKey.externalResourcePopupLayout ? keyboardAddOn : mDefaultAddOn,
+        getContext().getApplicationContext(),
+        popupKey.popupResId,
+        mMiniKeyboard.getThemedKeyboardDimens(),
+        "",
+        null,
+        null);
   }
 
   @Override
@@ -183,6 +200,7 @@ public class KeyboardViewWithMiniKeyboard extends SizeSensitiveKeyboardView {
     mMiniKeyboard = (KeyboardViewBase) inflater.inflate(R.layout.popup_keyboard_layout, null);
 
     mMiniKeyboard.setKeyboardTheme(getLastSetKeyboardTheme());
+    mMiniKeyboard.setPackThemeOverride(getPackThemeOverride());
     mMiniKeyboard.setOnKeyboardActionListener(mChildKeyboardActionListener);
     mMiniKeyboard.setThemeOverlay(mThemeOverlay);
   }
@@ -215,12 +233,15 @@ public class KeyboardViewWithMiniKeyboard extends SizeSensitiveKeyboardView {
   protected boolean onLongPress(
       AddOn keyboardAddOn, Keyboard.Key key, boolean isSticky, @NonNull PointerTracker tracker) {
     if (super.onLongPress(keyboardAddOn, key, isSticky, tracker)) return true;
-    if (key.popupResId == 0) return false;
+    if (key.popupResId == 0
+        && (key.popupCharacters == null || key.popupCharacters.length() == 0)
+        && (key.popupKeyboardPackPath == null || key.popupKeyboardPackPath.trim().isEmpty())) {
+      return false;
+    }
 
     // don't vibrate when selecting the first popup keyboard key
     PressVibrator.suppressNextVibration();
-    showMiniKeyboardForPopupKey(keyboardAddOn, key, isSticky);
-    return true;
+    return showMiniKeyboardForPopupKey(keyboardAddOn, key, isSticky);
   }
 
   @Override
@@ -238,14 +259,22 @@ public class KeyboardViewWithMiniKeyboard extends SizeSensitiveKeyboardView {
     mMiniKeyboard = null;
   }
 
-  protected void showMiniKeyboardForPopupKey(
+  @Override
+  public void setPackThemeOverride(@Nullable PackThemeOverride override) {
+    super.setPackThemeOverride(override);
+    if (mMiniKeyboard != null) {
+      mMiniKeyboard.setPackThemeOverride(override);
+    }
+  }
+
+  protected boolean showMiniKeyboardForPopupKey(
       @NonNull AddOn keyboardAddOn, @NonNull Keyboard.Key popupKey, boolean isSticky) {
     final int[] windowOffset = new int[2];
     getLocationInWindow(windowOffset);
 
     ensureMiniKeyboardInitialized();
 
-    setupMiniKeyboardContainer(keyboardAddOn, popupKey, isSticky);
+    if (!setupMiniKeyboardContainer(keyboardAddOn, popupKey, isSticky)) return false;
 
     Point miniKeyboardPosition =
         PopupKeyboardPositionCalculator.calculatePositionForPopupKeyboard(
@@ -269,6 +298,7 @@ public class KeyboardViewWithMiniKeyboard extends SizeSensitiveKeyboardView {
     dismissAllKeyPreviews();
 
     if (mPopupShownListener != null) mPopupShownListener.onPopupKeyboardShowingChanged(true);
+    return true;
   }
 
   protected void setPopupStickinessValues(

@@ -31,16 +31,21 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
+import wtf.uhoh.newsoftkeyboard.BuildConfig;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.addons.AddOn;
 import wtf.uhoh.newsoftkeyboard.addons.DefaultAddOn;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardsRegistry;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.KeyboardPacksDevPrefs;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.KeyboardPacksRepository;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.PackKeyboardRuntimeLoader;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.PackKeyboardSpec;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.physical.HardKeyboardTranslator;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 import wtf.uhoh.newsoftkeyboard.prefs.RxSharedPrefs;
 
 public class KeyboardSwitcher {
-
   private static final class KeyboardSwitcherState {
     @Keyboard.KeyboardRowModeId int keyboardRowMode = Keyboard.KEYBOARD_ROW_MODE_NORMAL;
     int lastSelectedSymbolsKeyboard = SYMBOLS_KEYBOARD_REGULAR_INDEX;
@@ -68,6 +73,11 @@ public class KeyboardSwitcher {
   private boolean mShowPopupForLanguageSwitch;
   private final AlphabetKeyboardProvider alphabetKeyboardProvider = new AlphabetKeyboardProvider();
   private final KeyboardModeApplier keyboardModeApplier = new KeyboardModeApplier();
+  @Nullable private KeyboardDefinition mDevPackKeyboardOverride = null;
+  @Nullable private PackKeyboardSpec mDevPackKeyboardOverrideSpec = null;
+  private int mDevPackKeyboardOverrideMode = Keyboard.KEYBOARD_ROW_MODE_NONE;
+  private final PackKeyboardRuntimeLoader packKeyboardRuntimeLoader =
+      new PackKeyboardRuntimeLoader();
 
   @Retention(RetentionPolicy.SOURCE)
   @IntDef({
@@ -143,6 +153,28 @@ public class KeyboardSwitcher {
         enabled -> mPersistLayoutForPackageId = enabled,
         enabled -> mCycleOverAllSymbols = enabled,
         enabled -> mShowPopupForLanguageSwitch = enabled);
+
+    mDisposable.add(
+        prefs
+            .getString(
+                R.string.settings_key_custom_keyboards_generation, R.string.settings_default_empty)
+            .asObservable()
+            .subscribe(ignored -> flushKeyboardsCache()));
+
+    if (BuildConfig.DEBUG) {
+      mDisposable.add(
+          prefs
+              .getString(
+                  KeyboardPacksDevPrefs.DEV_PACK_KEYBOARD_OVERRIDE_PREF,
+                  R.string.settings_default_empty)
+              .asObservable()
+              .subscribe(
+                  value -> {
+                    mDevPackKeyboardOverrideSpec = PackKeyboardSpec.parse(value);
+                    mDevPackKeyboardOverride = null;
+                    mDevPackKeyboardOverrideMode = Keyboard.KEYBOARD_ROW_MODE_NONE;
+                  }));
+    }
   }
 
   public void setInputView(@NonNull ThemedKeyboardDimensProvider themedKeyboardDimensProvider) {
@@ -215,8 +247,7 @@ public class KeyboardSwitcher {
       }
     }
 
-    final KeyboardAddOnAndBuilder targetBuilder =
-        NskApplicationBase.getKeyboardFactory(mContext).getAddOnById(keyboardId);
+    final KeyboardAddOnAndBuilder targetBuilder = locateKeyboardBuilderById(keyboardId);
     if (targetBuilder == null) {
       Logger.w(TAG, "Could not find keyboard with id " + keyboardId + " in factory.");
       return null;
@@ -496,6 +527,12 @@ public class KeyboardSwitcher {
 
   @NonNull
   private KeyboardDefinition getAlphabetKeyboard(int index, @Nullable EditorInfo editorInfo) {
+    KeyboardDefinition devOverride = getDevOverrideKeyboard(editorInfo);
+    if (devOverride != null) {
+      rememberKeyboardForPackage(editorInfo, devOverride);
+      return devOverride;
+    }
+
     KeyboardDefinition[] keyboards = getAlphabetKeyboards();
     if (index >= keyboards.length) {
       index = 0;
@@ -523,6 +560,36 @@ public class KeyboardSwitcher {
     return keyboard;
   }
 
+  @Nullable
+  private KeyboardDefinition getDevOverrideKeyboard(@Nullable EditorInfo editorInfo) {
+    if (!BuildConfig.DEBUG) return null;
+    PackKeyboardSpec spec = mDevPackKeyboardOverrideSpec;
+    if (spec == null) return null;
+
+    final int mode = rowModeResolver.resolve(editorInfo);
+    if (mDevPackKeyboardOverride != null && mDevPackKeyboardOverrideMode == mode) {
+      return mDevPackKeyboardOverride;
+    }
+
+    try {
+      var repo = new KeyboardPacksRepository(mContext);
+      var pack = repo.findInstalledPackById(spec.packId());
+      if (pack == null) return null;
+
+      KeyboardDefinition loaded =
+          packKeyboardRuntimeLoader.tryLoadKeyboardDefinition(
+              mContext, pack, spec.keyboardId(), mode);
+      if (loaded == null) return null;
+
+      mDevPackKeyboardOverride = loaded;
+      mDevPackKeyboardOverrideMode = mode;
+      return loaded;
+    } catch (Exception e) {
+      Logger.w(TAG, "Failed loading dev pack keyboard override: %s", e.getMessage());
+      return null;
+    }
+  }
+
   private void rememberKeyboardForPackage(
       @Nullable EditorInfo editorInfo, KeyboardDefinition keyboard) {
     if (editorInfo != null && !TextUtils.isEmpty(editorInfo.packageName)) {
@@ -534,6 +601,14 @@ public class KeyboardSwitcher {
   protected KeyboardDefinition createKeyboardFromCreator(
       int mode, KeyboardAddOnAndBuilder creator) {
     return creator.createKeyboard(mode);
+  }
+
+  @Nullable
+  private KeyboardAddOnAndBuilder locateKeyboardBuilderById(@NonNull String keyboardId) {
+    KeyboardAddOnAndBuilder builder =
+        NskApplicationBase.getKeyboardFactory(mContext).getAddOnById(keyboardId);
+    if (builder != null) return builder;
+    return CustomKeyboardsRegistry.findKeyboardBuilderById(mContext, keyboardId);
   }
 
   @NonNull

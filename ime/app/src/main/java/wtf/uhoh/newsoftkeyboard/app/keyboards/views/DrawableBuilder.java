@@ -21,21 +21,34 @@ import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import java.io.File;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
 
 public class DrawableBuilder {
+  @Nullable private final KeyboardTheme mTheme;
   private final int mDrawableResourceId;
-  private final KeyboardTheme mTheme;
+  @Nullable private final String mDrawableFilePath;
   @Nullable private Drawable mDrawable;
 
   private DrawableBuilder(KeyboardTheme theme, int drawableResId) {
     mTheme = theme;
     mDrawableResourceId = drawableResId;
+    mDrawableFilePath = null;
+  }
+
+  private DrawableBuilder(@Nullable String drawableFilePath) {
+    mTheme = null;
+    mDrawableResourceId = 0;
+    mDrawableFilePath = drawableFilePath;
   }
 
   @Nullable
   public Drawable buildDrawable() {
     if (mDrawable != null) return mDrawable;
+    if (mDrawableFilePath != null) {
+      mDrawable = Drawable.createFromPath(mDrawableFilePath);
+      return mDrawable;
+    }
     final Context packageContext = mTheme.getPackageContext();
     if (packageContext == null) return null;
     mDrawable = ContextCompat.getDrawable(packageContext, mDrawableResourceId);
@@ -47,5 +60,10 @@ public class DrawableBuilder {
     if (resId == 0)
       throw new IllegalArgumentException("No resource ID was found at index " + index);
     return new DrawableBuilder(theme, resId);
+  }
+
+  public static DrawableBuilder buildFromFile(File file) {
+    if (file == null) throw new IllegalArgumentException("file cannot be null");
+    return new DrawableBuilder(file.getAbsolutePath());
   }
 }

@@ -1,15 +1,14 @@
 package wtf.uhoh.newsoftkeyboard.keyboard.core;
 
 import java.util.Objects;
-import java.util.OptionalInt;
 
 public sealed interface KeyCode permits KeyCode.Numeric, KeyCode.Symbolic {
-  OptionalInt asNumeric();
+  Integer asNumeric();
 
   record Numeric(int value) implements KeyCode {
     @Override
-    public OptionalInt asNumeric() {
-      return OptionalInt.of(value);
+    public Integer asNumeric() {
+      return value;
     }
   }
 
@@ -19,8 +18,8 @@ public sealed interface KeyCode permits KeyCode.Numeric, KeyCode.Symbolic {
     }
 
     @Override
-    public OptionalInt asNumeric() {
-      return OptionalInt.empty();
+    public Integer asNumeric() {
+      return null;
     }
   }
 }

@@ -19,9 +19,9 @@ public class AskXmlKeyboardParserTest {
       assertEquals(5, model.rows().get(0).keys().size());
 
       var firstKey = model.rows().get(0).keys().get(0);
-      assertEquals("a", firstKey.label().orElseThrow());
+      assertEquals("a", firstKey.label());
       assertEquals(1, firstKey.codes().size());
-      assertEquals(97, firstKey.codes().get(0).asNumeric().orElseThrow());
+      assertEquals(Integer.valueOf(97), firstKey.codes().get(0).asNumeric());
     }
   }
 }

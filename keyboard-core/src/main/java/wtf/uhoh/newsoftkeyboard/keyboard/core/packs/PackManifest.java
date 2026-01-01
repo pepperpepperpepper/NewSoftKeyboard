@@ -1,8 +1,9 @@
 package wtf.uhoh.newsoftkeyboard.keyboard.core.packs;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 public final class PackManifest {
   public static final int SUPPORTED_SCHEMA_VERSION = 1;
@@ -11,7 +12,7 @@ public final class PackManifest {
   private final String id;
   private final String name;
   private final int version;
-  private final Optional<String> minCoreVersion;
+  private final String minCoreVersion;
   private final List<PackEntry> keyboards;
   private final List<PackEntry> themes;
 
@@ -20,16 +21,17 @@ public final class PackManifest {
       String id,
       String name,
       int version,
-      Optional<String> minCoreVersion,
+      String minCoreVersion,
       List<PackEntry> keyboards,
       List<PackEntry> themes) {
     this.schemaVersion = schemaVersion;
     this.id = Objects.requireNonNull(id);
     this.name = Objects.requireNonNull(name);
     this.version = version;
-    this.minCoreVersion = Objects.requireNonNull(minCoreVersion);
-    this.keyboards = List.copyOf(Objects.requireNonNull(keyboards));
-    this.themes = List.copyOf(Objects.requireNonNull(themes));
+    this.minCoreVersion = minCoreVersion;
+    this.keyboards =
+        Collections.unmodifiableList(new ArrayList<>(Objects.requireNonNull(keyboards)));
+    this.themes = Collections.unmodifiableList(new ArrayList<>(Objects.requireNonNull(themes)));
   }
 
   public int schemaVersion() {
@@ -48,7 +50,7 @@ public final class PackManifest {
     return version;
   }
 
-  public Optional<String> minCoreVersion() {
+  public String minCoreVersion() {
     return minCoreVersion;
   }
 

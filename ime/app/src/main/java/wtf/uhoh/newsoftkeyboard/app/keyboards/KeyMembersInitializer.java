@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardPrefs;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 import wtf.uhoh.newsoftkeyboard.utils.Workarounds;
 
@@ -72,8 +73,10 @@ final class KeyMembersInitializer {
             key.popupResId = R.xml.popup_domains;
             break;
           case KeyCodes.MODE_ALPHABET:
-            if (KeyboardPrefs.alwaysHideLanguageKey(appContext)
-                || !NskApplicationBase.getKeyboardFactory(localContext).hasMultipleAlphabets()) {
+            final int enabledKeyboardsCount =
+                NskApplicationBase.getKeyboardFactory(localContext).getEnabledIds().size()
+                    + CustomKeyboardPrefs.enabledCount(appContext);
+            if (KeyboardPrefs.alwaysHideLanguageKey(appContext) || enabledKeyboardsCount <= 1) {
               // need to hide this key
               foundLanguageKeyIndices.add(keyIndex);
               Logger.d(TAG, "Found a redundant language key at index %d", keyIndex);

@@ -203,6 +203,10 @@ public class KeyboardKey extends Keyboard.Key {
     return mExtraKeyData;
   }
 
+  void setExtraKeyData(@Nullable String extraKeyData) {
+    mExtraKeyData = extraKeyData;
+  }
+
   public void enable() {
     mEnabled = true;
   }

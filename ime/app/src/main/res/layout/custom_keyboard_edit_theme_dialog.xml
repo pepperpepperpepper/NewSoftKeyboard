@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <EditText
+            android:id="@+id/edit_theme_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/custom_keyboards_theme_id_hint"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_keyboard_background"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_keyboard_background"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_key_background"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_key_background"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_key_text_color"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_key_text_color"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_hint_text_color"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_hint_text_color"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_name_text_color"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_name_text_color"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_delete_icon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_delete_icon_path"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_shift_icon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_shift_icon_path"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_action_icon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_action_icon_path"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/edit_theme_space_icon"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="@string/custom_keyboards_theme_space_icon_path"
+            android:inputType="text" />
+    </LinearLayout>
+</ScrollView>
+

@@ -45,7 +45,8 @@ public final class ThemeXmlParser {
         Element colorElement = (Element) colorNodes.item(i);
         String name = colorElement.getAttribute("name");
         String value = colorElement.getAttribute("value");
-        if (name == null || name.isBlank() || value == null || value.isBlank()) continue;
+        if (name == null || name.trim().isEmpty() || value == null || value.trim().isEmpty())
+          continue;
         colors.put(name, parseColor(value));
       }
 
@@ -55,7 +56,8 @@ public final class ThemeXmlParser {
         Element iconElement = (Element) iconNodes.item(i);
         String name = iconElement.getAttribute("name");
         String path = iconElement.getAttribute("path");
-        if (name == null || name.isBlank() || path == null || path.isBlank()) continue;
+        if (name == null || name.trim().isEmpty() || path == null || path.trim().isEmpty())
+          continue;
         icons.put(name, PackPath.parse(path));
       }
 
@@ -79,11 +81,11 @@ public final class ThemeXmlParser {
 
     String hex = value.substring(1).toLowerCase(Locale.ROOT);
     if (hex.length() == 6) {
-      int rgb = Integer.parseUnsignedInt(hex, 16);
+      int rgb = Integer.parseInt(hex, 16);
       return 0xFF00_0000 | rgb;
     }
     if (hex.length() == 8) {
-      return (int) Long.parseUnsignedLong(hex, 16);
+      return (int) Long.parseLong(hex, 16);
     }
     throw new IllegalArgumentException(
         "Unsupported color format (expected #RRGGBB or #AARRGGBB): " + raw);

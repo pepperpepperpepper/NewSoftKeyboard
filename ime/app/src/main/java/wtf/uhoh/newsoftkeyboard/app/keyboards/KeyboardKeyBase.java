@@ -5,6 +5,7 @@ import android.content.res.XmlResourceParser;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
 import wtf.uhoh.newsoftkeyboard.addons.AddOn;
 
@@ -100,6 +101,9 @@ abstract class KeyboardKeyBase {
    */
   public int popupResId;
 
+  /** Pack-relative file path for a popup keyboard layout (used by file-based packs). */
+  @Nullable public String popupKeyboardPackPath;
+
   public boolean externalResourcePopupLayout = false;
 
   /** Whether this key repeats itself when held down */
@@ -155,6 +159,7 @@ abstract class KeyboardKeyBase {
     iconPreview = null;
     popupCharacters = null;
     popupResId = 0;
+    popupKeyboardPackPath = null;
     repeatable = false;
     dynamicEmblem = Keyboard.KEY_EMBLEM_NONE;
     modifier = false;

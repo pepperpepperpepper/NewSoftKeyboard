@@ -66,4 +66,16 @@ public final class PackPath {
   public String toString() {
     return value;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof PackPath other)) return false;
+    return value.equals(other.value);
+  }
+
+  @Override
+  public int hashCode() {
+    return value.hashCode();
+  }
 }

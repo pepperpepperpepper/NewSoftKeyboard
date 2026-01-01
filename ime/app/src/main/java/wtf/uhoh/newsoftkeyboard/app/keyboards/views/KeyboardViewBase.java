@@ -17,9 +17,11 @@
 package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -32,6 +34,7 @@ import androidx.annotation.VisibleForTesting;
 import com.anysoftkeyboard.api.KeyCodes;
 import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 import io.reactivex.disposables.CompositeDisposable;
+import java.io.File;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.addons.AddOn;
@@ -127,6 +130,7 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
   private final float mDisplayDensity;
   final AnimationLevelController animationLevelController = new AnimationLevelController();
   @NonNull protected OverlayData mThemeOverlay = new OverlayDataImpl();
+  @Nullable private PackThemeOverride packThemeOverride;
   // overrideable theme resources
   private final ThemeOverlayCombiner mThemeOverlayCombiner = new ThemeOverlayCombiner();
   private final SpecialKeyManager specialKeyManager;
@@ -282,6 +286,7 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
   @Override
   public void setKeyboardTheme(@NonNull KeyboardTheme theme) {
     keyboardThemeController.setKeyboardTheme(theme);
+    applyPackThemeOverrideIfAny();
   }
 
   @Override
@@ -289,6 +294,133 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
   public void setThemeOverlay(OverlayData overlay) {
     mThemeOverlay = overlay;
     keyboardThemeController.setThemeOverlay(overlay);
+    applyPackThemeOverrideIfAny();
+  }
+
+  @Nullable
+  protected PackThemeOverride getPackThemeOverride() {
+    return packThemeOverride;
+  }
+
+  public void setPackThemeOverride(@Nullable PackThemeOverride override) {
+    packThemeOverride = override;
+    keyboardThemeController.reapplyKeyboardTheme();
+    applyPackThemeOverrideIfAny();
+  }
+
+  private void applyPackThemeOverrideIfAny() {
+    PackThemeOverride override = packThemeOverride;
+    if (override == null) return;
+
+    final var model = override.themeModel();
+    for (var entry : model.colors().entrySet()) {
+      String key = normalizeThemeKeyName(entry.getKey());
+      int color = entry.getValue();
+      switch (key) {
+        case "keyboardbackground" -> {
+          mThemeOverlayCombiner.setThemeKeyboardBackground(new ColorDrawable(color));
+          setBackground(mThemeOverlayCombiner.getThemeResources().getKeyboardBackground());
+        }
+        case "keybackground" ->
+            mThemeOverlayCombiner.setThemeKeyBackground(new ColorDrawable(color));
+        case "keytextcolor" ->
+            mThemeOverlayCombiner.setThemeTextColor(ColorStateList.valueOf(color));
+        case "hinttextcolor" -> mThemeOverlayCombiner.setThemeHintTextColor(color);
+        case "keyboardnametextcolor", "nametextcolor" ->
+            mThemeOverlayCombiner.setThemeNameTextColor(color);
+        default -> {}
+      }
+    }
+
+    if (!model.icons().isEmpty()) {
+      keyIconResolver.clearCache(true);
+      final File packDir = override.packDirectory();
+      for (var entry : model.icons().entrySet()) {
+        int keyCode = keyCodeForPackIconName(entry.getKey());
+        if (keyCode == 0) continue;
+
+        File iconFile = new File(packDir, entry.getValue().value());
+        if (!iconFile.isFile()) continue;
+        keyIconResolver.putIconBuilder(keyCode, DrawableBuilder.buildFromFile(iconFile));
+      }
+    }
+
+    invalidateAllKeys();
+  }
+
+  @NonNull
+  private static String normalizeThemeKeyName(@Nullable String raw) {
+    if (raw == null) return "";
+    String value = raw.trim();
+    if (value.isEmpty()) return "";
+
+    int slash = value.lastIndexOf('/');
+    if (slash >= 0 && slash < value.length() - 1) value = value.substring(slash + 1);
+
+    StringBuilder builder = new StringBuilder(value.length());
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+        builder.append(Character.toLowerCase(c));
+      }
+    }
+    return builder.toString();
+  }
+
+  private static int keyCodeForPackIconName(@Nullable String raw) {
+    if (raw == null) return 0;
+
+    String value = raw.trim();
+    if (value.isEmpty()) return 0;
+
+    int slash = value.lastIndexOf('/');
+    if (slash >= 0 && slash < value.length() - 1) value = value.substring(slash + 1);
+    if (value.startsWith("iconKey")) value = value.substring("iconKey".length());
+
+    StringBuilder builder = new StringBuilder(value.length());
+    for (int i = 0; i < value.length(); i++) {
+      char c = value.charAt(i);
+      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+        builder.append(Character.toLowerCase(c));
+      }
+    }
+    String name = builder.toString();
+
+    return switch (name) {
+      case "shift" -> KeyCodes.SHIFT;
+      case "control", "ctrl" -> KeyCodes.CTRL;
+      case "action", "enter" -> KeyCodes.ENTER;
+      case "backspace", "delete" -> KeyCodes.DELETE;
+      case "cancel" -> KeyCodes.CANCEL;
+      case "globe" -> KeyCodes.MODE_ALPHABET;
+      case "space" -> KeyCodes.SPACE;
+      case "tab" -> KeyCodes.TAB;
+      case "arrowdown", "down" -> KeyCodes.ARROW_DOWN;
+      case "arrowleft", "left" -> KeyCodes.ARROW_LEFT;
+      case "arrowright", "right" -> KeyCodes.ARROW_RIGHT;
+      case "arrowup", "up" -> KeyCodes.ARROW_UP;
+      case "inputmovehome", "movehome", "home" -> KeyCodes.MOVE_HOME;
+      case "inputmoveend", "moveend", "end" -> KeyCodes.MOVE_END;
+      case "mic", "voiceinput", "voice" -> KeyCodes.VOICE_INPUT;
+      case "settings" -> KeyCodes.SETTINGS;
+      case "condensenormal", "mergelayout" -> KeyCodes.MERGE_LAYOUT;
+      case "condensesplit", "splitlayout" -> KeyCodes.SPLIT_LAYOUT;
+      case "condensecompacttoright", "compactlayouttoright" -> KeyCodes.COMPACT_LAYOUT_TO_RIGHT;
+      case "condensecompacttoleft", "compactlayouttoleft" -> KeyCodes.COMPACT_LAYOUT_TO_LEFT;
+      case "clipboardcopy" -> KeyCodes.CLIPBOARD_COPY;
+      case "clipboardcut" -> KeyCodes.CLIPBOARD_CUT;
+      case "clipboardpaste" -> KeyCodes.CLIPBOARD_PASTE;
+      case "clipboardselect" -> KeyCodes.CLIPBOARD_SELECT_ALL;
+      case "clipboardfineselect" -> KeyCodes.CLIPBOARD_SELECT;
+      case "quicktextpopup" -> KeyCodes.QUICK_TEXT_POPUP;
+      case "quicktext" -> KeyCodes.QUICK_TEXT;
+      case "undo" -> KeyCodes.UNDO;
+      case "redo" -> KeyCodes.REDO;
+      case "forwarddelete" -> KeyCodes.FORWARD_DELETE;
+      case "imageinsert" -> KeyCodes.IMAGE_MEDIA_POPUP;
+      case "clearquicktexthistory" -> KeyCodes.CLEAR_QUICK_TEXT_HISTORY;
+      default -> 0;
+    };
   }
 
   protected KeyDetector createKeyDetector(final float slide) {

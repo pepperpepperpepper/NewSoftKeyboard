@@ -324,6 +324,11 @@
 
     <string name="settings_key_layout_for_internet_fields">settings_key_layout_for_internet_fields</string>
 
+    <!-- Custom keyboards (Keyboard Designer) -->
+    <string name="settings_key_custom_keyboards_enabled_ids">settings_key_custom_keyboards_enabled_ids</string>
+    <string name="settings_key_custom_keyboards_generation">settings_key_custom_keyboards_generation</string>
+    <string name="settings_key_custom_keyboards_pack_theme_mapping">settings_key_custom_keyboards_pack_theme_mapping</string>
+
     <string name="settings_key_pop_text_option">settings_key_pop_text_option</string>
 
     <string name="settings_key_theme_case_type_override">settings_key_theme_case_type_override</string>

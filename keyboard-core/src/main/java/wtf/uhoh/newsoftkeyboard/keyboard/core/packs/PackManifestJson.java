@@ -1,17 +1,20 @@
 package wtf.uhoh.newsoftkeyboard.keyboard.core.packs;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 
 public final class PackManifestJson {
   private PackManifestJson() {}
 
   public static PackManifest parse(InputStream inputStream) throws IOException {
-    String json = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+    String json = new String(readAllBytes(inputStream), StandardCharsets.UTF_8);
     return parse(json);
   }
 
@@ -25,8 +28,8 @@ public final class PackManifestJson {
     String name = null;
     Integer version = null;
     String minCoreVersion = null;
-    List<PackEntry> keyboards = List.of();
-    List<PackEntry> themes = List.of();
+    List<PackEntry> keyboards = Collections.emptyList();
+    List<PackEntry> themes = Collections.emptyList();
 
     while (true) {
       cursor.skipWhitespace();
@@ -64,25 +67,127 @@ public final class PackManifestJson {
               + ")");
     }
 
-    if (id == null || id.isBlank()) throw new IOException("Missing required manifest field: id");
-    if (name == null || name.isBlank())
+    if (id == null || id.trim().isEmpty())
+      throw new IOException("Missing required manifest field: id");
+    if (name == null || name.trim().isEmpty())
       throw new IOException("Missing required manifest field: name");
     if (version == null) throw new IOException("Missing required manifest field: version");
 
-    return new PackManifest(
-        schema,
-        id,
-        name,
-        version,
-        Optional.ofNullable(minCoreVersion).filter(s -> !s.isBlank()),
-        keyboards,
-        themes);
+    final String sanitizedMinCoreVersion =
+        minCoreVersion != null && !minCoreVersion.trim().isEmpty() ? minCoreVersion : null;
+
+    return new PackManifest(schema, id, name, version, sanitizedMinCoreVersion, keyboards, themes);
+  }
+
+  public static void write(PackManifest manifest, OutputStream outputStream) throws IOException {
+    Objects.requireNonNull(manifest);
+    Objects.requireNonNull(outputStream);
+    outputStream.write(toJson(manifest).getBytes(StandardCharsets.UTF_8));
+  }
+
+  public static String toJson(PackManifest manifest) {
+    Objects.requireNonNull(manifest);
+    StringBuilder builder = new StringBuilder();
+    builder.append("{\n");
+    builder.append("  \"schemaVersion\": ").append(manifest.schemaVersion()).append(",\n");
+    builder.append("  \"id\": \"").append(escapeString(manifest.id())).append("\",\n");
+    builder.append("  \"name\": \"").append(escapeString(manifest.name())).append("\",\n");
+    builder.append("  \"version\": ").append(manifest.version());
+
+    if (manifest.minCoreVersion() != null && !manifest.minCoreVersion().trim().isEmpty()) {
+      builder.append(",\n");
+      builder
+          .append("  \"minCoreVersion\": \"")
+          .append(escapeString(manifest.minCoreVersion()))
+          .append('"');
+    }
+
+    builder.append(",\n");
+    builder.append("  \"keyboards\": ");
+    appendEntriesArray(builder, manifest.keyboards(), 2);
+    builder.append(",\n");
+    builder.append("  \"themes\": ");
+    appendEntriesArray(builder, manifest.themes(), 2);
+    builder.append('\n');
+    builder.append("}\n");
+    return builder.toString();
+  }
+
+  private static void appendEntriesArray(
+      StringBuilder builder, List<PackEntry> entries, int baseIndentSpaces) {
+    if (entries == null || entries.isEmpty()) {
+      builder.append("[]");
+      return;
+    }
+
+    String baseIndent = spaces(baseIndentSpaces);
+    String itemIndent = spaces(baseIndentSpaces + 2);
+    builder.append("[\n");
+    for (int i = 0; i < entries.size(); i++) {
+      PackEntry entry = entries.get(i);
+      builder.append(itemIndent);
+      builder.append("{\"id\":\"");
+      builder.append(escapeString(entry.id()));
+      builder.append("\",\"path\":\"");
+      builder.append(escapeString(entry.path().value()));
+      builder.append("\"}");
+      if (i < entries.size() - 1) builder.append(',');
+      builder.append('\n');
+    }
+    builder.append(baseIndent).append(']');
+  }
+
+  private static String spaces(int count) {
+    if (count <= 0) return "";
+    StringBuilder builder = new StringBuilder(count);
+    for (int i = 0; i < count; i++) builder.append(' ');
+    return builder.toString();
+  }
+
+  private static String escapeString(String raw) {
+    if (raw == null || raw.isEmpty()) return "";
+    StringBuilder builder = new StringBuilder(raw.length());
+    for (int i = 0; i < raw.length(); i++) {
+      char c = raw.charAt(i);
+      switch (c) {
+        case '"' -> builder.append("\\\"");
+        case '\\' -> builder.append("\\\\");
+        case '\b' -> builder.append("\\b");
+        case '\f' -> builder.append("\\f");
+        case '\n' -> builder.append("\\n");
+        case '\r' -> builder.append("\\r");
+        case '\t' -> builder.append("\\t");
+        default -> {
+          if (c <= 0x1F) {
+            builder.append(String.format("\\u%04x", (int) c));
+          } else {
+            builder.append(c);
+          }
+        }
+      }
+    }
+    return builder.toString();
+  }
+
+  private static byte[] readAllBytes(InputStream inputStream) throws IOException {
+    try (var out = new ByteArrayOutputStream()) {
+      copy(inputStream, out);
+      return out.toByteArray();
+    }
+  }
+
+  private static void copy(InputStream inputStream, OutputStream outputStream) throws IOException {
+    byte[] buffer = new byte[8 * 1024];
+    int read;
+    while ((read = inputStream.read(buffer)) != -1) {
+      outputStream.write(buffer, 0, read);
+    }
   }
 
   private static List<PackEntry> readEntriesArray(Cursor cursor) throws IOException {
     cursor.expect('[');
     cursor.skipWhitespace();
-    if (cursor.tryConsume(']')) return List.of();
+    if (cursor.tryConsume(']')) return Collections.emptyList();
 
     var entries = new ArrayList<PackEntry>();
     while (true) {
@@ -93,7 +198,7 @@ public final class PackManifestJson {
       cursor.expect(']');
       break;
     }
-    return List.copyOf(entries);
+    return Collections.unmodifiableList(new ArrayList<>(entries));
   }
 
   private static PackEntry readEntry(Cursor cursor) throws IOException {
@@ -130,7 +235,8 @@ public final class PackManifestJson {
       break;
     }
 
-    if (id == null || id.isBlank()) throw new IOException("Entry missing required field: id");
+    if (id == null || id.trim().isEmpty())
+      throw new IOException("Entry missing required field: id");
     if (path == null) throw new IOException("Entry missing required field: path");
     return new PackEntry(id, path);
   }

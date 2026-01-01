@@ -84,6 +84,7 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
     view.findViewById(R.id.dev_share_trace_file).setOnClickListener(this);
     view.findViewById(R.id.show_logcat_button).setOnClickListener(this);
     view.findViewById(R.id.share_logcat_button).setOnClickListener(this);
+    view.findViewById(R.id.keyboard_packs_button).setOnClickListener(this);
 
     TextView textWithListener = view.findViewById(R.id.actionDoneWithListener);
     textWithListener.setOnEditorActionListener(
@@ -194,6 +195,7 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
       case R.id.dev_share_trace_file -> onUserClickedShareTracingFile();
       case R.id.show_logcat_button -> onUserClickedShowLogCat();
       case R.id.share_logcat_button -> onUserClickedShareLogCat();
+      case R.id.keyboard_packs_button -> onUserClickedKeyboardPacks();
       default ->
           throw new IllegalArgumentException(
               "Failed to handle " + v.getId() + " in DeveloperToolsFragment");
@@ -268,6 +270,13 @@ public class DeveloperToolsFragment extends Fragment implements View.OnClickList
     Navigation.findNavController(requireView())
         .navigate(
             DeveloperToolsFragmentDirections.actionDeveloperToolsFragmentToLogCatViewFragment());
+  }
+
+  private void onUserClickedKeyboardPacks() {
+    Navigation.findNavController(requireView())
+        .navigate(
+            DeveloperToolsFragmentDirections
+                .actionDeveloperToolsFragmentToKeyboardPacksDevFragment());
   }
 
   private void onUserClickedShareLogCat() {

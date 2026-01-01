@@ -16,8 +16,12 @@
 
 package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.addons.AddOnsFactory;
@@ -44,6 +48,27 @@ public class KeyboardAddOnBrowserFragment
   @Override
   protected AddOnsFactory<KeyboardAddOnAndBuilder> getAddOnFactory() {
     return NskApplicationBase.getKeyboardFactory(getContext());
+  }
+
+  @Override
+  public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+    super.onCreateOptionsMenu(menu, inflater);
+    menu.add(
+            Menu.NONE,
+            R.id.custom_keyboards_menu_option,
+            Menu.NONE,
+            R.string.custom_keyboards_menu_title)
+        .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+    if (item.getItemId() == R.id.custom_keyboards_menu_option) {
+      Navigation.findNavController(requireView())
+          .navigate(R.id.action_keyboardAddOnBrowserFragment_to_customKeyboardsFragment);
+      return true;
+    }
+    return super.onOptionsItemSelected(item);
   }
 
   @Nullable

@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -242,22 +241,21 @@ public final class LinuxHostMain {
 
   private static RunArgs parseRunArgs(
       LinuxPackRepository packRepository, FilePrefsStore prefs, String[] args) throws IOException {
+    String outputModeRaw = prefs.getString("output.mode");
     OutputMode outputMode =
-        prefs.getString("output.mode").map(OutputMode::parseUnchecked).orElse(OutputMode.EDITOR);
-    String xdotoolWindow = prefs.getString("xdotool.window").orElse(null);
+        outputModeRaw != null ? OutputMode.parseUnchecked(outputModeRaw) : OutputMode.EDITOR;
+    String xdotoolWindow = prefs.getString("xdotool.window");
     int xdotoolDelayMs = prefs.getInt("xdotool.delay_ms", 0);
     boolean ibusActivation = prefs.getBoolean("ibus.activation", true);
+    String ibusSocketRaw = prefs.getString("ibus.socket");
     Path ibusSocketPath =
-        prefs
-            .getString("ibus.socket")
-            .map(raw -> Paths.get(raw).toAbsolutePath().normalize())
-            .orElse(null);
+        ibusSocketRaw != null ? Paths.get(ibusSocketRaw).toAbsolutePath().normalize() : null;
     if (ibusSocketPath == null) ibusSocketPath = defaultIbusSocketPath(System.getenv());
+    String ibusControlSocketRaw = prefs.getString("ibus.control_socket");
     Path ibusControlSocketPath =
-        prefs
-            .getString("ibus.control_socket")
-            .map(raw -> Paths.get(raw).toAbsolutePath().normalize())
-            .orElse(null);
+        ibusControlSocketRaw != null
+            ? Paths.get(ibusControlSocketRaw).toAbsolutePath().normalize()
+            : null;
     if (ibusControlSocketPath == null) {
       String controlOverride = System.getenv().get("NSK_IBUS_CONTROL_SOCKET");
       if (controlOverride != null && !controlOverride.isBlank()) {
@@ -420,10 +418,10 @@ public final class LinuxHostMain {
     for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
       List<KeySpec> keys = rows.get(rowIndex).keys();
       for (int keyIndex = 0; keyIndex < keys.size(); keyIndex++) {
-        Optional<String> keyLabel =
-            keys.get(keyIndex).label().map(String::trim).filter(s -> !s.isEmpty());
-        if (keyLabel.isEmpty()) continue;
-        String keyValue = keyLabel.get();
+        String rawLabel = keys.get(keyIndex).label();
+        if (rawLabel == null) continue;
+        String keyValue = rawLabel.trim();
+        if (keyValue.isEmpty()) continue;
         if (keyValue.equals(needle) || keyValue.equalsIgnoreCase(needle)) {
           return Optional.of(new KeyPosition(rowIndex, keyIndex));
         }
@@ -438,7 +436,7 @@ public final class LinuxHostMain {
       throw new IOException("Pack has no keyboards: " + pack.manifest().id());
     }
 
-    if (keyboardId == null || keyboardId.isBlank()) return keyboards.get(0);
+    if (keyboardId == null || keyboardId.trim().isEmpty()) return keyboards.get(0);
 
     for (PackEntry entry : keyboards) {
       if (keyboardId.equals(entry.id())) return entry;
@@ -696,12 +694,15 @@ public final class LinuxHostMain {
   }
 
   private static String displayLabel(KeySpec keySpec) {
-    Optional<String> label = keySpec.label().map(String::trim).filter(s -> !s.isEmpty());
-    if (label.isPresent()) return label.get();
+    String rawLabel = keySpec.label();
+    if (rawLabel != null) {
+      String label = rawLabel.trim();
+      if (!label.isEmpty()) return label;
+    }
 
-    OptionalInt primaryNumeric = primaryNumericCode(keySpec);
-    if (primaryNumeric.isPresent()) {
-      int code = primaryNumeric.getAsInt();
+    Integer primaryNumeric = primaryNumericCode(keySpec);
+    if (primaryNumeric != null) {
+      int code = primaryNumeric;
       return switch (code) {
         case -1 -> "⇧";
         case -5 -> "⌫";
@@ -712,12 +713,12 @@ public final class LinuxHostMain {
     return "<?>"; // no label, no codes
   }
 
-  private static OptionalInt primaryNumericCode(KeySpec keySpec) {
+  private static Integer primaryNumericCode(KeySpec keySpec) {
     for (KeyCode code : keySpec.codes()) {
-      OptionalInt numeric = code.asNumeric();
-      if (numeric.isPresent()) return numeric;
+      Integer numeric = code.asNumeric();
+      if (numeric != null) return numeric;
     }
-    return OptionalInt.empty();
+    return null;
   }
 
   private static void applyActions(JTextArea editor, List<SemanticAction> actions) {

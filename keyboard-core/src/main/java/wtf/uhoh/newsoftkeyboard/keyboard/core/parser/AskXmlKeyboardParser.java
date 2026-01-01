@@ -3,9 +3,10 @@ package wtf.uhoh.newsoftkeyboard.keyboard.core.parser;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Element;
@@ -36,6 +37,8 @@ public final class AskXmlKeyboardParser {
             "Expected root tag <Keyboard>, got <" + keyboardElement.getTagName() + ">");
       }
 
+      Map<String, String> rawKeyboardAttributes = rawAttributes(keyboardElement);
+
       var rowNodes = keyboardElement.getElementsByTagName("Row");
       var rows = new ArrayList<KeyboardRow>(rowNodes.getLength());
       for (int rowIndex = 0; rowIndex < rowNodes.getLength(); rowIndex++) {
@@ -43,13 +46,14 @@ public final class AskXmlKeyboardParser {
         rows.add(parseRow(rowElement));
       }
 
-      return new KeyboardModel(rows);
+      return new KeyboardModel(rawKeyboardAttributes, rows);
     } catch (ParserConfigurationException | SAXException e) {
       throw new IOException("Failed parsing keyboard XML", e);
     }
   }
 
   private static KeyboardRow parseRow(Element rowElement) {
+    Map<String, String> rawRowAttributes = rawAttributes(rowElement);
     NodeList keyNodes = rowElement.getChildNodes();
     var keys = new ArrayList<KeySpec>();
     for (int keyIndex = 0; keyIndex < keyNodes.getLength(); keyIndex++) {
@@ -58,37 +62,42 @@ public final class AskXmlKeyboardParser {
       if (!"Key".equals(node.getNodeName())) continue;
       keys.add(parseKey((Element) node));
     }
-    return new KeyboardRow(keys);
+    return new KeyboardRow(rawRowAttributes, keys);
   }
 
   private static KeySpec parseKey(Element keyElement) {
-    var rawAttributes = new HashMap<String, String>();
-    NamedNodeMap attrs = keyElement.getAttributes();
-    for (int i = 0; i < attrs.getLength(); i++) {
-      Node attr = attrs.item(i);
-      rawAttributes.put(attr.getNodeName(), attr.getNodeValue());
-    }
+    Map<String, String> rawAttributes = rawAttributes(keyElement);
 
-    Optional<String> label = optionalAttr(keyElement, ANDROID_NS_URI, "keyLabel");
-    Optional<String> popupCharacters = optionalAttr(keyElement, ANDROID_NS_URI, "popupCharacters");
+    String label = optionalAttr(keyElement, ANDROID_NS_URI, "keyLabel");
+    String popupCharacters = optionalAttr(keyElement, ANDROID_NS_URI, "popupCharacters");
     String codesRaw = keyElement.getAttributeNS(ANDROID_NS_URI, "codes");
     List<KeyCode> codes = parseCodes(codesRaw);
 
     return new KeySpec(codes, label, popupCharacters, rawAttributes);
   }
 
-  private static Optional<String> optionalAttr(Element element, String nsUri, String localName) {
+  private static Map<String, String> rawAttributes(Element element) {
+    var rawAttributes = new HashMap<String, String>();
+    NamedNodeMap attrs = element.getAttributes();
+    for (int i = 0; i < attrs.getLength(); i++) {
+      Node attr = attrs.item(i);
+      rawAttributes.put(attr.getNodeName(), attr.getNodeValue());
+    }
+    return Collections.unmodifiableMap(rawAttributes);
+  }
+
+  private static String optionalAttr(Element element, String nsUri, String localName) {
     String value = element.getAttributeNS(nsUri, localName);
-    if (value == null || value.isEmpty()) return Optional.empty();
-    return Optional.of(value);
+    if (value == null || value.isEmpty()) return null;
+    return value;
   }
 
   private static List<KeyCode> parseCodes(String raw) {
-    if (raw == null || raw.isBlank()) return List.of();
+    if (raw == null || raw.trim().isEmpty()) return Collections.emptyList();
 
     String trimmed = raw.trim();
     if (trimmed.startsWith("@")) {
-      return List.of(new KeyCode.Symbolic(trimmed));
+      return Collections.singletonList(new KeyCode.Symbolic(trimmed));
     }
 
     return parseCommaSeparatedCodes(trimmed);

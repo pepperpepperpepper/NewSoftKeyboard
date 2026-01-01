@@ -193,6 +193,7 @@ final class KeyDrawHelper {
           && (inputs.hintTextSizeMultiplier > 0)
           && ((key.popupCharacters != null && key.popupCharacters.length() > 0)
               || (key.popupResId != 0)
+              || (key.popupKeyboardPackPath != null && key.popupKeyboardPackPath.length() > 0)
               || (key.longPressCode != 0))) {
         Paint.Align oldAlign = paint.getTextAlign();
         keyHintRenderer.drawHint(

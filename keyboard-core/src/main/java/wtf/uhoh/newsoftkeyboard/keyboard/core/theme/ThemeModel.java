@@ -1,5 +1,7 @@
 package wtf.uhoh.newsoftkeyboard.keyboard.core.theme;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.packs.PackPath;
@@ -11,9 +13,10 @@ public final class ThemeModel {
 
   public ThemeModel(
       Map<String, Integer> colors, Map<String, PackPath> icons, Map<String, String> rawAttributes) {
-    this.colors = Map.copyOf(Objects.requireNonNull(colors));
-    this.icons = Map.copyOf(Objects.requireNonNull(icons));
-    this.rawAttributes = Map.copyOf(Objects.requireNonNull(rawAttributes));
+    this.colors = Collections.unmodifiableMap(new HashMap<>(Objects.requireNonNull(colors)));
+    this.icons = Collections.unmodifiableMap(new HashMap<>(Objects.requireNonNull(icons)));
+    this.rawAttributes =
+        Collections.unmodifiableMap(new HashMap<>(Objects.requireNonNull(rawAttributes)));
   }
 
   public Map<String, Integer> colors() {

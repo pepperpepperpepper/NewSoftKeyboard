@@ -253,7 +253,18 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_developerToolsFragment_to_keyboardPacksDevFragment"
+            app:destination="@id/keyboardPacksDevFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
+    <fragment
+        android:id="@+id/keyboardPacksDevFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.dev.KeyboardPacksDevFragment"
+        android:label="KeyboardPacksDevFragment" />
     <fragment
         android:id="@+id/keyboardAddOnBrowserFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.KeyboardAddOnBrowserFragment"
@@ -262,6 +273,40 @@
             android:id="@+id/deepLink4"
             app:action="android.intent.action.VIEW"
             app:uri="@string/deeplink_url_keyboards" />
+        <action
+            android:id="@+id/action_keyboardAddOnBrowserFragment_to_customKeyboardsFragment"
+            app:destination="@id/customKeyboardsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+    <fragment
+        android:id="@+id/customKeyboardsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.CustomKeyboardsFragment"
+        android:label="@string/custom_keyboards_title">
+        <action
+            android:id="@+id/action_customKeyboardsFragment_to_customKeyboardEditorFragment"
+            app:destination="@id/customKeyboardEditorFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+    <fragment
+        android:id="@+id/customKeyboardEditorFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.CustomKeyboardEditorFragment"
+        android:label="@string/custom_keyboards_title">
+        <argument
+            android:name="packId"
+            app:argType="string" />
+        <argument
+            android:name="keyboardEntryId"
+            app:argType="string" />
+        <argument
+            android:name="keyboardPath"
+            android:defaultValue=""
+            app:argType="string" />
     </fragment>
     <fragment
         android:id="@+id/dictionariesFragment"

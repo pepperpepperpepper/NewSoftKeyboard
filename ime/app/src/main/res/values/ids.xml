@@ -15,4 +15,6 @@
     <item name="notification_icon_debug_version" type="id" />
 
     <item name="keyboard_container_provider_tag_id" type="id" />
+
+    <item name="custom_keyboards_menu_option" type="id" />
 </resources>

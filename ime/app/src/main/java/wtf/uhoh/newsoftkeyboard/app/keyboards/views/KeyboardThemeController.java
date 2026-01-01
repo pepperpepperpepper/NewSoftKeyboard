@@ -62,6 +62,13 @@ final class KeyboardThemeController {
     paint.setTextSize(keyTextStyleState.keyTextSize());
   }
 
+  void reapplyKeyboardTheme() {
+    KeyboardTheme theme = lastSetTheme;
+    if (theme == null) return;
+    lastSetTheme = null;
+    setKeyboardTheme(theme);
+  }
+
   void setThemeOverlay(@NonNull OverlayData overlay) {
     keyIconResolver.clearCache(true);
     themeOverlayCombiner.setOverlayData(overlay);

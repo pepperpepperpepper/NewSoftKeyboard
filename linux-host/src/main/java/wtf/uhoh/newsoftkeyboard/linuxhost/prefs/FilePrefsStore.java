@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
-import java.util.Optional;
 import java.util.Properties;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.adapters.PrefsStore;
 
@@ -27,25 +26,26 @@ public final class FilePrefsStore implements PrefsStore {
   }
 
   @Override
-  public Optional<String> getString(String key) {
+  public String getString(String key) {
     String value = properties.getProperty(key);
-    if (value == null) return Optional.empty();
+    if (value == null) return null;
     String trimmed = value.trim();
-    if (trimmed.isEmpty()) return Optional.empty();
-    return Optional.of(trimmed);
+    if (trimmed.isEmpty()) return null;
+    return trimmed;
   }
 
   @Override
   public boolean getBoolean(String key, boolean defaultValue) {
-    return getString(key).map(FilePrefsStore::parseBoolean).orElse(defaultValue);
+    String value = getString(key);
+    return value != null ? parseBoolean(value) : defaultValue;
   }
 
   @Override
   public int getInt(String key, int defaultValue) {
-    Optional<String> value = getString(key);
-    if (value.isEmpty()) return defaultValue;
+    String value = getString(key);
+    if (value == null) return defaultValue;
     try {
-      return Integer.parseInt(value.get());
+      return Integer.parseInt(value);
     } catch (NumberFormatException e) {
       return defaultValue;
     }

@@ -1,6 +1,7 @@
 # Keyboard Designer Report (NewSoftKeyboard)
 
 Date: 2025-12-29
+Update: 2026-01-01
 
 ## Goal
 
@@ -16,6 +17,14 @@ This report focuses on:
 
 ## Status (as of 2025-12-29)
 
+Update (as of 2026-01-01): Phases 0–3 in this report are implemented in NewSoftKeyboard:
+
+- Android runtime loading of a pack keyboard as an IME keyboard.
+- Pack install/import/export via zip with safe extraction + validation.
+- In-app “Custom Keyboards” UI + interactive editor (keys/rows/popups/layers).
+- Pack themes (portable colors + icon overrides) applied as an overlay on top of the selected base theme.
+- Editor “test typing” mode and validation warnings (missing core keys, missing symbols switch, invalid popup links, row width overflow, invalid UTF-16/code points).
+
 Already implemented in this repo (usable today for tooling/tests):
 
 - A file-based keyboard pack format (`manifest.json` + `keyboards/*.xml` + optional themes/icons).
@@ -28,7 +37,7 @@ Already implemented in this repo (usable today for tooling/tests):
 - A Linux dev host that can load a pack keyboard and press keys (useful for pack smoke + iteration):
   - `linux-host/src/main/java/wtf/uhoh/newsoftkeyboard/linuxhost/LinuxHostMain.java`
 
-Not implemented yet (this document proposes the architecture/plan):
+Not implemented yet (as of 2025-12-29; implemented as of 2026-01-01):
 
 - Android runtime loading of a pack keyboard as an IME keyboard (not just parsing).
 - Pack install/uninstall UI (zip import/export) and an in-app “Keyboard Designer” UI.
@@ -311,10 +320,7 @@ Theme key naming (must be stable/portable):
   - Recommended: use attribute-like names (e.g., `keyboardBackground`, `keyBackground`, `keyTextColor`,
     `hintTextColor`, `keyboardNameTextColor`) and a small, stable icon name set (e.g., `enterIcon`, `shiftIcon`,
     `deleteIcon`, `micIcon`).
-- `scripts/convert_apk_to_pack.py` currently emits some theme keys as raw hex attribute IDs (except
-  `keyboardBackground` which is already normalized). That is **not portable** across APKs.
-  - Follow-up task: update the converter to map style item keys through `aapt2 dump resources` so it emits
-    stable `attr/<name>` (or plain `<name>`) keys in the pack theme output.
+- `scripts/convert_apk_to_pack.py` normalizes style item keys to stable attribute names (instead of raw hex IDs).
 
 ## Recommended Architecture: “Custom Keyboard Packs” (File-Based)
 

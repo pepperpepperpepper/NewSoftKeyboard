@@ -1,8 +1,8 @@
 package wtf.uhoh.newsoftkeyboard.keyboard.core.session;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.OptionalInt;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.KeyCode;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.KeySpec;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.KeyboardModel;
@@ -25,42 +25,42 @@ public final class KeyboardSession {
     if (inputEvent instanceof CoreInputEvent.KeyPress keyPress) {
       return pressKey(keyPress.rowIndex(), keyPress.keyIndex());
     }
-    return List.of();
+    return Collections.emptyList();
   }
 
   public List<SemanticAction> pressKey(int rowIndex, int keyIndex) {
     KeySpec keySpec = keyboard.rows().get(rowIndex).keys().get(keyIndex);
 
-    OptionalInt primaryCode = primaryNumericCode(keySpec);
-    if (primaryCode.isPresent()) {
-      int code = primaryCode.getAsInt();
+    Integer primaryCode = primaryNumericCode(keySpec);
+    if (primaryCode != null) {
+      int code = primaryCode;
       if (code == CODE_SHIFT) {
         shiftOnce = !shiftOnce;
-        return List.of();
+        return Collections.emptyList();
       }
       if (code == CODE_DELETE) {
         shiftOnce = false;
-        return List.of(new SemanticAction.DeleteBackward(1));
+        return Collections.singletonList(new SemanticAction.DeleteBackward(1));
       }
     }
 
-    var label = keySpec.label().orElse("");
-    if (!label.isEmpty()) {
+    var label = keySpec.label();
+    if (label != null && !label.isEmpty()) {
       String commit = shiftOnce ? applyShift(label) : label;
       shiftOnce = false;
-      return List.of(new SemanticAction.CommitText(commit));
+      return Collections.singletonList(new SemanticAction.CommitText(commit));
     }
 
     shiftOnce = false;
-    return List.of();
+    return Collections.emptyList();
   }
 
-  private static OptionalInt primaryNumericCode(KeySpec keySpec) {
+  private static Integer primaryNumericCode(KeySpec keySpec) {
     for (KeyCode code : keySpec.codes()) {
-      OptionalInt numeric = code.asNumeric();
-      if (numeric.isPresent()) return numeric;
+      Integer numeric = code.asNumeric();
+      if (numeric != null) return numeric;
     }
-    return OptionalInt.empty();
+    return null;
   }
 
   private static String applyShift(String label) {
@@ -70,6 +70,6 @@ public final class KeyboardSession {
 
   public List<SemanticAction> performEditorAction(EditorAction action) {
     shiftOnce = false;
-    return List.of(new SemanticAction.PerformEditorAction(action));
+    return Collections.singletonList(new SemanticAction.PerformEditorAction(action));
   }
 }

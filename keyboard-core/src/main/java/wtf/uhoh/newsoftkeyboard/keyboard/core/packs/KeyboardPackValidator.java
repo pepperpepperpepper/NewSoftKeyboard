@@ -3,6 +3,7 @@ package wtf.uhoh.newsoftkeyboard.keyboard.core.packs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -25,8 +26,8 @@ public final class KeyboardPackValidator {
               + ")");
     }
 
-    if (manifest.id().isBlank()) errors.add("manifest.id is empty");
-    if (manifest.name().isBlank()) errors.add("manifest.name is empty");
+    if (manifest.id().trim().isEmpty()) errors.add("manifest.id is empty");
+    if (manifest.name().trim().isEmpty()) errors.add("manifest.name is empty");
     if (manifest.version() < 0) errors.add("manifest.version must be >= 0");
 
     validateUniqueEntryIds(errors, "keyboards", manifest.keyboards());
@@ -73,7 +74,7 @@ public final class KeyboardPackValidator {
       }
     }
 
-    return new ValidationResult(List.copyOf(errors));
+    return new ValidationResult(errors);
   }
 
   private static void validateUniqueEntryIds(
@@ -88,7 +89,7 @@ public final class KeyboardPackValidator {
 
   public record ValidationResult(List<String> errors) {
     public ValidationResult {
-      errors = List.copyOf(errors);
+      errors = Collections.unmodifiableList(new ArrayList<>(errors));
     }
 
     public boolean isValid() {

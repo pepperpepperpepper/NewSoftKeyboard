@@ -2,8 +2,10 @@ package wtf.uhoh.newsoftkeyboard.app.keyboards;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
+import java.util.ArrayList;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardsRegistry;
 
 /** Ensures KeyboardSwitcher caches are built (enabled keyboards + symbols array). */
 final class KeyboardSwitcherCacheEnsurer {
@@ -31,8 +33,11 @@ final class KeyboardSwitcherCacheEnsurer {
         || updatedSymbolsKeyboardsArray.length == 0
         || updatedAlphabetCreators.length == 0) {
       if (updatedAlphabetKeyboards.length == 0 || updatedAlphabetCreators.length == 0) {
-        final List<KeyboardAddOnAndBuilder> enabledKeyboardBuilders =
-            NskApplicationBase.getKeyboardFactory(context).getEnabledAddOns();
+        final List<KeyboardAddOnAndBuilder> enabledKeyboardBuilders = new ArrayList<>();
+        enabledKeyboardBuilders.addAll(
+            NskApplicationBase.getKeyboardFactory(context).getEnabledAddOns());
+        enabledKeyboardBuilders.addAll(
+            CustomKeyboardsRegistry.listEnabledKeyboardBuilders(context));
         updatedAlphabetCreators = enabledKeyboardBuilders.toArray(new KeyboardAddOnAndBuilder[0]);
         updatedInternetInputLayoutIndex =
             InternetLayoutLocator.findIndex(internetInputLayoutId, updatedAlphabetCreators);

@@ -23,6 +23,10 @@ import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
@@ -31,8 +35,16 @@ import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardSwitchedListener;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardSwitcher;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.NextKeyboardType;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardPrefs;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.InstalledKeyboardPack;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.KeyboardPacksRepository;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.InputViewBinder;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewBase;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.PackThemeOverride;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
+import wtf.uhoh.newsoftkeyboard.keyboard.core.packs.PackEntry;
+import wtf.uhoh.newsoftkeyboard.keyboard.core.theme.ThemeModel;
+import wtf.uhoh.newsoftkeyboard.keyboard.core.theme.ThemeXmlParser;
 
 public abstract class ImeKeyboardSwitchedListener extends ImeRxPrefs
     implements KeyboardSwitchedListener {
@@ -166,7 +178,53 @@ public abstract class ImeKeyboardSwitchedListener extends ImeRxPrefs
           keyboard,
           mKeyboardSwitcher.peekNextAlphabetKeyboard(),
           mKeyboardSwitcher.peekNextSymbolsKeyboard());
+      if (inputView instanceof KeyboardViewBase keyboardView) {
+        keyboardView.setPackThemeOverride(resolvePackThemeOverrideOrNull(keyboard));
+      }
     }
+  }
+
+  @Nullable
+  private PackThemeOverride resolvePackThemeOverrideOrNull(@NonNull KeyboardDefinition keyboard) {
+    String packId = extractPackIdOrNull(keyboard.getKeyboardId());
+    if (packId == null) return null;
+
+    String themeId = CustomKeyboardPrefs.getSelectedThemeIdForPack(getApplicationContext(), packId);
+    if (TextUtils.isEmpty(themeId)) return null;
+
+    try {
+      InstalledKeyboardPack pack =
+          new KeyboardPacksRepository(getApplicationContext()).findInstalledPackById(packId);
+      if (pack == null) return null;
+
+      PackEntry themeEntry = null;
+      for (PackEntry entry : pack.manifest().themes()) {
+        if (entry.id().equals(themeId)) {
+          themeEntry = entry;
+          break;
+        }
+      }
+      if (themeEntry == null) return null;
+
+      File themeFile = new File(pack.directory(), themeEntry.path().value());
+      try (InputStream in = new FileInputStream(themeFile)) {
+        ThemeModel model = ThemeXmlParser.parse(in);
+        return new PackThemeOverride(pack.directory(), model);
+      }
+    } catch (IOException e) {
+      Logger.w(TAG, "Failed applying pack theme for %s: %s", packId, e.getMessage());
+      return null;
+    }
+  }
+
+  @Nullable
+  private static String extractPackIdOrNull(@NonNull String keyboardId) {
+    final String prefix = "pack::";
+    if (!keyboardId.startsWith(prefix)) return null;
+    String rest = keyboardId.substring(prefix.length());
+    int sep = rest.indexOf("::");
+    if (sep <= 0) return null;
+    return rest.substring(0, sep);
   }
 
   @Override
