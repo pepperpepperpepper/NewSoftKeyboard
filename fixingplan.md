@@ -13,7 +13,7 @@ This file **absorbs and replaces** `feedback-plan.md` to avoid the â€œtwo TODOsâ
 
 ## 0) Current shipped context
 
-- Latest published build (F-Droid): `13.8.52` (`versionCode 15103`)
+- Latest published build (F-Droid): `13.8.53` (`versionCode 15104`)
 - Regressions reported on real device (Pixel Fold): settings crash + spacebar state issues
 - Emulator note: Genymotion previously showed an ANR symptom in the same settings area (not a clean stack trace yet)
 
@@ -135,7 +135,7 @@ Also note:
 
 - `KeyDrawHelper.drawKeyTextureOverlayWithMask(...)` now wraps the masked-overlay path in a defensive
   `try/catch(RuntimeException | OutOfMemoryError)` and falls back to the simpler rounded-rect overlay instead of
-  crashing the IME.
+  crashing the IME. (Shipped in `13.8.53` / `15104`.)
 
 **Data we need (highest priority)**
 
