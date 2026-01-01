@@ -1515,10 +1515,14 @@ public class CustomKeyboardEditorFragment extends Fragment {
     public void onMultiTapEnded() {}
 
     @Override
-    public void onText(Keyboard.Key key, CharSequence text) {}
+    public void onText(Keyboard.Key key, CharSequence text) {
+      showKeyEditDialog(key);
+    }
 
     @Override
-    public void onTyping(Keyboard.Key key, CharSequence text) {}
+    public void onTyping(Keyboard.Key key, CharSequence text) {
+      showKeyEditDialog(key);
+    }
 
     @Override
     public void onCancel() {}
@@ -1617,10 +1621,16 @@ public class CustomKeyboardEditorFragment extends Fragment {
     public void onMultiTapEnded() {}
 
     @Override
-    public void onText(Keyboard.Key key, CharSequence text) {}
+    public void onText(Keyboard.Key key, CharSequence text) {
+      if (text == null || text.length() == 0) return;
+      appendToTestBuffer(text);
+    }
 
     @Override
-    public void onTyping(Keyboard.Key key, CharSequence text) {}
+    public void onTyping(Keyboard.Key key, CharSequence text) {
+      if (text == null || text.length() == 0) return;
+      appendToTestBuffer(text);
+    }
 
     @Override
     public void onCancel() {}
