@@ -116,35 +116,40 @@ final class KeyDrawHelper {
       inputs.keyBackground.draw(canvas);
 
       if (inputs.keyFaceWallpaperOverlayPaint != null) {
-        switch (inputs.keyFaceWallpaperOverlayMode) {
-          case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT:
-            canvas.drawRect(0f, 0f, key.width, key.height, inputs.keyFaceWallpaperOverlayPaint);
-            break;
-          case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE:
-            if (inputs.keyFaceWallpaperOverlayMatchKeyShape) {
-              drawKeyTextureOverlayWithMask(
-                  canvas,
-                  inputs.keyBackground,
-                  key.width,
-                  key.height,
-                  inputs.keyFaceWallpaperOverlayPaint);
-            } else {
-              final float radius =
-                  KeyBackgroundCornerRadiusResolver.resolveCornerRadiusOrFallback(
-                      inputs.keyBackground, key.width, key.height);
-              canvas.drawRoundRect(
-                  0f,
-                  0f,
-                  key.width,
-                  key.height,
-                  radius,
-                  radius,
-                  inputs.keyFaceWallpaperOverlayPaint);
-            }
-            break;
-          case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY:
-          default:
-            break;
+        try {
+          switch (inputs.keyFaceWallpaperOverlayMode) {
+            case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT:
+              canvas.drawRect(0f, 0f, key.width, key.height, inputs.keyFaceWallpaperOverlayPaint);
+              break;
+            case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE:
+              if (inputs.keyFaceWallpaperOverlayMatchKeyShape) {
+                drawKeyTextureOverlayWithMask(
+                    canvas,
+                    inputs.keyBackground,
+                    key.width,
+                    key.height,
+                    inputs.keyFaceWallpaperOverlayPaint);
+              } else {
+                final float radius =
+                    KeyBackgroundCornerRadiusResolver.resolveCornerRadiusOrFallback(
+                        inputs.keyBackground, key.width, key.height);
+                canvas.drawRoundRect(
+                    0f,
+                    0f,
+                    key.width,
+                    key.height,
+                    radius,
+                    radius,
+                    inputs.keyFaceWallpaperOverlayPaint);
+              }
+              break;
+            case KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY:
+            default:
+              break;
+          }
+        } catch (RuntimeException | OutOfMemoryError ignored) {
+          // Key wallpaper overlays should never crash the IME. If a renderer or device cannot
+          // handle the shader/layer/mask combination, skip the overlay for this draw pass.
         }
       }
 
@@ -249,17 +254,17 @@ final class KeyDrawHelper {
       int keyWidth,
       int keyHeight,
       @NonNull Paint overlayPaint) {
-    final var mask =
-        KeyBackgroundAlphaMaskCache.resolveAlphaMask(keyBackground, keyWidth, keyHeight);
-    if (mask == null) {
-      final float radius =
-          KeyBackgroundCornerRadiusResolver.resolveCornerRadiusOrFallback(
-              keyBackground, keyWidth, keyHeight);
-      canvas.drawRoundRect(0f, 0f, keyWidth, keyHeight, radius, radius, overlayPaint);
-      return;
-    }
-
     try {
+      final var mask =
+          KeyBackgroundAlphaMaskCache.resolveAlphaMask(keyBackground, keyWidth, keyHeight);
+      if (mask == null) {
+        final float radius =
+            KeyBackgroundCornerRadiusResolver.resolveCornerRadiusOrFallback(
+                keyBackground, keyWidth, keyHeight);
+        canvas.drawRoundRect(0f, 0f, keyWidth, keyHeight, radius, radius, overlayPaint);
+        return;
+      }
+
       final int saveCount = canvas.saveLayer(0f, 0f, keyWidth, keyHeight, null);
       canvas.drawRect(0f, 0f, keyWidth, keyHeight, overlayPaint);
       canvas.drawBitmap(mask, 0f, 0f, KeyBackgroundAlphaMaskCache.dstInPaint());

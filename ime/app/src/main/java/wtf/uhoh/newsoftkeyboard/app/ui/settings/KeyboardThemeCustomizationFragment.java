@@ -143,6 +143,8 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
     background.addPreference(dimPref);
 
     wallpaperModePref = new ListPreference(context);
+    wallpaperModePref.setKey("keyboard_theme_wallpaper_customization_mode");
+    wallpaperModePref.setPersistent(false);
     wallpaperModePref.setTitle(R.string.keyboard_theme_wallpaper_customization_mode_title);
     final CharSequence wallpaperModeSummaryBase =
         getText(R.string.keyboard_theme_wallpaper_customization_mode_summary);

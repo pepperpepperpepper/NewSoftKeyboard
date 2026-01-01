@@ -111,6 +111,79 @@ public class KeyboardThemeCustomizationFragmentTest {
     }
   }
 
+  @Test
+  public void changingWallpaperModeDoesNotCrashAndPersistsPreference() throws Exception {
+    final var targetContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+    final AtomicReference<String> themeIdRef = new AtomicReference<>(null);
+
+    final File sourceFile = new File(targetContext.getCacheDir(), "nsk_wallpaper_mode_test.png");
+    final Bitmap bitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
+    bitmap.eraseColor(Color.BLUE);
+    try (FileOutputStream out = new FileOutputStream(sourceFile)) {
+      //noinspection ResultOfMethodCallIgnored
+      bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+    } finally {
+      bitmap.recycle();
+    }
+    final Uri uri = Uri.fromFile(sourceFile);
+
+    Intents.init();
+    try {
+      final Intent resultData = new Intent().setData(uri);
+      final Instrumentation.ActivityResult result =
+          new Instrumentation.ActivityResult(Activity.RESULT_OK, resultData);
+      intending(hasAction(Intent.ACTION_OPEN_DOCUMENT)).respondWith(result);
+
+      final Intent intent =
+          new Intent(targetContext, MainSettingsActivity.class)
+              .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      scenario = ActivityScenario.launch(intent);
+      scenario.onActivity(
+          activity -> {
+            final var prefs = DirectBootAwareSharedPreferences.create(activity);
+            prefs
+                .edit()
+                .putBoolean(
+                    activity.getString(R.string.settings_key_extension_keyboard_enabled), true)
+                .apply();
+
+            final KeyboardTheme theme =
+                NskApplicationBase.getKeyboardThemeFactory(activity).getEnabledAddOn();
+            org.junit.Assert.assertNotNull(theme);
+            themeIdRef.set(theme.getId());
+
+            new KeyboardWallpaperOverrideStore(activity).clear(theme.getId());
+
+            androidx.navigation.Navigation.findNavController(activity, R.id.nav_host_fragment)
+                .navigate(R.id.keyboardThemeCustomizationFragment);
+          });
+
+      onView(withText(R.string.keyboard_theme_wallpaper_customization_pick_title))
+          .check(matches(isDisplayed()));
+      onView(withText(R.string.keyboard_theme_wallpaper_customization_pick_title)).perform(click());
+
+      waitForTextDisplayed(
+          R.string.keyboard_theme_wallpaper_customization_pick_summary_set, 10_000L);
+
+      // Change mode to "Background + key texture"
+      onView(withText(R.string.keyboard_theme_wallpaper_customization_mode_title)).perform(click());
+      onView(withText(R.string.keyboard_theme_wallpaper_customization_mode_background_key_texture))
+          .perform(click());
+
+      scenario.onActivity(
+          activity -> {
+            final String themeId = themeIdRef.get();
+            org.junit.Assert.assertNotNull(themeId);
+            final int mode = new KeyboardWallpaperOverrideStore(activity).getWallpaperMode(themeId);
+            org.junit.Assert.assertEquals(
+                KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE, mode);
+            new KeyboardWallpaperOverrideStore(activity).clear(themeId);
+          });
+    } finally {
+      Intents.release();
+    }
+  }
+
   private static void waitForTextDisplayed(int stringResId, long timeoutMs) {
     final long deadline = SystemClock.uptimeMillis() + Math.max(1L, timeoutMs);
     Throwable lastFailure = null;
