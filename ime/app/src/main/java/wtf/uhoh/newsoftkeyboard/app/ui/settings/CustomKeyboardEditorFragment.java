@@ -4,7 +4,9 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
@@ -35,6 +37,7 @@ import java.util.Set;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardKey;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.PackKeyboardDefinition;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardPrefs;
@@ -42,6 +45,7 @@ import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.InstalledKeyboardPack;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.KeyboardPacksRepository;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.PackKeyboardRuntimeLoader;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardView;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewBase;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.OnKeyboardActionListener;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.PackThemeOverride;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.KeyCode;
@@ -92,6 +96,11 @@ public class CustomKeyboardEditorFragment extends Fragment {
   private TextView statusView;
   private Button themeButton;
 
+  private int touchSlopPx;
+  private int editorDownKeyIndex = KeyboardViewBase.NOT_A_KEY;
+  private float editorDownX;
+  private float editorDownY;
+
   @Nullable private InstalledKeyboardPack pack;
   @Nullable private PackEntry keyboardEntry;
   @Nullable private PackEntry themeEntry;
@@ -137,6 +146,9 @@ public class CustomKeyboardEditorFragment extends Fragment {
         NskApplicationBase.getKeyboardThemeFactory(requireContext()).getEnabledAddOn());
     // CHECKSTYLE:ON: RawGetKeyboardTheme
 
+    touchSlopPx = ViewConfiguration.get(requireContext()).getScaledTouchSlop();
+    keyboardView.setOnTouchListener(this::onKeyboardViewTouch);
+
     if (savedInstanceState != null) {
       testTypingEnabled = savedInstanceState.getBoolean(STATE_TEST_TYPING_ENABLED, false);
       String restoredBuffer = savedInstanceState.getString(STATE_TEST_TYPING_BUFFER, "");
@@ -154,6 +166,65 @@ public class CustomKeyboardEditorFragment extends Fragment {
     testTypingSwitch.setOnCheckedChangeListener(
         (CompoundButton buttonView, boolean isChecked) -> setTestTypingEnabled(isChecked));
     setTestTypingEnabled(testTypingEnabled);
+  }
+
+  private boolean onKeyboardViewTouch(@NonNull View v, @NonNull MotionEvent event) {
+    if (testTypingEnabled) return false; // let KeyboardView handle actual typing simulation
+
+    KeyboardDefinition currentKeyboard = keyboardView != null ? keyboardView.getKeyboard() : null;
+    if (currentKeyboard == null || currentKeyboard.getKeys().isEmpty()) return false;
+
+    final int action = event.getActionMasked();
+    switch (action) {
+      case MotionEvent.ACTION_DOWN -> {
+        editorDownX = event.getX();
+        editorDownY = event.getY();
+        editorDownKeyIndex = findKeyIndexForEvent(currentKeyboard, event);
+        return true;
+      }
+      case MotionEvent.ACTION_MOVE -> {
+        if (editorDownKeyIndex == KeyboardViewBase.NOT_A_KEY) return true;
+        float dx = event.getX() - editorDownX;
+        float dy = event.getY() - editorDownY;
+        if ((dx * dx + dy * dy) > (touchSlopPx * touchSlopPx)) {
+          editorDownKeyIndex = KeyboardViewBase.NOT_A_KEY;
+        }
+        return true;
+      }
+      case MotionEvent.ACTION_UP -> {
+        int keyIndex = editorDownKeyIndex;
+        editorDownKeyIndex = KeyboardViewBase.NOT_A_KEY;
+        if (keyIndex == KeyboardViewBase.NOT_A_KEY) return true;
+
+        int upKeyIndex = findKeyIndexForEvent(currentKeyboard, event);
+        if (upKeyIndex != keyIndex) return true;
+
+        try {
+          showKeyEditDialog(currentKeyboard.getKeys().get(keyIndex));
+        } catch (IndexOutOfBoundsException ignored) {
+          // ignore
+        }
+        return true;
+      }
+      case MotionEvent.ACTION_CANCEL -> {
+        editorDownKeyIndex = KeyboardViewBase.NOT_A_KEY;
+        return true;
+      }
+      default -> {
+        return true;
+      }
+    }
+  }
+
+  private int findKeyIndexForEvent(
+      @NonNull KeyboardDefinition keyboard, @NonNull MotionEvent event) {
+    if (keyboardView == null) return KeyboardViewBase.NOT_A_KEY;
+    int index =
+        keyboardView
+            .getKeyDetector()
+            .getKeyIndexAndNearbyCodes((int) event.getX(), (int) event.getY(), null);
+    if (index < 0 || index >= keyboard.getKeys().size()) return KeyboardViewBase.NOT_A_KEY;
+    return index;
   }
 
   @Override
