@@ -141,6 +141,7 @@ public final class PackKeyboardDefinition extends KeyboardDefinition {
     final KeyboardDefaults keyboardDefaults = parseKeyboardDefaults(model.rawKeyboardAttributes());
     showPreview = keyboardDefaults.showPreview;
     autoCap = keyboardDefaults.autoCap;
+    setProximityThresholdSquareFromDefaultWidth(keyboardDefaults.defaultWidth);
 
     boolean hasTopRow = false;
     boolean hasBottomRow = false;

@@ -158,6 +158,11 @@ public abstract class Keyboard {
   /** Number of key widths from current touch point to search for nearest keys. */
   private static float SEARCH_DISTANCE = 1.8f;
 
+  protected final void setProximityThresholdSquareFromDefaultWidth(int defaultWidthPx) {
+    int threshold = (int) (defaultWidthPx * SEARCH_DISTANCE);
+    mProximityThreshold = threshold * threshold;
+  }
+
   /**
    * Container for keys in the mKeyboard. All keys in a row are at the same Y-coordinate. Some of
    * the key size defaults can be overridden per row from what the {@link Keyboard} defines.
@@ -420,9 +425,7 @@ public abstract class Keyboard {
     showPreview = parsed.showPreview;
     autoCap = parsed.autoCap;
 
-    mProximityThreshold = (int) (mDefaultWidth * SEARCH_DISTANCE);
-    // Square it for comparison
-    mProximityThreshold = mProximityThreshold * mProximityThreshold;
+    setProximityThresholdSquareFromDefaultWidth(mDefaultWidth);
   }
 
   void setTotalDimensionsFromParser(int width, int height) {
