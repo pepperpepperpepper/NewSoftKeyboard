@@ -1803,18 +1803,36 @@ public class CustomKeyboardEditorFragment extends Fragment {
     boolean hasEnter = false;
     boolean hasSymbolsSwitch = false;
 
-    for (KeyboardRow row : model.rows()) {
-      for (KeySpec keySpec : row.keys()) {
-        for (KeyCode code : keySpec.codes()) {
-          Integer numeric = code.asNumeric();
-          if (numeric == null) continue;
-          if (numeric == KeyCodes.DELETE) hasDelete = true;
-          if (numeric == KeyCodes.SPACE) hasSpace = true;
-          if (numeric == KeyCodes.ENTER) hasEnter = true;
-          if (numeric == KeyCodes.MODE_SYMBOLS
-              || numeric == KeyCodes.KEYBOARD_MODE_CHANGE
-              || numeric == KeyCodes.CUSTOM_KEYBOARD_SWITCH) {
+    KeyboardDefinition displayedKeyboard = keyboardView != null ? keyboardView.getKeyboard() : null;
+    if (displayedKeyboard != null) {
+      for (Keyboard.Key key : displayedKeyboard.getKeys()) {
+        int count = key.getCodesCount();
+        for (int i = 0; i < count; i++) {
+          int code = key.getCodeAtIndex(i, false);
+          if (code == KeyCodes.DELETE) hasDelete = true;
+          if (code == KeyCodes.SPACE) hasSpace = true;
+          if (code == KeyCodes.ENTER) hasEnter = true;
+          if (code == KeyCodes.MODE_SYMBOLS
+              || code == KeyCodes.KEYBOARD_MODE_CHANGE
+              || code == KeyCodes.CUSTOM_KEYBOARD_SWITCH) {
             hasSymbolsSwitch = true;
+          }
+        }
+      }
+    } else {
+      for (KeyboardRow row : model.rows()) {
+        for (KeySpec keySpec : row.keys()) {
+          for (KeyCode code : keySpec.codes()) {
+            Integer numeric = code.asNumeric();
+            if (numeric == null) continue;
+            if (numeric == KeyCodes.DELETE) hasDelete = true;
+            if (numeric == KeyCodes.SPACE) hasSpace = true;
+            if (numeric == KeyCodes.ENTER) hasEnter = true;
+            if (numeric == KeyCodes.MODE_SYMBOLS
+                || numeric == KeyCodes.KEYBOARD_MODE_CHANGE
+                || numeric == KeyCodes.CUSTOM_KEYBOARD_SWITCH) {
+              hasSymbolsSwitch = true;
+            }
           }
         }
       }
