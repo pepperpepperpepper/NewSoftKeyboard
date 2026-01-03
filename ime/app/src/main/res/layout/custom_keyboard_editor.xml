@@ -34,11 +34,13 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@android:drawable/editbox_background"
+            android:background="?android:attr/editTextBackground"
             android:ellipsize="end"
             android:hint="@string/custom_keyboards_test_typing_hint"
             android:minHeight="48dp"
             android:padding="8dp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textColorHint="?android:attr/textColorHint"
             android:textIsSelectable="true" />
 
         <Button
