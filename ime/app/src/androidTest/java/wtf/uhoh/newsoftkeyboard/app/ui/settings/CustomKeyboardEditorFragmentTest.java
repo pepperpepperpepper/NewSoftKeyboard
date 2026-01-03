@@ -119,8 +119,21 @@ public class CustomKeyboardEditorFragmentTest {
           Keyboard.Key key = keyboard.getKeys().get(keyIndex);
 
           float x = view.getPaddingLeft() + key.x + key.width / 2f;
-          float baseY = view.getPaddingTop() + key.y + key.height / 2f;
-          float y = findYThatHitsKey(view, keyIndex, x, baseY, key.height);
+          float y = view.getPaddingTop() + key.y + key.height / 2f;
+
+          int foundIndex = view.getKeyDetector().getKeyIndexAndNearbyCodes((int) x, (int) y, null);
+          if (foundIndex != keyIndex) {
+            throw new AssertionError(
+                "KeyDetector mismatch: expected "
+                    + keyIndex
+                    + " but got "
+                    + foundIndex
+                    + " at x="
+                    + x
+                    + ", y="
+                    + y
+                    + ".");
+          }
 
           coordinates[0] = x;
           coordinates[1] = y;
@@ -153,27 +166,6 @@ public class CustomKeyboardEditorFragmentTest {
       if (keyboard.getKeys().get(i).getPrimaryCode() == primaryCode) return i;
     }
     throw new AssertionError("Key with primaryCode " + primaryCode + " not found.");
-  }
-
-  private static float findYThatHitsKey(
-      KeyboardView view, int expectedKeyIndex, float x, float baseY, int searchRangePx) {
-    int yStep = Math.max(1, searchRangePx / 8);
-
-    int initial = view.getKeyDetector().getKeyIndexAndNearbyCodes((int) x, (int) baseY, null);
-    if (initial == expectedKeyIndex) return baseY;
-
-    for (int delta = -searchRangePx; delta <= searchRangePx; delta += yStep) {
-      int y = (int) (baseY + delta);
-      int found = view.getKeyDetector().getKeyIndexAndNearbyCodes((int) x, y, null);
-      if (found == expectedKeyIndex) return baseY + delta;
-    }
-
-    throw new AssertionError(
-        "Unable to find tap coordinate for key index "
-            + expectedKeyIndex
-            + " (initialDetectorIndex="
-            + initial
-            + ").");
   }
 
   private void launchEditor(InstalledKeyboardPack pack, String keyboardPath) {

@@ -56,7 +56,7 @@
         android:layout_marginTop="8dp"
         android:text="@string/custom_keyboards_theme_button" />
 
-    <wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardView
+    <wtf.uhoh.newsoftkeyboard.app.keyboards.views.DesignerKeyboardView
         android:id="@+id/custom_keyboard_editor_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
