@@ -73,7 +73,8 @@ final class KeyboardViewBaseInitializer {
             drawDecisions,
             hintLayoutCalculator,
             keyboardNameHintController,
-            dirtyRegionDecider);
+            dirtyRegionDecider,
+            view::invalidateAllKeys);
     PreviewThemeConfigurator previewThemeConfigurator =
         new PreviewThemeConfigurator(previewPopupTheme);
     PreviewPopupPresenter previewPopupPresenter =

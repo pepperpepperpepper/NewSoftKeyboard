@@ -202,8 +202,11 @@ public class ImeServiceThemeOverlayTest extends ImeServiceBaseTest {
     simulateFinishInputFlow();
     simulateOnStartInputFlow();
 
-    Mockito.verify(spyResolver, Mockito.atLeastOnce()).resolveImeWallpaper(Mockito.any());
-    Mockito.verify(spyResolver, Mockito.never()).resolveThemeWallpaperOrFallback(Mockito.any());
+    Mockito.verify(spyResolver, Mockito.atLeastOnce())
+        .resolveThemeWallpaperOrFallback(Mockito.any());
+    Mockito.verify(spyResolver, Mockito.atLeastOnce())
+        .applyPhotoOverrideIfAnyAsync(Mockito.any(), Mockito.any());
+    Mockito.verify(spyResolver, Mockito.never()).resolveImeWallpaper(Mockito.any());
   }
 
   private OverlayData captureOverlay() {

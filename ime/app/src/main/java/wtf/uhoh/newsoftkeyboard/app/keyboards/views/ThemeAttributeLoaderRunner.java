@@ -27,11 +27,7 @@ final class ThemeAttributeLoaderRunner {
     ThemeAttributeLoader themeAttributeLoader =
         new ThemeAttributeLoader(new HostImpl(host, overlayCombiner));
     themeAttributeLoader.loadThemeAttributes(theme, doneAttrs, padding);
-
-    final Drawable photoOverride = keyboardWallpaperResolver.resolvePhotoOverrideIfAny(theme);
-    if (photoOverride != null) {
-      host.setBackground(photoOverride);
-    }
+    keyboardWallpaperResolver.applyPhotoOverrideIfAnyAsync(host, theme);
   }
 
   private static final class HostImpl implements ThemeAttributeLoader.Host {

@@ -7,6 +7,7 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.os.Trace;
 import android.util.SparseArray;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -102,36 +103,41 @@ final class KeyBackgroundAlphaMaskCache {
 
   @Nullable
   private static Bitmap createAlphaMask(@NonNull Drawable drawable, int width, int height) {
-    final Bitmap argb;
+    Trace.beginSection("NSK.KeyAlphaMaskCreate");
     try {
-      argb = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-    } catch (OutOfMemoryError oom) {
-      return null;
-    }
+      final Bitmap argb;
+      try {
+        argb = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+      } catch (OutOfMemoryError oom) {
+        return null;
+      }
 
-    final Rect oldBounds = sOldBounds.get();
-    oldBounds.set(drawable.getBounds());
+      final Rect oldBounds = sOldBounds.get();
+      oldBounds.set(drawable.getBounds());
 
-    final Canvas canvas = new Canvas(argb);
-    drawable.setBounds(0, 0, width, height);
-    try {
-      drawable.draw(canvas);
-    } catch (RuntimeException ignored) {
-      drawable.setBounds(oldBounds);
+      final Canvas canvas = new Canvas(argb);
+      drawable.setBounds(0, 0, width, height);
+      try {
+        drawable.draw(canvas);
+      } catch (RuntimeException ignored) {
+        drawable.setBounds(oldBounds);
+        argb.recycle();
+        return null;
+      } finally {
+        drawable.setBounds(oldBounds);
+      }
+
+      final Bitmap alpha;
+      try {
+        alpha = argb.extractAlpha();
+      } catch (RuntimeException e) {
+        argb.recycle();
+        return null;
+      }
       argb.recycle();
-      return null;
+      return alpha;
     } finally {
-      drawable.setBounds(oldBounds);
+      Trace.endSection();
     }
-
-    final Bitmap alpha;
-    try {
-      alpha = argb.extractAlpha();
-    } catch (RuntimeException e) {
-      argb.recycle();
-      return null;
-    }
-    argb.recycle();
-    return alpha;
   }
 }

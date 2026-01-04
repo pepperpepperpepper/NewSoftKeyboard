@@ -7,8 +7,12 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.graphics.drawable.LayerDrawable;
 import android.net.Uri;
+import android.view.View;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import wtf.uhoh.newsoftkeyboard.R;
@@ -41,6 +45,27 @@ public class KeyboardWallpaperOverrideInstrumentedTest {
     assertFalse(store.isWallpaperInvalid(themeAId));
 
     final KeyboardTheme themeA = createLocalTheme(context, themeAId);
+    final CountDownLatch appliedLatch = new CountDownLatch(1);
+    final View view =
+        new View(context) {
+          @Override
+          public void setBackground(android.graphics.drawable.Drawable background) {
+            super.setBackground(background);
+            if (background instanceof LayerDrawable) {
+              appliedLatch.countDown();
+            }
+          }
+        };
+
+    final int displayWidth = Math.max(1, context.getResources().getDisplayMetrics().widthPixels);
+    final int displayHeight = Math.max(1, context.getResources().getDisplayMetrics().heightPixels);
+    InstrumentationRegistry.getInstrumentation()
+        .runOnMainSync(
+            () -> {
+              view.layout(0, 0, displayWidth, displayHeight);
+              resolver.applyPhotoOverrideIfAnyAsync(view, themeA);
+            });
+    assertTrue(appliedLatch.await(15, TimeUnit.SECONDS));
     assertTrue(resolver.resolveImeWallpaper(themeA) instanceof LayerDrawable);
 
     final KeyboardTheme themeB = createLocalTheme(context, themeBId);

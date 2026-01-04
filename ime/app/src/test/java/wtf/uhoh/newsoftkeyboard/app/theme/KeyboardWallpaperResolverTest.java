@@ -3,6 +3,7 @@ package wtf.uhoh.newsoftkeyboard.app.theme;
 import static androidx.test.core.app.ApplicationProvider.getApplicationContext;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -14,11 +15,16 @@ import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
+import android.os.Looper;
+import android.view.View;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.robolectric.Shadows;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 
@@ -26,7 +32,7 @@ import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 public class KeyboardWallpaperResolverTest {
 
   @Test
-  public void testUsesPhotoOverrideAndCachesDrawable() throws Exception {
+  public void testApplyPhotoOverrideAsyncSetsViewBackground() throws Exception {
     final Context context = getApplicationContext();
     final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
     final KeyboardWallpaperResolver resolver = new KeyboardWallpaperResolver(context);
@@ -37,15 +43,24 @@ public class KeyboardWallpaperResolverTest {
     writeSmallBitmap(store.getWallpaperFile(themeId), Color.RED);
     store.setDimPercent(themeId, 50);
 
-    final Drawable first = resolver.resolveImeWallpaper(theme);
-    assertTrue(first instanceof LayerDrawable);
+    final CountDownLatch latch = new CountDownLatch(1);
+    final View view =
+        new View(context) {
+          @Override
+          public void setBackground(Drawable background) {
+            super.setBackground(background);
+            latch.countDown();
+          }
+        };
+    view.layout(0, 0, 480, 320);
 
-    final Drawable second = resolver.resolveImeWallpaper(theme);
-    assertSame(first, second);
+    resolver.applyPhotoOverrideIfAnyAsync(view, theme);
+    assertTrue(awaitLatchAndIdleMainLooper(latch, 2, TimeUnit.SECONDS));
+    assertTrue(view.getBackground() instanceof LayerDrawable);
   }
 
   @Test
-  public void testInvalidFlagDisablesPhotoOverride() throws Exception {
+  public void testInvalidFlagDisablesPhotoOverrideApply() throws Exception {
     final Context context = getApplicationContext();
     final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
     final KeyboardWallpaperResolver resolver = new KeyboardWallpaperResolver(context);
@@ -56,13 +71,21 @@ public class KeyboardWallpaperResolverTest {
     writeSmallBitmap(store.getWallpaperFile(themeId), Color.BLUE);
     store.setDimPercent(themeId, 50);
 
-    final Drawable beforeInvalid = resolver.resolveImeWallpaper(theme);
-    assertTrue(beforeInvalid instanceof LayerDrawable);
-
     store.markWallpaperInvalid(themeId);
 
-    final Drawable afterInvalid = resolver.resolveImeWallpaper(theme);
-    assertFalse(afterInvalid instanceof LayerDrawable);
+    final CountDownLatch latch = new CountDownLatch(1);
+    final View view =
+        new View(context) {
+          @Override
+          public void setBackground(Drawable background) {
+            super.setBackground(background);
+            latch.countDown();
+          }
+        };
+    view.layout(0, 0, 480, 320);
+
+    resolver.applyPhotoOverrideIfAnyAsync(view, theme);
+    assertFalse(awaitLatchAndIdleMainLooper(latch, 250, TimeUnit.MILLISECONDS));
   }
 
   @Test
@@ -70,27 +93,35 @@ public class KeyboardWallpaperResolverTest {
     final Context context = getApplicationContext();
     final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
     final KeyboardWallpaperResolver resolver =
-        new KeyboardWallpaperResolver(context) {
-          @Override
-          protected Bitmap decodePhotoFile(File file) {
-            return null;
-          }
-        };
+        new KeyboardWallpaperResolver(
+            context,
+            new WallpaperBitmapLoader() {
+              @Override
+              public Bitmap getCached(File file, long lastModified, int requestedMaxDimPx) {
+                return null;
+              }
+
+              @Override
+              public void loadAsync(
+                  File file,
+                  long lastModified,
+                  int requestedMaxDimPx,
+                  WallpaperBitmapRepository.Callback cb) {
+                cb.onBitmapReady(null);
+              }
+            });
 
     final String themeId = "test-theme-decode-failure";
     final KeyboardTheme theme = createLocalTheme(context, themeId);
 
-    final File file = store.getWallpaperFile(themeId);
-    assertTrue(file.getParentFile().isDirectory() || file.getParentFile().mkdirs());
-    try (FileOutputStream out = new FileOutputStream(file)) {
-      out.write(new byte[] {0, 1, 2, 3});
-    }
+    writeSmallBitmap(store.getWallpaperFile(themeId), Color.YELLOW);
     assertTrue(store.hasWallpaper(themeId));
 
-    final Drawable resolved = resolver.resolveImeWallpaper(theme);
-    assertFalse(resolved instanceof LayerDrawable);
+    final View view = new View(context);
+    view.layout(0, 0, 480, 320);
+    resolver.applyPhotoOverrideIfAnyAsync(view, theme);
 
-    assertTrue(store.isWallpaperInvalid(themeId));
+    assertTrue(waitForCondition(() -> store.isWallpaperInvalid(themeId), 2, TimeUnit.SECONDS));
     assertFalse(store.hasWallpaper(themeId));
   }
 
@@ -110,17 +141,25 @@ public class KeyboardWallpaperResolverTest {
     store.setDimPercent(themeId, 10);
 
     final Rect viewBounds = new Rect(0, 0, 480, 320);
+    final CountDownLatch invalidateLatch = new CountDownLatch(1);
     final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
-        resolver.resolveKeyFaceOverlay(theme, viewBounds);
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
 
-    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT, overlay.mode());
-    assertNotNull(overlay.paint());
-    assertFalse(overlay.matchKeyShape());
+    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(null, overlay.paint());
+    assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
 
     final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
-        resolver.resolveKeyFaceOverlay(theme, viewBounds);
-    assertSame(overlay, overlay2);
-    assertSame(overlay.paint(), overlay2.paint());
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+    assertEquals(
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT, overlay2.mode());
+    assertNotNull(overlay2.paint());
+    assertFalse(overlay2.matchKeyShape());
+
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay3 =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+    assertSame(overlay2, overlay3);
+    assertSame(overlay2.paint(), overlay3.paint());
   }
 
   @Test
@@ -139,13 +178,20 @@ public class KeyboardWallpaperResolverTest {
     store.setMatchKeyShapeEnabled(themeId, true);
 
     final Rect viewBounds = new Rect(0, 0, 480, 320);
+    final CountDownLatch invalidateLatch = new CountDownLatch(1);
     final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
-        resolver.resolveKeyFaceOverlay(theme, viewBounds);
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
 
+    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(null, overlay.paint());
+    assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
+
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertEquals(
-        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE, overlay.mode());
-    assertNotNull(overlay.paint());
-    assertTrue(overlay.matchKeyShape());
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE, overlay2.mode());
+    assertNotNull(overlay2.paint());
+    assertTrue(overlay2.matchKeyShape());
   }
 
   @Test
@@ -163,20 +209,27 @@ public class KeyboardWallpaperResolverTest {
     store.setKeyAlphaPercent(themeId, 25);
 
     final Rect viewBounds = new Rect(0, 0, 480, 320);
+    final CountDownLatch invalidateLatch = new CountDownLatch(1);
     final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
-        resolver.resolveKeyFaceOverlay(theme, viewBounds);
-    assertNotNull(overlay.paint());
-    assertNotNull(overlay.paint().getShader());
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(null, overlay.paint());
+    assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
+
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlayReady =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+    assertNotNull(overlayReady.paint());
+    assertNotNull(overlayReady.paint().getShader());
 
     final Matrix m1 = new Matrix();
-    overlay.paint().getShader().getLocalMatrix(m1);
+    overlayReady.paint().getShader().getLocalMatrix(m1);
     final float[] v1 = new float[9];
     m1.getValues(v1);
 
     store.setWallpaperRotationDegrees(themeId, 90);
 
     final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
-        resolver.resolveKeyFaceOverlay(theme, viewBounds);
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertNotNull(overlay2.paint());
     assertNotNull(overlay2.paint().getShader());
 
@@ -185,7 +238,54 @@ public class KeyboardWallpaperResolverTest {
     final float[] v2 = new float[9];
     m2.getValues(v2);
 
-    assertFalse(Arrays.equals(v1, v2));
+    assertNotEquals(Arrays.toString(v1), Arrays.toString(v2));
+  }
+
+  @Test
+  public void testKeyFaceOverlayShaderMatrixUpdatesWhenAnchorChanges() throws Exception {
+    final Context context = getApplicationContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final KeyboardWallpaperResolver resolver = new KeyboardWallpaperResolver(context);
+
+    final String themeId = "test-theme-key-overlay-anchor";
+    final KeyboardTheme theme = createLocalTheme(context, themeId);
+
+    writeSmallBitmap(store.getWallpaperFile(themeId), Color.CYAN);
+    store.setWallpaperMode(
+        themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
+    store.setKeyAlphaPercent(themeId, 25);
+
+    final Rect viewBounds = new Rect(0, 0, 480, 320);
+    final CountDownLatch invalidateLatch = new CountDownLatch(1);
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(null, overlay.paint());
+    assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
+
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlayReady =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+    assertNotNull(overlayReady.paint());
+    assertNotNull(overlayReady.paint().getShader());
+
+    final Matrix m1 = new Matrix();
+    overlayReady.paint().getShader().getLocalMatrix(m1);
+    final float[] v1 = new float[9];
+    m1.getValues(v1);
+
+    store.setWallpaperAnchor(themeId, KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_TOP_LEFT);
+
+    final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+    assertNotNull(overlay2.paint());
+    assertNotNull(overlay2.paint().getShader());
+
+    final Matrix m2 = new Matrix();
+    overlay2.paint().getShader().getLocalMatrix(m2);
+    final float[] v2 = new float[9];
+    m2.getValues(v2);
+
+    assertNotEquals(Arrays.toString(v1), Arrays.toString(v2));
   }
 
   private static KeyboardTheme createLocalTheme(Context context, String themeId) {
@@ -214,5 +314,33 @@ public class KeyboardWallpaperResolverTest {
     } finally {
       bitmap.recycle();
     }
+  }
+
+  private static boolean waitForCondition(Condition condition, long timeout, TimeUnit unit)
+      throws InterruptedException {
+    final long deadline = System.nanoTime() + unit.toNanos(timeout);
+    while (System.nanoTime() < deadline) {
+      if (condition.evaluate()) return true;
+      Shadows.shadowOf(Looper.getMainLooper()).idle();
+      Thread.sleep(10);
+    }
+    Shadows.shadowOf(Looper.getMainLooper()).idle();
+    return condition.evaluate();
+  }
+
+  interface Condition {
+    boolean evaluate();
+  }
+
+  private static boolean awaitLatchAndIdleMainLooper(
+      CountDownLatch latch, long timeout, TimeUnit unit) throws InterruptedException {
+    final long deadline = System.nanoTime() + unit.toNanos(timeout);
+    while (System.nanoTime() < deadline) {
+      if (latch.getCount() == 0) return true;
+      Shadows.shadowOf(Looper.getMainLooper()).idle();
+      if (latch.await(10, TimeUnit.MILLISECONDS)) return true;
+    }
+    Shadows.shadowOf(Looper.getMainLooper()).idle();
+    return latch.getCount() == 0;
   }
 }

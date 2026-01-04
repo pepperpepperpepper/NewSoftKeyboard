@@ -24,6 +24,7 @@ import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
+import android.os.Looper;
 import android.view.MotionEvent;
 import android.widget.PopupWindow;
 import androidx.annotation.NonNull;
@@ -33,6 +34,7 @@ import com.anysoftkeyboard.api.KeyCodes;
 import java.io.FileOutputStream;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -236,7 +238,17 @@ public class KeyboardViewTest extends KeyboardViewWithMiniKeyboardTest {
 
     // Force a theme re-apply without switching themes (theme is reference-equality cached).
     mViewUnderTest.setThemeOverlay(new OverlayDataImpl());
-    final Drawable overrideBackground = mViewUnderTest.getBackground();
+    // Apply happens async once the view has bounds.
+    mViewUnderTest.layout(0, 0, 480, 320);
+
+    final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+    Drawable overrideBackground = null;
+    while (System.nanoTime() < deadline) {
+      Shadows.shadowOf(Looper.getMainLooper()).idle();
+      overrideBackground = mViewUnderTest.getBackground();
+      if (overrideBackground instanceof LayerDrawable) break;
+      sleep(10);
+    }
     Assert.assertNotNull(overrideBackground);
     Assert.assertTrue(overrideBackground instanceof LayerDrawable);
   }

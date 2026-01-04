@@ -29,12 +29,30 @@ public class KeyboardWallpaperOverrideStore {
   private static final String PREF_MODE_PREFIX = "photo_wallpaper_mode::";
   private static final String PREF_KEY_ALPHA_PREFIX = "photo_wallpaper_key_alpha::";
   private static final String PREF_ROTATION_PREFIX = "photo_wallpaper_rotation::";
+  private static final String PREF_SCALE_MODE_PREFIX = "photo_wallpaper_scale_mode::";
+  private static final String PREF_ANCHOR_PREFIX = "photo_wallpaper_anchor::";
   private static final String PREF_MATCH_KEY_SHAPE_PREFIX = "photo_wallpaper_match_key_shape::";
   private static final String PREF_IMPORT_HIGH_QUALITY = "photo_wallpaper_import_high_quality";
 
   public static final int WALLPAPER_MODE_BACKGROUND_ONLY = 0;
   public static final int WALLPAPER_MODE_BACKGROUND_KEY_TINT = 1;
   public static final int WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE = 2;
+
+  public static final int WALLPAPER_SCALE_MODE_CROP = 0;
+  public static final int WALLPAPER_SCALE_MODE_FIT = 1;
+  public static final int WALLPAPER_SCALE_MODE_STRETCH = 2;
+  public static final int WALLPAPER_SCALE_MODE_TILE = 3;
+  public static final int WALLPAPER_SCALE_MODE_MIRROR = 4;
+
+  public static final int WALLPAPER_ANCHOR_TOP_LEFT = 0;
+  public static final int WALLPAPER_ANCHOR_TOP = 1;
+  public static final int WALLPAPER_ANCHOR_TOP_RIGHT = 2;
+  public static final int WALLPAPER_ANCHOR_LEFT = 3;
+  public static final int WALLPAPER_ANCHOR_CENTER = 4;
+  public static final int WALLPAPER_ANCHOR_RIGHT = 5;
+  public static final int WALLPAPER_ANCHOR_BOTTOM_LEFT = 6;
+  public static final int WALLPAPER_ANCHOR_BOTTOM = 7;
+  public static final int WALLPAPER_ANCHOR_BOTTOM_RIGHT = 8;
 
   public static final int DEFAULT_KEY_ALPHA_PERCENT = 20;
 
@@ -74,6 +92,16 @@ public class KeyboardWallpaperOverrideStore {
   @NonNull
   public static String rotationKey(@NonNull String themeId) {
     return PREF_ROTATION_PREFIX + themeId;
+  }
+
+  @NonNull
+  public static String scaleModeKey(@NonNull String themeId) {
+    return PREF_SCALE_MODE_PREFIX + themeId;
+  }
+
+  @NonNull
+  public static String anchorKey(@NonNull String themeId) {
+    return PREF_ANCHOR_PREFIX + themeId;
   }
 
   @NonNull
@@ -133,6 +161,28 @@ public class KeyboardWallpaperOverrideStore {
     setWallpaperRotationDegrees(themeId, next);
   }
 
+  public int getWallpaperScaleMode(@NonNull String themeId) {
+    return normalizeScaleMode(prefs.getInt(scaleModeKey(themeId), WALLPAPER_SCALE_MODE_CROP));
+  }
+
+  public void setWallpaperScaleMode(@NonNull String themeId, int scaleMode) {
+    final SharedPreferences.Editor editor = prefs.edit();
+    editor.putInt(scaleModeKey(themeId), normalizeScaleMode(scaleMode));
+    markWallpaperChanged(themeId, editor);
+    editor.apply();
+  }
+
+  public int getWallpaperAnchor(@NonNull String themeId) {
+    return normalizeAnchor(prefs.getInt(anchorKey(themeId), WALLPAPER_ANCHOR_CENTER));
+  }
+
+  public void setWallpaperAnchor(@NonNull String themeId, int anchor) {
+    final SharedPreferences.Editor editor = prefs.edit();
+    editor.putInt(anchorKey(themeId), normalizeAnchor(anchor));
+    markWallpaperChanged(themeId, editor);
+    editor.apply();
+  }
+
   public boolean isMatchKeyShapeEnabled(@NonNull String themeId) {
     return prefs.getBoolean(matchKeyShapeKey(themeId), false);
   }
@@ -190,6 +240,8 @@ public class KeyboardWallpaperOverrideStore {
     editor.remove(modeKey(themeId));
     editor.remove(keyAlphaKey(themeId));
     editor.remove(rotationKey(themeId));
+    editor.remove(scaleModeKey(themeId));
+    editor.remove(anchorKey(themeId));
     editor.remove(matchKeyShapeKey(themeId));
     editor.remove(invalidKey(themeId));
     markWallpaperChanged(themeId, editor);
@@ -213,6 +265,8 @@ public class KeyboardWallpaperOverrideStore {
     editor.putInt(modeKey(targetThemeId), getWallpaperMode(sourceThemeId));
     editor.putInt(keyAlphaKey(targetThemeId), getKeyAlphaPercent(sourceThemeId));
     editor.putInt(rotationKey(targetThemeId), getWallpaperRotationDegrees(sourceThemeId));
+    editor.putInt(scaleModeKey(targetThemeId), getWallpaperScaleMode(sourceThemeId));
+    editor.putInt(anchorKey(targetThemeId), getWallpaperAnchor(sourceThemeId));
     editor.putBoolean(matchKeyShapeKey(targetThemeId), isMatchKeyShapeEnabled(sourceThemeId));
     editor.remove(invalidKey(targetThemeId));
     markWallpaperChanged(targetThemeId, editor);
@@ -441,6 +495,36 @@ public class KeyboardWallpaperOverrideStore {
         return normalized;
       default:
         return 0;
+    }
+  }
+
+  private static int normalizeScaleMode(int scaleMode) {
+    switch (scaleMode) {
+      case WALLPAPER_SCALE_MODE_CROP:
+      case WALLPAPER_SCALE_MODE_FIT:
+      case WALLPAPER_SCALE_MODE_STRETCH:
+      case WALLPAPER_SCALE_MODE_TILE:
+      case WALLPAPER_SCALE_MODE_MIRROR:
+        return scaleMode;
+      default:
+        return WALLPAPER_SCALE_MODE_CROP;
+    }
+  }
+
+  private static int normalizeAnchor(int anchor) {
+    switch (anchor) {
+      case WALLPAPER_ANCHOR_TOP_LEFT:
+      case WALLPAPER_ANCHOR_TOP:
+      case WALLPAPER_ANCHOR_TOP_RIGHT:
+      case WALLPAPER_ANCHOR_LEFT:
+      case WALLPAPER_ANCHOR_CENTER:
+      case WALLPAPER_ANCHOR_RIGHT:
+      case WALLPAPER_ANCHOR_BOTTOM_LEFT:
+      case WALLPAPER_ANCHOR_BOTTOM:
+      case WALLPAPER_ANCHOR_BOTTOM_RIGHT:
+        return anchor;
+      default:
+        return WALLPAPER_ANCHOR_CENTER;
     }
   }
 

@@ -1,14 +1,17 @@
 package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
+import android.os.Trace;
 import android.text.TextPaint;
 import android.text.TextUtils;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardKey;
@@ -36,6 +39,18 @@ final class KeyDrawHelper {
   private final TextPaint voiceBadgeTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
   private final RectF voiceBadgeRect = new RectF();
   private final Paint.FontMetrics voiceBadgeFontMetrics = new Paint.FontMetrics();
+
+  private final Paint keyFaceUnionMaskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+  private final RectF keyFaceUnionMaskRect = new RectF();
+  private final Canvas keyFaceUnionMaskCanvas = new Canvas();
+  @Nullable private Bitmap cachedKeyFaceUnionMask;
+  private int cachedKeyFaceUnionMaskWidth;
+  private int cachedKeyFaceUnionMaskHeight;
+  private int cachedKeyFaceUnionMaskPaddingLeft;
+  private int cachedKeyFaceUnionMaskPaddingTop;
+  @Nullable private Object cachedKeyFaceUnionMaskDrawableKey;
+  @Nullable private Object cachedKeyFaceUnionMaskKeyboardKey;
+  private int cachedKeyFaceUnionMaskKeyCount;
 
   KeyDrawHelper(
       Paint paint,
@@ -67,9 +82,22 @@ final class KeyDrawHelper {
     voiceBadgeTextPaint.setColor(Color.WHITE);
     voiceBadgeTextPaint.setTextAlign(Paint.Align.CENTER);
     voiceBadgeTextPaint.setFakeBoldText(true);
+
+    keyFaceUnionMaskPaint.setColor(Color.BLACK);
+    keyFaceUnionMaskPaint.setStyle(Paint.Style.FILL);
   }
 
   void drawKeys(@NonNull Canvas canvas, Rect dirtyRect, DrawInputs inputs) {
+    final boolean canUseKeyboardMaskOverlay =
+        inputs.keyFaceWallpaperOverlayPaint != null
+            && !inputs.drawSingleKey
+            && inputs.keyFaceWallpaperOverlayMode
+                == KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE
+            && inputs.keyFaceWallpaperOverlayMatchKeyShape;
+    if (canUseKeyboardMaskOverlay) {
+      drawKeysWithOptimizedKeyTextureOverlay(canvas, dirtyRect, inputs);
+      return;
+    }
 
     for (Keyboard.Key keyBase : inputs.keys) {
       final KeyboardKey key = (KeyboardKey) keyBase;
@@ -217,6 +245,276 @@ final class KeyDrawHelper {
 
       canvas.translate(-key.x - inputs.kbdPaddingLeft, -key.y - inputs.kbdPaddingTop);
     }
+  }
+
+  private void drawKeysWithOptimizedKeyTextureOverlay(
+      @NonNull Canvas canvas, @NonNull Rect dirtyRect, DrawInputs inputs) {
+    for (Keyboard.Key keyBase : inputs.keys) {
+      final KeyboardKey key = (KeyboardKey) keyBase;
+
+      if (!drawDecisions.shouldDrawKey(
+          key, dirtyRect, inputs.kbdPaddingLeft, inputs.kbdPaddingTop)) {
+        continue;
+      }
+
+      int[] drawableState = key.getCurrentDrawableState(inputs.drawableStatesProvider);
+      inputs.keyBackground.setState(drawableState);
+
+      drawDecisions.adjustBoundsIfNeeded(inputs.keyBackground, key);
+      canvas.translate(key.x + inputs.kbdPaddingLeft, key.y + inputs.kbdPaddingTop);
+      inputs.keyBackground.draw(canvas);
+      canvas.translate(-key.x - inputs.kbdPaddingLeft, -key.y - inputs.kbdPaddingTop);
+    }
+
+    boolean overlayApplied = false;
+    Trace.beginSection("NSK.WallpaperKeyOverlay");
+    try {
+      try {
+        Trace.beginSection("NSK.WallpaperKeyOverlayMask");
+        final Bitmap unionMask;
+        try {
+          unionMask = ensureKeyFaceUnionMask(inputs);
+        } finally {
+          Trace.endSection();
+        }
+        if (unionMask != null
+            && !unionMask.isRecycled()
+            && inputs.keyFaceWallpaperOverlayPaint != null) {
+          Trace.beginSection("NSK.WallpaperKeyOverlayDraw");
+          try {
+            overlayApplied =
+                drawKeyboardTextureOverlayWithMask(
+                    canvas, dirtyRect, unionMask, inputs.keyFaceWallpaperOverlayPaint);
+          } finally {
+            Trace.endSection();
+          }
+        }
+      } catch (RuntimeException | OutOfMemoryError ignored) {
+        overlayApplied = false;
+      }
+    } finally {
+      Trace.endSection();
+    }
+
+    for (Keyboard.Key keyBase : inputs.keys) {
+      final KeyboardKey key = (KeyboardKey) keyBase;
+      final boolean keyIsSpace = key.getPrimaryCode() == KeyCodes.SPACE;
+
+      if (!drawDecisions.shouldDrawKey(
+          key, dirtyRect, inputs.kbdPaddingLeft, inputs.kbdPaddingTop)) {
+        continue;
+      }
+
+      int[] drawableState = key.getCurrentDrawableState(inputs.drawableStatesProvider);
+
+      int resolvedTextColor =
+          drawDecisions.resolveTextColor(
+              key,
+              inputs.themeResourcesHolder,
+              inputs.keyTextColor,
+              keyIsSpace,
+              inputs.modifierStates.functionModeActive,
+              inputs.modifierStates.controlModeActive,
+              inputs.modifierStates.altModeActive,
+              inputs.modifierActiveTextColor,
+              inputs.drawableStatesProvider);
+
+      paint.setColor(resolvedTextColor);
+      inputs.keyBackground.setState(drawableState);
+
+      CharSequence label =
+          key.label == null
+              ? null
+              : KeyLabelAdjuster.adjustLabelToShiftState(
+                  inputs.keyboard,
+                  inputs.keyDetector,
+                  inputs.textCaseForceOverrideType,
+                  inputs.textCaseType,
+                  key);
+      label = KeyLabelAdjuster.adjustLabelForFunctionState(inputs.keyboard, key, label);
+
+      drawDecisions.adjustBoundsIfNeeded(inputs.keyBackground, key);
+      canvas.translate(key.x + inputs.kbdPaddingLeft, key.y + inputs.kbdPaddingTop);
+
+      if (!overlayApplied && inputs.keyFaceWallpaperOverlayPaint != null) {
+        try {
+          drawKeyTextureOverlayWithMask(
+              canvas,
+              inputs.keyBackground,
+              key.width,
+              key.height,
+              inputs.keyFaceWallpaperOverlayPaint);
+        } catch (RuntimeException | OutOfMemoryError ignored) {
+          // If the fallback path also fails, keep going without overlays.
+        }
+      }
+
+      label =
+          keyIconDrawer.drawIconIfNeeded(
+              canvas,
+              key,
+              drawableState,
+              keyIconResolver,
+              label,
+              keyBackgroundPadding,
+              keyLabelGuesser);
+
+      label =
+          keyboardNameRenderer.applyKeyboardNameIfNeeded(
+              label, keyIsSpace, inputs.drawKeyboardNameText, inputs.keyboardName);
+
+      if (label != null) {
+        keyLabelRenderer.drawLabel(
+            canvas,
+            paint,
+            label,
+            key,
+            keyBackgroundPadding,
+            keyIsSpace,
+            inputs.keyboardNameTextSize,
+            keyboardNameRenderer,
+            inputs.alwaysUseDrawText,
+            keyTextPaintSetter,
+            labelTextPaintSetter,
+            (p, l, width) ->
+                labelPaintConfigurator.adjustTextSizeForLabel(
+                    p, l, width, keyIsSpace ? inputs.keyboardNameTextSize : inputs.keyTextSize),
+            inputs.shadowRadius,
+            inputs.shadowOffsetX,
+            inputs.shadowOffsetY,
+            inputs.shadowColor);
+      }
+
+      if (inputs.drawHintText
+          && (inputs.hintTextSizeMultiplier > 0)
+          && ((key.popupCharacters != null && key.popupCharacters.length() > 0)
+              || (key.popupResId != 0)
+              || (key.popupKeyboardPackPath != null && key.popupKeyboardPackPath.length() > 0)
+              || (key.longPressCode != 0))) {
+        Paint.Align oldAlign = paint.getTextAlign();
+        keyHintRenderer.drawHint(
+            canvas,
+            paint,
+            key,
+            inputs.themeResourcesHolder,
+            keyBackgroundPadding,
+            inputs.hintAlign,
+            inputs.hintVAlign,
+            inputs.hintTextSize,
+            inputs.hintTextSizeMultiplier,
+            inputs.keyboardShifted,
+            inputs.keyboardLocale);
+        paint.setTextAlign(oldAlign);
+      }
+
+      if (keyIsSpace && inputs.spacebarVoiceBadgeText != null) {
+        drawSpacebarVoiceBadge(canvas, key, inputs.spacebarVoiceBadgeText);
+      }
+
+      canvas.translate(-key.x - inputs.kbdPaddingLeft, -key.y - inputs.kbdPaddingTop);
+    }
+  }
+
+  @Nullable
+  private Bitmap ensureKeyFaceUnionMask(@NonNull DrawInputs inputs) {
+    final int width = inputs.keyboardViewWidth;
+    final int height = inputs.keyboardViewHeight;
+    if (width <= 0 || height <= 0) return null;
+
+    final Object drawableKey =
+        inputs.keyBackground.getConstantState() != null
+            ? inputs.keyBackground.getConstantState()
+            : inputs.keyBackground;
+    final Object keyboardKey = inputs.keyboard;
+    final int keyCount = inputs.keys != null ? inputs.keys.length : 0;
+
+    final Bitmap cached = cachedKeyFaceUnionMask;
+    if (cached != null
+        && !cached.isRecycled()
+        && cachedKeyFaceUnionMaskWidth == width
+        && cachedKeyFaceUnionMaskHeight == height
+        && cachedKeyFaceUnionMaskPaddingLeft == inputs.kbdPaddingLeft
+        && cachedKeyFaceUnionMaskPaddingTop == inputs.kbdPaddingTop
+        && cachedKeyFaceUnionMaskDrawableKey == drawableKey
+        && cachedKeyFaceUnionMaskKeyboardKey == keyboardKey
+        && cachedKeyFaceUnionMaskKeyCount == keyCount) {
+      return cached;
+    }
+
+    Trace.beginSection("NSK.KeyFaceUnionMaskBuild");
+    try {
+      final Bitmap mask;
+      try {
+        if (cached != null
+            && !cached.isRecycled()
+            && cached.getWidth() == width
+            && cached.getHeight() == height) {
+          mask = cached;
+        } else {
+          if (cached != null && !cached.isRecycled()) cached.recycle();
+          mask = Bitmap.createBitmap(width, height, Bitmap.Config.ALPHA_8);
+        }
+      } catch (OutOfMemoryError oom) {
+        cachedKeyFaceUnionMask = null;
+        return null;
+      }
+
+      mask.eraseColor(Color.TRANSPARENT);
+      keyFaceUnionMaskCanvas.setBitmap(mask);
+
+      try {
+        for (Keyboard.Key keyBase : inputs.keys) {
+          final KeyboardKey key = (KeyboardKey) keyBase;
+          if (key.width <= 0 || key.height <= 0) continue;
+
+          final int left = key.x + inputs.kbdPaddingLeft;
+          final int top = key.y + inputs.kbdPaddingTop;
+
+          final Bitmap keyMask =
+              KeyBackgroundAlphaMaskCache.resolveAlphaMask(
+                  inputs.keyBackground, key.width, key.height);
+          if (keyMask != null && !keyMask.isRecycled()) {
+            keyFaceUnionMaskCanvas.drawBitmap(keyMask, left, top, null);
+          } else {
+            final float radius =
+                KeyBackgroundCornerRadiusResolver.resolveCornerRadiusOrFallback(
+                    inputs.keyBackground, key.width, key.height);
+            keyFaceUnionMaskRect.set(left, top, left + key.width, top + key.height);
+            keyFaceUnionMaskCanvas.drawRoundRect(
+                keyFaceUnionMaskRect, radius, radius, keyFaceUnionMaskPaint);
+          }
+        }
+      } catch (RuntimeException | OutOfMemoryError e) {
+        return null;
+      }
+
+      cachedKeyFaceUnionMask = mask;
+      cachedKeyFaceUnionMaskWidth = width;
+      cachedKeyFaceUnionMaskHeight = height;
+      cachedKeyFaceUnionMaskPaddingLeft = inputs.kbdPaddingLeft;
+      cachedKeyFaceUnionMaskPaddingTop = inputs.kbdPaddingTop;
+      cachedKeyFaceUnionMaskDrawableKey = drawableKey;
+      cachedKeyFaceUnionMaskKeyboardKey = keyboardKey;
+      cachedKeyFaceUnionMaskKeyCount = keyCount;
+
+      return mask;
+    } finally {
+      Trace.endSection();
+    }
+  }
+
+  private static boolean drawKeyboardTextureOverlayWithMask(
+      @NonNull Canvas canvas,
+      @NonNull Rect dirtyRect,
+      @NonNull Bitmap unionMask,
+      @NonNull Paint overlayPaint) {
+    if (dirtyRect.isEmpty()) return false;
+    final int saveCount =
+        canvas.saveLayer(dirtyRect.left, dirtyRect.top, dirtyRect.right, dirtyRect.bottom, null);
+    canvas.drawRect(dirtyRect, overlayPaint);
+    canvas.drawBitmap(unionMask, 0f, 0f, KeyBackgroundAlphaMaskCache.dstInPaint());
+    canvas.restoreToCount(saveCount);
+    return true;
   }
 
   private void drawSpacebarVoiceBadge(

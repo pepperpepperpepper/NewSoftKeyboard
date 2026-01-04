@@ -30,6 +30,7 @@ import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.debug.TestInputActivity;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperTransform;
 import wtf.uhoh.newsoftkeyboard.rx.RxSchedulers;
 
 public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat {
@@ -42,6 +43,8 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
   private Preference pickPhotoPref;
   private CheckBoxPreference highQualityImportPref;
   private SeekBarPreference dimPref;
+  private ListPreference scaleModePref;
+  private ListPreference anchorPref;
   private ListPreference wallpaperModePref;
   private SeekBarPreference keyOpacityPref;
   private CheckBoxPreference matchKeyShapePref;
@@ -126,6 +129,84 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
           return true;
         });
     background.addPreference(rotatePhotoPref);
+
+    scaleModePref = new ListPreference(context);
+    scaleModePref.setKey("keyboard_theme_wallpaper_customization_scale_mode");
+    scaleModePref.setPersistent(false);
+    scaleModePref.setTitle(R.string.keyboard_theme_wallpaper_customization_scale_title);
+    final CharSequence scaleModeSummaryBase =
+        getText(R.string.keyboard_theme_wallpaper_customization_scale_summary);
+    scaleModePref.setSummaryProvider(
+        pref -> {
+          if (!(pref instanceof ListPreference lp)) return scaleModeSummaryBase;
+          final CharSequence entry = lp.getEntry();
+          if (entry == null) return scaleModeSummaryBase;
+          return scaleModeSummaryBase + "\n" + entry;
+        });
+    scaleModePref.setEntries(
+        new CharSequence[] {
+          getString(R.string.keyboard_theme_wallpaper_customization_scale_crop),
+          getString(R.string.keyboard_theme_wallpaper_customization_scale_fit),
+          getString(R.string.keyboard_theme_wallpaper_customization_scale_stretch),
+          getString(R.string.keyboard_theme_wallpaper_customization_scale_tile),
+          getString(R.string.keyboard_theme_wallpaper_customization_scale_mirror)
+        });
+    scaleModePref.setEntryValues(new CharSequence[] {"0", "1", "2", "3", "4"});
+    scaleModePref.setOnPreferenceChangeListener(
+        (ignored, newValue) -> {
+          final KeyboardTheme theme = getCurrentTheme();
+          if (theme == null) return false;
+          try {
+            wallpaperStore.setWallpaperScaleMode(
+                theme.getId(), Integer.parseInt(String.valueOf(newValue)));
+            refreshState();
+            return true;
+          } catch (NumberFormatException e) {
+            return false;
+          }
+        });
+    background.addPreference(scaleModePref);
+
+    anchorPref = new ListPreference(context);
+    anchorPref.setKey("keyboard_theme_wallpaper_customization_anchor");
+    anchorPref.setPersistent(false);
+    anchorPref.setTitle(R.string.keyboard_theme_wallpaper_customization_anchor_title);
+    final CharSequence anchorSummaryBase =
+        getText(R.string.keyboard_theme_wallpaper_customization_anchor_summary);
+    anchorPref.setSummaryProvider(
+        pref -> {
+          if (!(pref instanceof ListPreference lp)) return anchorSummaryBase;
+          final CharSequence entry = lp.getEntry();
+          if (entry == null) return anchorSummaryBase;
+          return anchorSummaryBase + "\n" + entry;
+        });
+    anchorPref.setEntries(
+        new CharSequence[] {
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_top_left),
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_top),
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_top_right),
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_left),
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_center),
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_right),
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_bottom_left),
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_bottom),
+          getString(R.string.keyboard_theme_wallpaper_customization_anchor_bottom_right)
+        });
+    anchorPref.setEntryValues(new CharSequence[] {"0", "1", "2", "3", "4", "5", "6", "7", "8"});
+    anchorPref.setOnPreferenceChangeListener(
+        (ignored, newValue) -> {
+          final KeyboardTheme theme = getCurrentTheme();
+          if (theme == null) return false;
+          try {
+            wallpaperStore.setWallpaperAnchor(
+                theme.getId(), Integer.parseInt(String.valueOf(newValue)));
+            refreshState();
+            return true;
+          } catch (NumberFormatException e) {
+            return false;
+          }
+        });
+    background.addPreference(anchorPref);
 
     dimPref = new SeekBarPreference(context);
     dimPref.setTitle(R.string.keyboard_theme_wallpaper_customization_dim_title);
@@ -323,6 +404,8 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
     final boolean hasPhoto = wallpaperStore.hasWallpaper(themeId);
     final boolean isInvalid = wallpaperStore.isWallpaperInvalid(themeId);
     final int dim = wallpaperStore.getDimPercent(themeId);
+    final int scaleMode = wallpaperStore.getWallpaperScaleMode(themeId);
+    final int anchor = wallpaperStore.getWallpaperAnchor(themeId);
     final int mode = wallpaperStore.getWallpaperMode(themeId);
     final int keyOpacityPercent = wallpaperStore.getKeyAlphaPercent(themeId);
     final int rotationDegrees = wallpaperStore.getWallpaperRotationDegrees(themeId);
@@ -338,7 +421,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
                       ? R.string.keyboard_theme_wallpaper_customization_pick_summary_set
                       : R.string.keyboard_theme_wallpaper_customization_pick_summary));
     }
-    refreshPhotoPreview(themeId, hasPhoto, isInvalid, dim, rotationDegrees);
+    refreshPhotoPreview(themeId, hasPhoto, isInvalid, dim, rotationDegrees, scaleMode, anchor);
 
     if (highQualityImportPref != null) {
       highQualityImportPref.setChecked(wallpaperStore.isHighQualityImportEnabled());
@@ -354,6 +437,25 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
       final boolean enabled = hasPhoto && !isInvalid && !importInProgress;
       rotatePhotoPref.setEnabled(enabled);
       rotatePhotoPref.setVisible(enabled);
+    }
+
+    if (scaleModePref != null) {
+      final boolean enabled = hasPhoto && !isInvalid && !importInProgress;
+      scaleModePref.setEnabled(enabled);
+      scaleModePref.setVisible(enabled);
+      scaleModePref.setValue(String.valueOf(scaleMode));
+    }
+
+    if (anchorPref != null) {
+      final boolean enabled =
+          hasPhoto
+              && !isInvalid
+              && !importInProgress
+              && (scaleMode == KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP
+                  || scaleMode == KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_FIT);
+      anchorPref.setEnabled(enabled);
+      anchorPref.setVisible(enabled);
+      anchorPref.setValue(String.valueOf(anchor));
     }
 
     if (wallpaperModePref != null) {
@@ -399,7 +501,9 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
       boolean hasPhoto,
       boolean isInvalid,
       int dimPercent,
-      int rotationDegrees) {
+      int rotationDegrees,
+      int scaleMode,
+      int anchor) {
     if (pickPhotoPref == null) return;
 
     if (!hasPhoto || isInvalid) {
@@ -437,7 +541,13 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
         Single.fromCallable(
                 () ->
                     KeyboardWallpaperPreview.create(
-                        context.getResources(), file, sizePx, clampedDim, normalizedRotation))
+                        context.getResources(),
+                        file,
+                        sizePx,
+                        clampedDim,
+                        normalizedRotation,
+                        scaleMode,
+                        anchor))
             .subscribeOn(RxSchedulers.background())
             .observeOn(RxSchedulers.mainThread())
             .subscribe(
@@ -636,46 +746,30 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
         @NonNull File file,
         int targetSizePx,
         int dimPercent,
-        int rotationDegrees) {
-      final android.graphics.Bitmap bitmap = decodeSquareThumbnail(file, targetSizePx);
+        int rotationDegrees,
+        int scaleMode,
+        int anchor) {
+      final android.graphics.Bitmap bitmap = decodeThumbnail(file, targetSizePx);
       if (bitmap == null) return null;
 
-      final android.graphics.Bitmap rotated = rotateBitmap(bitmap, rotationDegrees);
-      if (rotated != bitmap) bitmap.recycle();
+      final android.graphics.drawable.Drawable baseDrawable =
+          new WallpaperPreviewDrawable(bitmap, rotationDegrees, scaleMode, anchor);
 
-      if (dimPercent > 0) {
-        final android.graphics.Canvas canvas = new android.graphics.Canvas(rotated);
-        final android.graphics.Paint paint = new android.graphics.Paint();
-        paint.setColor(android.graphics.Color.BLACK);
-        paint.setAlpha(Math.round(255f * (dimPercent / 100f)));
-        canvas.drawRect(0, 0, rotated.getWidth(), rotated.getHeight(), paint);
+      if (dimPercent <= 0) {
+        return new KeyboardWallpaperPreview(baseDrawable);
       }
 
-      return new KeyboardWallpaperPreview(
-          new android.graphics.drawable.BitmapDrawable(resources, rotated));
-    }
-
-    @NonNull
-    private static android.graphics.Bitmap rotateBitmap(
-        @NonNull android.graphics.Bitmap bitmap, int rotationDegrees) {
-      final int rotation = KeyboardWallpaperOverrideStore.normalizeRotationDegrees(rotationDegrees);
-      if (rotation == 0) return bitmap;
-
-      final android.graphics.Matrix matrix = new android.graphics.Matrix();
-      matrix.postRotate(rotation);
-      try {
-        final android.graphics.Bitmap rotated =
-            android.graphics.Bitmap.createBitmap(
-                bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-        return rotated != null ? rotated : bitmap;
-      } catch (OutOfMemoryError oom) {
-        return bitmap;
-      }
+      final android.graphics.drawable.ColorDrawable dim =
+          new android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK);
+      dim.setAlpha(Math.round(255f * (Math.max(0, Math.min(100, dimPercent)) / 100f)));
+      final android.graphics.drawable.LayerDrawable out =
+          new android.graphics.drawable.LayerDrawable(
+              new android.graphics.drawable.Drawable[] {baseDrawable, dim});
+      return new KeyboardWallpaperPreview(out);
     }
 
     @Nullable
-    private static android.graphics.Bitmap decodeSquareThumbnail(
-        @NonNull File file, int targetSizePx) {
+    private static android.graphics.Bitmap decodeThumbnail(@NonNull File file, int targetSizePx) {
       final android.graphics.BitmapFactory.Options bounds =
           new android.graphics.BitmapFactory.Options();
       bounds.inJustDecodeBounds = true;
@@ -699,29 +793,22 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
 
       final int w = decoded.getWidth();
       final int h = decoded.getHeight();
-      final int side = Math.min(w, h);
-      final int left = Math.max(0, (w - side) / 2);
-      final int top = Math.max(0, (h - side) / 2);
+      final int maxDim = Math.max(w, h);
+      if (maxDim <= requested) return decoded;
 
-      final android.graphics.Bitmap square;
+      final float scale = requested / (float) maxDim;
+      final int scaledW = Math.max(1, Math.round(w * scale));
+      final int scaledH = Math.max(1, Math.round(h * scale));
+
+      final android.graphics.Bitmap scaled;
       try {
-        square = android.graphics.Bitmap.createBitmap(decoded, left, top, side, side);
-      } catch (IllegalArgumentException | OutOfMemoryError e) {
+        scaled = android.graphics.Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true);
+      } catch (OutOfMemoryError oom) {
         decoded.recycle();
         return null;
       }
-      if (square != decoded) decoded.recycle();
-
-      if (side == requested) return square;
-      try {
-        final android.graphics.Bitmap scaled =
-            android.graphics.Bitmap.createScaledBitmap(square, requested, requested, true);
-        if (scaled != square) square.recycle();
-        return scaled;
-      } catch (OutOfMemoryError oom) {
-        square.recycle();
-        return null;
-      }
+      if (scaled != decoded) decoded.recycle();
+      return scaled;
     }
 
     private static int calculateInSampleSize(int width, int height, int reqWidth, int reqHeight) {
@@ -730,6 +817,67 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
         inSampleSize *= 2;
       }
       return Math.max(1, inSampleSize);
+    }
+
+    private static final class WallpaperPreviewDrawable extends android.graphics.drawable.Drawable {
+      @NonNull private final android.graphics.Bitmap bitmap;
+      @NonNull private final android.graphics.Paint paint;
+      @NonNull private final android.graphics.BitmapShader shader;
+      @NonNull private final android.graphics.Matrix shaderMatrix = new android.graphics.Matrix();
+      private final int rotationDegrees;
+      private final int scaleMode;
+      private final int anchor;
+      private int alpha = 0xFF;
+
+      WallpaperPreviewDrawable(
+          @NonNull android.graphics.Bitmap bitmap, int rotationDegrees, int scaleMode, int anchor) {
+        this.bitmap = bitmap;
+        this.rotationDegrees = rotationDegrees;
+        this.scaleMode = scaleMode;
+        this.anchor = anchor;
+        this.paint = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
+        final android.graphics.Shader.TileMode tileMode =
+            KeyboardWallpaperTransform.tileModeForScaleMode(scaleMode);
+        this.shader = new android.graphics.BitmapShader(bitmap, tileMode, tileMode);
+        this.paint.setShader(shader);
+      }
+
+      @Override
+      protected void onBoundsChange(android.graphics.Rect bounds) {
+        super.onBoundsChange(bounds);
+        KeyboardWallpaperTransform.updateShaderMatrix(
+            shaderMatrix,
+            bitmap.getWidth(),
+            bitmap.getHeight(),
+            bounds,
+            rotationDegrees,
+            scaleMode,
+            anchor);
+        shader.setLocalMatrix(shaderMatrix);
+      }
+
+      @Override
+      public void draw(@NonNull android.graphics.Canvas canvas) {
+        paint.setAlpha(alpha);
+        canvas.drawRect(getBounds(), paint);
+      }
+
+      @Override
+      public void setAlpha(int alpha) {
+        this.alpha = alpha;
+        invalidateSelf();
+      }
+
+      @Override
+      public void setColorFilter(@Nullable android.graphics.ColorFilter colorFilter) {
+        paint.setColorFilter(colorFilter);
+        invalidateSelf();
+      }
+
+      @Override
+      public int getOpacity() {
+        return android.graphics.PixelFormat.TRANSLUCENT;
+      }
     }
   }
 }

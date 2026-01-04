@@ -21,6 +21,7 @@ final class DrawInputsBuilder {
   private final HintLayoutCalculator hintLayoutCalculator;
   private final KeyboardNameHintController keyboardNameHintController;
   private final DirtyRegionDecider dirtyRegionDecider;
+  private final Runnable requestInvalidateAllKeys;
 
   DrawInputsBuilder(
       ThemeOverlayCombiner themeOverlayCombiner,
@@ -28,13 +29,15 @@ final class DrawInputsBuilder {
       DrawDecisions drawDecisions,
       HintLayoutCalculator hintLayoutCalculator,
       KeyboardNameHintController keyboardNameHintController,
-      DirtyRegionDecider dirtyRegionDecider) {
+      DirtyRegionDecider dirtyRegionDecider,
+      Runnable requestInvalidateAllKeys) {
     this.themeOverlayCombiner = themeOverlayCombiner;
     this.keyboardWallpaperResolver = keyboardWallpaperResolver;
     this.drawDecisions = drawDecisions;
     this.hintLayoutCalculator = hintLayoutCalculator;
     this.keyboardNameHintController = keyboardNameHintController;
     this.dirtyRegionDecider = dirtyRegionDecider;
+    this.requestInvalidateAllKeys = requestInvalidateAllKeys;
   }
 
   DrawInputs build(
@@ -86,7 +89,8 @@ final class DrawInputsBuilder {
             canvas, invalidKey, clipRegion, paddingLeft, paddingTop);
 
     final KeyboardWallpaperResolver.KeyFaceOverlay keyFaceOverlay =
-        keyboardWallpaperResolver.resolveKeyFaceOverlay(theme, keyboardViewBounds);
+        keyboardWallpaperResolver.resolveKeyFaceOverlay(
+            theme, keyboardViewBounds, requestInvalidateAllKeys);
 
     final float effectiveKeyboardNameTextSize =
         keyboardNameTextSize > 1f ? keyboardNameTextSize : keyTextSize;
@@ -111,6 +115,8 @@ final class DrawInputsBuilder {
         drawSingleKey,
         paddingLeft,
         paddingTop,
+        keyboardViewBounds.width(),
+        keyboardViewBounds.height(),
         effectiveKeyboardNameTextSize,
         hintTextSize,
         hintTextSizeMultiplier,

@@ -3,7 +3,6 @@ package wtf.uhoh.newsoftkeyboard.app.theme;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
@@ -17,24 +16,32 @@ import android.graphics.Shader;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.LayerDrawable;
+import android.os.Trace;
+import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.os.UserManagerCompat;
 import java.io.File;
+import java.util.WeakHashMap;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.addons.AddOn;
 
 /** Resolves the IME container wallpaper for a given {@link KeyboardTheme}. */
 public class KeyboardWallpaperResolver {
 
+  private static final WallpaperBitmapLoader DEFAULT_WALLPAPER_BITMAP_LOADER =
+      WallpaperBitmapRepository.getInstance();
+
   private final Context appContext;
   private final KeyboardWallpaperOverrideStore overrideStore;
+  private final WallpaperBitmapLoader wallpaperBitmapLoader;
 
   private String cachedPhotoThemeId;
   private long cachedPhotoLastModified;
+  private int cachedPhotoMaxDimBucketPx;
   @Nullable private Bitmap cachedPhotoBitmap;
-  @Nullable private CenterCropBitmapDrawable cachedPhotoBaseDrawable;
+  @Nullable private WallpaperBitmapDrawable cachedPhotoBaseDrawable;
   @Nullable private ColorDrawable cachedPhotoDimOverlayDrawable;
   @Nullable private LayerDrawable cachedPhotoDimmedDrawable;
   private int cachedPhotoDimPercent;
@@ -42,18 +49,37 @@ public class KeyboardWallpaperResolver {
   private int cachedKeyFaceOverlayDimPercent;
   private int cachedKeyFaceOverlayAlpha;
   private int cachedKeyFaceOverlayRotationDegrees;
+  private int cachedKeyFaceOverlayScaleMode;
+  private int cachedKeyFaceOverlayAnchor;
   @Nullable private Paint cachedKeyFaceOverlayPaint;
   @Nullable private Shader cachedKeyFaceOverlayShader;
   private final Rect cachedKeyFaceOverlayBounds = new Rect();
   private final Matrix cachedKeyFaceOverlayMatrix = new Matrix();
   private final KeyFaceOverlay keyFaceOverlay = new KeyFaceOverlay();
 
+  private final WeakHashMap<View, Integer> backgroundApplyTokens = new WeakHashMap<>();
+  private int nextBackgroundApplyToken = 1;
+
+  private String lastRequestedKeyFaceThemeId;
+  private long lastRequestedKeyFaceLastModified;
+  private int lastRequestedKeyFaceBucketPx;
+
   public KeyboardWallpaperResolver(@NonNull Context context) {
+    this(context, DEFAULT_WALLPAPER_BITMAP_LOADER);
+  }
+
+  KeyboardWallpaperResolver(@NonNull Context context, @NonNull WallpaperBitmapLoader bitmapLoader) {
     appContext = context.getApplicationContext();
     overrideStore = new KeyboardWallpaperOverrideStore(appContext);
+    wallpaperBitmapLoader = bitmapLoader;
     cachedKeyFaceOverlayDimPercent = Integer.MIN_VALUE;
     cachedKeyFaceOverlayAlpha = Integer.MIN_VALUE;
     cachedKeyFaceOverlayRotationDegrees = Integer.MIN_VALUE;
+    cachedKeyFaceOverlayScaleMode = Integer.MIN_VALUE;
+    cachedKeyFaceOverlayAnchor = Integer.MIN_VALUE;
+    cachedPhotoMaxDimBucketPx = 0;
+    lastRequestedKeyFaceLastModified = 0L;
+    lastRequestedKeyFaceBucketPx = 0;
   }
 
   @NonNull
@@ -84,6 +110,148 @@ public class KeyboardWallpaperResolver {
     return resolvePhotoOverrideInternal(theme);
   }
 
+  /**
+   * Applies the user photo override (if any) as this view's background without blocking the UI
+   * thread.
+   *
+   * <p>The view background is updated only after it has non-zero bounds.
+   */
+  public void applyPhotoOverrideIfAnyAsync(@NonNull View view, @Nullable KeyboardTheme theme) {
+    if (theme == null) return;
+
+    // Locked decision: don't attempt to load user photos on direct-boot / locked user.
+    if (!UserManagerCompat.isUserUnlocked(appContext)) {
+      clearPhotoCache();
+      return;
+    }
+
+    final String themeId = theme.getId();
+    if (overrideStore.isWallpaperInvalid(themeId)) {
+      if (themeId.equals(cachedPhotoThemeId)) clearPhotoCache();
+      return;
+    }
+
+    final File file = overrideStore.getWallpaperFile(themeId);
+    if (!file.isFile()) {
+      if (themeId.equals(cachedPhotoThemeId)) clearPhotoCache();
+      return;
+    }
+
+    final long lastModified = file.lastModified();
+    final int dimPercent = overrideStore.getDimPercent(themeId);
+    final int rotationDegrees = overrideStore.getWallpaperRotationDegrees(themeId);
+    final int scaleMode = overrideStore.getWallpaperScaleMode(themeId);
+    final int anchor = overrideStore.getWallpaperAnchor(themeId);
+
+    final int token = nextBackgroundApplyToken++;
+    backgroundApplyTokens.put(view, token);
+
+    final Runnable start =
+        () -> {
+          final Integer currentToken = backgroundApplyTokens.get(view);
+          if (currentToken == null || currentToken != token) return;
+
+          final int width = view.getWidth();
+          final int height = view.getHeight();
+          if (width <= 0 || height <= 0) return;
+
+          final int maxDimBucket =
+              WallpaperBitmapRepository.bucketMaxDimPx(Math.max(width, height));
+          final Bitmap cached = wallpaperBitmapLoader.getCached(file, lastModified, maxDimBucket);
+          if (cached != null) {
+            applyCachedPhotoToView(
+                view,
+                themeId,
+                lastModified,
+                maxDimBucket,
+                cached,
+                dimPercent,
+                rotationDegrees,
+                scaleMode,
+                anchor,
+                token);
+            return;
+          }
+
+          wallpaperBitmapLoader.loadAsync(
+              file,
+              lastModified,
+              maxDimBucket,
+              bitmap -> {
+                final Integer stillCurrent = backgroundApplyTokens.get(view);
+                if (stillCurrent == null || stillCurrent != token) return;
+
+                if (bitmap == null) {
+                  // treat as invalid/corrupt and fall back to theme wallpaper
+                  //noinspection ResultOfMethodCallIgnored
+                  file.delete();
+                  overrideStore.markWallpaperInvalid(themeId);
+                  if (themeId.equals(cachedPhotoThemeId)) clearPhotoCache();
+                  return;
+                }
+
+                applyCachedPhotoToView(
+                    view,
+                    themeId,
+                    lastModified,
+                    maxDimBucket,
+                    bitmap,
+                    dimPercent,
+                    rotationDegrees,
+                    scaleMode,
+                    anchor,
+                    token);
+              });
+        };
+
+    if (view.getWidth() > 0 && view.getHeight() > 0) {
+      start.run();
+    } else {
+      view.addOnLayoutChangeListener(
+          new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(
+                View v,
+                int left,
+                int top,
+                int right,
+                int bottom,
+                int oldLeft,
+                int oldTop,
+                int oldRight,
+                int oldBottom) {
+              v.removeOnLayoutChangeListener(this);
+              start.run();
+            }
+          });
+    }
+  }
+
+  private void applyCachedPhotoToView(
+      @NonNull View view,
+      @NonNull String themeId,
+      long lastModified,
+      int maxDimBucketPx,
+      @NonNull Bitmap bitmap,
+      int dimPercent,
+      int rotationDegrees,
+      int scaleMode,
+      int anchor,
+      int expectedToken) {
+    Trace.beginSection("NSK.WallpaperApply");
+    try {
+      final Integer token = backgroundApplyTokens.get(view);
+      if (token == null || token != expectedToken) return;
+
+      final WallpaperBitmapDrawable baseDrawable =
+          cacheLoadedPhoto(themeId, lastModified, maxDimBucketPx, bitmap);
+      baseDrawable.setTransform(rotationDegrees, scaleMode, anchor);
+      view.setBackground(applyDimOverlayCached(baseDrawable, dimPercent));
+    } finally {
+      Trace.endSection();
+    }
+  }
+
   @Nullable
   private Drawable resolvePhotoOverrideInternal(@NonNull KeyboardTheme theme) {
     // Locked decision: don't attempt to load user photos on direct-boot / locked user.
@@ -110,20 +278,19 @@ public class KeyboardWallpaperResolver {
 
     final long lastModified = file.lastModified();
     final int dimPercent = overrideStore.getDimPercent(themeId);
-    final CenterCropBitmapDrawable baseDrawable = ensurePhotoLoaded(themeId, file, lastModified);
+    final int rotationDegrees = overrideStore.getWallpaperRotationDegrees(themeId);
+    final int scaleMode = overrideStore.getWallpaperScaleMode(themeId);
+    final int anchor = overrideStore.getWallpaperAnchor(themeId);
+    final int maxDim =
+        Math.max(
+            appContext.getResources().getDisplayMetrics().widthPixels,
+            appContext.getResources().getDisplayMetrics().heightPixels);
+    final WallpaperBitmapDrawable baseDrawable =
+        ensurePhotoLoaded(themeId, file, lastModified, maxDim);
     if (baseDrawable == null) return null;
 
-    baseDrawable.setRotationDegrees(overrideStore.getWallpaperRotationDegrees(themeId));
+    baseDrawable.setTransform(rotationDegrees, scaleMode, anchor);
     return applyDimOverlayCached(baseDrawable, dimPercent);
-  }
-
-  @Nullable
-  protected Bitmap decodePhotoFile(@NonNull File file) {
-    try {
-      return BitmapFactory.decodeFile(file.getAbsolutePath());
-    } catch (OutOfMemoryError oom) {
-      return null;
-    }
   }
 
   @Nullable
@@ -163,6 +330,7 @@ public class KeyboardWallpaperResolver {
   private void clearPhotoCache() {
     cachedPhotoThemeId = null;
     cachedPhotoLastModified = 0L;
+    cachedPhotoMaxDimBucketPx = 0;
     cachedPhotoDimPercent = 0;
     cachedPhotoBitmap = null;
     cachedPhotoBaseDrawable = null;
@@ -172,41 +340,59 @@ public class KeyboardWallpaperResolver {
     cachedKeyFaceOverlayDimPercent = Integer.MIN_VALUE;
     cachedKeyFaceOverlayAlpha = Integer.MIN_VALUE;
     cachedKeyFaceOverlayRotationDegrees = Integer.MIN_VALUE;
+    cachedKeyFaceOverlayScaleMode = Integer.MIN_VALUE;
+    cachedKeyFaceOverlayAnchor = Integer.MIN_VALUE;
     cachedKeyFaceOverlayPaint = null;
     cachedKeyFaceOverlayShader = null;
     cachedKeyFaceOverlayBounds.setEmpty();
     keyFaceOverlay.reset();
+
+    lastRequestedKeyFaceThemeId = null;
+    lastRequestedKeyFaceLastModified = 0L;
+    lastRequestedKeyFaceBucketPx = 0;
   }
 
   @Nullable
-  private CenterCropBitmapDrawable ensurePhotoLoaded(
-      @NonNull String themeId, @NonNull File file, long lastModified) {
+  private WallpaperBitmapDrawable ensurePhotoLoaded(
+      @NonNull String themeId, @NonNull File file, long lastModified, int maxDimPx) {
+    final int bucket = WallpaperBitmapRepository.bucketMaxDimPx(maxDimPx);
     if (cachedPhotoBaseDrawable != null
         && themeId.equals(cachedPhotoThemeId)
-        && cachedPhotoLastModified == lastModified) {
+        && cachedPhotoLastModified == lastModified
+        && cachedPhotoMaxDimBucketPx == bucket) {
       return cachedPhotoBaseDrawable;
     }
 
-    final Bitmap bitmap = decodePhotoFile(file);
-    if (bitmap == null) {
-      // treat as invalid/corrupt and fall back to theme wallpaper
-      //noinspection ResultOfMethodCallIgnored
-      file.delete();
-      overrideStore.markWallpaperInvalid(themeId);
-      clearPhotoCache();
-      return null;
+    final Bitmap bitmap = wallpaperBitmapLoader.getCached(file, lastModified, bucket);
+    if (bitmap == null) return null;
+
+    return cacheLoadedPhoto(themeId, lastModified, bucket, bitmap);
+  }
+
+  @NonNull
+  private WallpaperBitmapDrawable cacheLoadedPhoto(
+      @NonNull String themeId, long lastModified, int maxDimBucketPx, @NonNull Bitmap bitmap) {
+    if (cachedPhotoBaseDrawable != null
+        && themeId.equals(cachedPhotoThemeId)
+        && cachedPhotoLastModified == lastModified
+        && cachedPhotoMaxDimBucketPx == maxDimBucketPx
+        && cachedPhotoBitmap == bitmap) {
+      return cachedPhotoBaseDrawable;
     }
 
     cachedPhotoThemeId = themeId;
     cachedPhotoLastModified = lastModified;
+    cachedPhotoMaxDimBucketPx = maxDimBucketPx;
     cachedPhotoBitmap = bitmap;
-    cachedPhotoBaseDrawable = new CenterCropBitmapDrawable(bitmap);
+    cachedPhotoBaseDrawable = new WallpaperBitmapDrawable(bitmap);
     cachedPhotoDimOverlayDrawable = null;
     cachedPhotoDimmedDrawable = null;
 
     cachedKeyFaceOverlayDimPercent = Integer.MIN_VALUE;
     cachedKeyFaceOverlayAlpha = Integer.MIN_VALUE;
     cachedKeyFaceOverlayRotationDegrees = Integer.MIN_VALUE;
+    cachedKeyFaceOverlayScaleMode = Integer.MIN_VALUE;
+    cachedKeyFaceOverlayAnchor = Integer.MIN_VALUE;
     cachedKeyFaceOverlayPaint = null;
     cachedKeyFaceOverlayShader = null;
     cachedKeyFaceOverlayBounds.setEmpty();
@@ -217,7 +403,7 @@ public class KeyboardWallpaperResolver {
 
   @NonNull
   private Drawable applyDimOverlayCached(
-      @NonNull CenterCropBitmapDrawable baseDrawable, int dimPercent) {
+      @NonNull WallpaperBitmapDrawable baseDrawable, int dimPercent) {
     final int clamped = clampPercent(dimPercent);
     if (clamped <= 0) {
       cachedPhotoDimPercent = 0;
@@ -247,7 +433,9 @@ public class KeyboardWallpaperResolver {
    */
   @NonNull
   public KeyFaceOverlay resolveKeyFaceOverlay(
-      @Nullable KeyboardTheme theme, @NonNull Rect keyboardViewBounds) {
+      @Nullable KeyboardTheme theme,
+      @NonNull Rect keyboardViewBounds,
+      @NonNull Runnable requestInvalidate) {
     keyFaceOverlay.reset();
     if (theme == null) return keyFaceOverlay;
 
@@ -280,37 +468,55 @@ public class KeyboardWallpaperResolver {
       return keyFaceOverlay;
     }
 
-    final CenterCropBitmapDrawable baseDrawable =
-        ensurePhotoLoaded(themeId, file, file.lastModified());
-    if (baseDrawable == null || cachedPhotoBitmap == null) return keyFaceOverlay;
+    final int maxDimPx = Math.max(keyboardViewBounds.width(), keyboardViewBounds.height());
+    final WallpaperBitmapDrawable baseDrawable =
+        ensurePhotoLoaded(themeId, file, file.lastModified(), maxDimPx);
+    if (baseDrawable == null || cachedPhotoBitmap == null) {
+      requestKeyFaceBitmapLoadIfNeeded(
+          themeId, file, file.lastModified(), maxDimPx, requestInvalidate);
+      return keyFaceOverlay;
+    }
 
-    if (cachedKeyFaceOverlayPaint == null || cachedKeyFaceOverlayShader == null) {
+    final int rotationDegrees = overrideStore.getWallpaperRotationDegrees(themeId);
+    final int scaleMode = overrideStore.getWallpaperScaleMode(themeId);
+    final int anchor = overrideStore.getWallpaperAnchor(themeId);
+
+    if (cachedKeyFaceOverlayPaint == null
+        || cachedKeyFaceOverlayShader == null
+        || cachedKeyFaceOverlayScaleMode != scaleMode) {
+      final Shader.TileMode tileMode = KeyboardWallpaperTransform.tileModeForScaleMode(scaleMode);
       cachedKeyFaceOverlayShader =
-          new android.graphics.BitmapShader(
-              cachedPhotoBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+          new android.graphics.BitmapShader(cachedPhotoBitmap, tileMode, tileMode);
       cachedKeyFaceOverlayPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
       cachedKeyFaceOverlayPaint.setShader(cachedKeyFaceOverlayShader);
       cachedKeyFaceOverlayBounds.setEmpty();
       cachedKeyFaceOverlayDimPercent = Integer.MIN_VALUE;
       cachedKeyFaceOverlayAlpha = Integer.MIN_VALUE;
       cachedKeyFaceOverlayRotationDegrees = Integer.MIN_VALUE;
+      cachedKeyFaceOverlayScaleMode = scaleMode;
+      cachedKeyFaceOverlayAnchor = Integer.MIN_VALUE;
     }
 
-    final int rotationDegrees = overrideStore.getWallpaperRotationDegrees(themeId);
     // Ensure the shader mapping is anchored to the full keyboard view bounds, not per-key bounds.
     if (!cachedKeyFaceOverlayBounds.equals(keyboardViewBounds)
-        || cachedKeyFaceOverlayRotationDegrees != rotationDegrees) {
+        || cachedKeyFaceOverlayRotationDegrees != rotationDegrees
+        || cachedKeyFaceOverlayScaleMode != scaleMode
+        || cachedKeyFaceOverlayAnchor != anchor) {
       cachedKeyFaceOverlayBounds.set(keyboardViewBounds);
-      updateCenterCropMatrix(
+      KeyboardWallpaperTransform.updateShaderMatrix(
           cachedKeyFaceOverlayMatrix,
           cachedPhotoBitmap.getWidth(),
           cachedPhotoBitmap.getHeight(),
           cachedKeyFaceOverlayBounds,
-          rotationDegrees);
+          rotationDegrees,
+          scaleMode,
+          anchor);
       if (cachedKeyFaceOverlayShader instanceof android.graphics.BitmapShader bitmapShader) {
         bitmapShader.setLocalMatrix(cachedKeyFaceOverlayMatrix);
       }
       cachedKeyFaceOverlayRotationDegrees = rotationDegrees;
+      cachedKeyFaceOverlayScaleMode = scaleMode;
+      cachedKeyFaceOverlayAnchor = anchor;
     }
 
     if (cachedKeyFaceOverlayAlpha != alphaPercent) {
@@ -332,6 +538,40 @@ public class KeyboardWallpaperResolver {
     return keyFaceOverlay;
   }
 
+  private void requestKeyFaceBitmapLoadIfNeeded(
+      @NonNull String themeId,
+      @NonNull File file,
+      long lastModified,
+      int maxDimPx,
+      @NonNull Runnable requestInvalidate) {
+    final int bucket = WallpaperBitmapRepository.bucketMaxDimPx(maxDimPx);
+    if (bucket <= 0) return;
+    if (themeId.equals(lastRequestedKeyFaceThemeId)
+        && lastRequestedKeyFaceLastModified == lastModified
+        && lastRequestedKeyFaceBucketPx == bucket) {
+      return;
+    }
+    lastRequestedKeyFaceThemeId = themeId;
+    lastRequestedKeyFaceLastModified = lastModified;
+    lastRequestedKeyFaceBucketPx = bucket;
+
+    wallpaperBitmapLoader.loadAsync(
+        file,
+        lastModified,
+        bucket,
+        bitmap -> {
+          if (bitmap == null) {
+            // treat as invalid/corrupt and fall back to theme wallpaper
+            //noinspection ResultOfMethodCallIgnored
+            file.delete();
+            overrideStore.markWallpaperInvalid(themeId);
+            if (themeId.equals(cachedPhotoThemeId)) clearPhotoCache();
+            return;
+          }
+          requestInvalidate.run();
+        });
+  }
+
   @Nullable
   private static ColorFilter createDimColorFilter(int dimPercent) {
     final int clamped = clampPercent(dimPercent);
@@ -345,48 +585,6 @@ public class KeyboardWallpaperResolver {
               1f, 0f
             });
     return new ColorMatrixColorFilter(matrix);
-  }
-
-  private static void updateCenterCropMatrix(
-      @NonNull Matrix outMatrix,
-      int bitmapWidth,
-      int bitmapHeight,
-      @NonNull Rect bounds,
-      int rotationDegrees) {
-    if (bitmapWidth <= 0 || bitmapHeight <= 0) return;
-
-    final int rotation = normalizeRotationDegrees(rotationDegrees);
-
-    final float boundsW = bounds.width();
-    final float boundsH = bounds.height();
-    if (boundsW <= 0f || boundsH <= 0f) return;
-
-    final float effectiveW = (rotation == 90 || rotation == 270) ? bitmapHeight : bitmapWidth;
-    final float effectiveH = (rotation == 90 || rotation == 270) ? bitmapWidth : bitmapHeight;
-
-    // Scale so the (possibly rotated) bitmap fully covers bounds.
-    final float scale = Math.max(boundsW / effectiveW, boundsH / effectiveH);
-
-    outMatrix.reset();
-    outMatrix.postTranslate(-bitmapWidth / 2f, -bitmapHeight / 2f);
-    if (rotation != 0) {
-      outMatrix.postRotate(rotation);
-    }
-    outMatrix.postScale(scale, scale);
-    outMatrix.postTranslate(bounds.exactCenterX(), bounds.exactCenterY());
-  }
-
-  private static int normalizeRotationDegrees(int rotationDegrees) {
-    final int normalized = ((rotationDegrees % 360) + 360) % 360;
-    switch (normalized) {
-      case 0:
-      case 90:
-      case 180:
-      case 270:
-        return normalized;
-      default:
-        return 0;
-    }
   }
 
   public static final class KeyFaceOverlay {
@@ -414,20 +612,21 @@ public class KeyboardWallpaperResolver {
     }
   }
 
-  private static final class CenterCropBitmapDrawable extends Drawable {
+  private static final class WallpaperBitmapDrawable extends Drawable {
     private final Bitmap bitmap;
     private final Paint paint;
-    private final Shader bitmapShader;
+    private android.graphics.BitmapShader bitmapShader;
     private final Matrix shaderMatrix = new Matrix();
     private int alpha = 0xFF;
     private int rotationDegrees = 0;
+    private int scaleMode = KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP;
+    private int anchor = KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_CENTER;
 
-    CenterCropBitmapDrawable(@NonNull Bitmap bitmap) {
+    WallpaperBitmapDrawable(@NonNull Bitmap bitmap) {
       this.bitmap = bitmap;
       this.paint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
-      this.bitmapShader =
-          new android.graphics.BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-      this.paint.setShader(bitmapShader);
+      this.bitmapShader = createShader(bitmap, scaleMode);
+      this.paint.setShader(this.bitmapShader);
     }
 
     @Override
@@ -436,17 +635,40 @@ public class KeyboardWallpaperResolver {
       updateShaderMatrix(bounds);
     }
 
-    void setRotationDegrees(int rotationDegrees) {
-      final int normalized = normalizeRotationDegrees(rotationDegrees);
-      if (this.rotationDegrees == normalized) return;
-      this.rotationDegrees = normalized;
-      updateShaderMatrix(getBounds());
+    void setTransform(int rotationDegrees, int scaleMode, int anchor) {
+      final int normalizedRotation =
+          KeyboardWallpaperOverrideStore.normalizeRotationDegrees(rotationDegrees);
+      final int normalizedScaleMode = normalizeScaleMode(scaleMode);
+      final int normalizedAnchor = normalizeAnchor(anchor);
+
+      boolean changed = false;
+      if (this.rotationDegrees != normalizedRotation) {
+        this.rotationDegrees = normalizedRotation;
+        changed = true;
+      }
+      if (this.scaleMode != normalizedScaleMode) {
+        this.scaleMode = normalizedScaleMode;
+        this.bitmapShader = createShader(bitmap, this.scaleMode);
+        this.paint.setShader(this.bitmapShader);
+        changed = true;
+      }
+      if (this.anchor != normalizedAnchor) {
+        this.anchor = normalizedAnchor;
+        changed = true;
+      }
+      if (changed) updateShaderMatrix(getBounds());
     }
 
     private void updateShaderMatrix(@NonNull Rect bounds) {
-      updateCenterCropMatrix(
-          shaderMatrix, bitmap.getWidth(), bitmap.getHeight(), bounds, rotationDegrees);
-      ((android.graphics.BitmapShader) bitmapShader).setLocalMatrix(shaderMatrix);
+      KeyboardWallpaperTransform.updateShaderMatrix(
+          shaderMatrix,
+          bitmap.getWidth(),
+          bitmap.getHeight(),
+          bounds,
+          rotationDegrees,
+          scaleMode,
+          anchor);
+      bitmapShader.setLocalMatrix(shaderMatrix);
       invalidateSelf();
     }
 
@@ -471,6 +693,32 @@ public class KeyboardWallpaperResolver {
     @Override
     public int getOpacity() {
       return PixelFormat.TRANSLUCENT;
+    }
+
+    private static android.graphics.BitmapShader createShader(
+        @NonNull Bitmap bitmap, int scaleMode) {
+      final Shader.TileMode tileMode = KeyboardWallpaperTransform.tileModeForScaleMode(scaleMode);
+      return new android.graphics.BitmapShader(bitmap, tileMode, tileMode);
+    }
+
+    private static int normalizeScaleMode(int scaleMode) {
+      switch (scaleMode) {
+        case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP:
+        case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_FIT:
+        case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_STRETCH:
+        case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_TILE:
+        case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_MIRROR:
+          return scaleMode;
+        default:
+          return KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP;
+      }
+    }
+
+    private static int normalizeAnchor(int anchor) {
+      return anchor >= KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_TOP_LEFT
+              && anchor <= KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_BOTTOM_RIGHT
+          ? anchor
+          : KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_CENTER;
     }
   }
 }

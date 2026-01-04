@@ -31,6 +31,8 @@ final class DrawInputs {
   final boolean drawSingleKey;
   final int kbdPaddingLeft;
   final int kbdPaddingTop;
+  final int keyboardViewWidth;
+  final int keyboardViewHeight;
   final float keyboardNameTextSize;
   final float hintTextSize;
   final float hintTextSizeMultiplier;
@@ -68,6 +70,8 @@ final class DrawInputs {
       boolean drawSingleKey,
       int kbdPaddingLeft,
       int kbdPaddingTop,
+      int keyboardViewWidth,
+      int keyboardViewHeight,
       float keyboardNameTextSize,
       float hintTextSize,
       float hintTextSizeMultiplier,
@@ -103,6 +107,8 @@ final class DrawInputs {
     this.drawSingleKey = drawSingleKey;
     this.kbdPaddingLeft = kbdPaddingLeft;
     this.kbdPaddingTop = kbdPaddingTop;
+    this.keyboardViewWidth = keyboardViewWidth;
+    this.keyboardViewHeight = keyboardViewHeight;
     this.keyboardNameTextSize = keyboardNameTextSize;
     this.hintTextSize = hintTextSize;
     this.hintTextSizeMultiplier = hintTextSizeMultiplier;
