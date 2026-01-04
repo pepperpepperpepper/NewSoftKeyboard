@@ -51,6 +51,8 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
   @Nullable private AlertDialog currentErrorDialog;
   @Nullable private VoiceErrorStripActionProvider currentErrorStripAction;
   private boolean restoreStripVisibilityAfterError = false;
+  @Nullable private VoiceStatusStripActionProvider currentStatusStripAction;
+  private boolean restoreStripVisibilityAfterStatus = false;
   @NonNull private VoiceInputState currentVoiceState = VoiceInputState.IDLE;
 
   public ImeVoiceInputCallbacks(
@@ -83,10 +85,16 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
     if (state != VoiceInputState.ERROR) {
       dismissErrorUi();
     }
+    if (state == VoiceInputState.RECORDING || state == VoiceInputState.WAITING) {
+      showStatusUi(state);
+    } else {
+      dismissStatusStripAction();
+    }
   }
 
   @Override
   public void onVoiceError(@NonNull String error) {
+    dismissStatusStripAction();
     dismissErrorUi();
 
     final String displayMessage = resolveUserVisibleErrorMessage(error);
@@ -215,6 +223,44 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
   private void dismissErrorUi() {
     dismissErrorDialog();
     dismissErrorStripAction();
+  }
+
+  private void showStatusUi(@NonNull VoiceInputState state) {
+    final KeyboardViewContainerView container = service.getInputViewContainer();
+    if (container == null) return;
+
+    final int messageId =
+        state == VoiceInputState.RECORDING
+            ? R.string.voice_spacebar_badge_recording
+            : R.string.voice_spacebar_badge_waiting;
+    final String message = service.getString(messageId);
+
+    final VoiceStatusStripActionProvider provider = currentStatusStripAction;
+    if (provider != null) {
+      provider.updateMessage(message);
+      return;
+    }
+
+    restoreStripVisibilityAfterStatus =
+        container.getCandidateView() != null
+            && container.getCandidateView().getVisibility() != View.VISIBLE;
+    container.setActionsStripVisibility(true);
+
+    currentStatusStripAction = new VoiceStatusStripActionProvider(service, message);
+    container.addStripAction(currentStatusStripAction, true);
+  }
+
+  private void dismissStatusStripAction() {
+    final KeyboardViewContainerView container = service.getInputViewContainer();
+    final VoiceStatusStripActionProvider provider = currentStatusStripAction;
+    currentStatusStripAction = null;
+    if (container != null && provider != null) {
+      container.removeStripAction(provider);
+      if (restoreStripVisibilityAfterStatus) {
+        container.setActionsStripVisibility(false);
+      }
+    }
+    restoreStripVisibilityAfterStatus = false;
   }
 
   private void dismissErrorDialog() {

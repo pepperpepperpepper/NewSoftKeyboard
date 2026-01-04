@@ -5,7 +5,8 @@ import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.InputViewBinder;
 
 /**
- * Handles visual updates for voice input state: voice-key state and a non-invasive spacebar badge.
+ * Handles visual updates for voice input state: voice-key state. Status messages are rendered above
+ * the keyboard (strip actions), not on the spacebar.
  */
 public final class VoiceStatusRenderer {
 
@@ -17,18 +18,14 @@ public final class VoiceStatusRenderer {
   }
 
   public void updateSpaceBarRecordingStatus(boolean isRecording, @Nullable InputViewBinder view) {
-    if (view == null) return;
-    // Prefer to show explicit recording state when we know it, but don't overwrite non-recording
-    // states (e.g., waiting/error) when recording stops.
-    final VoiceInputState stateToShow = isRecording ? VoiceInputState.RECORDING : voiceState;
-    view.setVoiceInputState(stateToShow);
+    if (isRecording) {
+      voiceState = VoiceInputState.RECORDING;
+    }
   }
 
   public void updateVoiceInputStatus(@Nullable InputViewBinder view, VoiceInputState newState) {
     if (voiceState == newState) return;
     voiceState = newState;
-    if (view == null) return;
-    view.setVoiceInputState(voiceState);
   }
 
   public VoiceInputState getCurrentState() {

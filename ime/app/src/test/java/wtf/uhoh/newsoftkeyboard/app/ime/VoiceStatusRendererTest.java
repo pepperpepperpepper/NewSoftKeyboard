@@ -12,21 +12,25 @@ import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 public class VoiceStatusRendererTest {
 
   @Test
-  public void testUpdateVoiceInputStatusUpdatesViewState() {
+  public void testUpdateVoiceInputStatusTracksStateButDoesNotUpdateViewState() {
     final InputViewBinder inputView = Mockito.mock(InputViewBinder.class);
     final VoiceStatusRenderer renderer = new VoiceStatusRenderer();
 
     renderer.updateVoiceInputStatus(inputView, VoiceInputState.RECORDING);
-    Mockito.verify(inputView).setVoiceInputState(VoiceInputState.RECORDING);
+    Mockito.verify(inputView, Mockito.never()).setVoiceInputState(Mockito.any());
+    Assert.assertEquals(VoiceInputState.RECORDING, renderer.getCurrentState());
 
     renderer.updateVoiceInputStatus(inputView, VoiceInputState.RECORDING);
-    Mockito.verify(inputView, Mockito.times(1)).setVoiceInputState(VoiceInputState.RECORDING);
+    Mockito.verify(inputView, Mockito.never()).setVoiceInputState(Mockito.any());
+    Assert.assertEquals(VoiceInputState.RECORDING, renderer.getCurrentState());
 
     renderer.updateVoiceInputStatus(inputView, VoiceInputState.WAITING);
-    Mockito.verify(inputView).setVoiceInputState(VoiceInputState.WAITING);
+    Mockito.verify(inputView, Mockito.never()).setVoiceInputState(Mockito.any());
+    Assert.assertEquals(VoiceInputState.WAITING, renderer.getCurrentState());
 
     renderer.updateVoiceInputStatus(inputView, VoiceInputState.IDLE);
-    Mockito.verify(inputView).setVoiceInputState(VoiceInputState.IDLE);
+    Mockito.verify(inputView, Mockito.never()).setVoiceInputState(Mockito.any());
+    Assert.assertEquals(VoiceInputState.IDLE, renderer.getCurrentState());
   }
 
   @Test

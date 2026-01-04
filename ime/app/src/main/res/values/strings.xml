@@ -1148,7 +1148,7 @@
     <string name="openai_status_processing">Processing audio...</string>
     <string name="openai_status_transcribing">Transcribing with OpenAI...</string>
 
-    <!-- Voice status badges (spacebar) -->
+    <!-- Voice status messages (rendered above keyboard) -->
     <string name="voice_spacebar_badge_recording">Recording</string>
     <string name="voice_spacebar_badge_waiting">Waiting</string>
     <string name="voice_spacebar_badge_error">Error</string>
