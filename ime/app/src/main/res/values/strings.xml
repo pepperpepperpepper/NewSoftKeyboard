@@ -1279,6 +1279,8 @@
     <string name="settings_full_changelog_title">Full changelog</string>
 
     <!-- Keyboard Designer / Custom keyboards -->
+    <string name="settings_keyboard_designer_title">Keyboard Designer</string>
+    <string name="settings_keyboard_designer_summary">Create and edit custom keyboard layouts.</string>
     <string name="custom_keyboards_menu_title">Custom keyboards</string>
     <string name="custom_keyboards_title">Custom keyboards</string>
     <string name="custom_keyboards_new_keyboard_button">New keyboard</string>

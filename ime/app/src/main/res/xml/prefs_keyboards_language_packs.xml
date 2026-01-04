@@ -23,6 +23,12 @@
             android:title="@string/settings_manage_keyboards_title"
             android:summary="@string/language_keyboards_settings_tile"
             app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="nav:custom_keyboards"
+            android:title="@string/settings_keyboard_designer_title"
+            android:summary="@string/settings_keyboard_designer_summary"
+            app:iconSpaceReserved="false" />
     </androidx.preference.PreferenceCategory>
 
     <androidx.preference.PreferenceCategory
@@ -114,4 +120,3 @@
     </androidx.preference.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>
-

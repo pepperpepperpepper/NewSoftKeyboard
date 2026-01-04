@@ -519,9 +519,11 @@ Recommendation:
 
 Recommended entry points in existing UI:
 
-1. **Keyboards list** (`KeyboardAddOnBrowserFragment`)
+1. **Keyboards & language packs** settings (`KeyboardsAndLanguagePacksFragment`)
+   - add a visible “Keyboard Designer” tile that opens the custom keyboard library (no hidden menu)
+2. **Keyboards list** (`KeyboardAddOnBrowserFragment`)
    - add a “Create custom keyboard” button (top action or FAB)
-2. A “Custom Keyboards” section under Language settings
+3. A “Custom Keyboards” section under Language settings
    - `LanguageSettingsFragment` → keyboards tile → tab/switcher for “Installed” vs “Custom”
 
 ### Core screens

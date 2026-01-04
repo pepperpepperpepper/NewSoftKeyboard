@@ -18,6 +18,7 @@ public class KeyboardsAndLanguagePacksFragment extends PreferenceFragmentCompat 
 
   private static final String KEY_LANGUAGE_PACKS_MANAGER = "nav:language_packs_manager";
   private static final String KEY_KEYBOARDS_MANAGER = "nav:keyboards_manager";
+  private static final String KEY_CUSTOM_KEYBOARDS = "nav:custom_keyboards";
   private static final String KEY_HARDWARE_KEYBOARD_GATE = "info:hardware_keyboard_gate";
   private static final String KEY_HARDWARE_KEYBOARD_SECTION = "hardware_keyboard_section";
 
@@ -49,6 +50,15 @@ public class KeyboardsAndLanguagePacksFragment extends PreferenceFragmentCompat 
       manageKeyboards.setOnPreferenceClickListener(
           ignored -> {
             Navigation.findNavController(requireView()).navigate(R.id.keyboardAddOnBrowserFragment);
+            return true;
+          });
+    }
+
+    final Preference customKeyboards = findPreference(KEY_CUSTOM_KEYBOARDS);
+    if (customKeyboards != null) {
+      customKeyboards.setOnPreferenceClickListener(
+          ignored -> {
+            Navigation.findNavController(requireView()).navigate(R.id.customKeyboardsFragment);
             return true;
           });
     }
