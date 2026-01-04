@@ -24,13 +24,11 @@
             android:title="@string/night_mode_screen"
             app:iconSpaceReserved="false" />
 
-        <androidx.preference.CheckBoxPreference
-            android:defaultValue="@bool/settings_default_apply_remote_app_colors"
+        <Preference
             android:key="@string/settings_key_apply_remote_app_colors"
-            android:persistent="true"
-            android:summaryOff="@string/apply_overlay_summary_off"
-            android:summaryOn="@string/apply_overlay_summary_on"
-            android:title="@string/apply_remote_app_colors_to_theme" />
+            android:summary="@string/apply_overlay_summary_off"
+            android:title="@string/apply_remote_app_colors_to_theme"
+            app:iconSpaceReserved="false" />
 
         <androidx.preference.ListPreference
             android:defaultValue="@string/settings_default_theme_case_type_override"

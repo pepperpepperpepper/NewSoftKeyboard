@@ -29,6 +29,8 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
   private static final String KEY_TOOLBAR_BOTTOM_ROW = "nav:toolbar_bottom_row_selector";
   private static final String KEY_TOOLBAR_ROW_MODES = "nav:toolbar_input_field_modes";
 
+  @Nullable private Preference applyRemoteAppColorsPref;
+
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     setPreferencesFromResource(R.xml.prefs_look_and_feel_settings, rootKey);
@@ -43,6 +45,17 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
     bindNav(KEY_TOOLBAR_TOP_ROW, R.id.topRowAddOnBrowserFragment);
     bindNav(KEY_TOOLBAR_SWIPE_ROW, R.id.extensionAddOnBrowserFragment);
     bindNav(KEY_TOOLBAR_BOTTOM_ROW, R.id.bottomRowAddOnBrowserFragment);
+
+    applyRemoteAppColorsPref =
+        findPreference(getString(R.string.settings_key_apply_remote_app_colors));
+    if (applyRemoteAppColorsPref != null) {
+      applyRemoteAppColorsPref.setOnPreferenceClickListener(
+          ignored -> {
+            Navigation.findNavController(requireView())
+                .navigate(R.id.keyboardThemeSelectorFragment);
+            return true;
+          });
+    }
 
     final Preference rowModes = findPreference(KEY_TOOLBAR_ROW_MODES);
     if (rowModes != null) {
@@ -61,12 +74,14 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
     super.onStart();
     UiUtils.setActivityTitle(this, R.string.settings_category_look_and_feel);
     updateToolbarSummaries();
+    updateThemeOverlaySummaries();
   }
 
   @Override
   public void onResume() {
     super.onResume();
     updateToolbarSummaries();
+    updateThemeOverlaySummaries();
     scrollToRequestedPreferenceIfNeeded();
   }
 
@@ -98,6 +113,20 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
                   .getEnabledAddOn()
                   .getName()));
     }
+  }
+
+  private void updateThemeOverlaySummaries() {
+    final Preference preference = applyRemoteAppColorsPref;
+    if (preference == null) return;
+
+    final boolean enabled =
+        NskApplicationBase.prefs(requireContext())
+            .getBoolean(
+                R.string.settings_key_apply_remote_app_colors,
+                R.bool.settings_default_apply_remote_app_colors)
+            .get();
+    preference.setSummary(
+        enabled ? R.string.apply_overlay_summary_on : R.string.apply_overlay_summary_off);
   }
 
   private void applySdkVisibilityRules() {

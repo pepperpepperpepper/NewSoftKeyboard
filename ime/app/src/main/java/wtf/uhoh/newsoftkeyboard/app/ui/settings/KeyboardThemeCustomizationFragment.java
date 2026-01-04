@@ -18,6 +18,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
+import androidx.preference.PreferenceViewHolder;
 import androidx.preference.SeekBarPreference;
 import io.reactivex.Single;
 import io.reactivex.disposables.Disposable;
@@ -28,17 +29,24 @@ import net.evendanan.pixel.UiUtils;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.debug.TestInputActivity;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.DemoKeyboardView;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperResolver;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperTransform;
 import wtf.uhoh.newsoftkeyboard.rx.RxSchedulers;
 
 public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat {
 
   private KeyboardWallpaperOverrideStore wallpaperStore;
+  private KeyboardWallpaperResolver wallpaperPreviewResolver;
   private ActivityResultLauncher<String[]> pickWallpaperLauncher;
   private Disposable importDisposable;
   private Disposable previewDisposable;
+
+  @Nullable private DemoKeyboardView livePreviewKeyboardView;
 
   private Preference pickPhotoPref;
   private CheckBoxPreference highQualityImportPref;
@@ -57,6 +65,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
   public void onAttach(@NonNull Context context) {
     super.onAttach(context);
     wallpaperStore = new KeyboardWallpaperOverrideStore(context);
+    wallpaperPreviewResolver = new KeyboardWallpaperResolver(context);
   }
 
   @Override
@@ -72,8 +81,20 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
     if (wallpaperStore == null) {
       wallpaperStore = new KeyboardWallpaperOverrideStore(context);
     }
+    if (wallpaperPreviewResolver == null) {
+      wallpaperPreviewResolver = new KeyboardWallpaperResolver(context);
+    }
     final PreferenceScreen screen = getPreferenceManager().createPreferenceScreen(context);
     setPreferenceScreen(screen);
+
+    final PreferenceCategory preview = new PreferenceCategory(context);
+    preview.setTitle(R.string.keyboard_theme_wallpaper_customization_preview_title);
+    screen.addPreference(preview);
+
+    final KeyboardLivePreviewPreference previewPref =
+        new KeyboardLivePreviewPreference(context, this::bindLivePreviewKeyboardView);
+    previewPref.setKey("info:keyboard_theme_wallpaper_preview");
+    preview.addPreference(previewPref);
 
     final PreferenceCategory background = new PreferenceCategory(context);
     background.setTitle(R.string.keyboard_theme_wallpaper_customization_title);
@@ -214,11 +235,13 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
     dimPref.setMin(0);
     dimPref.setMax(100);
     dimPref.setShowSeekBarValue(true);
+    dimPref.setUpdatesContinuously(true);
     dimPref.setOnPreferenceChangeListener(
         (ignored, newValue) -> {
           final KeyboardTheme theme = getCurrentTheme();
           if (theme == null) return false;
           wallpaperStore.setDimPercent(theme.getId(), (Integer) newValue);
+          updateLivePreview();
           return true;
         });
     background.addPreference(dimPref);
@@ -270,11 +293,13 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
     keyOpacityPref.setMin(0);
     keyOpacityPref.setMax(100);
     keyOpacityPref.setShowSeekBarValue(true);
+    keyOpacityPref.setUpdatesContinuously(true);
     keyOpacityPref.setOnPreferenceChangeListener(
         (ignored, newValue) -> {
           final KeyboardTheme theme = getCurrentTheme();
           if (theme == null) return false;
           wallpaperStore.setKeyAlphaPercent(theme.getId(), (Integer) newValue);
+          updateLivePreview();
           return true;
         });
     background.addPreference(keyOpacityPref);
@@ -289,6 +314,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
           final KeyboardTheme theme = getCurrentTheme();
           if (theme == null) return false;
           wallpaperStore.setMatchKeyShapeEnabled(theme.getId(), Boolean.TRUE.equals(newValue));
+          updateLivePreview();
           return true;
         });
     background.addPreference(matchKeyShapePref);
@@ -317,6 +343,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
                   Toast.LENGTH_SHORT)
               .show();
           refreshState();
+          updateLivePreview();
           return true;
         });
     background.addPreference(resetPref);
@@ -373,6 +400,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
       previewDisposable.dispose();
       previewDisposable = null;
     }
+    livePreviewKeyboardView = null;
     super.onDestroy();
   }
 
@@ -494,6 +522,45 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
     if (applyToAllPref != null) {
       applyToAllPref.setEnabled(!importInProgress && hasPhoto && !isInvalid);
     }
+
+    ensureLivePreviewConfigured();
+    updateLivePreview();
+  }
+
+  private void bindLivePreviewKeyboardView(@NonNull DemoKeyboardView view) {
+    livePreviewKeyboardView = view;
+    ensureLivePreviewConfigured();
+    updateLivePreview();
+  }
+
+  private void ensureLivePreviewConfigured() {
+    final DemoKeyboardView preview = livePreviewKeyboardView;
+    if (preview == null) return;
+
+    final KeyboardTheme theme = getCurrentTheme();
+    if (theme == null) return;
+
+    preview.setAllowExpensiveWallpaperEffects(true);
+    preview.setKeyboardTheme(theme);
+
+    final KeyboardDefinition defaultKeyboard =
+        NskApplicationBase.getKeyboardFactory(requireContext())
+            .getEnabledAddOn()
+            .createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
+    defaultKeyboard.loadKeyboard(preview.getThemedKeyboardDimens());
+    preview.setKeyboard(defaultKeyboard, null, null);
+  }
+
+  private void updateLivePreview() {
+    final DemoKeyboardView preview = livePreviewKeyboardView;
+    if (preview == null) return;
+    final KeyboardTheme theme = getCurrentTheme();
+    if (theme == null) return;
+
+    if (wallpaperPreviewResolver != null) {
+      wallpaperPreviewResolver.applyPhotoOverrideIfAnyAsync(preview, theme);
+    }
+    preview.invalidate();
   }
 
   private void refreshPhotoPreview(
@@ -613,6 +680,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
                           Toast.LENGTH_SHORT)
                       .show();
                   refreshState();
+                  updateLivePreview();
                 },
                 error -> {
                   if (!isAdded()) return;
@@ -711,6 +779,7 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
                         .show();
                   }
                   refreshState();
+                  updateLivePreview();
                 },
                 ignored -> {
                   if (!isAdded()) return;
@@ -721,6 +790,32 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
                       .show();
                   refreshState();
                 });
+  }
+
+  private static final class KeyboardLivePreviewPreference extends Preference {
+    interface ViewBinder {
+      void bind(@NonNull DemoKeyboardView view);
+    }
+
+    @Nullable private final ViewBinder binder;
+
+    KeyboardLivePreviewPreference(@NonNull Context context, @Nullable ViewBinder binder) {
+      super(context);
+      this.binder = binder;
+      setSelectable(false);
+      setPersistent(false);
+      setLayoutResource(R.layout.keyboard_theme_wallpaper_live_preview);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull PreferenceViewHolder holder) {
+      super.onBindViewHolder(holder);
+      final DemoKeyboardView view =
+          (DemoKeyboardView) holder.itemView.findViewById(R.id.wallpaper_live_preview_keyboard);
+      if (view != null && binder != null) {
+        binder.bind(view);
+      }
+    }
   }
 
   private static final class ApplyToAllResult {

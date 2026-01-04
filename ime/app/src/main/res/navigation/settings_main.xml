@@ -386,8 +386,8 @@
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.KeyboardThemeSelectorFragment"
         android:label="KeyboardThemeSelectorFragment">
         <action
-            android:id="@+id/action_keyboardThemeSelectorFragment_to_keyboardThemeTweaksFragment"
-            app:destination="@id/keyboardThemeTweaksFragment"
+            android:id="@+id/action_keyboardThemeSelectorFragment_to_keyboardThemeCustomizationFragment"
+            app:destination="@id/keyboardThemeCustomizationFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"

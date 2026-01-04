@@ -276,7 +276,7 @@ public class KeyboardWallpaperOverrideStoreTest {
 
     assertTrue(store.hasWallpaper(themeId));
     assertEquals(
-        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE,
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT,
         store.getWallpaperMode(themeId));
     assertEquals(60, store.getKeyAlphaPercent(themeId));
   }
@@ -307,7 +307,7 @@ public class KeyboardWallpaperOverrideStoreTest {
 
     assertTrue(store.hasWallpaper(themeId));
     assertEquals(
-        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE,
+        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT,
         store.getWallpaperMode(themeId));
     assertEquals(60, store.getKeyAlphaPercent(themeId));
   }

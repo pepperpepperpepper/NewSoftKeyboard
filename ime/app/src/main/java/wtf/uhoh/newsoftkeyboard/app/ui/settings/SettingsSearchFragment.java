@@ -228,6 +228,9 @@ public class SettingsSearchFragment extends Fragment {
         "nav:theme_selector",
         new ActionTarget(R.id.keyboardThemeSelectorFragment, TypeBadge.MANAGER, null));
     targets.put(
+        context.getString(R.string.settings_key_apply_remote_app_colors),
+        new ActionTarget(R.id.keyboardThemeSelectorFragment, TypeBadge.SETTING, null));
+    targets.put(
         "nav:night_mode_settings",
         new ActionTarget(R.id.nightModeSettingsFragment, TypeBadge.EDITOR, null));
     targets.put(

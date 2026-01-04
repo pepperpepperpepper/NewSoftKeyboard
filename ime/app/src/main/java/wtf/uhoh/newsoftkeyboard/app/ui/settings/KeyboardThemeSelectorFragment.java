@@ -18,6 +18,9 @@ package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
@@ -55,11 +58,20 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
   }
 
   @Override
+  public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+    super.onCreateOptionsMenu(menu, inflater);
+    final MenuItem customize = menu.findItem(R.id.tweaks_menu_option);
+    if (customize != null) {
+      customize.setTitle(R.string.keyboard_theme_customize_menu_title);
+    }
+  }
+
+  @Override
   protected void onTweaksOptionSelected() {
     Navigation.findNavController(requireView())
         .navigate(
             KeyboardThemeSelectorFragmentDirections
-                .actionKeyboardThemeSelectorFragmentToKeyboardThemeTweaksFragment());
+                .actionKeyboardThemeSelectorFragmentToKeyboardThemeCustomizationFragment());
   }
 
   @Override
@@ -119,7 +131,7 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
             Navigation.findNavController(view)
                 .navigate(
                     KeyboardThemeSelectorFragmentDirections
-                        .actionKeyboardThemeSelectorFragmentToKeyboardThemeTweaksFragment()));
+                        .actionKeyboardThemeSelectorFragmentToKeyboardThemeCustomizationFragment()));
     root.addView(customizeRow, listIndex);
   }
 

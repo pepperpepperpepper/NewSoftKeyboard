@@ -48,6 +48,7 @@ final class KeyboardDrawCoordinator {
       @Nullable KeyDrawableStateProvider drawableStateProvider,
       CharSequence keyboardName,
       @Nullable CharSequence spacebarVoiceBadgeText,
+      boolean allowExpensiveWallpaperEffects,
       int viewWidth,
       int viewHeight,
       int paddingLeft,
@@ -92,6 +93,7 @@ final class KeyboardDrawCoordinator {
             keyTextStyleState.keyTextSize(),
             keyTextStyleState.themeHintLabelAlign(),
             keyTextStyleState.themeHintLabelVAlign(),
+            allowExpensiveWallpaperEffects,
             drawableStateProvider);
     keyDrawHelper.drawKeys(canvas, dirtyRect, drawInputs);
     invalidateHelper.clearAfterDraw();

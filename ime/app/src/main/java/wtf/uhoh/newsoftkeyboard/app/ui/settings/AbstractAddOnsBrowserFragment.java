@@ -301,6 +301,9 @@ public abstract class AbstractAddOnsBrowserFragment<E extends AddOn> extends Fra
       super(itemView);
       itemView.setOnClickListener(this);
       mDemoKeyboardView = itemView.findViewById(R.id.item_keyboard_view);
+      if (mDemoKeyboardView != null) {
+        mDemoKeyboardView.setAllowExpensiveWallpaperEffects(false);
+      }
       mAddOnEnabledView = itemView.findViewById(R.id.enabled_image);
       mAddOnTitle = itemView.findViewById(R.id.title);
       mAddOnDescription = itemView.findViewById(R.id.subtitle);

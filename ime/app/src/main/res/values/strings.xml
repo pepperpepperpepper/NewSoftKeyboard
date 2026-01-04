@@ -35,9 +35,11 @@
     <string name="search_market_for_quick_key_addons">Get more <i>Quick-Text</i> add-ons at the app store…</string>
     
     <string name="keyboard_theme_tweak_group">Tweaks</string>
+    <string name="keyboard_theme_customize_menu_title">Customize</string>
     <string name="keyboard_theme_customize_current_title">Customize current theme</string>
-    <string name="keyboard_theme_customize_current_summary">Wallpaper, key previews, and size.</string>
+    <string name="keyboard_theme_customize_current_summary">Background photo and key overlay.</string>
     <string name="keyboard_theme_wallpaper_customization_title">Background photo (current theme)</string>
+    <string name="keyboard_theme_wallpaper_customization_preview_title">Live preview</string>
     <string name="keyboard_theme_wallpaper_customization_summary">Pick a background photo behind the keyboard for the currently selected theme.</string>
     <string name="keyboard_theme_wallpaper_customization_pick_title">Pick background photo</string>
     <string name="keyboard_theme_wallpaper_customization_pick_summary">Choose a photo from your gallery to show behind the keyboard.</string>

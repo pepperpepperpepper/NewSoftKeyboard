@@ -155,6 +155,7 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
   private final KeyboardDrawCoordinator keyboardDrawCoordinator;
   private final KeyboardModifierStateApplier keyboardModifierStateApplier =
       new KeyboardModifierStateApplier();
+  private boolean allowExpensiveWallpaperEffects = true;
 
   public KeyboardViewBase(Context context, AttributeSet attrs) {
     this(context, attrs, R.style.PlainLightNewSoftKeyboard);
@@ -657,10 +658,17 @@ public class KeyboardViewBase extends View implements InputViewBinder, PointerTr
         keyboardRenderState.drawableStatesProvider,
         keyboardRenderState.keyboardName,
         voiceStatusBadgeState.badgeText(),
+        allowExpensiveWallpaperEffects,
         getWidth(),
         getHeight(),
         getPaddingLeft(),
         getPaddingTop());
+  }
+
+  public void setAllowExpensiveWallpaperEffects(boolean allow) {
+    if (allowExpensiveWallpaperEffects == allow) return;
+    allowExpensiveWallpaperEffects = allow;
+    invalidate();
   }
 
   protected void setPaintForLabelText(Paint paint) {

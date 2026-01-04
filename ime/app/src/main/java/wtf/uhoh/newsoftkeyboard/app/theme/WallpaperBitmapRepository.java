@@ -174,13 +174,31 @@ final class WallpaperBitmapRepository implements WallpaperBitmapLoader {
 
       final int outMax = Math.max(bounds.outWidth, bounds.outHeight);
       final int requestedMax = Math.max(1, maxDimPx);
-      final int inSampleSize = Math.max(1, outMax / requestedMax);
+      // Keep the decoded bitmap close to the target size for quality, but always bounded.
+      //
+      // Note: BitmapFactory may round down non-power-of-two sample sizes on some Android versions,
+      // so we intentionally choose a power-of-two value and then scale down if still needed.
+      final int ratioCeil = (outMax + requestedMax - 1) / requestedMax;
+      final int inSampleSize = Math.max(1, Integer.highestOneBit(Math.max(1, ratioCeil)));
 
       final BitmapFactory.Options options = new BitmapFactory.Options();
       options.inSampleSize = inSampleSize;
       options.inPreferredConfig = Bitmap.Config.ARGB_8888;
       try {
-        return BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+        final Bitmap decoded = BitmapFactory.decodeFile(file.getAbsolutePath(), options);
+        if (decoded == null) return null;
+
+        final int width = decoded.getWidth();
+        final int height = decoded.getHeight();
+        final int decodedMax = Math.max(width, height);
+        if (decodedMax <= requestedMax) return decoded;
+
+        final float scale = requestedMax / (float) decodedMax;
+        final int scaledWidth = Math.max(1, Math.round(width * scale));
+        final int scaledHeight = Math.max(1, Math.round(height * scale));
+        final Bitmap scaled = Bitmap.createScaledBitmap(decoded, scaledWidth, scaledHeight, true);
+        if (scaled != decoded) decoded.recycle();
+        return scaled;
       } catch (OutOfMemoryError oom) {
         return null;
       }

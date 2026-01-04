@@ -338,6 +338,7 @@ public class KeyboardWallpaperOverrideStore {
     editor.remove(invalidKey(themeId));
     // Default to a visible mode when a user first imports a wallpaper, since many themes have an
     // opaque keyboard background and "background only" would appear to do nothing.
+    // Use key tint by default since it is significantly cheaper than key texture overlays.
     //
     // Also: if an older build persisted "background only" before any wallpaper existed, treat the
     // first import as a migration and still default to a visible mode.
@@ -345,7 +346,7 @@ public class KeyboardWallpaperOverrideStore {
         || (!hadExistingWallpaper
             && normalizeMode(prefs.getInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_ONLY))
                 == WALLPAPER_MODE_BACKGROUND_ONLY)) {
-      editor.putInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE);
+      editor.putInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_KEY_TINT);
     }
     // When importing a wallpaper for the first time, default the key overlay opacity to a visible
     // value so the photo doesn't appear "invisible" on opaque themes.

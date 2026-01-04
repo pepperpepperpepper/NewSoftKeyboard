@@ -67,6 +67,7 @@ final class DrawInputsBuilder {
       float keyTextSize,
       int themeHintLabelAlign,
       int themeHintLabelVAlign,
+      boolean allowExpensiveWallpaperEffects,
       @Nullable KeyDrawableStateProvider drawableStatesProvider) {
 
     final ThemeResourcesHolder themeResourcesHolder = themeOverlayCombiner.getThemeResources();
@@ -90,7 +91,7 @@ final class DrawInputsBuilder {
 
     final KeyboardWallpaperResolver.KeyFaceOverlay keyFaceOverlay =
         keyboardWallpaperResolver.resolveKeyFaceOverlay(
-            theme, keyboardViewBounds, requestInvalidateAllKeys);
+            theme, keyboardViewBounds, allowExpensiveWallpaperEffects, requestInvalidateAllKeys);
 
     final float effectiveKeyboardNameTextSize =
         keyboardNameTextSize > 1f ? keyboardNameTextSize : keyTextSize;

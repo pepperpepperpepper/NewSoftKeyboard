@@ -327,6 +327,12 @@ public class KeyboardWallpaperResolver {
     return value;
   }
 
+  private static int alphaForPercent(int percent) {
+    final int clamped = clampPercent(percent);
+    // Integer rounding: (255 * p / 100) with proper half-up rounding.
+    return (255 * clamped + 50) / 100;
+  }
+
   private void clearPhotoCache() {
     cachedPhotoThemeId = null;
     cachedPhotoLastModified = 0L;
@@ -418,7 +424,7 @@ public class KeyboardWallpaperResolver {
     }
 
     if (cachedPhotoDimPercent != clamped && cachedPhotoDimOverlayDrawable != null) {
-      cachedPhotoDimOverlayDrawable.setAlpha(Math.round(255f * (clamped / 100f)));
+      cachedPhotoDimOverlayDrawable.setAlpha(alphaForPercent(clamped));
       cachedPhotoDimPercent = clamped;
     }
 
@@ -435,6 +441,15 @@ public class KeyboardWallpaperResolver {
   public KeyFaceOverlay resolveKeyFaceOverlay(
       @Nullable KeyboardTheme theme,
       @NonNull Rect keyboardViewBounds,
+      @NonNull Runnable requestInvalidate) {
+    return resolveKeyFaceOverlay(theme, keyboardViewBounds, true, requestInvalidate);
+  }
+
+  @NonNull
+  public KeyFaceOverlay resolveKeyFaceOverlay(
+      @Nullable KeyboardTheme theme,
+      @NonNull Rect keyboardViewBounds,
+      boolean allowMatchKeyShape,
       @NonNull Runnable requestInvalidate) {
     keyFaceOverlay.reset();
     if (theme == null) return keyFaceOverlay;
@@ -520,7 +535,7 @@ public class KeyboardWallpaperResolver {
     }
 
     if (cachedKeyFaceOverlayAlpha != alphaPercent) {
-      cachedKeyFaceOverlayPaint.setAlpha(Math.round(255f * (clampPercent(alphaPercent) / 100f)));
+      cachedKeyFaceOverlayPaint.setAlpha(alphaForPercent(alphaPercent));
       cachedKeyFaceOverlayAlpha = alphaPercent;
     }
 
@@ -533,7 +548,8 @@ public class KeyboardWallpaperResolver {
     keyFaceOverlay.mode = mode;
     keyFaceOverlay.paint = cachedKeyFaceOverlayPaint;
     keyFaceOverlay.matchKeyShape =
-        mode == KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE
+        allowMatchKeyShape
+            && mode == KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE
             && overrideStore.isMatchKeyShapeEnabled(themeId);
     return keyFaceOverlay;
   }
@@ -577,7 +593,7 @@ public class KeyboardWallpaperResolver {
     final int clamped = clampPercent(dimPercent);
     if (clamped <= 0) return null;
 
-    final float factor = 1f - (clamped / 100f);
+    final float factor = (100f - clamped) / 100f;
     final ColorMatrix matrix =
         new ColorMatrix(
             new float[] {
