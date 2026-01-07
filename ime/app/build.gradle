@@ -7,8 +7,8 @@ ext.override_app_id = 'wtf.uhoh.newsoftkeyboard'
 ext.shouldBePublished = true
 ext.override_release_key_alias = 'fdroidrepo'
 ext.closedTestingTrackName = 'alpha'
-ext.override_version_code = 15114
-ext.override_version_name = '13.8.63'
+ext.override_version_code = 15115
+ext.override_version_name = '13.8.64'
 
 apply from: "${rootDir}/gradle/apk_module.gradle"
 
