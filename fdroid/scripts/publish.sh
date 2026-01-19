@@ -43,7 +43,7 @@ require_cmd() { command -v "$1" >/dev/null || fail "Missing command: $1"; }
 require_cmd aws
 require_cmd aapt
 require_cmd python
-require_cmd /home/arch/fdroid-env/bin/fdroid
+require_cmd fdroid
 
 [[ -n "${ENV_FILE}" && -f "$ENV_FILE" ]] || fail "Env file not found. Set ENV_FILE/FDROID_ENV_FILE or create fdroid/.env (git-ignored)."
 log "Using env file: $ENV_FILE"
@@ -60,6 +60,17 @@ fi
 log "Syncing from S3 -> local staging"
 aws s3 sync "s3://${FDROID_AWS_BUCKET}/repo" "${FDROID_DATA}/repo"
 aws s3 sync "s3://${FDROID_AWS_BUCKET}/archive" "${FDROID_DATA}/archive"
+
+log "Quarantining known-bad repo artifacts (*.apk.prev, *.apk.<digits>)"
+quarantine_dir="${FDROID_DATA}/quarantine"
+mkdir -p "$quarantine_dir"
+while IFS= read -r -d '' path; do
+  log "Quarantining $(basename "$path")"
+  mv "$path" "$quarantine_dir/$(basename "$path")"
+done < <(
+  find "${FDROID_DATA}/repo" "${FDROID_DATA}/archive" -maxdepth 1 -type f \
+    \( -name '*.apk.prev' -o -regextype posix-extended -regex '.*\.apk\.[0-9]+$' \) -print0
+)
 
 log "Enforcing keepversions=${KEEPVERSIONS} in config.yml"
 python - "$KEEPVERSIONS" "$FDROID_DATA/config.yml" <<'PY'
@@ -132,7 +143,7 @@ CURRENT_VERSION_CODE=
 (cd "$FDROID_DATA" && "$ROOT/scripts/fdroid/generate_metadata.py")
 
 log "Running fdroid update"
-(cd "$FDROID_DATA" && /home/arch/fdroid-env/bin/fdroid update --create-metadata --verbose)
+(cd "$FDROID_DATA" && fdroid update --create-metadata --verbose)
 
 log "Validating APK count >= $EXPECTED_MIN_APKS"
 count=$(find -L "${FDROID_DATA}/repo" "${FDROID_DATA}/archive" -name "wtf.uhoh.newsoftkeyboard_*.apk" | wc -l)
