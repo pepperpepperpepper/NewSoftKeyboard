@@ -26,6 +26,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.multidex.MultiDexApplication;
 import io.reactivex.Observable;
@@ -47,6 +48,7 @@ import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV24;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV26;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV28;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV29;
+import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV33;
 import wtf.uhoh.newsoftkeyboard.app.dictionaries.ExternalDictionaryFactory;
 import wtf.uhoh.newsoftkeyboard.app.keyboardextensions.KeyboardExtension;
 import wtf.uhoh.newsoftkeyboard.app.keyboardextensions.KeyboardExtensionFactory;
@@ -73,6 +75,8 @@ public class NskApplicationBase extends MultiDexApplication {
       "settings_key_last_app_version_installed";
   static final String PREF_KEYS_LAST_INSTALLED_APP_TIME =
       "settings_key_first_time_current_version_installed";
+  private static final String PREF_KEYS_HAPTICS_DEFAULT_MODE_MIGRATED =
+      "settings_key_haptics_default_mode_migrated";
   private static final String TAG = "NSKApp";
   private static DeviceSpecific msDeviceSpecific;
   private final CompositeDisposable mCompositeDisposable = new CompositeDisposable();
@@ -88,6 +92,9 @@ public class NskApplicationBase extends MultiDexApplication {
   private ArrayList<PublicNotice> mPublicNotices;
 
   private NotificationDriver mNotificationDriver;
+  @Nullable private SharedPreferences.OnSharedPreferenceChangeListener mVibrationPrefsSyncListener;
+  private final Object mVibrationPrefsSyncLock = new Object();
+  private boolean mVibrationPrefsSyncInProgress = false;
 
   public static DeviceSpecific getDeviceSpecific() {
     return msDeviceSpecific;
@@ -162,7 +169,8 @@ public class NskApplicationBase extends MultiDexApplication {
     if (Build.VERSION.SDK_INT < 26) return new DeviceSpecificV24();
     if (Build.VERSION.SDK_INT < 28) return new DeviceSpecificV26();
     if (Build.VERSION.SDK_INT < 29) return new DeviceSpecificV28();
-    return new DeviceSpecificV29();
+    if (Build.VERSION.SDK_INT < 33) return new DeviceSpecificV29();
+    return new DeviceSpecificV33();
   }
 
   @Override
@@ -261,10 +269,149 @@ public class NskApplicationBase extends MultiDexApplication {
   }
 
   private void onSharedPreferencesReady(@NonNull SharedPreferences sp) {
+    migrateSystemVibrationPrefsToTriStateDuration(sp);
+    registerSystemVibrationPrefsSync(sp);
     setupCrashHandler(sp);
     updateStatistics(sp);
     TesterNotification.showDragonsIfNeeded(
         getApplicationContext(), mNotificationDriver, BuildConfig.TESTING_BUILD);
+  }
+
+  private void migrateSystemVibrationPrefsToTriStateDuration(@NonNull SharedPreferences sp) {
+    final String useSystemVibrationKey = getString(R.string.settings_key_use_system_vibration);
+    final String keypressDurationKey =
+        getString(R.string.settings_key_vibrate_on_key_press_duration_int);
+    final String customDurationBackupKey =
+        getString(R.string.settings_key_vibrate_on_key_press_duration_custom_backup_int);
+
+    final boolean useSystemVibrationDefault =
+        getResources().getBoolean(R.bool.settings_default_use_system_vibration);
+    final int keypressDurationDefault =
+        getResources().getInteger(R.integer.settings_default_vibrate_on_key_press_duration_int);
+    final int customDurationBackupDefault =
+        getResources()
+            .getInteger(R.integer.settings_default_vibrate_on_key_press_duration_custom_backup_int);
+
+    final boolean hasUseSystemVibrationValue = sp.contains(useSystemVibrationKey);
+    final boolean useSystemVibration =
+        hasUseSystemVibrationValue
+            ? sp.getBoolean(useSystemVibrationKey, useSystemVibrationDefault)
+            : false;
+    final int keypressDuration = sp.getInt(keypressDurationKey, keypressDurationDefault);
+    final int customDurationBackup =
+        sp.getInt(customDurationBackupKey, customDurationBackupDefault);
+    final boolean hasMigratedDefaultMode =
+        sp.getBoolean(PREF_KEYS_HAPTICS_DEFAULT_MODE_MIGRATED, false);
+
+    int desiredBackup = customDurationBackup;
+    if (keypressDuration > 0) desiredBackup = keypressDuration;
+
+    int desiredDuration = keypressDuration;
+    if (useSystemVibration) {
+      desiredDuration = -1;
+    } else if (keypressDuration < 0) {
+      desiredDuration = desiredBackup > 0 ? desiredBackup : 0;
+    }
+
+    if (!hasMigratedDefaultMode
+        && useSystemVibration
+        && keypressDuration < 0
+        && customDurationBackup == customDurationBackupDefault) {
+      desiredDuration = customDurationBackupDefault > 0 ? customDurationBackupDefault : 0;
+    }
+
+    final boolean desiredUseSystemVibration = desiredDuration < 0;
+
+    if (desiredBackup == customDurationBackup
+        && desiredDuration == keypressDuration
+        && desiredUseSystemVibration == useSystemVibration
+        && hasMigratedDefaultMode) {
+      return;
+    }
+
+    final SharedPreferences.Editor edit = sp.edit();
+    edit.putInt(customDurationBackupKey, desiredBackup);
+    edit.putInt(keypressDurationKey, desiredDuration);
+    edit.putBoolean(useSystemVibrationKey, desiredUseSystemVibration);
+    edit.putBoolean(PREF_KEYS_HAPTICS_DEFAULT_MODE_MIGRATED, true);
+    edit.apply();
+  }
+
+  private void registerSystemVibrationPrefsSync(@NonNull SharedPreferences sp) {
+    if (mVibrationPrefsSyncListener != null) return;
+
+    final String useSystemVibrationKey = getString(R.string.settings_key_use_system_vibration);
+    final String keypressDurationKey =
+        getString(R.string.settings_key_vibrate_on_key_press_duration_int);
+    final String customDurationBackupKey =
+        getString(R.string.settings_key_vibrate_on_key_press_duration_custom_backup_int);
+
+    final boolean useSystemVibrationDefault =
+        getResources().getBoolean(R.bool.settings_default_use_system_vibration);
+    final int keypressDurationDefault =
+        getResources().getInteger(R.integer.settings_default_vibrate_on_key_press_duration_int);
+    final int customDurationBackupDefault =
+        getResources()
+            .getInteger(R.integer.settings_default_vibrate_on_key_press_duration_custom_backup_int);
+
+    mVibrationPrefsSyncListener =
+        (sharedPreferences, key) -> {
+          if (!useSystemVibrationKey.equals(key) && !keypressDurationKey.equals(key)) return;
+          synchronized (mVibrationPrefsSyncLock) {
+            if (mVibrationPrefsSyncInProgress) return;
+            mVibrationPrefsSyncInProgress = true;
+          }
+
+          try {
+            final boolean useSystemVibration =
+                sharedPreferences.getBoolean(useSystemVibrationKey, useSystemVibrationDefault);
+            final int keypressDuration =
+                sharedPreferences.getInt(keypressDurationKey, keypressDurationDefault);
+            final int customDurationBackup =
+                sharedPreferences.getInt(customDurationBackupKey, customDurationBackupDefault);
+
+            final SharedPreferences.Editor edit = sharedPreferences.edit();
+            boolean needsApply = false;
+
+            if (keypressDurationKey.equals(key)) {
+              if (keypressDuration > 0 && customDurationBackup != keypressDuration) {
+                edit.putInt(customDurationBackupKey, keypressDuration);
+                needsApply = true;
+              }
+
+              final boolean desiredUseSystemVibration = keypressDuration < 0;
+              if (useSystemVibration != desiredUseSystemVibration) {
+                edit.putBoolean(useSystemVibrationKey, desiredUseSystemVibration);
+                needsApply = true;
+              }
+            } else if (useSystemVibrationKey.equals(key)) {
+              if (useSystemVibration) {
+                if (keypressDuration > 0 && customDurationBackup != keypressDuration) {
+                  edit.putInt(customDurationBackupKey, keypressDuration);
+                  needsApply = true;
+                }
+                if (keypressDuration >= 0) {
+                  edit.putInt(keypressDurationKey, -1);
+                  needsApply = true;
+                }
+              } else {
+                if (keypressDuration < 0) {
+                  final int restoredDuration = customDurationBackup > 0 ? customDurationBackup : 0;
+                  edit.putInt(keypressDurationKey, restoredDuration);
+                  needsApply = true;
+                }
+              }
+            }
+
+            if (needsApply) edit.apply();
+          } finally {
+            synchronized (mVibrationPrefsSyncLock) {
+              mVibrationPrefsSyncInProgress = false;
+            }
+          }
+        };
+
+    sp.registerOnSharedPreferenceChangeListener(mVibrationPrefsSyncListener);
   }
 
   public List<PublicNotice> getPublicNotices() {

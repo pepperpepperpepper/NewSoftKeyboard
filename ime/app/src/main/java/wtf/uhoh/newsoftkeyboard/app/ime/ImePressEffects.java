@@ -3,20 +3,20 @@ package wtf.uhoh.newsoftkeyboard.app.ime;
 import static wtf.uhoh.newsoftkeyboard.app.ime.ImeIncognito.isNumberPassword;
 
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.media.AudioManager;
+import android.os.Build;
 import android.os.SystemClock;
 import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.provider.Settings;
+import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
-import androidx.core.util.Pair;
 import app.cash.copper.rx2.RxContentResolver;
 import com.anysoftkeyboard.api.KeyCodes;
-import com.github.karczews.rxbroadcastreceiver.RxBroadcastReceivers;
 import io.reactivex.Observable;
 import io.reactivex.subjects.PublishSubject;
 import wtf.uhoh.newsoftkeyboard.R;
@@ -27,6 +27,7 @@ import wtf.uhoh.newsoftkeyboard.app.devicespecific.PressVibrator;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.InputViewBinder;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewBase;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.preview.AboveKeyPositionCalculator;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.preview.AboveKeyboardPositionCalculator;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.preview.KeyPreviewsController;
@@ -43,6 +44,8 @@ public abstract class ImePressEffects extends ImeClipboard {
 
   private static final float SILENT = 0.0f;
   private static final float SYSTEM_VOLUME = -1.0f;
+  private static final String HAPTIC_FEEDBACK_INTENSITY_SETTING = "haptic_feedback_intensity";
+  private static final String KEYBOARD_VIBRATION_ENABLED_SETTING = "keyboard_vibration_enabled";
   @NonNull private final PublishSubject<Long> mKeyPreviewSubject = PublishSubject.create();
 
   @NonNull
@@ -51,29 +54,81 @@ public abstract class ImePressEffects extends ImeClipboard {
   private AudioManager mAudioManager;
   private float mCustomSoundVolume = SILENT;
   private PressVibrator mVibrator;
+  private boolean mUseSystemHapticFeedback = false;
+  private boolean mSystemWideHapticEnabled = true;
+  private boolean mSystemKeyboardVibrationEnabled = true;
+  private int mSystemVibrationFallbackDuration = 0;
+  private boolean mVibratorError = false;
   @NonNull private KeyPreviewsController mKeyPreviewController = new NullKeyPreviewsManager();
+
+  @VisibleForTesting
+  interface HapticFeedbackPerformer {
+    boolean perform(@NonNull View view, int effect, int flags);
+  }
+
+  @VisibleForTesting static volatile HapticFeedbackPerformer sHapticFeedbackPerformer;
+
+  private static final class SystemVibrationSettings {
+    final boolean mUseSystemVibration;
+    final boolean mSystemWideHapticEnabled;
+    final boolean mKeyboardVibrationEnabled;
+
+    SystemVibrationSettings(
+        boolean useSystemVibration,
+        boolean systemWideHapticEnabled,
+        boolean keyboardVibrationEnabled) {
+      mUseSystemVibration = useSystemVibration;
+      mSystemWideHapticEnabled = systemWideHapticEnabled;
+      mKeyboardVibrationEnabled = keyboardVibrationEnabled;
+    }
+  }
+
+  @VisibleForTesting
+  static @Nullable Vibrator selectBestVibrator(
+      @Nullable Vibrator systemVibrator, @Nullable Vibrator legacyVibrator) {
+    // On some devices/emulators, VibratorManager#getDefaultVibrator can return a non-null vibrator
+    // instance that reports having no hardware, while the legacy vibrator service is functional.
+    // Prefer the first vibrator that reports having hardware. If neither reports having hardware,
+    // prefer the VibratorManager-backed vibrator when available (some OEM builds appear to
+    // misreport hasVibrator() for the legacy service).
+    final boolean systemHasVibrator = systemVibrator != null && systemVibrator.hasVibrator();
+    final boolean legacyHasVibrator = legacyVibrator != null && legacyVibrator.hasVibrator();
+    if (systemVibrator != null && (systemHasVibrator || !legacyHasVibrator)) {
+      return systemVibrator;
+    } else if (legacyVibrator != null) {
+      return legacyVibrator;
+    } else {
+      return systemVibrator;
+    }
+  }
 
   @Override
   public void onCreate() {
     super.onCreate();
 
     mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-    mVibrator =
-        NskApplicationBase.getDeviceSpecific()
-            .createPressVibrator((Vibrator) getSystemService(Context.VIBRATOR_SERVICE));
+    final Vibrator systemVibrator;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+      final VibratorManager vibratorManager =
+          (VibratorManager) getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+      systemVibrator = vibratorManager != null ? vibratorManager.getDefaultVibrator() : null;
+    } else {
+      systemVibrator = null;
+    }
+    final Vibrator legacyVibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+    final Vibrator vibratorToUse = selectBestVibrator(systemVibrator, legacyVibrator);
+    mVibrator = NskApplicationBase.getDeviceSpecific().createPressVibrator(vibratorToUse);
 
     addDisposable(
         Observable.combineLatest(
                 PowerSaving.observePowerSavingState(
-                    getApplicationContext(), R.string.settings_key_power_save_mode_sound_control),
+                    getApplicationContext(),
+                    R.string.settings_key_power_save_mode_sound_control,
+                    R.bool.settings_default_false),
                 NightMode.observeNightModeState(
                     getApplicationContext(),
                     R.string.settings_key_night_mode_sound_control,
-                    R.bool.settings_default_true),
-                RxBroadcastReceivers.fromIntentFilter(
-                        getApplicationContext(),
-                        new IntentFilter(AudioManager.RINGER_MODE_CHANGED_ACTION))
-                    .startWith(new Intent()),
+                    R.bool.settings_default_false),
                 prefs()
                     .getBoolean(R.string.settings_key_sound_on, R.bool.settings_default_sound_on)
                     .asObservable(),
@@ -87,16 +142,9 @@ public abstract class ImePressEffects extends ImeClipboard {
                         R.string.settings_key_custom_sound_volume,
                         R.integer.settings_default_zero_value)
                     .asObservable(),
-                (powerState,
-                    nightState,
-                    soundIntent,
-                    soundOn,
-                    useCustomVolume,
-                    customVolumeLevel) -> {
+                (powerState, nightState, soundOn, useCustomVolume, customVolumeLevel) -> {
                   if (powerState) return SILENT;
                   if (nightState) return SILENT;
-                  if (mAudioManager.getRingerMode() != AudioManager.RINGER_MODE_NORMAL)
-                    return SILENT;
                   if (!soundOn) return SILENT;
 
                   if (useCustomVolume) {
@@ -124,11 +172,12 @@ public abstract class ImePressEffects extends ImeClipboard {
         Observable.combineLatest(
                 PowerSaving.observePowerSavingState(
                     getApplicationContext(),
-                    R.string.settings_key_power_save_mode_vibration_control),
+                    R.string.settings_key_power_save_mode_vibration_control,
+                    R.bool.settings_default_false),
                 NightMode.observeNightModeState(
                     getApplicationContext(),
                     R.string.settings_key_night_mode_vibration_control,
-                    R.bool.settings_default_true),
+                    R.bool.settings_default_false),
                 prefs()
                     .getInteger(
                         R.string.settings_key_vibrate_on_key_press_duration_int,
@@ -138,6 +187,7 @@ public abstract class ImePressEffects extends ImeClipboard {
                     powerState ? 0 : nightState ? 0 : vibrationDuration)
             .subscribe(
                 value -> {
+                  mVibratorError = false;
                   mVibrator.setDuration(value);
                   // demo
                   performKeyVibration(KeyCodes.SPACE, false);
@@ -145,32 +195,45 @@ public abstract class ImePressEffects extends ImeClipboard {
                 t -> Logger.w(TAG, t, "Failed to get vibrate duration")));
 
     addDisposable(
-        prefs()
-            .getBoolean(
-                R.string.settings_key_vibrate_on_long_press,
-                R.bool.settings_default_vibrate_on_long_press)
-            .asObservable()
+        Observable.combineLatest(
+                PowerSaving.observePowerSavingState(
+                    getApplicationContext(),
+                    R.string.settings_key_power_save_mode_vibration_control,
+                    R.bool.settings_default_false),
+                NightMode.observeNightModeState(
+                    getApplicationContext(),
+                    R.string.settings_key_night_mode_vibration_control,
+                    R.bool.settings_default_false),
+                prefs()
+                    .getBoolean(
+                        R.string.settings_key_vibrate_on_long_press,
+                        R.bool.settings_default_vibrate_on_long_press)
+                    .asObservable(),
+                (powerState, nightState, vibrateOnLongPress) ->
+                    (powerState || nightState) ? 0 : (vibrateOnLongPress ? 7 : 0))
             .subscribe(
                 value -> {
-                  mVibrator.setLongPressDuration(value ? 7 : 0);
+                  mVibratorError = false;
+                  mVibrator.setLongPressDuration(value);
                   // demo
                   performKeyVibration(KeyCodes.SPACE, true);
                 },
-                t -> Logger.w(TAG, t, "Failed to get vibrate duration")));
+                t -> Logger.w(TAG, t, "Failed to get long-press vibrate duration")));
 
     addDisposable(
         Observable.combineLatest(
                 PowerSaving.observePowerSavingState(
                     getApplicationContext(),
-                    R.string.settings_key_power_save_mode_vibration_control),
+                    R.string.settings_key_power_save_mode_vibration_control,
+                    R.bool.settings_default_false),
                 NightMode.observeNightModeState(
                     getApplicationContext(),
                     R.string.settings_key_night_mode_vibration_control,
-                    R.bool.settings_default_true),
+                    R.bool.settings_default_false),
                 prefs()
-                    .getBoolean(
-                        R.string.settings_key_use_system_vibration,
-                        R.bool.settings_default_use_system_vibration)
+                    .getInteger(
+                        R.string.settings_key_vibrate_on_key_press_duration_int,
+                        R.integer.settings_default_vibrate_on_key_press_duration_int)
                     .asObservable(),
                 RxContentResolver.observeQuery(
                         getContentResolver(),
@@ -186,20 +249,213 @@ public abstract class ImePressEffects extends ImeClipboard {
                     .map(
                         query ->
                             Settings.System.getInt(
-                                    getContentResolver(),
-                                    Settings.System.HAPTIC_FEEDBACK_ENABLED,
-                                    1)
-                                == 1),
-                (powerState, nightState, systemVibration, systemWideHapticEnabled) ->
-                    new Pair<>(
-                        !powerState && !nightState && systemVibration, systemWideHapticEnabled))
+                                getContentResolver(), Settings.System.HAPTIC_FEEDBACK_ENABLED, -1))
+                    .doOnError(
+                        t ->
+                            Logger.w(
+                                TAG,
+                                t,
+                                "Failed to read system haptic enabled state from Settings.System."
+                                    + " Assuming disabled."))
+                    .onErrorReturnItem(0),
+                RxContentResolver.observeQuery(
+                        getContentResolver(),
+                        Settings.Secure.getUriFor(Settings.System.HAPTIC_FEEDBACK_ENABLED),
+                        null,
+                        null,
+                        null,
+                        null,
+                        true,
+                        RxSchedulers.mainThread())
+                    .subscribeOn(RxSchedulers.background())
+                    .observeOn(RxSchedulers.mainThread())
+                    .map(
+                        query ->
+                            Settings.Secure.getInt(
+                                getContentResolver(), Settings.System.HAPTIC_FEEDBACK_ENABLED, -1))
+                    .doOnError(
+                        t ->
+                            Logger.w(
+                                TAG,
+                                t,
+                                "Failed to read system haptic enabled state from Settings.Secure."
+                                    + " Assuming disabled."))
+                    .onErrorReturnItem(0),
+                RxContentResolver.observeQuery(
+                        getContentResolver(),
+                        Settings.System.getUriFor(HAPTIC_FEEDBACK_INTENSITY_SETTING),
+                        null,
+                        null,
+                        null,
+                        null,
+                        true,
+                        RxSchedulers.mainThread())
+                    .subscribeOn(RxSchedulers.background())
+                    .observeOn(RxSchedulers.mainThread())
+                    .map(
+                        query ->
+                            Settings.System.getInt(
+                                getContentResolver(), HAPTIC_FEEDBACK_INTENSITY_SETTING, -1))
+                    .doOnError(
+                        t ->
+                            Logger.w(
+                                TAG,
+                                t,
+                                "Failed to read system haptic intensity from Settings.System."
+                                    + " Assuming unknown."))
+                    .onErrorReturnItem(-1),
+                RxContentResolver.observeQuery(
+                        getContentResolver(),
+                        Settings.Secure.getUriFor(HAPTIC_FEEDBACK_INTENSITY_SETTING),
+                        null,
+                        null,
+                        null,
+                        null,
+                        true,
+                        RxSchedulers.mainThread())
+                    .subscribeOn(RxSchedulers.background())
+                    .observeOn(RxSchedulers.mainThread())
+                    .map(
+                        query ->
+                            Settings.Secure.getInt(
+                                getContentResolver(), HAPTIC_FEEDBACK_INTENSITY_SETTING, -1))
+                    .doOnError(
+                        t ->
+                            Logger.w(
+                                TAG,
+                                t,
+                                "Failed to read system haptic intensity from Settings.Secure."
+                                    + " Assuming unknown."))
+                    .onErrorReturnItem(-1),
+                RxContentResolver.observeQuery(
+                        getContentResolver(),
+                        Settings.System.getUriFor(KEYBOARD_VIBRATION_ENABLED_SETTING),
+                        null,
+                        null,
+                        null,
+                        null,
+                        true,
+                        RxSchedulers.mainThread())
+                    .subscribeOn(RxSchedulers.background())
+                    .observeOn(RxSchedulers.mainThread())
+                    .map(
+                        query ->
+                            Settings.System.getInt(
+                                getContentResolver(), KEYBOARD_VIBRATION_ENABLED_SETTING, -1))
+                    .doOnError(
+                        t ->
+                            Logger.w(
+                                TAG,
+                                t,
+                                "Failed to read system keyboard vibration enabled state from"
+                                    + " Settings.System. Assuming unknown."))
+                    .onErrorReturnItem(-1),
+                RxContentResolver.observeQuery(
+                        getContentResolver(),
+                        Settings.Secure.getUriFor(KEYBOARD_VIBRATION_ENABLED_SETTING),
+                        null,
+                        null,
+                        null,
+                        null,
+                        true,
+                        RxSchedulers.mainThread())
+                    .subscribeOn(RxSchedulers.background())
+                    .observeOn(RxSchedulers.mainThread())
+                    .map(
+                        query ->
+                            Settings.Secure.getInt(
+                                getContentResolver(), KEYBOARD_VIBRATION_ENABLED_SETTING, -1))
+                    .doOnError(
+                        t ->
+                            Logger.w(
+                                TAG,
+                                t,
+                                "Failed to read system keyboard vibration enabled state from"
+                                    + " Settings.Secure. Assuming unknown."))
+                    .onErrorReturnItem(-1),
+                (powerState,
+                    nightState,
+                    vibrationDuration,
+                    systemWideHapticEnabledSystem,
+                    systemWideHapticEnabledSecure,
+                    systemWideHapticIntensitySystem,
+                    systemWideHapticIntensitySecure,
+                    keyboardVibrationEnabledSystem,
+                    keyboardVibrationEnabledSecure) -> {
+                  final boolean systemVibration = vibrationDuration < 0;
+                  // Some Android builds store the global "haptic feedback enabled" toggle under
+                  // either Settings.System or Settings.Secure. Treat 0 in either location as
+                  // disabled. If neither key is present, assume enabled.
+                  final boolean systemWideHapticEnabled =
+                      (systemWideHapticEnabledSystem < 0 || systemWideHapticEnabledSystem > 0)
+                          && (systemWideHapticEnabledSecure < 0
+                              || systemWideHapticEnabledSecure > 0);
+
+                  // On some Android builds, "Touch feedback intensity" is stored in either
+                  // Settings.System or Settings.Secure. If we can read any of them and it is 0,
+                  // treat touch-haptics as disabled. If neither key is present, assume enabled.
+                  final boolean systemWideHapticIntensityEnabled =
+                      (systemWideHapticIntensitySystem < 0 || systemWideHapticIntensitySystem > 0)
+                          && (systemWideHapticIntensitySecure < 0
+                              || systemWideHapticIntensitySecure > 0);
+
+                  // On newer Android builds, IME vibration can be gated behind a dedicated system
+                  // toggle (separate from generic touch feedback).
+                  // Treat 0 in either location as disabled. If neither key is present, assume
+                  // enabled.
+                  final boolean keyboardVibrationEnabled =
+                      (keyboardVibrationEnabledSystem < 0 || keyboardVibrationEnabledSystem > 0)
+                          && (keyboardVibrationEnabledSecure < 0
+                              || keyboardVibrationEnabledSecure > 0);
+
+                  return new SystemVibrationSettings(
+                      !powerState && !nightState && systemVibration,
+                      systemWideHapticEnabled && systemWideHapticIntensityEnabled,
+                      keyboardVibrationEnabled);
+                })
             .subscribe(
                 value -> {
-                  mVibrator.setUseSystemVibration(value.first, value.second);
+                  mVibratorError = false;
+                  mUseSystemHapticFeedback = value.mUseSystemVibration;
+                  mSystemWideHapticEnabled = value.mSystemWideHapticEnabled;
+                  mSystemKeyboardVibrationEnabled = value.mKeyboardVibrationEnabled;
+                  // In system vibration mode, use system predefined effects when available.
+                  // On API 29+, we prefer view-based haptic-feedback when system-wide touch haptics
+                  // are enabled and fall back to vibrator-based system effects otherwise.
+                  mVibrator.setUseSystemVibration(
+                      value.mUseSystemVibration, value.mSystemWideHapticEnabled);
+                  mVibrator.setSystemKeyboardVibrationEnabled(value.mKeyboardVibrationEnabled);
                   // demo
                   performKeyVibration(KeyCodes.SPACE, false);
                 },
                 t -> Logger.w(TAG, t, "Failed to read system vibration pref")));
+
+    addDisposable(
+        Observable.combineLatest(
+                PowerSaving.observePowerSavingState(
+                    getApplicationContext(),
+                    R.string.settings_key_power_save_mode_vibration_control,
+                    R.bool.settings_default_false),
+                NightMode.observeNightModeState(
+                    getApplicationContext(),
+                    R.string.settings_key_night_mode_vibration_control,
+                    R.bool.settings_default_false),
+                prefs()
+                    .getInteger(
+                        R.string.settings_key_system_vibration_fallback_duration_int,
+                        R.integer.settings_default_system_vibration_fallback_duration_int)
+                    .asObservable(),
+                (powerState, nightState, vibrationDuration) ->
+                    (powerState || nightState) ? 0 : vibrationDuration)
+            .subscribe(
+                value -> {
+                  mVibratorError = false;
+                  mSystemVibrationFallbackDuration = value;
+                  mVibrator.setSystemVibrationFallbackDuration(value);
+                  // demo
+                  performKeyVibration(KeyCodes.SPACE, false);
+                },
+                t -> Logger.w(TAG, t, "Failed to read system vibration fallback duration pref")));
 
     addDisposable(
         Observable.combineLatest(
@@ -225,6 +481,9 @@ public abstract class ImePressEffects extends ImeClipboard {
   @Override
   public void onStartInputView(EditorInfo info, boolean restarting) {
     super.onStartInputView(info, restarting);
+    // A previous vibrator exception might have been transient (e.g., service created while
+    // not actively showing UI). Reset to allow trying again while the IME is actually visible.
+    mVibratorError = false;
     mKeyPreviewForPasswordSubject.onNext(isTextPassword(info) || isNumberPassword(info));
   }
 
@@ -279,7 +538,7 @@ public abstract class ImePressEffects extends ImeClipboard {
   }
 
   private void performKeySound(int primaryCode) {
-    if (mCustomSoundVolume != SILENT && primaryCode != 0) {
+    if (mCustomSoundVolume != SILENT) {
       final int keyFX;
       switch (primaryCode) {
         case 13:
@@ -306,21 +565,214 @@ public abstract class ImePressEffects extends ImeClipboard {
         default:
           keyFX = AudioManager.FX_KEYPRESS_STANDARD;
       }
-      mAudioManager.playSoundEffect(keyFX, mCustomSoundVolume);
+      if (mCustomSoundVolume == SYSTEM_VOLUME) {
+        mAudioManager.playSoundEffect(keyFX);
+      } else {
+        mAudioManager.playSoundEffect(keyFX, mCustomSoundVolume);
+      }
     }
   }
 
   private void performKeyVibration(int primaryCode, boolean longPress) {
+    final boolean systemHapticsMode = mUseSystemHapticFeedback;
+    final boolean systemWideHapticEnabled = mSystemWideHapticEnabled;
+    final boolean systemKeyboardVibrationEnabled = mSystemKeyboardVibrationEnabled;
+    final boolean shouldSystemFallbackVibrate =
+        systemHapticsMode && !longPress && mSystemVibrationFallbackDuration > 0;
+    final boolean hasVibratorService = mVibrator.hasVibrator();
+
+    if (systemHapticsMode && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      // In system-haptics mode, prefer View.performHapticFeedback(...) (HeliBoard-style).
+      // We pass FLAG_IGNORE_GLOBAL_SETTING in system mode, so this can still work even when the
+      // system-wide touch-haptics toggle (or intensity) is off or inaccessible.
+      // However, on some devices the framework can report an effect as "handled" while producing
+      // no physical haptics when system-wide touch haptics are disabled (for example, when the
+      // user sets touch feedback intensity to none/0). When we detect that case, treat return
+      // values as hints only so we still attempt the vibrator-based path.
+      final boolean didHaptic =
+          performSystemHapticFeedback(
+              longPress, systemWideHapticEnabled && systemKeyboardVibrationEnabled);
+      if (didHaptic) {
+        if (shouldSystemFallbackVibrate) {
+          try {
+            mVibrator.vibrateSystemVibrationFallback();
+          } catch (Exception e) {
+            mVibratorError = true;
+            Logger.w(TAG, e, "Failed to interact with vibrator while running system fallback.");
+          }
+        }
+        return;
+      }
+
+      // If system-wide haptics are disabled or view haptics failed, prefer vibrator-based system
+      // effects when available.
+      if (hasVibratorService) {
+        if (!mVibratorError) {
+          try {
+            mVibrator.vibrate(longPress);
+            if (shouldSystemFallbackVibrate) {
+              mVibrator.vibrateSystemVibrationFallback();
+            }
+            return;
+          } catch (Exception e) {
+            mVibratorError = true;
+            Logger.w(
+                TAG,
+                e,
+                "Failed to interact with vibrator using system effects. Falling back to a safer"
+                    + " vibration path.");
+          }
+        }
+
+        try {
+          if (shouldSystemFallbackVibrate) {
+            mVibrator.vibrateSystemVibrationFallback();
+          } else {
+            mVibrator.vibrateFallback(longPress);
+          }
+          return;
+        } catch (Exception e) {
+          mVibratorError = true;
+          Logger.w(
+              TAG, e, "Failed to interact with vibrator. Falling back to system haptic-feedback.");
+        }
+      }
+
+      // If system-wide haptics are enabled, we already attempted system haptic-feedback above.
+      // Only try it here when system-wide touch haptics are disabled (or unknown) and we have no
+      // viable vibrator path.
+      if (!systemWideHapticEnabled) {
+        performSystemHapticFeedback(longPress, false);
+      }
+      return;
+    }
+
+    if (systemHapticsMode || mVibratorError) {
+      final boolean didHaptic = performSystemHapticFeedback(longPress, !systemHapticsMode);
+      if (didHaptic && !shouldSystemFallbackVibrate) return;
+    }
+
     try {
-      if (primaryCode != 0) {
+      if (systemHapticsMode) {
+        if (shouldSystemFallbackVibrate) {
+          mVibrator.vibrateSystemVibrationFallback();
+        } else if (longPress) {
+          mVibrator.vibrate(true);
+        } else {
+          mVibrator.vibrateFallback(false);
+        }
+      } else {
         mVibrator.vibrate(longPress);
       }
     } catch (Exception e) {
-      Logger.w(TAG, "Failed to interact with vibrator! Disabling for now.");
-      mVibrator.setUseSystemVibration(false, false);
-      mVibrator.setDuration(0);
-      mVibrator.setLongPressDuration(0);
+      mVibratorError = true;
+      Logger.w(TAG, e, "Failed to interact with vibrator. Falling back to system haptic-feedback.");
+      performSystemHapticFeedback(longPress, !systemHapticsMode);
     }
+  }
+
+  private boolean performSystemHapticFeedback(boolean longPress) {
+    return performSystemHapticFeedback(longPress, true);
+  }
+
+  private boolean performSystemHapticFeedback(boolean longPress, boolean trustReturnValues) {
+    // We generally trust the framework return values, but in "system haptics" mode some devices can
+    // report an effect as "handled" while producing no physical haptics. When we don't trust return
+    // values, we still attempt view haptic-feedback as a best-effort, but we don't use it as a
+    // signal to skip vibrator-based haptics.
+    // Historically we trusted LONG_PRESS return values, but some devices can also report it as
+    // "handled" while producing no physical haptics. When running in "use system vibration" mode,
+    // treat return values as hints for long-press too so we can still attempt vibrator-based
+    // haptics.
+    if (longPress && !mUseSystemHapticFeedback) trustReturnValues = true;
+
+    int flags = 0;
+    // In system vibration mode, the user has explicitly opted in to haptics from this IME.
+    // Align with HeliBoard: ignore the global setting, but do not override the view's own
+    // haptic-feedback enable state.
+    if (mUseSystemHapticFeedback) {
+      flags |= HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING;
+    } else {
+      // In non-system mode, system haptic-feedback is a fallback path. Prefer producing some
+      // haptic feedback even if the view's setting is disabled.
+      flags |= HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING;
+    }
+    final int primaryEffect;
+    final int fallbackEffect;
+    if (longPress) {
+      primaryEffect = HapticFeedbackConstants.LONG_PRESS;
+      fallbackEffect = primaryEffect;
+    } else {
+      // Prefer the keyboard-specific effect over the legacy virtual-key effect.
+      // In system-haptics mode, we try both effects because some devices report an effect as
+      // "handled"
+      // but produce no haptics.
+      primaryEffect = HapticFeedbackConstants.KEYBOARD_TAP;
+      fallbackEffect = HapticFeedbackConstants.VIRTUAL_KEY;
+    }
+
+    final View inputView;
+    final InputViewBinder inputViewBinder = getInputView();
+    if (inputViewBinder instanceof View) {
+      inputView = (View) inputViewBinder;
+    } else {
+      inputView = null;
+    }
+    final KeyboardViewContainerView inputViewContainer = getInputViewContainer();
+
+    if (!trustReturnValues) {
+      // Best-effort: attempt haptic feedback on the input view and, if it does not handle the
+      // request at all, on its container too. Return values are treated as hints only, since some
+      // devices report "handled" while producing no physical haptics.
+      boolean didPrimary = false;
+      boolean didFallback = false;
+      if (inputView != null) {
+        didPrimary = performHapticFeedback(inputView, primaryEffect, flags);
+        if (primaryEffect != fallbackEffect) {
+          didFallback = performHapticFeedback(inputView, fallbackEffect, flags);
+        }
+      }
+      if (inputViewContainer != null && (inputView == null || (!didPrimary && !didFallback))) {
+        performHapticFeedback(inputViewContainer, primaryEffect, flags);
+        if (primaryEffect != fallbackEffect) {
+          performHapticFeedback(inputViewContainer, fallbackEffect, flags);
+        }
+      }
+      return false;
+    }
+
+    boolean didPrimary = false;
+    boolean didFallback = false;
+
+    if (inputView != null) {
+      didPrimary = performHapticFeedback(inputView, primaryEffect, flags);
+      didFallback =
+          primaryEffect != fallbackEffect
+              && performHapticFeedback(inputView, fallbackEffect, flags);
+      if (didPrimary || didFallback) return true;
+    }
+    if (inputViewContainer != null) {
+      if (inputView == null || (!didPrimary && !didFallback)) {
+        didPrimary = performHapticFeedback(inputViewContainer, primaryEffect, flags);
+        didFallback =
+            primaryEffect != fallbackEffect
+                && performHapticFeedback(inputViewContainer, fallbackEffect, flags);
+        if (didPrimary || didFallback) return true;
+      }
+    }
+
+    return false;
+  }
+
+  private boolean performHapticFeedback(@NonNull View view, int effect, int flags) {
+    final HapticFeedbackPerformer performer = sHapticFeedbackPerformer;
+    if (performer != null) return performer.perform(view, effect, flags);
+    return view.performHapticFeedback(effect, flags);
+  }
+
+  @Override
+  protected void performHapticFeedbackForUserAction() {
+    performKeyVibration(KeyCodes.SPACE, false);
   }
 
   @VisibleForTesting
@@ -331,6 +783,11 @@ public abstract class ImePressEffects extends ImeClipboard {
   @VisibleForTesting
   protected Vibrator getVibrator() {
     return mVibrator.getVibrator();
+  }
+
+  @VisibleForTesting
+  /* package */ boolean isUsingSystemHapticFeedback() {
+    return mUseSystemHapticFeedback;
   }
 
   @Override

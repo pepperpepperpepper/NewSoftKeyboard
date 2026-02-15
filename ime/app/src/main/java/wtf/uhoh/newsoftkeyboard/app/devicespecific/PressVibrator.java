@@ -35,7 +35,27 @@ public abstract class PressVibrator {
     // empty; not supported if not overridden
   }
 
+  public void setSystemKeyboardVibrationEnabled(boolean enabled) {
+    // empty; not supported if not overridden
+  }
+
+  public void setSystemVibrationFallbackDuration(int duration) {
+    // empty; not supported if not overridden
+  }
+
   public abstract void vibrate(boolean longPress);
+
+  public void vibrateFallback(boolean longPress) {
+    vibrate(longPress);
+  }
+
+  public void vibrateSystemVibrationFallback() {
+    // empty; not supported if not overridden
+  }
+
+  public boolean hasVibrator() {
+    return mVibe != null && mVibe.hasVibrator();
+  }
 
   public static void suppressNextVibration() {
     mSkip = true;

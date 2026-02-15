@@ -4,20 +4,28 @@
     <!-- Default settings values -->
     <string name="settings_default_default_domain_text">.com</string>
     <bool name="settings_default_use_system_vibration">false</bool>
-    <integer name="settings_default_vibrate_on_key_press_duration_int">0</integer>
+    <integer name="settings_default_vibrate_on_key_press_duration_int">20</integer>
+    <integer name="settings_default_vibrate_on_key_press_duration_custom_backup_int">20</integer>
+    <integer name="settings_default_system_vibration_fallback_duration_int">0</integer>
     <integer name="settings_default_vibrate_on_key_press_duration_max_value">100</integer>
     <integer name="settings_default_vibrate_on_key_press_duration_min_value">0</integer>
+    <integer name="settings_default_vibrate_on_key_press_duration_min_value_including_system">-1</integer>
     <string name="settings_default_pop_text_option">on_correction</string>
-    <bool name="settings_default_sound_on">false</bool>
+    <bool name="settings_default_sound_on">true</bool>
     <bool name="settings_default_vibrate_on_long_press">true</bool>
     <bool name="settings_default_colorize_nav_bar">false</bool>
     <bool name="settings_default_keyboard_icon_in_status_bar">false</bool>
     <bool name="settings_default_auto_capitalization">true</bool>
     <bool name="settings_default_show_suggestions">true</bool>
+    <bool name="settings_default_respect_app_no_suggestions_flag">false</bool>
     <bool name="settings_default_allow_suggestions_restart">true</bool>
     <bool name="settings_default_lang_key_shows_popup">false</bool>
     <bool name="settings_default_show_settings_app">true</bool>
     <bool name="settings_default_show_chewbacca">true</bool>
+    <bool name="settings_default_keyboard_api_enabled">false</bool>
+    <bool name="settings_default_keyboard_api_high_risk_actions_enabled">false</bool>
+    <bool name="settings_default_keyboard_api_clipboard_copy_cut_enabled">false</bool>
+    <bool name="settings_default_keyboard_api_automation_controllers_enabled">false</bool>
     <bool name="settings_default_use_16_keys_symbols_keyboards">false</bool>
     <bool name="settings_default_landscape_fullscreen">true</bool>
     <bool name="settings_default_portrait_fullscreen">false</bool>
@@ -74,6 +82,7 @@
     <string name="settings_default_default_split_state">merged_always</string>
 
     <bool name="settings_default_os_clipboard_sync">true</bool>
+    <bool name="settings_default_clipboard_action_always_visible">false</bool>
 
     <bool name="settings_default_bool_should_swap_punctuation_and_space">true</bool>
 
@@ -118,6 +127,9 @@
 
     <string name="settings_key_hint_size_default">big</string>
     <string name="settings_default_prediction_engine_mode">ngram</string>
+    <integer name="settings_default_prediction_context_window_words">20</integer>
+    <integer name="settings_default_prediction_context_window_words_max_value">40</integer>
+    <integer name="settings_default_prediction_context_window_words_min_value">2</integer>
 
     <string name="settings_default_power_save_mode_value">on_low_battery</string>
     <string name="settings_default_night_mode_value">never</string>

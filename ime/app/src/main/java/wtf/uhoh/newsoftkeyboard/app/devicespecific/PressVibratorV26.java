@@ -16,6 +16,7 @@
 
 package wtf.uhoh.newsoftkeyboard.app.devicespecific;
 
+import android.media.AudioAttributes;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import androidx.annotation.RequiresApi;
@@ -24,10 +25,24 @@ import androidx.annotation.RequiresApi;
 public class PressVibratorV26 extends PressVibratorV1 {
   protected VibrationEffect mVibration;
   protected VibrationEffect mLongPressVibration;
+  protected VibrationEffect mSystemVibrationFallbackVibration;
   protected static final int AMPLITUDE = VibrationEffect.DEFAULT_AMPLITUDE;
+  protected static final AudioAttributes HAPTIC_AUDIO_ATTRIBUTES =
+      new AudioAttributes.Builder()
+          .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+          .build();
 
   public PressVibratorV26(Vibrator vibe) {
     super(vibe);
+  }
+
+  protected void vibrateWithLegacyAttributes(VibrationEffect ve) {
+    try {
+      mVibe.vibrate(ve);
+    } catch (Throwable ignored) {
+      mVibe.vibrate(ve, HAPTIC_AUDIO_ATTRIBUTES);
+    }
   }
 
   @Override
@@ -47,6 +62,15 @@ public class PressVibratorV26 extends PressVibratorV1 {
   }
 
   @Override
+  public void setSystemVibrationFallbackDuration(int duration) {
+    mSystemVibrationFallbackDuration = duration;
+    mSystemVibrationFallbackVibration =
+        mSystemVibrationFallbackDuration > 0
+            ? VibrationEffect.createOneShot(mSystemVibrationFallbackDuration, AMPLITUDE)
+            : null;
+  }
+
+  @Override
   public void setUseSystemVibration(boolean system, boolean systemWideHapticEnabled) {
     // not supported
   }
@@ -54,8 +78,15 @@ public class PressVibratorV26 extends PressVibratorV1 {
   @Override
   public void vibrate(boolean longPress) {
     VibrationEffect ve = longPress ? mLongPressVibration : mVibration;
-    if (ve != null && !checkSuppressed()) {
-      mVibe.vibrate(ve);
+    if (mVibe != null && ve != null && !checkSuppressed()) {
+      vibrateWithLegacyAttributes(ve);
+    }
+  }
+
+  @Override
+  public void vibrateSystemVibrationFallback() {
+    if (mVibe != null && mSystemVibrationFallbackVibration != null && !checkSuppressed()) {
+      vibrateWithLegacyAttributes(mSystemVibrationFallbackVibration);
     }
   }
 }

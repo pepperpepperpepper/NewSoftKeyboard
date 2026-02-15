@@ -6,9 +6,12 @@
     <string name="settings_key_keyboard_icon_in_status_bar">settings_key_keyboard_icon_in_status_bar</string>
     <string name="settings_key_auto_capitalization">auto_caps</string>
     <string name="settings_key_show_suggestions">candidates_on</string>
+    <string name="settings_key_respect_app_no_suggestions_flag">settings_key_respect_app_no_suggestions_flag</string>
 
     <string name="settings_key_use_system_vibration">settings_key_use_system_vibration</string>
     <string name="settings_key_vibrate_on_key_press_duration_int">settings_key_vibrate_on_key_press_duration_int</string>
+    <string name="settings_key_vibrate_on_key_press_duration_custom_backup_int">settings_key_vibrate_on_key_press_duration_custom_backup_int</string>
+    <string name="settings_key_system_vibration_fallback_duration_int">settings_key_system_vibration_fallback_duration_int</string>
 
     <string name="settings_key_night_mode">settings_key_night_mode</string>
     <string name="settings_key_night_mode_sound_control">settings_key_night_mode_sound_control</string>
@@ -49,6 +52,7 @@
     <string name="settings_key_lang_key_shows_popup">lang_key_shows_popup</string>
 
     <string name="settings_key_os_clipboard_sync">settings_key_os_clipboard_sync</string>
+    <string name="settings_key_clipboard_action_always_visible">settings_key_clipboard_action_always_visible</string>
 
     <string name="settings_key_show_keyboard_name_text_key">settings_key_show_keyboard_name_text_key</string>
 
@@ -70,6 +74,11 @@
 
     <string name="settings_key_show_settings_app">settings_key_show_settings_app</string>
     <string name="settings_key_show_chewbacca">settings_key_show_chewbacca</string>
+
+    <string name="settings_key_keyboard_api_enabled">keyboard_api_enabled</string>
+    <string name="settings_key_keyboard_api_high_risk_actions_enabled">keyboard_api_high_risk_actions_enabled</string>
+    <string name="settings_key_keyboard_api_clipboard_copy_cut_enabled">keyboard_api_clipboard_copy_cut_enabled</string>
+    <string name="settings_key_keyboard_api_automation_controllers_enabled">keyboard_api_automation_controllers_enabled</string>
 
     <string name="settings_key_use_16_keys_symbols_keyboards">settings_key_use_16_keys_symbols_keyboards</string>
 

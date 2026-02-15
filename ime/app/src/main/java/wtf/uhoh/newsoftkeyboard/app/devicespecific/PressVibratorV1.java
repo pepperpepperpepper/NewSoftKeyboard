@@ -21,6 +21,7 @@ import android.os.Vibrator;
 public class PressVibratorV1 extends PressVibrator {
   protected int mDuration;
   protected int mLongPressDuration;
+  protected int mSystemVibrationFallbackDuration;
 
   public PressVibratorV1(Vibrator vibe) {
     super(vibe);
@@ -37,10 +38,22 @@ public class PressVibratorV1 extends PressVibrator {
   }
 
   @Override
+  public void setSystemVibrationFallbackDuration(int duration) {
+    mSystemVibrationFallbackDuration = duration;
+  }
+
+  @Override
   public void vibrate(boolean longPress) {
     int dur = longPress ? mLongPressDuration : mDuration;
-    if (dur > 0 && !checkSuppressed()) {
+    if (mVibe != null && dur > 0 && !checkSuppressed()) {
       mVibe.vibrate(dur);
+    }
+  }
+
+  @Override
+  public void vibrateSystemVibrationFallback() {
+    if (mVibe != null && mSystemVibrationFallbackDuration > 0 && !checkSuppressed()) {
+      mVibe.vibrate(mSystemVibrationFallbackDuration);
     }
   }
 }
