@@ -35,19 +35,11 @@
         android:title="@string/night_mode_darken_keyboard_theme" />
 
     <androidx.preference.CheckBoxPreference
-        android:defaultValue="@bool/settings_default_true"
+        android:defaultValue="@bool/settings_default_false"
         android:key="@string/settings_key_night_mode_sound_control"
         android:persistent="true"
         android:summaryOff=""
         android:summaryOn=""
         android:title="@string/night_mode_sound_control" />
-
-    <androidx.preference.CheckBoxPreference
-        android:defaultValue="@bool/settings_default_true"
-        android:key="@string/settings_key_night_mode_vibration_control"
-        android:persistent="true"
-        android:summaryOff=""
-        android:summaryOn=""
-        android:title="@string/night_mode_vibration_control" />
 
 </androidx.preference.PreferenceScreen>

@@ -19,6 +19,8 @@ import app.cash.copper.rx2.RxContentResolver;
 import com.anysoftkeyboard.api.KeyCodes;
 import io.reactivex.Observable;
 import io.reactivex.subjects.PublishSubject;
+import java.io.FileDescriptor;
+import java.io.PrintWriter;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.android.NightMode;
@@ -59,6 +61,27 @@ public abstract class ImePressEffects extends ImeClipboard {
   private boolean mSystemKeyboardVibrationEnabled = true;
   private int mSystemVibrationFallbackDuration = 0;
   private boolean mVibratorError = false;
+  private int mConfiguredKeyPressVibrationDuration = 0;
+  private int mConfiguredLongPressVibrationDuration = 0;
+  private int mConfiguredSystemVibrationFallbackDuration = 0;
+  private boolean mLastSoundPowerSavingState = false;
+  private boolean mLastSoundNightModeState = false;
+  private boolean mLastSoundOnPref = false;
+  private boolean mLastUseCustomSoundVolumePref = false;
+  private int mLastCustomSoundVolumeLevelPref = 0;
+  private boolean mLastVibrationPowerSavingState = false;
+  private int mLastVibrationDurationPref = 0;
+  private boolean mLastLongPressPowerSavingState = false;
+  private boolean mLastVibrateOnLongPressPref = false;
+  private int mLastVibrationPrimaryCode = 0;
+  private boolean mLastVibrationLongPress = false;
+  private long mLastVibrationAttemptUptimeMs = 0L;
+  @NonNull private String mLastVibrationPath = "none";
+  @NonNull private String mSoundStateError = "";
+  @NonNull private String mKeyPressVibrationStateError = "";
+  @NonNull private String mLongPressVibrationStateError = "";
+  @NonNull private String mSystemVibrationStateError = "";
+  @NonNull private String mSystemVibrationFallbackStateError = "";
   @NonNull private KeyPreviewsController mKeyPreviewController = new NullKeyPreviewsManager();
 
   @VisibleForTesting
@@ -143,6 +166,11 @@ public abstract class ImePressEffects extends ImeClipboard {
                         R.integer.settings_default_zero_value)
                     .asObservable(),
                 (powerState, nightState, soundOn, useCustomVolume, customVolumeLevel) -> {
+                  mLastSoundPowerSavingState = powerState;
+                  mLastSoundNightModeState = nightState;
+                  mLastSoundOnPref = soundOn;
+                  mLastUseCustomSoundVolumePref = useCustomVolume;
+                  mLastCustomSoundVolumeLevelPref = customVolumeLevel;
                   if (powerState) return SILENT;
                   if (nightState) return SILENT;
                   if (!soundOn) return SILENT;
@@ -155,6 +183,7 @@ public abstract class ImePressEffects extends ImeClipboard {
                 })
             .subscribe(
                 customVolume -> {
+                  mSoundStateError = "";
                   if (mCustomSoundVolume != customVolume) {
                     if (customVolume == SILENT) {
                       mAudioManager.unloadSoundEffects();
@@ -166,69 +195,78 @@ public abstract class ImePressEffects extends ImeClipboard {
                   // demo
                   performKeySound(KeyCodes.SPACE);
                 },
-                t -> Logger.w(TAG, t, "Failed to read custom volume prefs")));
+                t -> {
+                  mSoundStateError = t.getClass().getSimpleName() + ": " + t.getMessage();
+                  Logger.w(TAG, t, "Failed to read custom volume prefs");
+                }));
 
     addDisposable(
         Observable.combineLatest(
                 PowerSaving.observePowerSavingState(
                     getApplicationContext(),
                     R.string.settings_key_power_save_mode_vibration_control,
-                    R.bool.settings_default_false),
-                NightMode.observeNightModeState(
-                    getApplicationContext(),
-                    R.string.settings_key_night_mode_vibration_control,
                     R.bool.settings_default_false),
                 prefs()
                     .getInteger(
                         R.string.settings_key_vibrate_on_key_press_duration_int,
                         R.integer.settings_default_vibrate_on_key_press_duration_int)
                     .asObservable(),
-                (powerState, nightState, vibrationDuration) ->
-                    powerState ? 0 : nightState ? 0 : vibrationDuration)
+                (powerState, vibrationDuration) -> {
+                  mLastVibrationPowerSavingState = powerState;
+                  mLastVibrationDurationPref = vibrationDuration;
+                  return powerState ? 0 : vibrationDuration;
+                })
             .subscribe(
                 value -> {
+                  mKeyPressVibrationStateError = "";
                   mVibratorError = false;
+                  mConfiguredKeyPressVibrationDuration = value;
                   mVibrator.setDuration(value);
                   // demo
                   performKeyVibration(KeyCodes.SPACE, false);
                 },
-                t -> Logger.w(TAG, t, "Failed to get vibrate duration")));
+                t -> {
+                  mKeyPressVibrationStateError =
+                      t.getClass().getSimpleName() + ": " + t.getMessage();
+                  Logger.w(TAG, t, "Failed to get vibrate duration");
+                }));
 
     addDisposable(
         Observable.combineLatest(
                 PowerSaving.observePowerSavingState(
                     getApplicationContext(),
                     R.string.settings_key_power_save_mode_vibration_control,
-                    R.bool.settings_default_false),
-                NightMode.observeNightModeState(
-                    getApplicationContext(),
-                    R.string.settings_key_night_mode_vibration_control,
                     R.bool.settings_default_false),
                 prefs()
                     .getBoolean(
                         R.string.settings_key_vibrate_on_long_press,
                         R.bool.settings_default_vibrate_on_long_press)
                     .asObservable(),
-                (powerState, nightState, vibrateOnLongPress) ->
-                    (powerState || nightState) ? 0 : (vibrateOnLongPress ? 7 : 0))
+                (powerState, vibrateOnLongPress) -> {
+                  mLastLongPressPowerSavingState = powerState;
+                  mLastVibrateOnLongPressPref = vibrateOnLongPress;
+                  return powerState ? 0 : (vibrateOnLongPress ? 7 : 0);
+                })
             .subscribe(
                 value -> {
+                  mLongPressVibrationStateError = "";
                   mVibratorError = false;
+                  mConfiguredLongPressVibrationDuration = value;
                   mVibrator.setLongPressDuration(value);
                   // demo
                   performKeyVibration(KeyCodes.SPACE, true);
                 },
-                t -> Logger.w(TAG, t, "Failed to get long-press vibrate duration")));
+                t -> {
+                  mLongPressVibrationStateError =
+                      t.getClass().getSimpleName() + ": " + t.getMessage();
+                  Logger.w(TAG, t, "Failed to get long-press vibrate duration");
+                }));
 
     addDisposable(
         Observable.combineLatest(
                 PowerSaving.observePowerSavingState(
                     getApplicationContext(),
                     R.string.settings_key_power_save_mode_vibration_control,
-                    R.bool.settings_default_false),
-                NightMode.observeNightModeState(
-                    getApplicationContext(),
-                    R.string.settings_key_night_mode_vibration_control,
                     R.bool.settings_default_false),
                 prefs()
                     .getInteger(
@@ -374,7 +412,6 @@ public abstract class ImePressEffects extends ImeClipboard {
                                     + " Settings.Secure. Assuming unknown."))
                     .onErrorReturnItem(-1),
                 (powerState,
-                    nightState,
                     vibrationDuration,
                     systemWideHapticEnabledSystem,
                     systemWideHapticEnabledSecure,
@@ -409,12 +446,13 @@ public abstract class ImePressEffects extends ImeClipboard {
                               || keyboardVibrationEnabledSecure > 0);
 
                   return new SystemVibrationSettings(
-                      !powerState && !nightState && systemVibration,
+                      !powerState && systemVibration,
                       systemWideHapticEnabled && systemWideHapticIntensityEnabled,
                       keyboardVibrationEnabled);
                 })
             .subscribe(
                 value -> {
+                  mSystemVibrationStateError = "";
                   mVibratorError = false;
                   mUseSystemHapticFeedback = value.mUseSystemVibration;
                   mSystemWideHapticEnabled = value.mSystemWideHapticEnabled;
@@ -428,7 +466,10 @@ public abstract class ImePressEffects extends ImeClipboard {
                   // demo
                   performKeyVibration(KeyCodes.SPACE, false);
                 },
-                t -> Logger.w(TAG, t, "Failed to read system vibration pref")));
+                t -> {
+                  mSystemVibrationStateError = t.getClass().getSimpleName() + ": " + t.getMessage();
+                  Logger.w(TAG, t, "Failed to read system vibration pref");
+                }));
 
     addDisposable(
         Observable.combineLatest(
@@ -436,26 +477,27 @@ public abstract class ImePressEffects extends ImeClipboard {
                     getApplicationContext(),
                     R.string.settings_key_power_save_mode_vibration_control,
                     R.bool.settings_default_false),
-                NightMode.observeNightModeState(
-                    getApplicationContext(),
-                    R.string.settings_key_night_mode_vibration_control,
-                    R.bool.settings_default_false),
                 prefs()
                     .getInteger(
                         R.string.settings_key_system_vibration_fallback_duration_int,
                         R.integer.settings_default_system_vibration_fallback_duration_int)
                     .asObservable(),
-                (powerState, nightState, vibrationDuration) ->
-                    (powerState || nightState) ? 0 : vibrationDuration)
+                (powerState, vibrationDuration) -> powerState ? 0 : vibrationDuration)
             .subscribe(
                 value -> {
+                  mSystemVibrationFallbackStateError = "";
                   mVibratorError = false;
                   mSystemVibrationFallbackDuration = value;
+                  mConfiguredSystemVibrationFallbackDuration = value;
                   mVibrator.setSystemVibrationFallbackDuration(value);
                   // demo
                   performKeyVibration(KeyCodes.SPACE, false);
                 },
-                t -> Logger.w(TAG, t, "Failed to read system vibration fallback duration pref")));
+                t -> {
+                  mSystemVibrationFallbackStateError =
+                      t.getClass().getSimpleName() + ": " + t.getMessage();
+                  Logger.w(TAG, t, "Failed to read system vibration fallback duration pref");
+                }));
 
     addDisposable(
         Observable.combineLatest(
@@ -574,6 +616,11 @@ public abstract class ImePressEffects extends ImeClipboard {
   }
 
   private void performKeyVibration(int primaryCode, boolean longPress) {
+    mLastVibrationPrimaryCode = primaryCode;
+    mLastVibrationLongPress = longPress;
+    mLastVibrationAttemptUptimeMs = SystemClock.uptimeMillis();
+    mLastVibrationPath = "start";
+
     final boolean systemHapticsMode = mUseSystemHapticFeedback;
     final boolean systemWideHapticEnabled = mSystemWideHapticEnabled;
     final boolean systemKeyboardVibrationEnabled = mSystemKeyboardVibrationEnabled;
@@ -593,6 +640,10 @@ public abstract class ImePressEffects extends ImeClipboard {
           performSystemHapticFeedback(
               longPress, systemWideHapticEnabled && systemKeyboardVibrationEnabled);
       if (didHaptic) {
+        mLastVibrationPath =
+            shouldSystemFallbackVibrate
+                ? "system_haptic_feedback+system_fallback"
+                : "system_haptic_feedback";
         if (shouldSystemFallbackVibrate) {
           try {
             mVibrator.vibrateSystemVibrationFallback();
@@ -612,6 +663,9 @@ public abstract class ImePressEffects extends ImeClipboard {
             mVibrator.vibrate(longPress);
             if (shouldSystemFallbackVibrate) {
               mVibrator.vibrateSystemVibrationFallback();
+              mLastVibrationPath = "system_vibrator+system_fallback";
+            } else {
+              mLastVibrationPath = "system_vibrator";
             }
             return;
           } catch (Exception e) {
@@ -627,8 +681,10 @@ public abstract class ImePressEffects extends ImeClipboard {
         try {
           if (shouldSystemFallbackVibrate) {
             mVibrator.vibrateSystemVibrationFallback();
+            mLastVibrationPath = "system_fallback_only";
           } else {
             mVibrator.vibrateFallback(longPress);
+            mLastVibrationPath = "vibrator_fallback";
           }
           return;
         } catch (Exception e) {
@@ -642,31 +698,42 @@ public abstract class ImePressEffects extends ImeClipboard {
       // Only try it here when system-wide touch haptics are disabled (or unknown) and we have no
       // viable vibrator path.
       if (!systemWideHapticEnabled) {
+        mLastVibrationPath = "last_chance_system_haptic_feedback";
         performSystemHapticFeedback(longPress, false);
+      } else {
+        mLastVibrationPath = "system_haptic_noop";
       }
       return;
     }
 
     if (systemHapticsMode || mVibratorError) {
       final boolean didHaptic = performSystemHapticFeedback(longPress, !systemHapticsMode);
-      if (didHaptic && !shouldSystemFallbackVibrate) return;
+      if (didHaptic && !shouldSystemFallbackVibrate) {
+        mLastVibrationPath = "legacy_system_haptic_feedback";
+        return;
+      }
     }
 
     try {
       if (systemHapticsMode) {
         if (shouldSystemFallbackVibrate) {
           mVibrator.vibrateSystemVibrationFallback();
+          mLastVibrationPath = "legacy_system_fallback";
         } else if (longPress) {
           mVibrator.vibrate(true);
+          mLastVibrationPath = "legacy_system_long_press";
         } else {
           mVibrator.vibrateFallback(false);
+          mLastVibrationPath = "legacy_system_vibrator_fallback";
         }
       } else {
         mVibrator.vibrate(longPress);
+        mLastVibrationPath = "legacy_vibrator";
       }
     } catch (Exception e) {
       mVibratorError = true;
       Logger.w(TAG, e, "Failed to interact with vibrator. Falling back to system haptic-feedback.");
+      mLastVibrationPath = "legacy_exception_system_haptic_fallback";
       performSystemHapticFeedback(longPress, !systemHapticsMode);
     }
   }
@@ -817,5 +884,47 @@ public abstract class ImePressEffects extends ImeClipboard {
   @Override
   public void onLongPressDone(@NonNull Keyboard.Key key) {
     performKeyVibration(key.getPrimaryCode(), true);
+  }
+
+  @Override
+  protected void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
+    super.dump(fd, writer, args);
+
+    writer.println("NSK press-effects:");
+    writer.println("  useSystemHapticFeedback=" + mUseSystemHapticFeedback);
+    writer.println("  systemWideHapticEnabled=" + mSystemWideHapticEnabled);
+    writer.println("  systemKeyboardVibrationEnabled=" + mSystemKeyboardVibrationEnabled);
+    writer.println("  vibratorError=" + mVibratorError);
+    writer.println("  configuredKeyPressVibrationDuration=" + mConfiguredKeyPressVibrationDuration);
+    writer.println(
+        "  configuredLongPressVibrationDuration=" + mConfiguredLongPressVibrationDuration);
+    writer.println(
+        "  configuredSystemVibrationFallbackDuration="
+            + mConfiguredSystemVibrationFallbackDuration);
+    writer.println("  soundPowerSavingState=" + mLastSoundPowerSavingState);
+    writer.println("  soundNightModeState=" + mLastSoundNightModeState);
+    writer.println("  soundOnPref=" + mLastSoundOnPref);
+    writer.println("  useCustomSoundVolumePref=" + mLastUseCustomSoundVolumePref);
+    writer.println("  customSoundVolumeLevelPref=" + mLastCustomSoundVolumeLevelPref);
+    writer.println("  vibrationPowerSavingState=" + mLastVibrationPowerSavingState);
+    writer.println("  vibrationDurationPref=" + mLastVibrationDurationPref);
+    writer.println("  longPressPowerSavingState=" + mLastLongPressPowerSavingState);
+    writer.println("  vibrateOnLongPressPref=" + mLastVibrateOnLongPressPref);
+    writer.println("  customSoundVolume=" + mCustomSoundVolume);
+    writer.println("  systemVibrationFallbackDuration=" + mSystemVibrationFallbackDuration);
+    writer.println(
+        "  vibratorImpl=" + (mVibrator == null ? "null" : mVibrator.getClass().getName()));
+    writer.println(
+        "  vibratorServicePresent=" + (mVibrator != null && mVibrator.getVibrator() != null));
+    writer.println("  vibratorHasVibrator=" + (mVibrator != null && mVibrator.hasVibrator()));
+    writer.println("  soundStateError=" + mSoundStateError);
+    writer.println("  keyPressVibrationStateError=" + mKeyPressVibrationStateError);
+    writer.println("  longPressVibrationStateError=" + mLongPressVibrationStateError);
+    writer.println("  systemVibrationStateError=" + mSystemVibrationStateError);
+    writer.println("  systemVibrationFallbackStateError=" + mSystemVibrationFallbackStateError);
+    writer.println("  lastVibrationPrimaryCode=" + mLastVibrationPrimaryCode);
+    writer.println("  lastVibrationLongPress=" + mLastVibrationLongPress);
+    writer.println("  lastVibrationAttemptUptimeMs=" + mLastVibrationAttemptUptimeMs);
+    writer.println("  lastVibrationPath=" + mLastVibrationPath);
   }
 }

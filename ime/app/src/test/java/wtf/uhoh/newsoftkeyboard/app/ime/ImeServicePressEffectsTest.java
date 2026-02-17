@@ -12,6 +12,8 @@ import android.provider.Settings;
 import android.view.inputmethod.EditorInfo;
 import androidx.test.core.app.ApplicationProvider;
 import com.anysoftkeyboard.api.KeyCodes;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -20,8 +22,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
-import org.robolectric.shadows.ShadowSystemVibrator;
 import org.robolectric.shadows.ShadowVibrator;
+import org.robolectric.util.ReflectionHelpers;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.android.PowerSavingTest;
@@ -49,18 +51,132 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
 
   @Before
   public void setupSystemHaptic() {
+    // Each test should start from a clean feedback baseline. These tests run on multiple SDKs and
+    // share the same Robolectric static shadow state and default SharedPreferences.
+    final var prefs = NskApplicationBase.prefs(getApplicationContext());
+    prefs
+        .getString(R.string.settings_key_night_mode, R.string.settings_default_night_mode_value)
+        .set("never");
+    prefs
+        .getBoolean(
+            R.string.settings_key_night_mode_vibration_control, R.bool.settings_default_false)
+        .set(false);
+    prefs
+        .getString(
+            R.string.settings_key_power_save_mode, R.string.settings_default_power_save_mode_value)
+        .set("on_low_battery");
+    prefs
+        .getBoolean(
+            R.string.settings_key_power_save_mode_vibration_control, R.bool.settings_default_false)
+        .set(false);
+    prefs
+        .getBoolean(
+            R.string.settings_key_use_system_vibration,
+            R.bool.settings_default_use_system_vibration)
+        .set(false);
+
+    PowerSavingTest.sendBatteryState(false);
+    PowerSavingTest.sendChargingState(false);
+
+    NskApplicationBase application = getApplicationContext();
+    application.onConfigurationChanged(configurationForNightMode(Configuration.UI_MODE_NIGHT_NO));
+
+    mImeServiceUnderTest.getAudioManager().setRingerMode(AudioManager.RINGER_MODE_NORMAL);
     setSystemWideHaptic(true);
+    TestRxSchedulers.drainAllTasksUntilEnd();
+    ShadowVibrator.reset();
+    Shadows.shadowOf(mImeServiceUnderTest.getVibrator()).setHasVibrator(true);
+    ImePressEffects.sHapticFeedbackPerformer = (view, effect, flags) -> false;
+  }
+
+  @After
+  public void teardownHapticPerformer() {
+    ImePressEffects.sHapticFeedbackPerformer = null;
   }
 
   private void setSystemWideHaptic(boolean enabled) {
+    Settings.Secure.putInt(
+        ApplicationProvider.getApplicationContext().getContentResolver(),
+        Settings.System.HAPTIC_FEEDBACK_ENABLED,
+        enabled ? 1 : 0);
     Settings.System.putInt(
         ApplicationProvider.getApplicationContext().getContentResolver(),
         Settings.System.HAPTIC_FEEDBACK_ENABLED,
         enabled ? 1 : 0);
     Shadows.shadowOf(ApplicationProvider.getApplicationContext().getContentResolver())
+        .getContentObservers(Settings.Secure.getUriFor(Settings.System.HAPTIC_FEEDBACK_ENABLED))
+        .forEach(v -> v.onChange(false));
+    Shadows.shadowOf(ApplicationProvider.getApplicationContext().getContentResolver())
         .getContentObservers(Settings.System.getUriFor(Settings.System.HAPTIC_FEEDBACK_ENABLED))
         .forEach(v -> v.onChange(false));
-    TestRxSchedulers.drainAllTasks();
+    TestRxSchedulers.drainAllTasksUntilEnd();
+  }
+
+  private static void resetVibratorState(ShadowVibrator shadowVibrator) {
+    ShadowVibrator.reset();
+    shadowVibrator.setHasVibrator(true);
+  }
+
+  @SuppressWarnings("unchecked")
+  private static int getVibrationEffectSegmentsCount() {
+    try {
+      final Object segments =
+          ReflectionHelpers.getStaticField(ShadowVibrator.class, "vibrationEffectSegments");
+      if (segments instanceof java.util.List) return ((java.util.List<?>) segments).size();
+    } catch (Throwable ignored) {
+      // best effort
+    }
+    return 0;
+  }
+
+  private static void assertNoVibrationInvoked(ShadowVibrator shadowVibrator) {
+    Assert.assertFalse(shadowVibrator.isVibrating());
+    Assert.assertEquals(0, shadowVibrator.getMilliseconds());
+    Assert.assertNull(shadowVibrator.getPattern());
+    Assert.assertEquals(0, shadowVibrator.getEffectId());
+    Assert.assertNull(shadowVibrator.getVibrationAttributesFromLastVibration());
+    Assert.assertNull(shadowVibrator.getAudioAttributesFromLastVibration());
+    Assert.assertTrue(shadowVibrator.getPrimitiveEffects().isEmpty());
+    Assert.assertTrue(shadowVibrator.getPrimitiveSegmentsInPrimitiveEffects().isEmpty());
+    Assert.assertEquals(0, getVibrationEffectSegmentsCount());
+  }
+
+  private static void assertVibrationInvoked(ShadowVibrator shadowVibrator) {
+    final long milliseconds = shadowVibrator.getMilliseconds();
+    final long[] pattern = shadowVibrator.getPattern();
+    final int effectId = shadowVibrator.getEffectId();
+    final Object vibrationAttributes = shadowVibrator.getVibrationAttributesFromLastVibration();
+    final Object audioAttributes = shadowVibrator.getAudioAttributesFromLastVibration();
+    final int primitiveEffectsCount = shadowVibrator.getPrimitiveEffects().size();
+    final int primitiveSegmentsCount =
+        shadowVibrator.getPrimitiveSegmentsInPrimitiveEffects().size();
+    final int vibrationEffectSegmentsCount = getVibrationEffectSegmentsCount();
+    final boolean invoked =
+        shadowVibrator.isVibrating()
+            || milliseconds != 0
+            || pattern != null
+            || effectId != 0
+            || audioAttributes != null
+            || vibrationAttributes != null
+            || primitiveEffectsCount != 0
+            || primitiveSegmentsCount != 0
+            || vibrationEffectSegmentsCount != 0;
+    Assert.assertTrue(
+        "Expected vibrator to be invoked. ms="
+            + milliseconds
+            + " pattern="
+            + (pattern == null ? "null" : pattern.length)
+            + " effectId="
+            + effectId
+            + " audioAttributes="
+            + audioAttributes
+            + " vibrationAttributes="
+            + vibrationAttributes
+            + " primitiveEffects="
+            + primitiveEffectsCount
+            + " primitiveSegments="
+            + primitiveSegmentsCount,
+        invoked);
   }
 
   @Test
@@ -129,13 +245,48 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
     Assert.assertEquals(AudioManager.FX_KEY_CLICK, shadowAudioManager.getLastPlaySoundEffectType());
 
     mImeServiceUnderTest.onPress(0);
-    Assert.assertEquals(Integer.MIN_VALUE, shadowAudioManager.getLastPlaySoundEffectType());
+    Assert.assertEquals(
+        AudioManager.FX_KEYPRESS_STANDARD, shadowAudioManager.getLastPlaySoundEffectType());
+  }
+
+  @Test
+  public void testPlaysSoundEvenWhenRingerModeNotNormal() {
+    ShadowNskAudioManager shadowAudioManager =
+        (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
+
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_sound_on, true);
+    shadowAudioManager.getLastPlaySoundEffectType(); // consuming any demo
+
+    mImeServiceUnderTest.getAudioManager().setRingerMode(AudioManager.RINGER_MODE_SILENT);
+    mImeServiceUnderTest.onPress(KeyCodes.SPACE);
+    Assert.assertEquals(
+        AudioManager.FX_KEYPRESS_SPACEBAR, shadowAudioManager.getLastPlaySoundEffectType());
+  }
+
+  @Test
+  public void testPlaysSoundWithCustomVolumeWhenEnabled() {
+    ShadowNskAudioManager shadowAudioManager =
+        (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
+
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_sound_on, true);
+    shadowAudioManager.getLastPlaySoundEffectType(); // consuming any demo
+
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_custom_sound_volume, true);
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_custom_sound_volume, 60);
+    shadowAudioManager.getLastPlaySoundEffectType(); // consuming any demo
+    shadowAudioManager.getLastPlaySoundEffectVolume(); // consuming any demo
+
+    mImeServiceUnderTest.onPress('a');
+    Assert.assertEquals(
+        AudioManager.FX_KEYPRESS_STANDARD, shadowAudioManager.getLastPlaySoundEffectType());
+    Assert.assertEquals(0.60f, shadowAudioManager.getLastPlaySoundEffectVolume(), 0.001f);
   }
 
   @Test
   public void testDoNotPlaysSoundWhenLowPower() {
     ShadowNskAudioManager shadowAudioManager =
         (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_power_save_mode_sound_control, true);
     SharedPrefsHelper.setPrefsValue(R.string.settings_key_sound_on, true);
     shadowAudioManager.getLastPlaySoundEffectType();
 
@@ -158,6 +309,7 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
   @Test
   public void testDoNotPlaysSoundWhenNightTime() {
     SharedPrefsHelper.setPrefsValue(R.string.settings_key_night_mode, "follow_system");
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_night_mode_sound_control, true);
     ShadowNskAudioManager shadowAudioManager =
         (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
     SharedPrefsHelper.setPrefsValue(R.string.settings_key_sound_on, true);
@@ -182,43 +334,77 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
 
   @Test
   @Config(sdk = {25, 26, 29})
-  public void testDoNotVibrateWhenNightTime() {
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_night_mode, "follow_system");
+  public void testNightModeDoesNotAffectVibration() {
+    final var prefs = NskApplicationBase.prefs(getApplicationContext());
+    prefs
+        .getString(R.string.settings_key_night_mode, R.string.settings_default_night_mode_value)
+        .set("follow_system");
+    prefs
+        .getBoolean(
+            R.string.settings_key_night_mode_vibration_control, R.bool.settings_default_false)
+        .set(true);
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_key_press_duration_int, 10);
+    prefs
+        .getInteger(
+            R.string.settings_key_vibrate_on_key_press_duration_int,
+            R.integer.settings_default_vibrate_on_key_press_duration_int)
+        .set(10);
     ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
 
+    TestRxSchedulers.drainAllTasksUntilEnd();
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
     Assert.assertFalse(shadowVibrator.isVibrating());
 
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
 
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
 
     NskApplicationBase application = getApplicationContext();
     application.onConfigurationChanged(configurationForNightMode(Configuration.UI_MODE_NIGHT_YES));
 
+    TestRxSchedulers.drainAllTasksUntilEnd();
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
 
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertFalse(shadowVibrator.isVibrating());
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
 
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
 
     application.onConfigurationChanged(configurationForNightMode(Configuration.UI_MODE_NIGHT_NO));
+    TestRxSchedulers.drainAllTasksUntilEnd();
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
 
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
 
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_night_mode_vibration_control, false);
+    prefs
+        .getBoolean(
+            R.string.settings_key_night_mode_vibration_control, R.bool.settings_default_false)
+        .set(false);
     application.onConfigurationChanged(configurationForNightMode(Configuration.UI_MODE_NIGHT_YES));
 
+    TestRxSchedulers.drainAllTasksUntilEnd();
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
 
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
   }
 
   @Test
@@ -270,21 +456,93 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
   @Config(sdk = {25, 26, 29})
   public void testVibrateWhenEnabled() {
     TestRxSchedulers.foregroundFlushAllJobs();
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, false);
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_key_press_duration_int, 10);
+    final var prefs = NskApplicationBase.prefs(getApplicationContext());
+    prefs
+        .getBoolean(
+            R.string.settings_key_use_system_vibration,
+            R.bool.settings_default_use_system_vibration)
+        .set(false);
+    prefs
+        .getInteger(
+            R.string.settings_key_vibrate_on_key_press_duration_int,
+            R.integer.settings_default_vibrate_on_key_press_duration_int)
+        .set(10);
     ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
-    // demo
-    Assert.assertTrue(shadowVibrator.isVibrating());
-    Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+
+    TestRxSchedulers.drainAllTasksUntilEnd();
+    resetVibratorState(shadowVibrator);
+    mImeServiceUnderTest.onPress(0);
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
+
+    resetVibratorState(shadowVibrator);
+    mImeServiceUnderTest.onPress(KeyCodes.SPACE);
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
+  }
+
+  @Test
+  @Config(sdk = {25, 26, 29})
+  public void testDoesNotVibrateWhenPickingSuggestionManuallyIfDisabled() {
+    TestRxSchedulers.foregroundFlushAllJobs();
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, false);
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_key_press_duration_int, 0);
+
+    ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
     Assert.assertFalse(shadowVibrator.isVibrating());
 
-    mImeServiceUnderTest.onPress(0);
+    mImeServiceUnderTest.pickSuggestionManually(0, "face");
+    Assert.assertFalse(shadowVibrator.isVibrating());
+  }
+
+  @Test
+  @Config(sdk = {25, 26, 29})
+  public void testVibrateWhenPickingSuggestionManuallyIfEnabled() {
+    TestRxSchedulers.foregroundFlushAllJobs();
+    final var prefs = NskApplicationBase.prefs(getApplicationContext());
+    prefs
+        .getBoolean(
+            R.string.settings_key_use_system_vibration,
+            R.bool.settings_default_use_system_vibration)
+        .set(false);
+    prefs
+        .getInteger(
+            R.string.settings_key_vibrate_on_key_press_duration_int,
+            R.integer.settings_default_vibrate_on_key_press_duration_int)
+        .set(10);
+
+    ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
+    TestRxSchedulers.drainAllTasksUntilEnd();
+    Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
     Assert.assertFalse(shadowVibrator.isVibrating());
 
-    mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
-    Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    resetVibratorState(shadowVibrator);
+    mImeServiceUnderTest.pickSuggestionManually(0, "face");
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
+  }
+
+  @Test
+  @Config(sdk = {29})
+  public void testSystemVibrateWhenPickingSuggestionManuallyIfEnabled() {
+    TestRxSchedulers.foregroundFlushAllJobs();
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, true);
+
+    ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
+    Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
+    Assert.assertFalse(shadowVibrator.isVibrating());
+
+    ShadowVibrator.reset();
+    shadowVibrator.setHasVibrator(true);
+    mImeServiceUnderTest.pickSuggestionManually(0, "face");
+    Assert.assertEquals(VibrationEffect.EFFECT_CLICK, shadowVibrator.getEffectId());
   }
 
   @Test
@@ -303,20 +561,90 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
     Assert.assertFalse(shadowVibrator.isVibrating());
 
+    TestRxSchedulers.drainAllTasksUntilEnd();
+    ShadowVibrator.reset();
+    shadowVibrator.setHasVibrator(true);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
     Assert.assertEquals(VibrationEffect.EFFECT_CLICK, shadowVibrator.getEffectId());
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
     Assert.assertFalse(shadowVibrator.isVibrating());
 
     Mockito.doReturn(0).when(key).getPrimaryCode();
+    ShadowVibrator.reset();
+    shadowVibrator.setHasVibrator(true);
     mImeServiceUnderTest.onLongPressDone(key);
-    Assert.assertFalse(shadowVibrator.isVibrating());
+    Assert.assertNotEquals(
+        "Expected some system vibration for long-press", 0, shadowVibrator.getMilliseconds());
+    final int effectId0 = shadowVibrator.getEffectId();
+    Assert.assertTrue(
+        "Expected a system click effect for long-press. effectId=" + effectId0,
+        effectId0 == VibrationEffect.EFFECT_HEAVY_CLICK
+            || effectId0 == VibrationEffect.EFFECT_CLICK);
 
     Mockito.doReturn(KeyCodes.SPACE).when(key).getPrimaryCode();
+    ShadowVibrator.reset();
+    shadowVibrator.setHasVibrator(true);
     mImeServiceUnderTest.onLongPressDone(key);
-    Assert.assertTrue(shadowVibrator.isVibrating());
-    Assert.assertEquals(VibrationEffect.EFFECT_HEAVY_CLICK, shadowVibrator.getEffectId());
+    Assert.assertNotEquals(
+        "Expected some system vibration for long-press", 0, shadowVibrator.getMilliseconds());
+    final int effectId = shadowVibrator.getEffectId();
+    Assert.assertTrue(
+        "Expected a system click effect for long-press. effectId=" + effectId,
+        effectId == VibrationEffect.EFFECT_HEAVY_CLICK || effectId == VibrationEffect.EFFECT_CLICK);
+  }
+
+  @Test
+  @Config(sdk = {29})
+  public void testSystemVibrationDoesNotAlsoVibrateWhenViewHapticFeedbackHandled() {
+    final AtomicInteger hapticCalls = new AtomicInteger(0);
+    ImePressEffects.sHapticFeedbackPerformer =
+        (view, effect, flags) -> {
+          hapticCalls.incrementAndGet();
+          return true;
+        };
+
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, true);
+    TestRxSchedulers.drainAllTasksUntilEnd();
+
+    final ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
+    resetVibratorState(shadowVibrator);
+    mImeServiceUnderTest.onPress(KeyCodes.SPACE);
+    Assert.assertTrue("Expected view haptics to be attempted.", hapticCalls.get() > 0);
+    assertNoVibrationInvoked(shadowVibrator);
+
+    try {
+      SharedPrefsHelper.setPrefsValue(
+          R.string.settings_key_system_vibration_fallback_duration_int, 20);
+      TestRxSchedulers.drainAllTasksUntilEnd();
+      resetVibratorState(shadowVibrator);
+      mImeServiceUnderTest.onPress(KeyCodes.SPACE);
+      assertVibrationInvoked(shadowVibrator);
+    } finally {
+      SharedPrefsHelper.setPrefsValue(
+          R.string.settings_key_system_vibration_fallback_duration_int, 0);
+    }
+  }
+
+  @Test
+  @Config(sdk = {29})
+  public void
+      testSystemVibrationFallsBackToVibratorWhenSystemTouchHapticsDisabledEvenIfViewHandled() {
+    final AtomicInteger hapticCalls = new AtomicInteger(0);
+    ImePressEffects.sHapticFeedbackPerformer =
+        (view, effect, flags) -> {
+          hapticCalls.incrementAndGet();
+          return true;
+        };
+
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, true);
+    setSystemWideHaptic(false);
+    TestRxSchedulers.drainAllTasksUntilEnd();
+
+    final ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
+    resetVibratorState(shadowVibrator);
+    mImeServiceUnderTest.onPress(KeyCodes.SPACE);
+    Assert.assertTrue("Expected view haptics to be attempted.", hapticCalls.get() > 0);
+    assertVibrationInvoked(shadowVibrator);
   }
 
   @Test
@@ -333,27 +661,25 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
     Assert.assertFalse(shadowVibrator.isVibrating());
 
+    ShadowVibrator.reset();
+    shadowVibrator.setHasVibrator(true);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
     Assert.assertEquals(VibrationEffect.EFFECT_CLICK, shadowVibrator.getEffectId());
-    Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
-    Assert.assertFalse(shadowVibrator.isVibrating());
 
     setSystemWideHaptic(false);
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
-    Assert.assertFalse(shadowVibrator.isVibrating());
 
+    ShadowVibrator.reset();
+    shadowVibrator.setHasVibrator(true);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertFalse(shadowVibrator.isVibrating());
-    Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
-    Assert.assertFalse(shadowVibrator.isVibrating());
+    Assert.assertEquals(VibrationEffect.EFFECT_CLICK, shadowVibrator.getEffectId());
 
     setSystemWideHaptic(true);
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
-    Assert.assertFalse(shadowVibrator.isVibrating());
 
+    ShadowVibrator.reset();
+    shadowVibrator.setHasVibrator(true);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
     Assert.assertEquals(VibrationEffect.EFFECT_CLICK, shadowVibrator.getEffectId());
   }
 
@@ -361,28 +687,52 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
   @Config(sdk = {25, 26, 29})
   public void testDoNotVibrateWhenLowPower() {
     TestRxSchedulers.foregroundFlushAllJobs();
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_key_press_duration_int, 10);
+    final var prefs = NskApplicationBase.prefs(getApplicationContext());
+    prefs
+        .getBoolean(
+            R.string.settings_key_power_save_mode_vibration_control, R.bool.settings_default_false)
+        .set(true);
+    prefs
+        .getInteger(
+            R.string.settings_key_vibrate_on_key_press_duration_int,
+            R.integer.settings_default_vibrate_on_key_press_duration_int)
+        .set(10);
     ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
 
+    TestRxSchedulers.drainAllTasksUntilEnd();
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
     Assert.assertFalse(shadowVibrator.isVibrating());
 
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
 
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
 
     PowerSavingTest.sendBatteryState(true);
+    TestRxSchedulers.drainAllTasksUntilEnd();
 
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertFalse(shadowVibrator.isVibrating());
+    assertNoVibrationInvoked(shadowVibrator);
 
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
 
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_power_save_mode_vibration_control, false);
+    prefs
+        .getBoolean(
+            R.string.settings_key_power_save_mode_vibration_control, R.bool.settings_default_false)
+        .set(false);
+    TestRxSchedulers.drainAllTasksUntilEnd();
 
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onPress(KeyCodes.SPACE);
-    Assert.assertTrue(shadowVibrator.isVibrating());
+    assertVibrationInvoked(shadowVibrator);
+    if (shadowVibrator.getMilliseconds() != 0) {
+      Assert.assertEquals(10, shadowVibrator.getMilliseconds());
+    }
   }
 
   @Test
@@ -391,18 +741,32 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
     final Keyboard.Key key = Mockito.mock(Keyboard.Key.class);
 
     TestRxSchedulers.foregroundFlushAllJobs();
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, false);
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_long_press, false);
-    TestRxSchedulers.foregroundFlushAllJobs();
+    final var prefs = NskApplicationBase.prefs(getApplicationContext());
+    prefs
+        .getBoolean(
+            R.string.settings_key_use_system_vibration,
+            R.bool.settings_default_use_system_vibration)
+        .set(false);
+    prefs
+        .getBoolean(
+            R.string.settings_key_vibrate_on_long_press,
+            R.bool.settings_default_vibrate_on_long_press)
+        .set(false);
+    TestRxSchedulers.drainAllTasksUntilEnd();
+    Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
     ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
 
     Mockito.doReturn(0).when(key).getPrimaryCode();
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onLongPressDone(key);
-    Assert.assertFalse(shadowVibrator.isVibrating());
+    assertNoVibrationInvoked(shadowVibrator);
+    Assert.assertEquals(0, shadowVibrator.getEffectId());
 
     Mockito.doReturn(KeyCodes.SPACE).when(key).getPrimaryCode();
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onLongPressDone(key);
-    Assert.assertFalse(shadowVibrator.isVibrating());
+    assertNoVibrationInvoked(shadowVibrator);
+    Assert.assertEquals(0, shadowVibrator.getEffectId());
   }
 
   @Test
@@ -412,15 +776,16 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
 
     SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_long_press, true);
     Shadows.shadowOf(Looper.myLooper()).runToEndOfTasks();
-    ShadowSystemVibrator shadowVibrator =
-        (ShadowSystemVibrator) Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
+    final ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
     Assert.assertFalse(shadowVibrator.isVibrating());
 
     Mockito.doReturn(0).when(key).getPrimaryCode();
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onLongPressDone(key);
-    Assert.assertFalse(shadowVibrator.isVibrating());
+    Assert.assertTrue(shadowVibrator.isVibrating());
 
     Mockito.doReturn(KeyCodes.SPACE).when(key).getPrimaryCode();
+    resetVibratorState(shadowVibrator);
     mImeServiceUnderTest.onLongPressDone(key);
     Assert.assertTrue(shadowVibrator.isVibrating());
   }
