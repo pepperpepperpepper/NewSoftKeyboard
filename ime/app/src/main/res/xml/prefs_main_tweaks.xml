@@ -33,6 +33,10 @@
         android:summaryOn="@string/show_crash_notification_on_summary"
         android:title="@string/show_crash_notification" />
 
+    <Preference android:key="programmable_api_settings"
+        android:summary="@string/keyboard_api_entry_summary"
+        android:title="@string/keyboard_api_settings_title" />
+
     <Preference android:key="dev_tools"
         android:summary="@string/click_for_developer_features_summary"
         android:title="@string/click_for_developer_features" />

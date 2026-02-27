@@ -37,6 +37,18 @@ public interface Suggest {
    */
   List<CharSequence> getNextSuggestions(CharSequence previousWord, boolean inAllUpperCaseState);
 
+  /** Notifies the next-word pipeline that a word was committed to the editor. */
+  void notifyWordCommitted(@NonNull CharSequence committedWord);
+
+  /**
+   * Seeds the next-word prediction engines' in-memory context window from existing editor text.
+   *
+   * <p>This must not learn or persist from the provided text.
+   */
+  default void seedNextWordEngineContextFromEditorText(@NonNull CharSequence textBeforeCursor) {
+    // optional: implemented by SuggestImpl
+  }
+
   /**
    * Returns a list of words that match the list of character codes passed in. This list will be
    * overwritten the next time this function is called.
@@ -57,6 +69,13 @@ public interface Suggest {
   boolean addWordToUserDictionary(String word);
 
   void removeWordFromUserDictionary(String word);
+
+  /**
+   * Clears user-generated learning data (for example: next-word history and auto-dictionary data).
+   *
+   * <p>This method must not export or log any user data.
+   */
+  void clearLearningData();
 
   void setTagsSearcher(@NonNull TagsExtractor extractor);
 

@@ -538,6 +538,7 @@ public class ImeServiceGimmicksTest extends ImeServiceBaseTest {
   @Test
   public void testDoesNotDeleteEntireWordWhenShiftDeleteInsideWordWhenNotPredicting() {
     simulateFinishInputFlow();
+    SharedPrefsHelper.setPrefsValue("settings_key_respect_app_no_suggestions_flag", true);
 
     mImeServiceUnderTest.getResources().getConfiguration().keyboard = Configuration.KEYBOARD_NOKEYS;
 
@@ -567,6 +568,7 @@ public class ImeServiceGimmicksTest extends ImeServiceBaseTest {
   @Test
   public void testHappyPathBackWordWhenNotPredicting() {
     simulateFinishInputFlow();
+    SharedPrefsHelper.setPrefsValue("settings_key_respect_app_no_suggestions_flag", true);
 
     mImeServiceUnderTest.getResources().getConfiguration().keyboard = Configuration.KEYBOARD_NOKEYS;
 

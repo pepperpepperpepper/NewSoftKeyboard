@@ -76,11 +76,7 @@ public class VoiceRecognitionTrigger {
     SpeechToTextBackend backend =
         SpeechToTextBackendRegistry.getSelectedBackend(mInputMethodService);
     if (backend != null) {
-      android.content.SharedPreferences prefs =
-          android.preference.PreferenceManager.getDefaultSharedPreferences(mInputMethodService);
-      if (prefs != null && backend.isConfigured(mInputMethodService, prefs)) {
-        return getThirdPartyTrigger(backend);
-      }
+      return getThirdPartyTrigger(backend);
     }
 
     if (ImeTrigger.isInstalled(mInputMethodService)) {
@@ -220,6 +216,12 @@ public class VoiceRecognitionTrigger {
     // The trigger is refreshed as the system may have changed in the meanwhile.
     mTrigger = getTrigger();
     applyCallbacksToThirdPartyTrigger();
+  }
+
+  public void onFinishInputView() {
+    if (mTrigger != null) {
+      mTrigger.onFinishInputView();
+    }
   }
 
   /**

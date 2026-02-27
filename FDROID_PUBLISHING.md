@@ -66,7 +66,7 @@
 ## One-Command Publish (canonical)
 
 - Script: `fdroid/scripts/publish.sh`
-- Prereqs: env file + `aapt` + `aws` + `/home/arch/fdroid-env/bin/fdroid`.
+- Prereqs: env file + `aapt` + `aws` + `fdroid` (on `PATH`).
 - Data dir default: `FDROID_DATA=/home/arch/fdroid` (overridable).
 - Env file resolution (first match wins):
   - `$ENV_FILE` or `$FDROID_ENV_FILE`

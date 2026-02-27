@@ -2,13 +2,13 @@ package wtf.uhoh.newsoftkeyboard.engine;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import java.util.List;
 import wtf.uhoh.newsoftkeyboard.engine.neural.NeuralPredictionManager;
 
 /** Adapter over NeuralPredictionManager to conform to PredictionEngine. */
 public final class NeuralEngineAdapter implements PredictionEngine {
 
   private final NeuralPredictionManager manager;
+  @Nullable private volatile NeuralPredictionManager.NextWordScoringContext lastScoringContext;
 
   public NeuralEngineAdapter(@NonNull NeuralPredictionManager manager) {
     this.manager = manager;
@@ -27,11 +27,13 @@ public final class NeuralEngineAdapter implements PredictionEngine {
 
   @Override
   public boolean activate() {
+    lastScoringContext = null;
     return manager.activate();
   }
 
   @Override
   public void deactivate() {
+    lastScoringContext = null;
     manager.deactivate();
   }
 
@@ -44,7 +46,14 @@ public final class NeuralEngineAdapter implements PredictionEngine {
   @NonNull
   @Override
   public PredictionResult predict(@NonNull String[] contextTokens, int maxResults) {
-    final List<String> preds = manager.predictNextWords(contextTokens, maxResults);
-    return new PredictionResult(preds);
+    final NeuralPredictionManager.NextWordPredictions prediction =
+        manager.predictNextWordsWithScoringContext(contextTokens, maxResults);
+    lastScoringContext = prediction.scoringContext;
+    return new PredictionResult(prediction.candidates);
+  }
+
+  @Nullable
+  public NeuralPredictionManager.NextWordScoringContext getLastScoringContext() {
+    return lastScoringContext;
   }
 }

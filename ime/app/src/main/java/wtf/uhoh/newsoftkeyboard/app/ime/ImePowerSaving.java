@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.android.PowerSaving;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewBase;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlayDataImpl;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlyDataCreator;
 import wtf.uhoh.newsoftkeyboard.rx.GenericOnError;
@@ -25,6 +26,7 @@ public abstract class ImePowerSaving extends ImeNightMode {
                 powerState -> {
                   mPowerState = powerState;
                   setupInputViewWatermark();
+                  applyWallpaperPerformancePolicy();
                 },
                 GenericOnError.onError("Power-Saving icon")));
 
@@ -35,6 +37,13 @@ public abstract class ImePowerSaving extends ImeNightMode {
                 R.bool.settings_default_true)
             .subscribe(
                 mToggleOverlayCreator::setToggle, GenericOnError.onError("Power-Saving theme")));
+  }
+
+  @Override
+  public android.view.View onCreateInputView() {
+    final android.view.View view = super.onCreateInputView();
+    applyWallpaperPerformancePolicy();
+    return view;
   }
 
   @NonNull
@@ -55,5 +64,13 @@ public abstract class ImePowerSaving extends ImeNightMode {
             this,
             new OverlayDataImpl(Color.BLACK, Color.BLACK, Color.DKGRAY, Color.GRAY, Color.DKGRAY),
             "PowerSaving");
+  }
+
+  private void applyWallpaperPerformancePolicy() {
+    final boolean allowExpensiveEffects = !mPowerState;
+    final var inputView = getInputView();
+    if (inputView instanceof KeyboardViewBase keyboardViewBase) {
+      keyboardViewBase.setAllowExpensiveWallpaperEffects(allowExpensiveEffects);
+    }
   }
 }

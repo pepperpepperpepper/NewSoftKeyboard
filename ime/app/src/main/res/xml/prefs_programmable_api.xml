@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:key="programmable_api_settings_screen"
+    android:title="@string/keyboard_api_settings_title">
+
+    <androidx.preference.CheckBoxPreference
+        android:defaultValue="@bool/settings_default_keyboard_api_enabled"
+        android:key="@string/settings_key_keyboard_api_enabled"
+        android:persistent="true"
+        android:summary="@string/keyboard_api_enabled_summary"
+        android:title="@string/keyboard_api_enabled_title" />
+
+    <androidx.preference.CheckBoxPreference
+        android:defaultValue="@bool/settings_default_keyboard_api_high_risk_actions_enabled"
+        android:dependency="@string/settings_key_keyboard_api_enabled"
+        android:key="@string/settings_key_keyboard_api_high_risk_actions_enabled"
+        android:persistent="true"
+        android:summary="@string/keyboard_api_high_risk_enabled_summary"
+        android:title="@string/keyboard_api_high_risk_enabled_title" />
+
+    <androidx.preference.CheckBoxPreference
+        android:defaultValue="@bool/settings_default_keyboard_api_clipboard_copy_cut_enabled"
+        android:dependency="@string/settings_key_keyboard_api_high_risk_actions_enabled"
+        android:key="@string/settings_key_keyboard_api_clipboard_copy_cut_enabled"
+        android:persistent="true"
+        android:summary="@string/keyboard_api_clipboard_copy_cut_enabled_summary"
+        android:title="@string/keyboard_api_clipboard_copy_cut_enabled_title" />
+
+    <androidx.preference.CheckBoxPreference
+        android:defaultValue="@bool/settings_default_keyboard_api_automation_controllers_enabled"
+        android:dependency="@string/settings_key_keyboard_api_high_risk_actions_enabled"
+        android:key="@string/settings_key_keyboard_api_automation_controllers_enabled"
+        android:persistent="true"
+        android:summary="@string/keyboard_api_automation_controllers_enabled_summary"
+        android:title="@string/keyboard_api_automation_controllers_enabled_title" />
+
+    <PreferenceCategory
+        android:key="keyboard_api_pairing_category"
+        android:title="@string/keyboard_api_pairing_requests_title" />
+
+    <PreferenceCategory
+        android:key="keyboard_api_audit_category"
+        android:title="@string/keyboard_api_audit_title">
+
+        <Preference
+            android:key="keyboard_api_audit_view"
+            android:summary="@string/keyboard_api_audit_view_summary"
+            android:title="@string/keyboard_api_audit_view_title" />
+
+        <Preference
+            android:key="keyboard_api_audit_clear"
+            android:summary="@string/keyboard_api_audit_clear_summary"
+            android:title="@string/keyboard_api_audit_clear_title" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="keyboard_api_controllers_category"
+        android:title="@string/keyboard_api_controllers_title">
+
+        <Preference
+            android:key="keyboard_api_add_controller"
+            android:summary="@string/keyboard_api_add_controller_summary"
+            android:title="@string/keyboard_api_add_controller_title" />
+    </PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>

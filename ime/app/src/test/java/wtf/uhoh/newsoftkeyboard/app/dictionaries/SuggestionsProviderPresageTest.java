@@ -43,6 +43,7 @@ public class SuggestionsProviderPresageTest {
     stageTestModel();
     mSuggestionsProvider = new SuggestionsProvider(getApplicationContext());
     SharedPrefsHelper.setPrefsValue(R.string.settings_key_prediction_engine_mode, "ngram");
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_next_word_dictionary_type, "words");
     TestRxSchedulers.drainAllTasks();
   }
 
@@ -58,6 +59,7 @@ public class SuggestionsProviderPresageTest {
   public void testPresagePredictionsAppendedToNextWords() {
     final List<CharSequence> suggestions = new ArrayList<>();
 
+    mSuggestionsProvider.notifyWordCommitted("hello");
     mSuggestionsProvider.getNextWords("hello", suggestions, 3);
 
     assertTrue(

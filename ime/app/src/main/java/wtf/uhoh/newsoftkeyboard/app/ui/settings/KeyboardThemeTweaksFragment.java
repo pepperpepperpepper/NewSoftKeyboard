@@ -20,7 +20,6 @@ import android.os.Bundle;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.navigation.Navigation;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import wtf.uhoh.newsoftkeyboard.R;
@@ -39,11 +38,7 @@ public class KeyboardThemeTweaksFragment extends PreferenceFragmentCompat {
     super.onViewCreated(view, savedInstanceState);
     final Preference wallpaper = findPreference(KEY_WALLPAPER_CUSTOMIZATION);
     if (wallpaper != null) {
-      wallpaper.setOnPreferenceClickListener(
-          ignored -> {
-            Navigation.findNavController(view).navigate(R.id.keyboardThemeCustomizationFragment);
-            return true;
-          });
+      AppearanceOwnerNavigation.bindPreference(wallpaper, view, KEY_WALLPAPER_CUSTOMIZATION);
     }
   }
 }

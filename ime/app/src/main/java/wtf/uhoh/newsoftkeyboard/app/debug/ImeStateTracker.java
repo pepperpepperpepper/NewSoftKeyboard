@@ -125,26 +125,30 @@ public final class ImeStateTracker {
         mLastKeyboardId = keyboard.getKeyboardAddOn().getId();
         mLastKeyboardName = keyboard.getKeyboardAddOn().getName();
         mLastKeyboard = keyboard;
-        Log.d(
-            TAG,
-            "recordVisible id="
-                + mLastKeyboardId
-                + " name="
-                + mLastKeyboardName
-                + " view="
-                + (mLastKeyboardView != null
-                    ? mLastKeyboardView.getClass().getSimpleName()
-                    : "null"));
+        if (BuildConfig.DEBUG) {
+          Log.d(
+              TAG,
+              "recordVisible id="
+                  + mLastKeyboardId
+                  + " name="
+                  + mLastKeyboardName
+                  + " view="
+                  + (mLastKeyboardView != null
+                      ? mLastKeyboardView.getClass().getSimpleName()
+                      : "null"));
+        }
       } else {
         mLastKeyboardId = null;
         mLastKeyboardName = null;
         mLastKeyboard = null;
-        Log.d(
-            TAG,
-            "recordVisible missing add-on? keyboard="
-                + keyboard
-                + " addon="
-                + (keyboard != null ? keyboard.getKeyboardAddOn() : "null"));
+        if (BuildConfig.DEBUG) {
+          Log.d(
+              TAG,
+              "recordVisible missing add-on? keyboard="
+                  + keyboard
+                  + " addon="
+                  + (keyboard != null ? keyboard.getKeyboardAddOn() : "null"));
+        }
       }
       mLastEditorInfo = editorInfo;
       if (BuildConfig.DEBUG) {
@@ -192,10 +196,12 @@ public final class ImeStateTracker {
 
     void setKeyboardView(@Nullable KeyboardViewBase keyboardView) {
       mLastKeyboardView = keyboardView;
-      Log.d(
-          TAG,
-          "reportKeyboardView set to "
-              + (keyboardView != null ? keyboardView.getClass().getName() : "null"));
+      if (BuildConfig.DEBUG) {
+        Log.d(
+            TAG,
+            "reportKeyboardView set to "
+                + (keyboardView != null ? keyboardView.getClass().getName() : "null"));
+      }
     }
 
     @Nullable
@@ -203,14 +209,21 @@ public final class ImeStateTracker {
       KeyboardDefinition keyboard = mLastKeyboard;
       KeyboardViewBase keyboardView = mLastKeyboardView;
       if (keyboard == null || keyboardView == null) {
-        Log.d(
-            TAG,
-            "computeKeyCenterByPopup missing data keyboard=" + keyboard + " view=" + keyboardView);
+        if (BuildConfig.DEBUG) {
+          Log.d(
+              TAG,
+              "computeKeyCenterByPopup missing data keyboard="
+                  + keyboard
+                  + " view="
+                  + keyboardView);
+        }
         return null;
       }
       List<Keyboard.Key> keys = keyboard.getKeys();
       if (keys == null) {
-        Log.d(TAG, "computeKeyCenterByPopup keys list null");
+        if (BuildConfig.DEBUG) {
+          Log.d(TAG, "computeKeyCenterByPopup keys list null");
+        }
         return null;
       }
       for (Keyboard.Key key : keys) {
@@ -226,7 +239,9 @@ public final class ImeStateTracker {
           return new PointF(centerX, centerY);
         }
       }
-      Log.d(TAG, "computeKeyCenterByPopup could not find popupCharacters=" + popupCharacters);
+      if (BuildConfig.DEBUG) {
+        Log.d(TAG, "computeKeyCenterByPopup could not find popupCharacters=" + popupCharacters);
+      }
       return null;
     }
 
@@ -235,17 +250,21 @@ public final class ImeStateTracker {
       KeyboardDefinition keyboard = mLastKeyboard;
       KeyboardViewBase keyboardView = mLastKeyboardView;
       if (keyboard == null || keyboardView == null) {
-        Log.d(
-            TAG,
-            "computeKeyCenterByPrimaryCode missing data keyboard="
-                + keyboard
-                + " view="
-                + keyboardView);
+        if (BuildConfig.DEBUG) {
+          Log.d(
+              TAG,
+              "computeKeyCenterByPrimaryCode missing data keyboard="
+                  + keyboard
+                  + " view="
+                  + keyboardView);
+        }
         return null;
       }
       List<Keyboard.Key> keys = keyboard.getKeys();
       if (keys == null) {
-        Log.d(TAG, "computeKeyCenterByPrimaryCode keys list null");
+        if (BuildConfig.DEBUG) {
+          Log.d(TAG, "computeKeyCenterByPrimaryCode keys list null");
+        }
         return null;
       }
       for (Keyboard.Key key : keys) {
@@ -271,8 +290,8 @@ public final class ImeStateTracker {
                 + primaryCode
                 + " existing="
                 + codes);
+        Log.d(TAG, "computeKeyCenterByPrimaryCode could not find code=" + primaryCode);
       }
-      Log.d(TAG, "computeKeyCenterByPrimaryCode could not find code=" + primaryCode);
       return null;
     }
 

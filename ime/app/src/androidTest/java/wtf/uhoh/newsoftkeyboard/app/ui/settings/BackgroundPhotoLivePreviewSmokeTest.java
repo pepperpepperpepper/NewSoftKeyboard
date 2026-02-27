@@ -4,7 +4,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import androidx.navigation.Navigation;
+import android.view.View;
 import androidx.preference.Preference;
 import androidx.preference.SeekBarPreference;
 import androidx.test.core.app.ActivityScenario;
@@ -15,8 +15,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import wtf.uhoh.newsoftkeyboard.R;
-import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
-import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperLayer;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
 
 @RunWith(AndroidJUnit4.class)
@@ -35,10 +34,7 @@ public class BackgroundPhotoLivePreviewSmokeTest {
   @Test
   public void livePreviewUpdatesDimAndKeyOpacity() throws Exception {
     final Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-    final KeyboardTheme theme =
-        NskApplicationBase.getKeyboardThemeFactory(context).getEnabledAddOn();
-    Assert.assertNotNull(theme);
-    final String themeId = theme.getId();
+    final String themeId = ThemeCustomizationSmokeTestUtils.ensureDefaultThemeEnabled(context);
 
     final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
     store.clear(themeId);
@@ -57,32 +53,53 @@ public class BackgroundPhotoLivePreviewSmokeTest {
       store.importFromUri(themeId, source);
 
       final Intent intent =
-          new Intent(context, MainSettingsActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+          new Intent(context, MainSettingsActivity.class)
+              .setAction(Intent.ACTION_VIEW)
+              .setData(Uri.parse(context.getString(R.string.deeplink_url_themes)))
+              .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
       scenario = ActivityScenario.launch(intent);
       scenario.onActivity(
           activity -> {
             ThemeCustomizationSmokeTestUtils.ensureKeyboardEnabled(activity);
-            Navigation.findNavController(activity, R.id.nav_host_fragment)
-                .navigate(R.id.keyboardThemeCustomizationFragment);
           });
-
-      ThemeCustomizationSmokeTestUtils.waitForDimOverlayAlpha(scenario, 102, 15_000L);
 
       scenario.onActivity(
           activity -> {
-            final KeyboardThemeCustomizationFragment fragment =
-                ThemeCustomizationSmokeTestUtils.findNavFragment(
-                    activity, KeyboardThemeCustomizationFragment.class);
-            Assert.assertNotNull(fragment);
-            final Preference dimPref =
-                ThemeCustomizationSmokeTestUtils.findPreferenceByTitle(
-                    fragment.getPreferenceScreen(),
-                    activity.getString(R.string.keyboard_theme_wallpaper_customization_dim_title));
-            Assert.assertTrue(dimPref instanceof SeekBarPreference);
-            Assert.assertTrue(dimPref.callChangeListener(60));
+            final View row = activity.findViewById(R.id.keyboard_theme_customize_row);
+            if (row == null) throw new AssertionError("Customize row not found.");
+            row.performClick();
           });
-      ThemeCustomizationSmokeTestUtils.waitForDimOverlayAlpha(
-          scenario, Math.round(255f * 0.60f), 15_000L);
+      ThemeCustomizationSmokeTestUtils.waitForLivePreviewBackgroundDrawable(scenario, 15_000L);
+      final int baselineLuma =
+          ThemeCustomizationSmokeTestUtils.captureLivePreviewBackgroundLuma(scenario);
+
+      scenario.onActivity(
+          activity -> {
+            final KeyboardWallpaperLayer[] stack = store.getBackgroundLayerStack(themeId).clone();
+            boolean updated = false;
+            for (int i = 0; i < stack.length; i++) {
+              final KeyboardWallpaperLayer layer = stack[i];
+              if (layer == null) continue;
+              if (layer.type() != KeyboardWallpaperLayer.TYPE_DIM) continue;
+              stack[i] =
+                  new KeyboardWallpaperLayer(
+                      layer.type(),
+                      true /*enabled*/,
+                      60 /*opacityPercent*/,
+                      layer.blendMode(),
+                      layer.argb(),
+                      layer.argb2(),
+                      layer.direction(),
+                      layer.scalePercent(),
+                      layer.gradientStops());
+              updated = true;
+              break;
+            }
+            Assert.assertTrue("Dim layer not found in background layer stack", updated);
+            store.setBackgroundLayerStack(themeId, stack);
+          });
+      ThemeCustomizationSmokeTestUtils.waitForLivePreviewBackgroundLumaAtMost(
+          scenario, Math.max(0, baselineLuma - 5), 15_000L);
 
       scenario.onActivity(
           activity -> {

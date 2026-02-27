@@ -3,8 +3,11 @@ package wtf.uhoh.newsoftkeyboard.nextword.pipeline;
 import androidx.annotation.NonNull;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -17,6 +20,10 @@ import java.util.Set;
  * avoid behavioral changes. Add that later once UX rules are finalized.
  */
 public final class CandidateNormalizer {
+
+  private static final Set<String> DOMAIN_LIKE_TOKENS =
+      java.util.Collections.unmodifiableSet(
+          new HashSet<>(java.util.Arrays.asList("com", "http", "https", "www")));
 
   /**
    * Normalizes a list of model predictions.
@@ -34,6 +41,18 @@ public final class CandidateNormalizer {
   }
 
   /**
+   * Normalizes next-word candidates specifically for suggestion-strip UX.
+   *
+   * <p>In addition to {@link #normalize(List)} it also filters out low-quality domain-like tokens
+   * (e.g., {@code com/http/www}) unless the recent context looks URL-like.
+   */
+  @NonNull
+  public static List<String> normalizeForNextWordUx(
+      @NonNull Deque<String> contextTokens, @NonNull List<String> raw) {
+    return normalizeForNextWordUx(contextTokens, raw, java.util.Collections.emptySet());
+  }
+
+  /**
    * Normalizes a list of model predictions, skipping any token whose lowercase form appears in
    * {@code disallowLower}. If everything is filtered out, returns an empty list (callers may choose
    * to fall back to legacy sources instead of repeating the same token).
@@ -48,7 +67,7 @@ public final class CandidateNormalizer {
       final String trimmed = token.trim();
       if (trimmed.isEmpty()) continue;
       if (isPunctuationOnly(trimmed)) continue;
-      final String lower = trimmed.toLowerCase();
+      final String lower = trimmed.toLowerCase(Locale.ROOT);
       if (disallowLower.contains(lower)) continue;
       if (seenLower.add(lower)) {
         // preserve original casing for now
@@ -56,6 +75,52 @@ public final class CandidateNormalizer {
       }
     }
     return out;
+  }
+
+  /**
+   * Normalizes next-word candidates for suggestion-strip UX, skipping any token whose lowercase
+   * form appears in {@code disallowLower} and filtering out domain-like tokens when the recent
+   * context does not appear URL-like.
+   *
+   * <p>If everything is filtered out, returns an empty list (callers may choose to fall back to
+   * other sources instead of surfacing low-quality artifacts).
+   */
+  @NonNull
+  public static List<String> normalizeForNextWordUx(
+      @NonNull Deque<String> contextTokens,
+      @NonNull List<String> raw,
+      @NonNull Collection<String> disallowLower) {
+    final boolean allowDomainLike = looksLikeDomainContext(contextTokens);
+    final List<String> out = new ArrayList<>(raw.size());
+    final Set<String> seenLower = new HashSet<>();
+    for (String token : raw) {
+      if (token == null) continue;
+      final String trimmed = token.trim();
+      if (trimmed.isEmpty()) continue;
+      if (isPunctuationOnly(trimmed)) continue;
+      final String lower = trimmed.toLowerCase(Locale.ROOT);
+      if (disallowLower.contains(lower)) continue;
+      if (!allowDomainLike && DOMAIN_LIKE_TOKENS.contains(lower)) continue;
+      if (seenLower.add(lower)) {
+        // preserve original casing for now
+        out.add(trimmed);
+      }
+    }
+    return out;
+  }
+
+  private static boolean looksLikeDomainContext(@NonNull Deque<String> contextTokens) {
+    if (contextTokens.isEmpty()) return false;
+    final Iterator<String> it = contextTokens.descendingIterator();
+    for (int i = 0; it.hasNext() && i < 2; i++) {
+      final String token = it.next();
+      if (token == null) continue;
+      final String lower = token.toLowerCase(Locale.ROOT);
+      if (lower.contains(".")) return true;
+      if (lower.startsWith("http")) return true;
+      if (lower.startsWith("www")) return true;
+    }
+    return false;
   }
 
   private static boolean isPunctuationOnly(@NonNull String s) {

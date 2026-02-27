@@ -33,7 +33,9 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
   @Nullable private ListPreference mPredictionEnginePreference;
   @Nullable private Preference mManageModelsPreference;
   @Nullable private Preference mClearDataPreference;
+  @Nullable private Preference mPredictionContextWindowPreference;
   @Nullable private String mPredictionEnginePrefKey;
+  @Nullable private String mPredictionContextWindowPrefKey;
   @Nullable private String mNextWordModePrefKey;
   @Nullable private String mNeuralFailurePrefKey;
   @Nullable private ModelStore mModelStore;
@@ -61,12 +63,15 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
     addPreferencesFromResource(R.xml.prefs_next_word);
     mModelStore = new ModelStore(requireContext());
     mPredictionEnginePrefKey = getString(R.string.settings_key_prediction_engine_mode);
+    mPredictionContextWindowPrefKey =
+        getString(R.string.settings_key_prediction_context_window_words);
     mNextWordModePrefKey = getString(R.string.settings_key_next_word_dictionary_type);
     mNeuralFailurePrefKey = getString(R.string.settings_key_prediction_engine_last_neural_error);
     Preference enginePreference = findPreference(mPredictionEnginePrefKey);
     if (enginePreference instanceof ListPreference) {
       mPredictionEnginePreference = (ListPreference) enginePreference;
     }
+    mPredictionContextWindowPreference = findPreference(mPredictionContextWindowPrefKey);
     mManageModelsPreference = findPreference(KEY_NAV_MANAGE_MODELS);
     if (mManageModelsPreference == null) {
       mManageModelsPreference =
@@ -204,11 +209,16 @@ public class NextWordSettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void updatePredictionEnginePreferenceEnabled() {
-    if (mPredictionEnginePreference == null) {
+    if (mPredictionEnginePreference == null && mPredictionContextWindowPreference == null) {
       return;
     }
     final boolean suggestionsEnabled = isNextWordSuggestionsEnabled();
-    mPredictionEnginePreference.setEnabled(suggestionsEnabled);
+    if (mPredictionEnginePreference != null) {
+      mPredictionEnginePreference.setEnabled(suggestionsEnabled);
+    }
+    if (mPredictionContextWindowPreference != null) {
+      mPredictionContextWindowPreference.setEnabled(suggestionsEnabled);
+    }
     if (!suggestionsEnabled) {
       // ensure summary reflects disabled state
       updatePredictionEnginePreferenceSummary("none");

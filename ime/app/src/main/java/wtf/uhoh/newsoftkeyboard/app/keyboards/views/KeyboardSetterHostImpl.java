@@ -85,6 +85,6 @@ class KeyboardSetterHostImpl implements KeyboardSetter.Host {
 
   @Override
   public void setSpecialKeysIconsAndLabels() {
-    host.setSpecialKeysIconsAndLabels();
+    host.getThemeAndDrawController().setSpecialKeysIconsAndLabels();
   }
 }

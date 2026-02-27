@@ -90,6 +90,10 @@ public final class InputViewLifecycleHandler {
   }
 
   public void onFinishInputView(@Nullable DevStripActionProvider devToolsAction) {
+    final VoiceImeController voiceImeController = host.getVoiceImeController();
+    if (voiceImeController != null) {
+      voiceImeController.onFinishInputView();
+    }
     host.getInputView().resetInputView();
     if (BuildConfig.DEBUG && devToolsAction != null) {
       host.getInputViewContainer().removeStripAction(devToolsAction);

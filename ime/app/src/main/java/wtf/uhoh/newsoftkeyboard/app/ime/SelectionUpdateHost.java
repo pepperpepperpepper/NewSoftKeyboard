@@ -27,6 +27,16 @@ final class SelectionUpdateHost implements SelectionUpdateProcessor.Host {
   }
 
   @Override
+  public void onUnexpectedCursorMoveWhileNotPredicting() {
+    host.onUnexpectedCursorMoveWhileNotPredicting();
+  }
+
+  @Override
+  public boolean isSelectionUpdateDelayed() {
+    return host.isSelectionUpdateDelayed();
+  }
+
+  @Override
   public InputConnectionRouter inputConnectionRouter() {
     return host.getInputConnectionRouter();
   }
@@ -69,6 +79,11 @@ final class SelectionUpdateHost implements SelectionUpdateProcessor.Host {
   @Override
   public void clearExpectingSelectionUpdate() {
     host.clearExpectingSelectionUpdate();
+  }
+
+  @Override
+  public void markSelectionUpdateReceived() {
+    host.markSelectionUpdateReceived();
   }
 
   @Override

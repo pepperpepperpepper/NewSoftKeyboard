@@ -30,6 +30,7 @@ import wtf.uhoh.newsoftkeyboard.R;
 public class MainTweaksFragment extends PreferenceFragmentCompat {
 
   @VisibleForTesting static final String DEV_TOOLS_KEY = "dev_tools";
+  private static final String PROGRAMMABLE_API_KEY = "programmable_api_settings";
 
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -50,6 +51,11 @@ public class MainTweaksFragment extends PreferenceFragmentCompat {
     } else {
       preference.setOnPreferenceClickListener(this::onDevToolsPreferenceClicked);
     }
+
+    final Preference programmableApi = findPreference(PROGRAMMABLE_API_KEY);
+    if (programmableApi != null) {
+      programmableApi.setOnPreferenceClickListener(this::onProgrammableApiPreferenceClicked);
+    }
   }
 
   @Override
@@ -61,6 +67,12 @@ public class MainTweaksFragment extends PreferenceFragmentCompat {
   private boolean onDevToolsPreferenceClicked(Preference p) {
     Navigation.findNavController(requireView())
         .navigate(MainTweaksFragmentDirections.actionMainTweaksFragmentToDeveloperToolsFragment());
+    return true;
+  }
+
+  private boolean onProgrammableApiPreferenceClicked(Preference p) {
+    Navigation.findNavController(requireView())
+        .navigate(R.id.action_mainTweaksFragment_to_programmableApiSettingsFragment);
     return true;
   }
 }

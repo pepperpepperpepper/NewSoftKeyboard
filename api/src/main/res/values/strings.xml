@@ -78,6 +78,7 @@
     <string name="openai_error_api_key_unset">OpenAI API key is not set. Please configure it in settings.</string>
     <string name="openai_error_microphone_permission">Microphone permission not granted. Please add permission for microphone in app settings.</string>
     <string name="openai_error_endpoint_unset">OpenAI API endpoint is not set. Please configure it in settings.</string>
+    <string name="openai_error_endpoint_insecure">OpenAI API endpoint must use HTTPS.</string>
     <string name="openai_error_network">Network error occurred while contacting OpenAI API.</string>
     <string name="openai_error_api_error">OpenAI API error: %s</string>
     <string name="openai_error_recording_failed">Audio recording failed. Please try again.</string>
@@ -127,4 +128,6 @@
     <string name="elevenlabs_add_trailing_space_summary">Add space after transcribed text</string>
     <string name="elevenlabs_status_transcribing">Transcribing with ElevenLabs...</string>
     <string name="elevenlabs_error_api_key_unset">ElevenLabs API key is not set. Please configure it in settings.</string>
+    <string name="elevenlabs_error_endpoint_unset">ElevenLabs API endpoint is not set. Please configure it in settings.</string>
+    <string name="elevenlabs_error_endpoint_insecure">ElevenLabs API endpoint must use HTTPS.</string>
 </resources>

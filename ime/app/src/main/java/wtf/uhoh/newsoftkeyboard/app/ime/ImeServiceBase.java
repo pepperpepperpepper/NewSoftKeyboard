@@ -19,23 +19,23 @@ package wtf.uhoh.newsoftkeyboard.app.ime;
 import android.content.Intent;
 import android.os.IBinder;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
+import android.view.inputmethod.ExtractedTextRequest;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
-import com.google.android.voiceime.VoiceImeController;
 import com.google.android.voiceime.VoiceImeController.VoiceInputState;
-import com.google.android.voiceime.VoiceRecognitionTrigger;
+import com.google.android.voiceime.VoiceImeTextPrecommitProcessor;
+import java.util.List;
 import java.util.Locale;
 import wtf.uhoh.newsoftkeyboard.BuildConfig;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.debug.ImeStateTracker;
 import wtf.uhoh.newsoftkeyboard.app.dictionaries.ExternalDictionaryFactory;
+import wtf.uhoh.newsoftkeyboard.app.ime.context.ContextProfilesController;
 import wtf.uhoh.newsoftkeyboard.app.ime.hosts.ImeFunctionKeyHost;
 import wtf.uhoh.newsoftkeyboard.app.ime.hosts.ImeModifierKeyStateHost;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
@@ -47,9 +47,12 @@ import wtf.uhoh.newsoftkeyboard.app.ui.dev.DevStripActionProvider;
 import wtf.uhoh.newsoftkeyboard.app.ui.dev.DeveloperUtils;
 import wtf.uhoh.newsoftkeyboard.app.ui.support.VoiceInputNotInstalledActivity;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
+import wtf.uhoh.newsoftkeyboard.nextword.prediction.NextWordContextTokenizer;
+import wtf.uhoh.newsoftkeyboard.prefs.context.ContextProfilesStore;
 
 /** Input method implementation for QWERTY-ish keyboard. */
-public abstract class ImeServiceBase extends ImeColorizeNavBar {
+public abstract class ImeServiceBase extends ImeColorizeNavBar
+    implements VoiceImeTextPrecommitProcessor {
 
   private static final Object INSTANCE_LOCK = new Object();
   @Nullable private static ImeServiceBase sInstance;
@@ -87,14 +90,15 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
   private NavigationKeyHandler navigationKeyHandler;
   private StatusIconController statusIconController;
   private StatusIconHelper statusIconHelper;
-  private VoiceRecognitionTrigger mVoiceRecognitionTrigger;
-  private VoiceImeController voiceImeController;
-  private VoiceStatusRenderer voiceStatusRenderer = new VoiceStatusRenderer();
-  private VoiceUiHelper voiceUiHelper;
-  private boolean keepScreenOnForVoiceInput;
   private final FullscreenModeDecider fullscreenModeDecider = new FullscreenModeDecider();
   private final FullscreenExtractViewController fullscreenExtractViewController =
       new FullscreenExtractViewController();
+  @Nullable private ImeVoiceController voiceController;
+  @Nullable private ImeContextProfilesEffectsController contextProfilesEffectsController;
+  @Nullable private ImeSessionOverridesController sessionOverridesController;
+  @Nullable private ImeProgrammableApiController programmableApiController;
+
+  @Nullable private String lastEditorKeyForNextWordContext;
 
   @Nullable private DeleteActionHelper.Host deleteActionHost;
 
@@ -107,6 +111,22 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
 
   protected ImeServiceBase() {
     super();
+  }
+
+  @NonNull
+  public ImeProgrammableApiController getProgrammableApiController() {
+    if (programmableApiController == null) {
+      programmableApiController = new ImeProgrammableApiController(this);
+    }
+    return programmableApiController;
+  }
+
+  @NonNull
+  ImeSessionOverridesController getSessionOverridesController() {
+    if (sessionOverridesController == null) {
+      sessionOverridesController = new ImeSessionOverridesController(this);
+    }
+    return sessionOverridesController;
   }
 
   @NonNull
@@ -165,6 +185,8 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
     synchronized (INSTANCE_LOCK) {
       sInstance = this;
     }
+    voiceController = new ImeVoiceController(this);
+    contextProfilesEffectsController = new ImeContextProfilesEffectsController(this);
     getShiftStateController();
     if (!BuildConfig.DEBUG && BuildConfig.VERSION_NAME.endsWith("-SNAPSHOT")) {
       throw new RuntimeException("You can not run a 'RELEASE' build with a SNAPSHOT postfix!");
@@ -205,10 +227,11 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
     statusIconController = init.statusIconController();
     statusIconHelper = init.statusIconHelper();
     packageBroadcastRegistrar = init.packageBroadcastRegistrar();
-    mVoiceRecognitionTrigger = init.voiceRecognitionTrigger();
-    voiceImeController = init.voiceImeController();
-    voiceUiHelper = new VoiceUiHelper(voiceStatusRenderer, voiceImeController);
-    voiceImeController.attachCallbacks();
+    final ImeVoiceController voiceControllerRef = voiceController;
+    if (voiceControllerRef != null) {
+      voiceControllerRef.onVoiceInitialized(
+          init.voiceRecognitionTrigger(), init.voiceImeController());
+    }
 
     mDevToolsAction = new DevStripActionProvider(this);
   }
@@ -233,7 +256,8 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
   @Override
   public void onDestroy() {
     Logger.i(TAG, "ImeServiceBase has been destroyed! Cleaning resources..");
-    updateKeepScreenOnForVoiceInput(VoiceInputState.IDLE);
+    final ImeVoiceController controller = voiceController;
+    if (controller != null) controller.onDestroy();
     if (packageBroadcastRegistrar != null) {
       packageBroadcastRegistrar.unregister();
     }
@@ -273,6 +297,51 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
   }
 
   @Override
+  protected boolean shouldResetNextWordContextOnStartInput(
+      @NonNull EditorInfo attribute, boolean restarting) {
+    final String previousKey = lastEditorKeyForNextWordContext;
+    final String currentKey = buildEditorKeyForNextWordContext(attribute);
+    // Some editors/devices can provide incomplete EditorInfo during onStartInput(...) (e.g. missing
+    // packageName), and we don't want to wipe next-word context based on an unstable identity.
+    // Defer the reset decision to onStartInputView(...), where EditorInfo is typically stable.
+    if (currentKey == null) return false;
+    final boolean sameEditor = currentKey != null && currentKey.equals(previousKey);
+    final boolean readbackBlocked = isEditorTextReadbackBlockedForNextWordContext(attribute);
+    final boolean cursorHasContext = attribute.initialSelStart > 0 || attribute.initialSelEnd > 0;
+    final boolean preserveNextWordContext =
+        restarting || (readbackBlocked && sameEditor && cursorHasContext);
+    return !preserveNextWordContext;
+  }
+
+  @Override
+  public View onCreateInputView() {
+    final View view = super.onCreateInputView();
+    getSessionOverridesController().updateSessionOverridesIndicator();
+    return view;
+  }
+
+  @Nullable
+  private static String buildEditorKeyForNextWordContext(@NonNull EditorInfo editorInfo) {
+    final String pkg = editorInfo.packageName;
+    if (pkg == null || pkg.isEmpty()) return null;
+    // Keep this compact and stable. Avoid storing editor text/hints (privacy).
+    return pkg
+        + ":"
+        + editorInfo.fieldId
+        + ":"
+        + editorInfo.inputType
+        + ":"
+        + editorInfo.imeOptions;
+  }
+
+  private boolean isEditorTextReadbackBlockedForNextWordContext(@NonNull EditorInfo editorInfo) {
+    if (isTextPassword(editorInfo) || isNumberPassword(editorInfo)) return true;
+    if ((editorInfo.imeOptions & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0) return true;
+    if ((editorInfo.inputType & EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0) return true;
+    return getSuggest().isIncognitoMode();
+  }
+
+  @Override
   public void onStartInputView(final EditorInfo attribute, final boolean restarting) {
     Logger.v(
         TAG,
@@ -282,7 +351,190 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
         restarting);
 
     super.onStartInputView(attribute, restarting);
+    getSessionOverridesController().maybeClearSessionOverridesForNewEditor(attribute);
+    getSessionOverridesController().applySessionKeyboardOverrideIfAny(attribute);
+    final ImeContextProfilesEffectsController contextController = contextProfilesEffectsController;
+    if (contextController != null) contextController.onStartInputView(attribute);
     inputViewLifecycleHandler.onStartInputView(TAG, attribute, restarting, mDevToolsAction);
+    getSessionOverridesController().updateSessionOverridesIndicator();
+
+    // Ensure next-word context does not leak across editors when editor seeding is blocked. In
+    // those privacy-restricted cases we should preserve in-memory context when we appear to be
+    // returning to the same editor, even if `restarting=false` (some apps/devices restart the IME
+    // view this way on pause/resume).
+    final String previousKey = lastEditorKeyForNextWordContext;
+    final String currentKey = buildEditorKeyForNextWordContext(attribute);
+    final boolean sameEditor = currentKey != null && currentKey.equals(previousKey);
+    final boolean readbackBlocked = isEditorTextReadbackBlockedForNextWordContext(attribute);
+    final boolean cursorHasContext = attribute.initialSelStart > 0 || attribute.initialSelEnd > 0;
+    final boolean preserveNextWordContext =
+        restarting || (readbackBlocked && sameEditor && cursorHasContext);
+    lastEditorKeyForNextWordContext = currentKey;
+    if (!preserveNextWordContext) {
+      getSuggest().resetNextWordSentence();
+      clearLastCommittedWordForNextSuggestions();
+    }
+
+    maybeSeedNextWordEngineContextFromEditor(attribute);
+  }
+
+  private void maybeSeedNextWordEngineContextFromEditor(@NonNull EditorInfo attribute) {
+    if (isTextPassword(attribute) || isNumberPassword(attribute)) return;
+    if ((attribute.imeOptions & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0) return;
+    if ((attribute.inputType & EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0) return;
+    if (getSuggest().isIncognitoMode()) return;
+
+    final InputConnectionRouter router = getImeSessionState().getInputConnectionRouter();
+    if (!router.hasConnection()) return;
+    CharSequence beforeCursor = null;
+    ExtractedText extractedText = null;
+    try {
+      beforeCursor = router.getTextBeforeCursor(4096, 0);
+    } catch (Throwable t) {
+      // Some editors can throw while we query context. This is best-effort only.
+    }
+    if (beforeCursor == null || beforeCursor.length() == 0) {
+      try {
+        final ExtractedTextRequest request = new ExtractedTextRequest();
+        request.hintMaxChars = 4096;
+        request.hintMaxLines = 10;
+        extractedText = router.getExtractedText(request);
+        if (extractedText != null
+            && extractedText.text != null
+            && extractedText.text.length() > 0) {
+          final int selEnd =
+              Math.max(0, Math.min(extractedText.selectionEnd, extractedText.text.length()));
+          final int start = Math.max(0, selEnd - 4096);
+          beforeCursor = extractedText.text.subSequence(start, selEnd);
+        }
+      } catch (Throwable t) {
+        // Best-effort only; some editors can throw while we query extracted text.
+        return;
+      }
+    }
+    if (beforeCursor == null || beforeCursor.length() == 0) return;
+    CharSequence afterCursor = null;
+    try {
+      afterCursor = router.getTextAfterCursor(2, 0);
+    } catch (Throwable t) {
+      // Best-effort only; some editors can throw while we query context.
+    }
+
+    CharSequence seedTextBeforeCursor = beforeCursor;
+    if (isCursorInsideTokenForContextSeeding(beforeCursor, afterCursor, extractedText)) {
+      seedTextBeforeCursor = trimTrailingTokenFragment(beforeCursor);
+    }
+    getSuggest().seedNextWordEngineContextFromEditorText(seedTextBeforeCursor);
+
+    // If we have no in-session committed token yet, seed a best-effort "previous word" from the
+    // editor text so separator-driven next-word fallback requests work when the user resumes
+    // typing in an existing field.
+    if (lastCommittedWordForNextSuggestions().length() > 0) return;
+    if (afterCursor != null
+        && afterCursor.length() > 0
+        && !isWordSeparator(afterCursor.charAt(0))) {
+      return; // cursor is at the start/inside a token; let completion/correction flows handle it
+    }
+    if (afterCursor == null) {
+      // We couldn't read the next character. Best-effort: use ExtractedText if available to
+      // determine whether the cursor is touching a token.
+      if (extractedText == null) {
+        try {
+          final ExtractedTextRequest request = new ExtractedTextRequest();
+          request.hintMaxChars = 256;
+          request.hintMaxLines = 3;
+          extractedText = router.getExtractedText(request);
+        } catch (Throwable t) {
+          extractedText = null;
+        }
+      }
+      if (extractedText == null || extractedText.text == null || extractedText.text.length() == 0)
+        return;
+      final int selEnd = extractedText.selectionEnd;
+      if (selEnd < 0) return;
+      if (selEnd < extractedText.text.length()
+          && !isWordSeparator(extractedText.text.charAt(selEnd))) {
+        return; // cursor is at the start/inside a token
+      }
+    }
+    final List<String> tokens = NextWordContextTokenizer.tokenizeTextBeforeCursor(beforeCursor, 64);
+    if (tokens.isEmpty()) return;
+    seedLastCommittedWordForNextSuggestionsFromEditorText(tokens.get(tokens.size() - 1));
+  }
+
+  private static boolean isContextTokenChar(char c) {
+    if (Character.isLetterOrDigit(c)) return true;
+    // allow common intra-token joiners (matches NextWordContextTokenizer)
+    return c == '\'' || c == '\u2019' || c == '-' || c == '_';
+  }
+
+  private static boolean isCursorInsideTokenForContextSeeding(
+      @NonNull CharSequence beforeCursor,
+      @Nullable CharSequence afterCursor,
+      @Nullable ExtractedText extractedText) {
+    if (beforeCursor.length() == 0) return false;
+    final char lastBefore = beforeCursor.charAt(beforeCursor.length() - 1);
+    if (!isContextTokenChar(lastBefore)) return false;
+
+    if (afterCursor != null && afterCursor.length() > 0) {
+      return isContextTokenChar(afterCursor.charAt(0));
+    }
+    if (afterCursor == null
+        && extractedText != null
+        && extractedText.text != null
+        && extractedText.text.length() > 0) {
+      final int selEnd = extractedText.selectionEnd;
+      if (selEnd >= 0 && selEnd < extractedText.text.length()) {
+        return isContextTokenChar(extractedText.text.charAt(selEnd));
+      }
+    }
+    return false;
+  }
+
+  @NonNull
+  private static CharSequence trimTrailingTokenFragment(@NonNull CharSequence beforeCursor) {
+    int i = beforeCursor.length() - 1;
+    while (i >= 0 && isContextTokenChar(beforeCursor.charAt(i))) i--;
+    return beforeCursor.subSequence(0, i + 1);
+  }
+
+  @Nullable
+  ContextProfilesController getContextProfilesController() {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    return controller != null ? controller.getContextProfilesController() : null;
+  }
+
+  @Nullable
+  ContextProfilesStore getContextProfilesStore() {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    return controller != null ? controller.getContextProfilesStore() : null;
+  }
+
+  boolean areContextProfilesTemporarilyDisabled() {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    return controller != null && controller.areTemporarilyDisabled();
+  }
+
+  void applyContextProfileOverridesForCurrentEditor(@NonNull EditorInfo editorInfo) {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    if (controller != null) controller.applyContextProfileOverridesForCurrentEditor(editorInfo);
+  }
+
+  void clearContextProfileOverrides() {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    if (controller != null) controller.clearContextProfileOverrides();
+  }
+
+  @Override
+  @NonNull
+  public String onVoiceTextPreCommit(@NonNull String formattedText) {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    return controller != null ? controller.onVoiceTextPreCommit(formattedText) : formattedText;
+  }
+
+  void applyContextProfileTypedRulesForEditorAction(@Nullable EditorInfo editorInfo) {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    if (controller != null) controller.applyContextProfileTypedRulesForEditorAction(editorInfo);
   }
 
   @Override
@@ -295,6 +547,7 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
   @Override
   public void onFinishInputView(boolean finishingInput) {
     ImeStateTracker.onKeyboardHidden();
+    getSessionOverridesController().clearSessionOverridesOnFinishInputView();
     super.onFinishInputView(finishingInput);
     inputViewLifecycleHandler.onFinishInputView(mDevToolsAction);
   }
@@ -339,7 +592,8 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
   }
 
   void updateVoiceKeyState() {
-    voiceUiHelper.updateVoiceKeyState(getCurrentAlphabetKeyboard(), getInputView());
+    final ImeVoiceController controller = voiceController;
+    if (controller != null) controller.updateVoiceKeyState();
   }
 
   /**
@@ -347,32 +601,13 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
    * voice recording is active.
    */
   void updateSpaceBarRecordingStatus(boolean isRecording) {
-    voiceUiHelper.updateSpaceBarRecordingStatus(
-        isRecording, getCurrentAlphabetKeyboard(), getInputView());
-    updateKeepScreenOnForVoiceInput(voiceImeController.getCurrentState());
+    final ImeVoiceController controller = voiceController;
+    if (controller != null) controller.updateSpaceBarRecordingStatus(isRecording);
   }
 
   void updateVoiceInputStatus(VoiceInputState newState) {
-    voiceUiHelper.updateVoiceInputStatus(newState, getCurrentAlphabetKeyboard(), getInputView());
-    updateKeepScreenOnForVoiceInput(newState);
-  }
-
-  private void updateKeepScreenOnForVoiceInput(@NonNull VoiceInputState voiceInputState) {
-    final boolean keepScreenOn =
-        voiceInputState == VoiceInputState.RECORDING || voiceInputState == VoiceInputState.WAITING;
-    if (keepScreenOn == keepScreenOnForVoiceInput) {
-      return;
-    }
-    keepScreenOnForVoiceInput = keepScreenOn;
-    final Window window = getWindow().getWindow();
-    if (window == null) {
-      return;
-    }
-    if (keepScreenOn) {
-      window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-    } else {
-      window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-    }
+    final ImeVoiceController controller = voiceController;
+    if (controller != null) controller.updateVoiceInputStatus(newState);
   }
 
   void handleEmojiSearchRequest() {
@@ -390,6 +625,8 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
       int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI) {
     // Ensure editor state tracker is in sync before applying wrap/separator logic.
     getCursorPosition();
+    final ImeContextProfilesEffectsController contextController = contextProfilesEffectsController;
+    if (contextController != null) contextController.clearVoiceSuggestionState();
 
     final InputConnectionRouter inputConnectionRouter =
         getImeSessionState().getInputConnectionRouter();
@@ -419,7 +656,34 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
     if (emojiSearchController.handleOverlayText(text)) {
       return;
     }
+    final ImeContextProfilesEffectsController contextController = contextProfilesEffectsController;
+    if (contextController != null) contextController.clearVoiceSuggestionState();
     super.onText(key, text);
+  }
+
+  @Override
+  public void pickSuggestionManually(
+      int index, CharSequence suggestion, boolean withAutoSpaceEnabled) {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    if (controller != null
+        && controller.handlePickSuggestionManually(index, suggestion, withAutoSpaceEnabled)) {
+      return;
+    }
+    super.pickSuggestionManually(index, suggestion, withAutoSpaceEnabled);
+  }
+
+  /* package */ void pickSuggestionManuallyFromContextProfilesController(
+      int index, @Nullable CharSequence suggestion, boolean withAutoSpaceEnabled) {
+    super.pickSuggestionManually(index, suggestion, withAutoSpaceEnabled);
+  }
+
+  @Override
+  public void handleSeparator(int primaryCode) {
+    super.handleSeparator(primaryCode);
+    final EditorInfo editorInfo = currentInputEditorInfo();
+    if (editorInfo == null) return;
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    if (controller != null) controller.applyContextProfileTypedRulesOnSeparator(editorInfo);
   }
 
   @Override
@@ -544,7 +808,10 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
     super.onWindowHidden();
     emojiSearchController.onWindowHidden();
 
-    abortCorrectionAndResetPredictionState(true);
+    // Window-hide is often a transient lifecycle event (pause/resume, app switching, etc.). Avoid
+    // wiping next-word context here; editor-boundary + privacy resets are handled in
+    // onStartInputView(...).
+    abortCorrectionAndResetPredictionState(true, /* resetNextWordSentence= */ false);
   }
 
   private void nextAlterKeyboard(EditorInfo currentEditorInfo) {
@@ -613,6 +880,21 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
     OptionsMenuLauncher.show(new ImeOptionsMenuHost(this));
   }
 
+  boolean isContextProfilesGloballyEnabledForOptionsMenu() {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    return controller != null && controller.isContextProfilesGloballyEnabledForOptionsMenu();
+  }
+
+  boolean isContextProfilesEnabledForOptionsMenu() {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    return controller != null && controller.isContextProfilesEnabledForOptionsMenu();
+  }
+
+  void setContextProfilesTemporarilyDisabledForOptionsMenu(boolean disabled) {
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    if (controller != null) controller.setTemporarilyDisabledForOptionsMenu(disabled);
+  }
+
   @Override
   protected void onOrientationChanged(int oldOrientation, int newOrientation) {
     super.onOrientationChanged(oldOrientation, newOrientation);
@@ -652,6 +934,8 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar {
     }
     super.onUpdateSelection(
         oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd);
+    final ImeContextProfilesEffectsController controller = contextProfilesEffectsController;
+    if (controller != null) controller.showPendingVoiceSuggestionIfAny();
   }
 
   void updateShiftStateNow() {

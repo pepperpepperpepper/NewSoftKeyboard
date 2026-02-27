@@ -138,7 +138,6 @@ public class OpenAISpeechSettingsFragment extends PreferenceFragmentCompat {
   public void showPromptDialog() {
     Preference promptPreference = findPreference(getString(R.string.settings_key_openai_prompt));
     if (promptPreference != null) {
-      android.util.Log.d("OpenAISpeechSettings", "Showing prompt dialog");
       promptPreference.performClick();
     }
   }
@@ -147,18 +146,7 @@ public class OpenAISpeechSettingsFragment extends PreferenceFragmentCompat {
     OpenAIPromptEditTextPreference promptPreference =
         findPreference(getString(R.string.settings_key_openai_prompt));
     if (promptPreference != null) {
-      android.util.Log.d("OpenAISpeechSettings", "Updating prompt preference with: " + promptText);
       promptPreference.setText(promptText);
-      // Also ensure the SharedPreferences is updated
-      android.content.SharedPreferences prefs =
-          requireContext()
-              .getSharedPreferences(
-                  "wtf.uhoh.newsoftkeyboard_preferences", android.content.Context.MODE_PRIVATE);
-      android.content.SharedPreferences.Editor editor = prefs.edit();
-      editor.putString(getString(R.string.settings_key_openai_prompt), promptText);
-      editor.apply();
-      android.util.Log.d(
-          "OpenAISpeechSettings", "Also updated SharedPreferences with prompt: " + promptText);
     }
   }
 }

@@ -169,7 +169,20 @@ public class ImeServiceDictionaryEnablingTest extends ImeServiceBaseTest {
   }
 
   @Test
-  public void testDictionariesNotCreatedForNoSuggestions() {
+  public void testDictionariesCreatedForNoSuggestionsButWithoutAutoPick() {
+    final EditorInfo editorInfo = TestableImeService.createEditorInfoTextWithSuggestions();
+    editorInfo.inputType += EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+    simulateFinishInputFlow();
+    simulateOnStartInputFlow(false, editorInfo);
+    mImeServiceUnderTest.simulateKeyPress('h');
+
+    Assert.assertTrue(mImeServiceUnderTest.isPredictionOn());
+    Assert.assertFalse(mImeServiceUnderTest.isAutoCorrect());
+  }
+
+  @Test
+  public void testDictionariesNotCreatedForNoSuggestionsWhenRespectNoSuggestionsEnabled() {
+    SharedPrefsHelper.setPrefsValue("settings_key_respect_app_no_suggestions_flag", true);
     final EditorInfo editorInfo = TestableImeService.createEditorInfoTextWithSuggestions();
     editorInfo.inputType += EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
     simulateFinishInputFlow();

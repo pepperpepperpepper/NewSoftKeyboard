@@ -136,30 +136,69 @@ public class KeyboardWallpaperResolverTest {
 
     writeSmallBitmap(store.getWallpaperFile(themeId), Color.RED);
     store.setWallpaperMode(
-        themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
+        themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
     store.setKeyAlphaPercent(themeId, 25);
     store.setDimPercent(themeId, 10);
 
     final Rect viewBounds = new Rect(0, 0, 480, 320);
     final CountDownLatch invalidateLatch = new CountDownLatch(1);
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
+    final KeyFaceOverlay overlay =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
 
-    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
     assertEquals(null, overlay.paint());
     assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
 
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
+    final KeyFaceOverlay overlay2 =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertEquals(
-        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT, overlay2.mode());
+        KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TINT, overlay2.mode());
     assertNotNull(overlay2.paint());
     assertFalse(overlay2.matchKeyShape());
 
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay3 =
+    final KeyFaceOverlay overlay3 =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertSame(overlay2, overlay3);
     assertSame(overlay2.paint(), overlay3.paint());
+  }
+
+  @Test
+  public void testKeyFaceOverlayResolvesBlendModeWhenAllowed() throws Exception {
+    final Context context = getApplicationContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final KeyboardWallpaperResolver resolver = new KeyboardWallpaperResolver(context);
+
+    final String themeId = "test-theme-key-overlay-blend-mode";
+    final KeyboardTheme theme = createLocalTheme(context, themeId);
+
+    writeSmallBitmap(store.getWallpaperFile(themeId), Color.CYAN);
+    store.setWallpaperMode(
+        themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE);
+    store.setKeyAlphaPercent(themeId, 25);
+    store.setKeyBlendMode(
+        themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_MULTIPLY);
+
+    final Rect viewBounds = new Rect(0, 0, 480, 320);
+    final CountDownLatch invalidateLatch = new CountDownLatch(1);
+    final KeyFaceOverlay overlay =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+
+    assertEquals(KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(null, overlay.paint());
+    assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
+
+    final KeyFaceOverlay overlay2 =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
+    assertEquals(
+        KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE, overlay2.mode());
+    assertNotNull(overlay2.paint());
+    assertEquals(
+        KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_MULTIPLY, overlay2.blendMode());
+
+    final KeyFaceOverlay overlayCheap =
+        resolver.resolveKeyFaceOverlay(theme, viewBounds, false, invalidateLatch::countDown);
+    assertEquals(
+        KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_NORMAL, overlayCheap.blendMode());
   }
 
   @Test
@@ -173,23 +212,23 @@ public class KeyboardWallpaperResolverTest {
 
     writeSmallBitmap(store.getWallpaperFile(themeId), Color.MAGENTA);
     store.setWallpaperMode(
-        themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE);
+        themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE);
     store.setKeyAlphaPercent(themeId, 25);
     store.setMatchKeyShapeEnabled(themeId, true);
 
     final Rect viewBounds = new Rect(0, 0, 480, 320);
     final CountDownLatch invalidateLatch = new CountDownLatch(1);
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
+    final KeyFaceOverlay overlay =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
 
-    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
     assertEquals(null, overlay.paint());
     assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
 
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
+    final KeyFaceOverlay overlay2 =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertEquals(
-        KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE, overlay2.mode());
+        KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE, overlay2.mode());
     assertNotNull(overlay2.paint());
     assertTrue(overlay2.matchKeyShape());
   }
@@ -205,18 +244,18 @@ public class KeyboardWallpaperResolverTest {
 
     writeSmallBitmap(store.getWallpaperFile(themeId), Color.GREEN);
     store.setWallpaperMode(
-        themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
+        themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
     store.setKeyAlphaPercent(themeId, 25);
 
     final Rect viewBounds = new Rect(0, 0, 480, 320);
     final CountDownLatch invalidateLatch = new CountDownLatch(1);
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
+    final KeyFaceOverlay overlay =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
-    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
     assertEquals(null, overlay.paint());
     assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
 
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlayReady =
+    final KeyFaceOverlay overlayReady =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertNotNull(overlayReady.paint());
     assertNotNull(overlayReady.paint().getShader());
@@ -228,7 +267,7 @@ public class KeyboardWallpaperResolverTest {
 
     store.setWallpaperRotationDegrees(themeId, 90);
 
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
+    final KeyFaceOverlay overlay2 =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertNotNull(overlay2.paint());
     assertNotNull(overlay2.paint().getShader());
@@ -252,18 +291,18 @@ public class KeyboardWallpaperResolverTest {
 
     writeSmallBitmap(store.getWallpaperFile(themeId), Color.CYAN);
     store.setWallpaperMode(
-        themeId, KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
+        themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TINT);
     store.setKeyAlphaPercent(themeId, 25);
 
     final Rect viewBounds = new Rect(0, 0, 480, 320);
     final CountDownLatch invalidateLatch = new CountDownLatch(1);
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay =
+    final KeyFaceOverlay overlay =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
-    assertEquals(KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
+    assertEquals(KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_ONLY, overlay.mode());
     assertEquals(null, overlay.paint());
     assertTrue(awaitLatchAndIdleMainLooper(invalidateLatch, 2, TimeUnit.SECONDS));
 
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlayReady =
+    final KeyFaceOverlay overlayReady =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertNotNull(overlayReady.paint());
     assertNotNull(overlayReady.paint().getShader());
@@ -273,9 +312,9 @@ public class KeyboardWallpaperResolverTest {
     final float[] v1 = new float[9];
     m1.getValues(v1);
 
-    store.setWallpaperAnchor(themeId, KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_TOP_LEFT);
+    store.setWallpaperAnchor(themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_TOP_LEFT);
 
-    final KeyboardWallpaperResolver.KeyFaceOverlay overlay2 =
+    final KeyFaceOverlay overlay2 =
         resolver.resolveKeyFaceOverlay(theme, viewBounds, invalidateLatch::countDown);
     assertNotNull(overlay2.paint());
     assertNotNull(overlay2.paint().getShader());

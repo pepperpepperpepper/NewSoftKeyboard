@@ -98,7 +98,17 @@ public abstract class ImeServiceBaseTest {
   }
 
   @After
-  public void tearDownForImeServiceBase() throws Exception {}
+  public void tearDownForImeServiceBase() throws Exception {
+    // Robolectric service shutdown currently has a few brittle edge-cases in this test-suite.
+    // We still need to avoid leaking a global IME instance across test classes (e.g. KeyboardApi).
+    try {
+      final var instanceField = ImeServiceBase.class.getDeclaredField("sInstance");
+      instanceField.setAccessible(true);
+      instanceField.set(null, null);
+    } catch (Exception ignored) {
+      // Best-effort cleanup.
+    }
+  }
 
   protected final InputMethodManagerShadow getShadowInputMethodManager() {
     return mInputMethodManagerShadow;

@@ -748,6 +748,8 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
 
     mClipboardManager.setPrimaryClip(null /*I know what I'm doing with this null*/);
     Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
+    Assert.assertNull(
+        mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
   }
 
   @Test
@@ -761,10 +763,12 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
 
     mClipboardManager.clearPrimaryClip();
     Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
+    Assert.assertNull(
+        mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
   }
 
   @Test
-  public void testHideActionIfKeyPressedButLeavesHintForDuration() {
+  public void testHideActionIfKeyPressedHidesStripAction() {
     mClipboardManager.setPrimaryClip(
         new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
 
@@ -773,14 +777,24 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
     Assert.assertNotNull(
         mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
     mImeServiceUnderTest.simulateKeyPress('a');
-    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
-    Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
-    ShadowSystemClock.advanceBy(Duration.of(2, ChronoUnit.MINUTES));
-    mImeServiceUnderTest.simulateKeyPress('a');
-    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
     Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
     Assert.assertNull(
         mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
+  }
+
+  @Test
+  public void testAlwaysVisibleSettingKeepsStripActionOnKeyPress() {
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_clipboard_action_always_visible, true);
+    mClipboardManager.setPrimaryClip(
+        new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
+
+    simulateOnStartInputFlow();
+    Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
+
+    mImeServiceUnderTest.simulateKeyPress('a');
+
+    Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
+    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
   }
 
   @Test
@@ -882,6 +896,21 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
   }
 
   @Test
+  public void testAlwaysVisibleSettingKeepsStripActionForOldEntries() {
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_clipboard_action_always_visible, true);
+    simulateFinishInputFlow();
+    mClipboardManager.setPrimaryClip(
+        new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
+    ShadowSystemClock.advanceBy(Duration.of(121, ChronoUnit.SECONDS));
+    simulateOnStartInputFlow();
+
+    Assert.assertNotNull(
+        mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
+    Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
+    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
+  }
+
+  @Test
   public void testShowHintStripActionIfClipboardEntryIsKindaOld() {
     simulateFinishInputFlow();
     mClipboardManager.setPrimaryClip(
@@ -893,10 +922,6 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
     Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
     Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
     ShadowSystemClock.advanceBy(Duration.of(120, ChronoUnit.SECONDS));
-    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
-    Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
-    Assert.assertNotNull(
-        mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
     mImeServiceUnderTest.simulateKeyPress('a');
     Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
     Assert.assertNull(

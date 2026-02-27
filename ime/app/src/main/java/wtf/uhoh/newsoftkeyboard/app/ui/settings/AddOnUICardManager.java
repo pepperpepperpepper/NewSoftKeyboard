@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import wtf.uhoh.newsoftkeyboard.BuildConfig;
 
 public class AddOnUICardManager {
   private static final String TAG = "AddOnUICardManager";
@@ -27,10 +28,15 @@ public class AddOnUICardManager {
     try {
       context.getPackageManager().getPackageInfo(card.getPackageName(), 0);
     } catch (PackageManager.NameNotFoundException e) {
-      Log.w(TAG, "Attempted to register UI card for uninstalled package: " + card.getPackageName());
+      if (BuildConfig.DEBUG) {
+        Log.w(
+            TAG, "Attempted to register UI card for uninstalled package: " + card.getPackageName());
+      }
       return;
     }
-    Log.i(TAG, "Registering card for " + card.getPackageName() + " title=" + card.getTitle());
+    if (BuildConfig.DEBUG) {
+      Log.i(TAG, "Registering card for " + card.getPackageName() + " title=" + card.getTitle());
+    }
 
     Set<String> registeredCards = preferences.getStringSet(REGISTERED_CARDS_KEY, new HashSet<>());
     Set<String> updatedCards = new HashSet<>(registeredCards);
@@ -46,12 +52,14 @@ public class AddOnUICardManager {
         .putString(cardKey, cardData)
         .apply();
 
-    Log.i(
-        TAG,
-        "Registered UI card for package: "
-            + card.getPackageName()
-            + " cards now="
-            + updatedCards.size());
+    if (BuildConfig.DEBUG) {
+      Log.i(
+          TAG,
+          "Registered UI card for package: "
+              + card.getPackageName()
+              + " cards now="
+              + updatedCards.size());
+    }
   }
 
   public void unregisterUICard(String packageName) {
@@ -61,15 +69,19 @@ public class AddOnUICardManager {
 
     preferences.edit().putStringSet(REGISTERED_CARDS_KEY, updatedCards).remove(packageName).apply();
 
-    Log.i(
-        TAG,
-        "Unregistered UI card for package: " + packageName + " cards now=" + updatedCards.size());
+    if (BuildConfig.DEBUG) {
+      Log.i(
+          TAG,
+          "Unregistered UI card for package: " + packageName + " cards now=" + updatedCards.size());
+    }
   }
 
   public List<AddOnUICard> getActiveUICards() {
     List<AddOnUICard> cards = new ArrayList<>();
     Set<String> registeredCards = preferences.getStringSet(REGISTERED_CARDS_KEY, new HashSet<>());
-    Log.i(TAG, "Loading active cards from prefs. stored ids=" + registeredCards);
+    if (BuildConfig.DEBUG) {
+      Log.i(TAG, "Loading active cards from prefs. stored ids=" + registeredCards);
+    }
 
     for (String packageName : registeredCards) {
       // Verify the package is still installed
@@ -79,7 +91,9 @@ public class AddOnUICardManager {
         if (cardData != null) {
           AddOnUICard card = jsonToCard(cardData);
           if (card != null) {
-            Log.i(TAG, "Loaded card for " + packageName + " title=" + card.getTitle());
+            if (BuildConfig.DEBUG) {
+              Log.i(TAG, "Loaded card for " + packageName + " title=" + card.getTitle());
+            }
             cards.add(card);
           }
         }

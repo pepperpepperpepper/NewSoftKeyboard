@@ -122,14 +122,11 @@ public class WordsSQLiteConnection extends SQLiteOpenHelper {
       if (res < 0) {
         Logger.e(
             TAG,
-            "Unable to insert '"
-                + word
-                + "' to SQLite storage ("
-                + mCurrentLocale
-                + "@"
-                + mDbName
-                + ")! Result:"
-                + res);
+            "Unable to insert word to SQLite storage (locale=%s@%s)! Result: %d. Word len=%d.",
+            mCurrentLocale,
+            mDbName,
+            res,
+            word.length());
       }
       db.close();
     }
@@ -140,6 +137,14 @@ public class WordsSQLiteConnection extends SQLiteOpenHelper {
       SQLiteDatabase db = getWritableDatabase();
 
       db.delete(TABLE_NAME, Words.WORD + "=?", new String[] {word});
+      db.close();
+    }
+  }
+
+  public void clearAllWords() {
+    synchronized (mDbName) {
+      SQLiteDatabase db = getWritableDatabase();
+      db.delete(TABLE_NAME, null, null);
       db.close();
     }
   }

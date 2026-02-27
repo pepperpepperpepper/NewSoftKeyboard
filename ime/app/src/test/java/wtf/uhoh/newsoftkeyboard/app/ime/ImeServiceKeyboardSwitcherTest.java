@@ -56,7 +56,7 @@ public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
     }
 
     Assert.assertEquals(
-        6, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
+        7, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
     Assert.assertNotNull(
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(0));
     Assert.assertNotNull(
@@ -70,6 +70,8 @@ public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(4));
     Assert.assertNull(
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(5));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(6));
 
     mImeServiceUnderTest.onLowMemory();
 
@@ -83,7 +85,7 @@ public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().get(2));
 
     Assert.assertEquals(
-        6, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
+        7, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
     Assert.assertNull(
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(0));
     Assert.assertNull(
@@ -97,6 +99,8 @@ public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(4));
     Assert.assertNull(
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(5));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(6));
   }
 
   @Test
@@ -127,7 +131,7 @@ public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
     }
 
     Assert.assertEquals(
-        6, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
+        7, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
     Assert.assertNotNull(
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(0));
     Assert.assertNotNull(
@@ -141,6 +145,8 @@ public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(4));
     Assert.assertNull(
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(5));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(6));
 
     mImeServiceUnderTest.onLowMemory();
 
@@ -154,7 +160,7 @@ public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedAlphabetKeyboards().get(2));
 
     Assert.assertEquals(
-        6, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
+        7, mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().size());
     Assert.assertNull(
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(0));
     Assert.assertNotNull(
@@ -168,6 +174,8 @@ public class ImeServiceKeyboardSwitcherTest extends ImeServiceBaseTest {
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(4));
     Assert.assertNull(
         mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(5));
+    Assert.assertNull(
+        mImeServiceUnderTest.getKeyboardSwitcherForTests().getCachedSymbolsKeyboards().get(6));
   }
 
   @Test

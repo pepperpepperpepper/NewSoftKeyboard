@@ -46,6 +46,7 @@ public class KeyIconDrawerTest {
             iconResolver,
             /* currentLabel= */ "",
             new Rect(),
+            /* iconTintColor= */ 0xFF000000,
             code -> "fallback");
 
     Assert.assertNull(result);
@@ -71,6 +72,7 @@ public class KeyIconDrawerTest {
             iconResolver,
             /* currentLabel= */ "1",
             new Rect(),
+            /* iconTintColor= */ 0xFF000000,
             code -> "fallback");
 
     Assert.assertNull(result);

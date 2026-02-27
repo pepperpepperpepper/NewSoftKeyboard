@@ -15,6 +15,15 @@
             android:summaryOff="@string/candidates_off_summary" />
 
         <androidx.preference.CheckBoxPreference
+            android:defaultValue="@bool/settings_default_respect_app_no_suggestions_flag"
+            android:dependency="candidates_on"
+            android:key="@string/settings_key_respect_app_no_suggestions_flag"
+            android:persistent="true"
+            android:summaryOn="@string/respect_app_no_suggestions_flag_summary_on"
+            android:summaryOff="@string/respect_app_no_suggestions_flag_summary_off"
+            android:title="@string/respect_app_no_suggestions_flag_title" />
+
+        <androidx.preference.CheckBoxPreference
             android:defaultValue="true"
             android:key="auto_caps"
             android:persistent="true"
@@ -93,6 +102,11 @@
             android:title="@string/abbreviation_dict_editor"
             android:key="nav:abbreviation_editor"
             android:dependency="@string/settings_key_quick_fix" />
+
+        <Preference
+            android:key="nav:context_profiles"
+            android:title="@string/context_profiles_settings_title"
+            android:summary="@string/context_profiles_settings_summary" />
 
         <androidx.preference.CheckBoxPreference
             android:defaultValue="@bool/settings_default_try_splitting_words_for_correction"
@@ -193,4 +207,3 @@
     </androidx.preference.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>
-

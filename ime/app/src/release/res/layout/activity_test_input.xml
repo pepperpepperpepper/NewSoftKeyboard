@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:padding="24dp">
 
-    <EditText
+    <wtf.uhoh.newsoftkeyboard.app.debug.TestInputEditText
         android:id="@+id/test_edit_text"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -16,4 +16,3 @@
         android:textCursorDrawable="@null" />
 
 </FrameLayout>
-

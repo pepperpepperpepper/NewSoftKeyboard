@@ -55,9 +55,7 @@ public class UserInterfaceSettingsFragment extends Fragment implements View.OnCl
     final NavController navController = Navigation.findNavController(requireView());
     switch (view.getId()) {
       case R.id.settings_tile_themes:
-        navController.navigate(
-            UserInterfaceSettingsFragmentDirections
-                .actionUserInterfaceSettingsFragmentToKeyboardThemeSelectorFragment());
+        AppearanceOwnerNavigation.navigateToOwner(view, "nav:theme_selector");
         break;
       case R.id.settings_tile_effects:
         navController.navigate(

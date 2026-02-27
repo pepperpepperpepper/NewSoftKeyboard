@@ -17,6 +17,7 @@
 package com.google.android.voiceime;
 
 import android.content.Context;
+import android.net.Uri;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import java.io.File;
@@ -51,11 +52,18 @@ public final class ElevenLabsTranscriber {
       boolean addTrailingSpace,
       @NonNull Callback callback) {
 
+    String sanitizedEndpoint = endpoint.trim();
+    if (!isHttpsUrl(sanitizedEndpoint)) {
+      callback.onError(context.getString(R.string.elevenlabs_error_endpoint_insecure));
+      return;
+    }
+
     new Thread(
             () -> {
               try {
                 String result =
-                    performRequest(audioFile, mediaType, apiKey, endpoint, modelId, language);
+                    performRequest(
+                        audioFile, mediaType, apiKey, sanitizedEndpoint, modelId, language);
                 if (addTrailingSpace) {
                   result = result + " ";
                 }
@@ -69,6 +77,15 @@ public final class ElevenLabsTranscriber {
               }
             })
         .start();
+  }
+
+  private static boolean isHttpsUrl(@NonNull String rawUrl) {
+    try {
+      Uri uri = Uri.parse(rawUrl);
+      return uri != null && "https".equalsIgnoreCase(uri.getScheme());
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   private String performRequest(

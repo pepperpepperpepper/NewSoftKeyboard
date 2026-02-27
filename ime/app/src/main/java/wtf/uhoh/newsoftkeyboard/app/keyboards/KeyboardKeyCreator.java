@@ -27,7 +27,13 @@ final class KeyboardKeyCreator {
             resourceMapping, keyboardContext, parent, keyboardDimens, x, y, parser);
 
     if (key.mCodes.length > 0) {
-      final int primaryCode = key.mCodes[0];
+      int primaryCode = key.mCodes[0];
+
+      if (primaryCode == KeyCodes.ENTER) {
+        key = new EnterKey(resourceMapping, keyboardContext, parent, keyboardDimens, x, y, parser);
+        keyboard.setEnterKeyFromXml((EnterKey) key);
+        primaryCode = key.mCodes[0];
+      }
 
       // creating less sensitive keys if required
       switch (primaryCode) {

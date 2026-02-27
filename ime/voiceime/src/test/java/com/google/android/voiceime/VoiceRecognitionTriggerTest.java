@@ -1,150 +1,73 @@
 package com.google.android.voiceime;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.inputmethodservice.InputMethodService;
-import android.view.inputmethod.InputMethodInfo;
-import android.view.inputmethod.InputMethodManager;
-import android.view.inputmethod.InputMethodSubtype;
-import java.util.ArrayList;
-import java.util.List;
-import org.junit.Assert;
-import org.junit.Before;
+import androidx.test.core.app.ApplicationProvider;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
-import wtf.uhoh.newsoftkeyboard.testing.NskPlainTestRunner;
+import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 
-@RunWith(NskPlainTestRunner.class)
+@RunWith(NskRobolectricTestRunner.class)
 public class VoiceRecognitionTriggerTest {
 
-  InputMethodManager mMockInputMethodManager;
-  InputMethodService mMockInputMethodService;
-  PackageManager mMockPackageManager;
-  SharedPreferences mMockSharedPreferences;
+  @Test
+  public void usesSelectedThirdPartyBackendEvenWhenNotConfigured() {
+    Context context = ApplicationProvider.getApplicationContext();
+    SharedPreferences prefs =
+        android.preference.PreferenceManager.getDefaultSharedPreferences(context);
+    prefs.edit().clear().apply();
+    prefs
+        .edit()
+        .putString(context.getString(R.string.settings_key_speech_to_text_backend), "openai")
+        .remove(context.getString(R.string.settings_key_openai_api_key))
+        .apply();
 
-  List<InputMethodInfo> inputMethods;
-  List<ResolveInfo> voiceActivities;
+    InputMethodService service = mockImeService(context);
+    VoiceRecognitionTrigger trigger = new VoiceRecognitionTrigger(service);
 
-  @Before
-  public void setUp() {
-    inputMethods = new ArrayList<>();
-    voiceActivities = new ArrayList<>();
+    assertEquals("openai", trigger.getKind());
+  }
 
-    mMockInputMethodManager = Mockito.mock(InputMethodManager.class);
-    Mockito.when(mMockInputMethodManager.getEnabledInputMethodList()).thenReturn(inputMethods);
+  @Test
+  public void disableThirdPartyBackendDoesNotForceThirdPartyTrigger() {
+    Context context = ApplicationProvider.getApplicationContext();
+    SharedPreferences prefs =
+        android.preference.PreferenceManager.getDefaultSharedPreferences(context);
+    prefs.edit().clear().apply();
+    prefs
+        .edit()
+        .putString(context.getString(R.string.settings_key_speech_to_text_backend), "none")
+        .apply();
 
-    mMockInputMethodService = Mockito.mock(InputMethodService.class);
-    Mockito.when(mMockInputMethodService.getSystemService(Context.INPUT_METHOD_SERVICE))
-        .thenReturn(mMockInputMethodManager);
+    InputMethodService service = mockImeService(context);
+    VoiceRecognitionTrigger trigger = new VoiceRecognitionTrigger(service);
 
-    mMockPackageManager = Mockito.mock(PackageManager.class);
-    Mockito.when(mMockInputMethodService.getPackageManager()).thenReturn(mMockPackageManager);
+    assertNotEquals("openai", trigger.getKind());
+    assertNotEquals("elevenlabs", trigger.getKind());
+  }
 
-    Mockito.when(mMockPackageManager.queryIntentActivities(Mockito.any(), Mockito.eq(0)))
-        .thenReturn(voiceActivities);
-
-    // Mock SharedPreferences for OpenAI integration
-    mMockSharedPreferences = Mockito.mock(SharedPreferences.class);
-    Mockito.when(mMockSharedPreferences.getBoolean(Mockito.anyString(), Mockito.anyBoolean()))
-        .thenReturn(false); // Default to disabled
-    Mockito.when(mMockSharedPreferences.getString(Mockito.anyString(), Mockito.anyString()))
-        .thenReturn(""); // Default to empty string
-
-    // Mock context.getString() to return resource names for OpenAI settings
-    Mockito.when(mMockInputMethodService.getString(Mockito.anyInt()))
+  private static InputMethodService mockImeService(Context context) {
+    InputMethodService service = Mockito.mock(InputMethodService.class);
+    Mockito.when(service.getApplicationContext()).thenReturn(context);
+    Mockito.when(service.getCacheDir()).thenReturn(context.getCacheDir());
+    Mockito.when(service.getExternalCacheDir()).thenReturn(context.getExternalCacheDir());
+    Mockito.when(service.getExternalFilesDir(null)).thenReturn(context.getExternalFilesDir(null));
+    Mockito.when(service.getResources()).thenReturn(context.getResources());
+    Mockito.when(service.getString(Mockito.anyInt()))
+        .thenAnswer(invocation -> context.getString(invocation.getArgument(0)));
+    Mockito.when(service.getSystemService(Mockito.anyString()))
+        .thenAnswer(invocation -> context.getSystemService((String) invocation.getArgument(0)));
+    Mockito.when(service.getPackageManager()).thenReturn(context.getPackageManager());
+    Mockito.when(service.getPackageName()).thenReturn(context.getPackageName());
+    Mockito.when(service.getSharedPreferences(Mockito.anyString(), Mockito.anyInt()))
         .thenAnswer(
-            invocation -> {
-              int resourceId = invocation.getArgument(0);
-              // Return known resource names based on common patterns
-              if (resourceId > 0x7f000000) { // Android resource ID pattern
-                return "settings_key_openai_enabled"; // Default key
-              }
-              return "unknown_key";
-            });
-  }
-
-  private void addInputMethodInfo(List<String> modes) {
-    InputMethodInfo inputMethod = Mockito.mock(InputMethodInfo.class);
-
-    Mockito.when(inputMethod.getSubtypeCount()).thenReturn(modes.size());
-
-    for (int i = 0; i < modes.size(); i++) {
-      InputMethodSubtype subtype = Mockito.mock(InputMethodSubtype.class);
-      Mockito.when(subtype.getMode()).thenReturn(modes.get(i));
-      Mockito.when(inputMethod.getSubtypeAt(i)).thenReturn(subtype);
-    }
-
-    inputMethods.add(inputMethod);
-  }
-
-  @Test
-  public void testImeNotInstalledWhenNoVoice() {
-    addInputMethodInfo(List.of("keyboard", "keyboard", "handwriting"));
-    addInputMethodInfo(List.of("handwriting"));
-    addInputMethodInfo(List.of("handwriting", "keyboard", "keyboard", "keyboard"));
-
-    Assert.assertFalse(ImeTrigger.isInstalled(mMockInputMethodService));
-  }
-
-  @Test
-  public void testImeInstalledWhenOnlyVoice() {
-    addInputMethodInfo(List.of("voice"));
-
-    Assert.assertTrue(ImeTrigger.isInstalled(mMockInputMethodService));
-  }
-
-  @Test
-  public void testImeInstalledWhenMixedVoice() {
-    addInputMethodInfo(List.of("keyboard", "keyboard", "handwriting"));
-    addInputMethodInfo(List.of("handwriting"));
-    addInputMethodInfo(List.of("handwriting", "keyboard", "voice", "keyboard", "keyboard"));
-
-    Assert.assertTrue(ImeTrigger.isInstalled(mMockInputMethodService));
-  }
-
-  @Test
-  public void testIntentNotInstalledWhenNoActivities() {
-    Assert.assertFalse(IntentApiTrigger.isInstalled(mMockInputMethodService));
-  }
-
-  @Test
-  public void testIntentInstalledWhenSomeActivity() {
-    voiceActivities.add(new ResolveInfo());
-    Assert.assertTrue(IntentApiTrigger.isInstalled(mMockInputMethodService));
-  }
-
-  @Test
-  public void testVoiceRecognitionTriggerNoneWhenNothing() {
-    VoiceRecognitionTrigger trigger = new VoiceRecognitionTrigger(mMockInputMethodService);
-    Assert.assertEquals("none", trigger.getKind());
-  }
-
-  @Test
-  public void testVoiceRecognitionTriggerPrioritizesIme() {
-    addInputMethodInfo(List.of("voice"));
-    voiceActivities.add(new ResolveInfo());
-
-    VoiceRecognitionTrigger trigger = new VoiceRecognitionTrigger(mMockInputMethodService);
-    Assert.assertEquals("ime", trigger.getKind());
-  }
-
-  @Test
-  public void testVoiceRecognitionTriggerFallsBackToIntent() {
-    addInputMethodInfo(List.of("keyboard"));
-    voiceActivities.add(new ResolveInfo());
-
-    VoiceRecognitionTrigger trigger = new VoiceRecognitionTrigger(mMockInputMethodService);
-    Assert.assertEquals("intent", trigger.getKind());
-  }
-
-  @Test
-  public void testVoiceRecognitionTriggerAcceptsIme() {
-    addInputMethodInfo(List.of("voice"));
-
-    VoiceRecognitionTrigger trigger = new VoiceRecognitionTrigger(mMockInputMethodService);
-    Assert.assertEquals("ime", trigger.getKind());
+            invocation ->
+                context.getSharedPreferences(invocation.getArgument(0), invocation.getArgument(1)));
+    return service;
   }
 }

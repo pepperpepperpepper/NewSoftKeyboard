@@ -1,0 +1,158 @@
+package wtf.uhoh.newsoftkeyboard.app.theme;
+
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
+import android.graphics.Shader;
+import android.graphics.drawable.Drawable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+final class TrianglesDrawable extends Drawable {
+  private static final int TRIANGLES_SIZE_PX = 64;
+  @Nullable private static Bitmap cachedTrianglesBitmap;
+
+  private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+  private final android.graphics.BitmapShader shader;
+  private final Matrix shaderMatrix = new Matrix();
+  private int blendMode = KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_NORMAL;
+  @Nullable private Integer argb;
+  private int alpha = 0xFF;
+  private int scalePercent = KeyboardWallpaperLayer.DEFAULT_SCALE_PERCENT;
+
+  TrianglesDrawable() {
+    paint.setStyle(Paint.Style.FILL);
+    paint.setFilterBitmap(false);
+    paint.setDither(false);
+    shader = createTrianglesShader();
+    paint.setShader(shader);
+    updateShaderMatrix();
+    updateColorFilter();
+  }
+
+  void setBlendMode(int blendMode) {
+    final int normalized = KeyboardWallpaperOverrideConstants.normalizeBlendMode(blendMode);
+    if (this.blendMode == normalized) return;
+    this.blendMode = normalized;
+    KeyboardWallpaperRenderMath.configureBlendMode(paint, normalized);
+    invalidateSelf();
+  }
+
+  void setColor(@Nullable Integer argb) {
+    if ((this.argb == null && argb == null) || (this.argb != null && this.argb.equals(argb))) {
+      return;
+    }
+    this.argb = argb;
+    updateColorFilter();
+    invalidateSelf();
+  }
+
+  void setScalePercent(int scalePercent) {
+    final int clamped = Math.max(25, Math.min(400, scalePercent));
+    if (this.scalePercent == clamped) return;
+    this.scalePercent = clamped;
+    updateShaderMatrix();
+    invalidateSelf();
+  }
+
+  private void updateColorFilter() {
+    if (argb == null) {
+      paint.setColorFilter(null);
+    } else {
+      paint.setColorFilter(
+          new android.graphics.PorterDuffColorFilter(argb, PorterDuff.Mode.SRC_IN));
+    }
+  }
+
+  private void updateShaderMatrix() {
+    final float scale = scalePercent / 100f;
+    shaderMatrix.reset();
+    shaderMatrix.setScale(scale, scale);
+    shader.setLocalMatrix(shaderMatrix);
+  }
+
+  @Override
+  public void draw(@NonNull Canvas canvas) {
+    if (argb == null || alpha <= 0) return;
+    canvas.drawRect(getBounds(), paint);
+  }
+
+  @Override
+  public void setAlpha(int alpha) {
+    final int clamped = Math.max(0, Math.min(0xFF, alpha));
+    if (this.alpha == clamped) return;
+    this.alpha = clamped;
+    paint.setAlpha(clamped);
+    invalidateSelf();
+  }
+
+  @Override
+  public void setColorFilter(@Nullable ColorFilter colorFilter) {
+    paint.setColorFilter(colorFilter);
+    invalidateSelf();
+  }
+
+  @Override
+  public int getOpacity() {
+    return PixelFormat.TRANSLUCENT;
+  }
+
+  @NonNull
+  private static android.graphics.BitmapShader createTrianglesShader() {
+    final Bitmap bitmap = getTrianglesBitmap();
+    return new android.graphics.BitmapShader(
+        bitmap, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
+  }
+
+  @NonNull
+  private static Bitmap getTrianglesBitmap() {
+    if (cachedTrianglesBitmap != null && !cachedTrianglesBitmap.isRecycled())
+      return cachedTrianglesBitmap;
+    synchronized (TrianglesDrawable.class) {
+      if (cachedTrianglesBitmap != null && !cachedTrianglesBitmap.isRecycled())
+        return cachedTrianglesBitmap;
+      cachedTrianglesBitmap = generateTrianglesBitmap();
+      return cachedTrianglesBitmap;
+    }
+  }
+
+  @NonNull
+  private static Bitmap generateTrianglesBitmap() {
+    final int size = TRIANGLES_SIZE_PX;
+    final Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+    final Canvas canvas = new Canvas(bitmap);
+    final Paint triPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    triPaint.setStyle(Paint.Style.FILL);
+    triPaint.setColor(Color.WHITE);
+
+    final int cells = 2;
+    final float step = size / (float) cells;
+    for (int y = 0; y < cells; y++) {
+      for (int x = 0; x < cells; x++) {
+        final float left = x * step;
+        final float top = y * step;
+        final Path path = new Path();
+        if (((x + y) & 1) == 0) {
+          // Upward triangle.
+          path.moveTo(left + (step / 2f), top);
+          path.lineTo(left, top + step);
+          path.lineTo(left + step, top + step);
+        } else {
+          // Downward triangle.
+          path.moveTo(left, top);
+          path.lineTo(left + step, top);
+          path.lineTo(left + (step / 2f), top + step);
+        }
+        path.close();
+        canvas.drawPath(path, triPaint);
+      }
+    }
+    return bitmap;
+  }
+}

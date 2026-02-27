@@ -74,6 +74,11 @@ final class KeyboardModeApplier {
         keyboardLocked = true;
         keyboard = symbolsKeyboardProvider.apply(KeyboardSwitcher.SYMBOLS_KEYBOARD_NUMBERS_INDEX);
         break;
+      case KeyboardSwitcher.INPUT_MODE_PIN:
+        alphabetMode = false;
+        keyboardLocked = true;
+        keyboard = symbolsKeyboardProvider.apply(KeyboardSwitcher.SYMBOLS_KEYBOARD_PIN_INDEX);
+        break;
       case KeyboardSwitcher.INPUT_MODE_SYMBOLS:
         alphabetMode = false;
         keyboardLocked = true;

@@ -270,24 +270,25 @@
             android:summary="@string/pop_text_type_summary"
             android:title="@string/pop_text_type_dialog_title" />
 
-        <androidx.preference.CheckBoxPreference
-            android:defaultValue="@bool/settings_default_use_system_vibration"
-            android:key="@string/settings_key_use_system_vibration"
+        <net.evendanan.pixel.SlidePreference
+            android:defaultValue="@integer/settings_default_system_vibration_fallback_duration_int"
+            android:key="@string/settings_key_system_vibration_fallback_duration_int"
             android:persistent="true"
-            android:summaryOff="@string/use_system_vibration_off_summary"
-            android:summaryOn="@string/use_system_vibration_on_summary"
-            android:title="@string/use_system_vibration_title"
-            android:disableDependentsState="true" />
+            android:title="@string/system_vibration_fallback_duration_title"
+            app:slideMaximum="@integer/settings_default_vibrate_on_key_press_duration_max_value"
+            app:slideMinimum="@integer/settings_default_vibrate_on_key_press_duration_min_value"
+            app:valueStringTemplate="@string/vibrate_on_key_press_value_template" />
 
         <net.evendanan.pixel.SlidePreference
             android:defaultValue="@integer/settings_default_vibrate_on_key_press_duration_int"
-            android:dependency="@string/settings_key_use_system_vibration"
             android:key="@string/settings_key_vibrate_on_key_press_duration_int"
             app:slideMaximum="@integer/settings_default_vibrate_on_key_press_duration_max_value"
             android:persistent="true"
             android:title="@string/vibrate_on_key_press_title"
+            app:specialValues="@array/vibration_duration_special_values"
+            app:specialValueLabels="@array/vibration_duration_special_value_labels"
             app:valueStringTemplate="@string/vibrate_on_key_press_value_template"
-            app:slideMinimum="@integer/settings_default_vibrate_on_key_press_duration_min_value" />
+            app:slideMinimum="@integer/settings_default_vibrate_on_key_press_duration_min_value_including_system" />
 
         <androidx.preference.CheckBoxPreference
             android:defaultValue="@bool/settings_default_vibrate_on_long_press"

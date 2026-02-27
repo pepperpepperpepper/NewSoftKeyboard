@@ -27,13 +27,16 @@ public final class BackWordDeleter {
       // cursor == 2
       // length == 5
       // textAfterCursor = word.substring(2, 3) -> word.substring(cursor, length - cursor)
+      final int charsToDelete = currentComposedWord.cursorPosition();
       final CharSequence textAfterCursor =
           currentComposedWord
               .getTypedWord()
               .subSequence(currentComposedWord.cursorPosition(), currentComposedWord.charCount());
       currentComposedWord.reset();
       suggest.resetNextWordSentence();
-      inputConnectionRouter.setComposingText(textAfterCursor, 0);
+      if (!inputConnectionRouter.setComposingText(textAfterCursor, 0)) {
+        inputConnectionRouter.deleteSurroundingText(charsToDelete, 0);
+      }
       postUpdateSuggestions.run();
       return;
     }

@@ -28,4 +28,7 @@ interface Trigger {
 
   /** Notifies that the calling IME started. */
   public abstract void onStartInputView();
+
+  /** Notifies that the calling IME finished/hid the input-view. */
+  public abstract void onFinishInputView();
 }

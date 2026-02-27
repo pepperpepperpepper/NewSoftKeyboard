@@ -24,7 +24,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
-import android.text.TextUtils;
 import android.text.format.DateFormat;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -87,7 +86,6 @@ public abstract class ChewbaccaUncaughtExceptionHandler implements UncaughtExcep
                     mApp.openFileOutput(ackReportFilename, Context.MODE_PRIVATE),
                     Charset.forName("UTF-8")))) {
           Logger.i(TAG, "Archiving crash report to %s.", ackReportFilename);
-          Logger.d(TAG, "Crash report:");
           String line;
           boolean stillInHeader = true;
           while (null != (line = reader.readLine())) {
@@ -96,7 +94,6 @@ public abstract class ChewbaccaUncaughtExceptionHandler implements UncaughtExcep
             report.append(line).append(NEW_LINE);
             if (line.equals(HEADER_BREAK_LINE)) stillInHeader = false;
             if (stillInHeader) header.append(line).append(NEW_LINE);
-            Logger.d(TAG, "err: %s", line);
           }
         }
       } catch (Exception e) {
@@ -105,7 +102,7 @@ public abstract class ChewbaccaUncaughtExceptionHandler implements UncaughtExcep
       }
 
       if (!newCrashFile.delete()) {
-        Logger.e(TAG, "Failed to delete crash log! %s", newCrashFile.getAbsolutePath());
+        Logger.e(TAG, "Failed to delete crash log file.");
       }
 
       sendNotification(
@@ -196,10 +193,6 @@ public abstract class ChewbaccaUncaughtExceptionHandler implements UncaughtExcep
             Charset.forName("UTF-8"))) {
       writer.write(reportMessage.toString());
       Logger.i(TAG, "Wrote crash report to %s.", NEW_CRASH_FILENAME);
-      Logger.d(TAG, "Crash report:");
-      for (String line : TextUtils.split(reportMessage.toString(), NEW_LINE)) {
-        Logger.d(TAG, "err: %s", line);
-      }
     } catch (Exception writeEx) {
       Logger.e(TAG, writeEx, "Failed to write crash report file!");
     }

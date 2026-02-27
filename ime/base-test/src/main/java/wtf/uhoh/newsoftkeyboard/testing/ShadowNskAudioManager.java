@@ -32,6 +32,12 @@ public class ShadowNskAudioManager extends ShadowAudioManager {
     mVolume = volume;
   }
 
+  @Implementation
+  public void playSoundEffect(int effectType) {
+    mEffectType = effectType;
+    mVolume = Float.NaN;
+  }
+
   public float getLastPlaySoundEffectVolume() {
     final float volume = mVolume;
     mVolume = Float.MIN_VALUE;

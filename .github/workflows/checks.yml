@@ -84,6 +84,28 @@ jobs:
         with:
           name: checks-reports
           path: collected_reports
+  security:
+    runs-on: ubuntu-24.04
+    container: ghcr.io/menny/android:1.21.2
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5.0.0
+        with:
+          fetch-depth: 2
+      - uses: actions/cache@v4.2.4
+        with:
+          path: .github_cache_gradle/
+          key: security-v12-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}-${{ hashFiles('**/*.gradle') }}
+          restore-keys: |
+            security-v12-
+            global-v12-
+      - name: setup
+        run: ./scripts/ci/ci_setup.sh
+      - name: security
+        run: ./scripts/ci/ci_check_security.sh
+      - name: fix-fs
+        if: always()
+        run: ./scripts/ci/ci_fix_fs.sh
   linters:
     runs-on: ubuntu-24.04
     container: ghcr.io/menny/android:1.21.2

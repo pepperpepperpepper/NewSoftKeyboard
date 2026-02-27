@@ -18,6 +18,7 @@ package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -28,7 +29,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-import androidx.navigation.Navigation;
 import com.f2prateek.rx.preferences2.Preference;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.addons.AddOnsFactory;
@@ -37,6 +37,8 @@ import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.DemoKeyboardView;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemePresetStore;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlayData;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlayDataImpl;
 
@@ -45,6 +47,9 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
   private TextView mApplySummaryText;
   private Preference<Boolean> mApplyPrefs;
   private DemoKeyboardView mSelectedKeyboardView;
+  @Nullable private TextView mCustomizeRowSummaryText;
+  @Nullable private KeyboardThemePresetStore mPresetStore;
+  @Nullable private KeyboardWallpaperOverrideStore mWallpaperStore;
   private OverlayData mOverlayData = new OverlayDataImpl();
 
   public KeyboardThemeSelectorFragment() {
@@ -68,10 +73,8 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
 
   @Override
   protected void onTweaksOptionSelected() {
-    Navigation.findNavController(requireView())
-        .navigate(
-            KeyboardThemeSelectorFragmentDirections
-                .actionKeyboardThemeSelectorFragmentToKeyboardThemeCustomizationFragment());
+    AppearanceOwnerNavigation.navigateToOwner(
+        requireView(), "nav:keyboard_theme_wallpaper_customization");
   }
 
   @Override
@@ -79,6 +82,9 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
     super.onViewCreated(view, savedInstanceState);
     insertCustomizeRow(view);
     mSelectedKeyboardView = view.findViewById(R.id.demo_keyboard_view);
+    mPresetStore = new KeyboardThemePresetStore(requireContext());
+    mWallpaperStore = new KeyboardWallpaperOverrideStore(requireContext());
+    updateCustomizeRowSummary(getAddOnFactory().getEnabledAddOn());
 
     mApplyPrefs =
         NskApplicationBase.prefs(requireContext())
@@ -126,13 +132,41 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
 
     final View customizeRow =
         getLayoutInflater().inflate(R.layout.keyboard_theme_selector_customize_row, root, false);
+    mCustomizeRowSummaryText = customizeRow.findViewById(R.id.keyboard_theme_customize_row_summary);
     customizeRow.setOnClickListener(
         ignored ->
-            Navigation.findNavController(view)
-                .navigate(
-                    KeyboardThemeSelectorFragmentDirections
-                        .actionKeyboardThemeSelectorFragmentToKeyboardThemeCustomizationFragment()));
+            AppearanceOwnerNavigation.navigateToOwner(
+                view, "nav:keyboard_theme_wallpaper_customization"));
     root.addView(customizeRow, listIndex);
+  }
+
+  private void updateCustomizeRowSummary(@Nullable KeyboardTheme theme) {
+    final TextView summary = mCustomizeRowSummaryText;
+    if (summary == null || theme == null) return;
+    final KeyboardThemePresetStore presetStore = mPresetStore;
+    if (presetStore == null) return;
+    final String baseThemeId = theme.getId();
+    final String presetId = presetStore.getActivePresetId(baseThemeId);
+
+    String presetName = presetStore.getPresetName(presetId);
+    if (TextUtils.isEmpty(presetName)) {
+      presetName =
+          presetId.equals(baseThemeId)
+              ? getString(R.string.keyboard_theme_presets_default_entry)
+              : getString(R.string.keyboard_theme_presets_unnamed_entry);
+    }
+
+    final KeyboardWallpaperOverrideStore wallpaperStore = mWallpaperStore;
+    final boolean hasPhoto =
+        wallpaperStore != null
+            && wallpaperStore.hasWallpaper(presetId)
+            && !wallpaperStore.isWallpaperInvalid(presetId);
+    summary.setText(
+        hasPhoto
+            ? getString(R.string.keyboard_theme_customize_current_summary_preset, presetName)
+                + " \u2022 "
+                + getString(R.string.keyboard_theme_customize_current_summary_photo_set)
+            : getString(R.string.keyboard_theme_customize_current_summary_preset, presetName));
   }
 
   private void onDemoAppClicked(View view) {
@@ -203,5 +237,9 @@ public class KeyboardThemeSelectorFragment extends AbstractAddOnsBrowserFragment
             .createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
     defaultKeyboard.loadKeyboard(demoKeyboardView.getThemedKeyboardDimens());
     demoKeyboardView.setKeyboard(defaultKeyboard, null, null);
+
+    if (demoKeyboardView == mSelectedKeyboardView) {
+      updateCustomizeRowSummary(addOn);
+    }
   }
 }

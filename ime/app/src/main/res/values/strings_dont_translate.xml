@@ -43,6 +43,19 @@
     <string name="deeplink_url_quick_text">anysoftkeyboard://settings/quick_text</string>
     <string name="deeplink_url_gestures">anysoftkeyboard://settings/gestures</string>
     <string name="deeplink_url_dev_tools">anysoftkeyboard://settings/dev_tools</string>
+    <string name="deeplink_url_programmable_api_settings">anysoftkeyboard://settings/automation/api</string>
+    <string name="deeplink_url_settings_search">anysoftkeyboard://settings/search</string>
+    <string name="deeplink_url_keyboards_language_packs">anysoftkeyboard://settings/language</string>
+    <string name="deeplink_url_typing">anysoftkeyboard://settings/typing</string>
+    <string name="deeplink_url_look_and_feel">anysoftkeyboard://settings/ui</string>
+    <string name="deeplink_url_gestures_quick_keys">anysoftkeyboard://settings/gestures_quick_keys</string>
+    <string name="deeplink_url_clipboard">anysoftkeyboard://settings/clipboard</string>
+    <string name="deeplink_url_voice">anysoftkeyboard://settings/voice</string>
+    <string name="deeplink_url_troubleshooting_backup">anysoftkeyboard://settings/troubleshooting</string>
+    <string name="deeplink_url_settings_ui_launcher">anysoftkeyboard://settings/settings_ui</string>
+    <string name="deeplink_url_help_about">anysoftkeyboard://settings/help_about</string>
+    <string name="deeplink_url_power_saving">anysoftkeyboard://settings/performance/power_saving</string>
+    <string name="deeplink_url_night_mode">anysoftkeyboard://settings/ui/night_mode</string>
 
     <string name="label_subtype_generic">%s</string>
 

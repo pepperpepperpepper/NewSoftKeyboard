@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -16,8 +17,11 @@ import io.reactivex.disposables.Disposable;
 import net.evendanan.pixel.GeneralDialogController;
 import net.evendanan.pixel.UiUtils;
 import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 
 public class TroubleshootingAndBackupSettingsFragment extends PreferenceFragmentCompat {
+
+  private static final String KEY_RESET_LOOK_AND_FEEL_SLIDERS = "reset_look_and_feel_sliders";
 
   private final PrefsBackupRestoreController mPrefsBackupRestoreController =
       new PrefsBackupRestoreController();
@@ -40,9 +44,10 @@ public class TroubleshootingAndBackupSettingsFragment extends PreferenceFragment
     bindDialogAction("nav:backup_prefs", R.id.backup_prefs);
     bindDialogAction("nav:restore_prefs", R.id.restore_prefs);
 
-    bindNav("nav:power_saving_settings", R.id.powerSavingSettingsFragment);
+    bindOwnerShortcut(view, "nav:power_saving_settings");
     bindNav("nav:developer_tools", R.id.developerToolsFragment);
     bindNav("nav:logcat_viewer", R.id.logCatViewFragment);
+    bindLookAndFeelSlidersReset();
 
     refreshEnabledStates();
   }
@@ -117,6 +122,12 @@ public class TroubleshootingAndBackupSettingsFragment extends PreferenceFragment
         });
   }
 
+  private void bindOwnerShortcut(@NonNull View view, @NonNull String key) {
+    final Preference preference = findPreference(key);
+    if (preference == null) return;
+    AppearanceOwnerNavigation.bindPreference(preference, view, key);
+  }
+
   private void bindDialogAction(@NonNull String key, int optionId) {
     final Preference preference = findPreference(key);
     if (preference == null) return;
@@ -126,6 +137,73 @@ public class TroubleshootingAndBackupSettingsFragment extends PreferenceFragment
           if (dialogController != null) dialogController.showDialog(optionId);
           return true;
         });
+  }
+
+  private void bindLookAndFeelSlidersReset() {
+    final Preference preference = findPreference(KEY_RESET_LOOK_AND_FEEL_SLIDERS);
+    if (preference == null) return;
+    preference.setOnPreferenceClickListener(
+        ignored -> {
+          confirmResetLookAndFeelSliders();
+          return true;
+        });
+  }
+
+  private void confirmResetLookAndFeelSliders() {
+    new AlertDialog.Builder(requireContext(), R.style.Theme_NskAlertDialog)
+        .setTitle(R.string.reset_look_and_feel_sliders_title)
+        .setMessage(R.string.reset_look_and_feel_sliders_confirm_message)
+        .setNegativeButton(android.R.string.cancel, (d, w) -> d.dismiss())
+        .setPositiveButton(
+            R.string.reset_look_and_feel_sliders_confirm_action,
+            (d, w) -> {
+              d.dismiss();
+              resetLookAndFeelSliders();
+            })
+        .show();
+  }
+
+  private void resetLookAndFeelSliders() {
+    final var prefs = NskApplicationBase.prefs(requireContext());
+    prefs
+        .getInteger(
+            R.string.settings_key_zoom_percent_in_portrait,
+            R.integer.settings_default_zoom_percent_in_portrait)
+        .set(getResources().getInteger(R.integer.settings_default_zoom_percent_in_portrait));
+    prefs
+        .getInteger(
+            R.string.settings_key_zoom_percent_in_landscape,
+            R.integer.settings_default_zoom_percent_in_landscape)
+        .set(getResources().getInteger(R.integer.settings_default_zoom_percent_in_landscape));
+    prefs
+        .getInteger(
+            R.string.settings_key_bottom_extra_padding_in_portrait,
+            R.integer.settings_default_bottom_extra_padding_in_portrait)
+        .set(
+            getResources().getInteger(R.integer.settings_default_bottom_extra_padding_in_portrait));
+    prefs
+        .getInteger(
+            R.string.settings_key_vibrate_on_key_press_duration_int,
+            R.integer.settings_default_vibrate_on_key_press_duration_int)
+        .set(
+            getResources()
+                .getInteger(R.integer.settings_default_vibrate_on_key_press_duration_int));
+    prefs
+        .getInteger(
+            R.string.settings_key_system_vibration_fallback_duration_int,
+            R.integer.settings_default_system_vibration_fallback_duration_int)
+        .set(
+            getResources()
+                .getInteger(R.integer.settings_default_system_vibration_fallback_duration_int));
+    prefs
+        .getInteger(
+            R.string.settings_key_custom_sound_volume,
+            R.integer.settings_default_custom_volume_level)
+        .set(getResources().getInteger(R.integer.settings_default_custom_volume_level));
+
+    Toast.makeText(
+            requireContext(), R.string.reset_look_and_feel_sliders_done_toast, Toast.LENGTH_SHORT)
+        .show();
   }
 
   private void scrollToRequestedPreferenceIfNeeded() {

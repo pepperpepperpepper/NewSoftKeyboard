@@ -63,3 +63,9 @@ backups/
 # python
 __pycache__/
 *.pyc
+
+# local docs (do not commit)
+/devicefarm_instructions.md
+
+# local checkouts (do not commit)
+/HeliBoard/

@@ -257,6 +257,10 @@ public abstract class KeyboardDefinition extends Keyboard {
     mVoiceKey = key;
   }
 
+  /* package */ void setEnterKeyFromXml(@NonNull EnterKey key) {
+    mEnterKey = key;
+  }
+
   /* package */ void markRightToLeftLayoutFromXml() {
     mRightToLeftLayout = true;
   }

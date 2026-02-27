@@ -36,6 +36,42 @@ public abstract class SQLiteUserDictionaryBase extends ContentObserverDictionary
     return mLocale;
   }
 
+  public void clearAllWords() {
+    synchronized (mResourceMonitor) {
+      if (isClosed()) return;
+      if (mStorage == null) mStorage = createStorage(mLocale);
+      try {
+        mStorage.clearAllWords();
+      } catch (SQLiteException e) {
+        e.printStackTrace();
+        final String dbFile = mStorage.getDbFilename();
+        try {
+          mStorage.close();
+        } catch (SQLiteException swallow) {
+          Logger.w(
+              TAG,
+              "Caught an SQL exception while closing database (message: '%s').",
+              swallow.getMessage());
+        }
+        Logger.w(
+            TAG,
+            "Caught an SQL exception while clearing database (message: '%s'). I'll delete the"
+                + " database '%s'...",
+            e.getMessage(),
+            dbFile);
+        try {
+          mContext.deleteDatabase(dbFile);
+        } catch (Exception okToFailEx) {
+          Logger.w(TAG, "Failed to delete database file " + dbFile + "!");
+          okToFailEx.printStackTrace();
+        }
+        mStorage = null; // will re-create the storage.
+        mStorage = createStorage(mLocale);
+      }
+      resetDictionary();
+    }
+  }
+
   @Override
   protected void readWordsFromActualStorage(WordReadListener listener) {
     try {

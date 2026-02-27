@@ -12,4 +12,10 @@
         android:icon="@drawable/ic_action_settings_light"
         android:title="@string/tweaks_group"
         app:showAsAction="always|withText" />
+
+    <item
+        android:id="@+id/custom_keyboards_menu_option"
+        android:title="@string/custom_keyboards_menu_title"
+        android:visible="false"
+        app:showAsAction="never" />
 </menu>

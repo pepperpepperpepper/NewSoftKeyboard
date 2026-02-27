@@ -203,6 +203,35 @@ public class GestureTypingDetectorTest {
   }
 
   @Test
+  public void testFallsBackToBaseCharacterForMissingKey() {
+    TestRxSchedulers.drainAllTasks();
+    Assert.assertEquals(GestureTypingDetector.LoadingState.LOADED, mCurrentState.get());
+
+    mDetectorUnderTest.setWords(
+        Collections.singletonList(
+            new char[][] {
+              // this list is sorted alphabetically (as in the binary dictionary)
+              "cafe".toCharArray(), "café".toCharArray(), "cape".toCharArray(), "case".toCharArray()
+            }),
+        // bump café frequency to ensure it wins tie-breaks vs cafe if the gesture path matches.
+        Collections.singletonList(new int[] {100, 150, 90, 80}));
+
+    Assert.assertEquals(GestureTypingDetector.LoadingState.LOADING, mCurrentState.get());
+    TestRxSchedulers.drainAllTasks();
+    Assert.assertEquals(GestureTypingDetector.LoadingState.LOADED, mCurrentState.get());
+
+    mDetectorUnderTest.clearGesture();
+
+    generatePointsStreamOfKeysString("cafe")
+        .forEach(point -> mDetectorUnderTest.addPoint(point.x, point.y));
+    final ArrayList<String> candidates = mDetectorUnderTest.getCandidates();
+
+    Assert.assertEquals(MAX_SUGGESTIONS, candidates.size());
+    Assert.assertEquals("café", candidates.get(0));
+    Assert.assertTrue(candidates.contains("cafe"));
+  }
+
+  @Test
   public void testFilterOutWordsThatDoNotStartsWithFirstPress() {
     TestRxSchedulers.drainAllTasks();
     Assert.assertEquals(GestureTypingDetector.LoadingState.LOADED, mCurrentState.get());

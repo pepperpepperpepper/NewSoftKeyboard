@@ -53,13 +53,13 @@ public final class SpeechToTextFileUtils {
       @NonNull String prefix,
       @NonNull String extension) {
     if (!sourceFile.exists()) {
-      Log.w(TAG, "Source file does not exist: " + sourceFile.getAbsolutePath());
+      Log.w(TAG, "Source file does not exist.");
       return null;
     }
 
     File destinationDir = new File(targetDirectoryPath);
     if (!destinationDir.exists() && !destinationDir.mkdirs()) {
-      Log.w(TAG, "Failed to create directory: " + destinationDir.getAbsolutePath());
+      Log.w(TAG, "Failed to create destination directory.");
       return null;
     }
 

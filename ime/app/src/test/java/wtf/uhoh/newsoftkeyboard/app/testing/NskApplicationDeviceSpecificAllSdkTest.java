@@ -27,6 +27,7 @@ import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV24;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV26;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV28;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV29;
+import wtf.uhoh.newsoftkeyboard.app.devicespecific.DeviceSpecificV33;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.NskOnGestureListener;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.NskV19GestureDetector;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.NskV8GestureDetector;
@@ -34,6 +35,7 @@ import wtf.uhoh.newsoftkeyboard.app.devicespecific.PressVibrator;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.PressVibratorV1;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.PressVibratorV26;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.PressVibratorV29;
+import wtf.uhoh.newsoftkeyboard.app.devicespecific.PressVibratorV33;
 import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 import wtf.uhoh.newsoftkeyboard.testing.TestUtils;
 
@@ -75,9 +77,9 @@ public abstract class NskApplicationDeviceSpecificAllSdkTest {
           DeviceSpecificV29.class, // 30
           DeviceSpecificV29.class,
           DeviceSpecificV29.class,
-          DeviceSpecificV29.class,
-          DeviceSpecificV29.class,
-          DeviceSpecificV29.class);
+          DeviceSpecificV33.class, // 33
+          DeviceSpecificV33.class,
+          DeviceSpecificV33.class);
 
   private final List<Class<? extends Clipboard>> mExpectedClipboardClass =
       Arrays.asList(
@@ -192,9 +194,9 @@ public abstract class NskApplicationDeviceSpecificAllSdkTest {
           PressVibratorV29.class, // 30
           PressVibratorV29.class,
           PressVibratorV29.class,
-          PressVibratorV29.class,
-          PressVibratorV29.class,
-          PressVibratorV29.class);
+          PressVibratorV33.class, // 33
+          PressVibratorV33.class,
+          PressVibratorV33.class);
 
   void testCreateDeviceSpecificImplementationImpl() {
     if (Build.VERSION.SDK_INT > 100) return; // FUTURE?

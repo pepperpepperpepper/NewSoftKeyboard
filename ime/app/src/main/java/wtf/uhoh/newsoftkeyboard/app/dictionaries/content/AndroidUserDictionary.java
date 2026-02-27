@@ -83,12 +83,10 @@ public class AndroidUserDictionary extends ContentObserverDictionary {
     Uri result = mContext.getContentResolver().insert(Words.CONTENT_URI, values);
     Logger.i(
         TAG,
-        "Added the word '"
-            + word
-            + "' at locale "
-            + mLocale
-            + " into Android's user dictionary. Result "
-            + result);
+        "Added word to Android user dictionary (len=%d, locale=%s). Insert result is null? %s",
+        word.length(),
+        mLocale,
+        result == null);
   }
 
   @Override

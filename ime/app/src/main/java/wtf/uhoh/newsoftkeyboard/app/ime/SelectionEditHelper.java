@@ -86,7 +86,9 @@ public final class SelectionEditHelper {
         workspace.append(selectedTextString.toLowerCase(locale));
       }
     }
-    inputConnectionRouter.setComposingText(workspace.toString(), 0);
+    if (!inputConnectionRouter.setComposingText(workspace.toString(), 0)) {
+      inputConnectionRouter.commitText(workspace.toString(), 0);
+    }
     inputConnectionRouter.endBatchEdit();
     inputConnectionRouter.setSelection(selectionStart, selectionEnd);
   }

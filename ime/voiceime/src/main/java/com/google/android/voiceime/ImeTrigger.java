@@ -99,4 +99,9 @@ class ImeTrigger implements Trigger {
     // Empty. Voice IME pastes the recognition result directly into the text
     // view
   }
+
+  @Override
+  public void onFinishInputView() {
+    // No-op. Voice IME pastes directly into the target app.
+  }
 }

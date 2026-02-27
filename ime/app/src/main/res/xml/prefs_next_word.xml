@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+                  xmlns:app="http://schemas.android.com/apk/res-auto"
                   android:key="special_dictionaries_group">
 
     <androidx.preference.PreferenceCategory
@@ -33,6 +34,15 @@
             android:entryValues="@array/prediction_engine_mode_values"
             android:summary="@string/prediction_engine_mode_summary"
             android:title="@string/prediction_engine_mode_title"/>
+
+        <net.evendanan.pixel.SlidePreference
+            android:key="@string/settings_key_prediction_context_window_words"
+            android:defaultValue="@integer/settings_default_prediction_context_window_words"
+            android:persistent="true"
+            android:title="@string/prediction_context_window_words_title"
+            app:slideMaximum="@integer/settings_default_prediction_context_window_words_max_value"
+            app:slideMinimum="@integer/settings_default_prediction_context_window_words_min_value"
+            app:valueStringTemplate="@string/prediction_context_window_words_value_template" />
 
         <Preference
             android:key="nav:nextword_models"

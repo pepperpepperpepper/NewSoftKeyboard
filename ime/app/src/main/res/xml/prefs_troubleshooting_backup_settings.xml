@@ -45,6 +45,12 @@
             android:defaultValue="@bool/settings_default_always_use_fallback_user_dictionary"
             android:summaryOn="@string/always_use_fallback_user_dictionary_on_summary"
             android:summaryOff="@string/always_use_fallback_user_dictionary_off_summary" />
+
+        <Preference
+            android:key="reset_look_and_feel_sliders"
+            android:title="@string/reset_look_and_feel_sliders_title"
+            android:summary="@string/reset_look_and_feel_sliders_summary"
+            app:iconSpaceReserved="false" />
     </androidx.preference.PreferenceCategory>
 
     <androidx.preference.PreferenceCategory

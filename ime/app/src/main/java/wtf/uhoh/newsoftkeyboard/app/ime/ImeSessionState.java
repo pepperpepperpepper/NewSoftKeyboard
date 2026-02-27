@@ -40,11 +40,13 @@ public final class ImeSessionState {
 
   public void onStartInput(@Nullable EditorInfo editorInfo) {
     currentEditorInfo = editorInfo;
+    inputConnectionRouter.resetComposingTextSupport();
   }
 
   public void onFinishInput() {
     currentEditorInfo = null;
     editorStateTracker.reset();
+    inputConnectionRouter.resetComposingTextSupport();
   }
 
   @Nullable

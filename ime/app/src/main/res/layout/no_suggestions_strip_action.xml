@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/no_suggestions_strip_action_root"
+    android:layout_width="wrap_content"
+    android:layout_height="@dimen/candidate_strip_height"
+    android:layout_gravity="center_vertical"
+    android:background="@drawable/strip_action_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingLeft="8dp"
+    android:paddingRight="8dp"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp"
+    android:visibility="gone">
+
+  <TextView
+      android:id="@+id/no_suggestions_strip_action_message"
+      style="@style/Nsk.Text.SuggestionsAction.Small"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:ellipsize="end"
+      android:maxLines="1"
+      android:text="@string/no_suggestions_strip_action_message" />
+</LinearLayout>
+

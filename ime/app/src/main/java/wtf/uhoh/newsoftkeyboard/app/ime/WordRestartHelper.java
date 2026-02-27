@@ -52,7 +52,7 @@ final class WordRestartHelper {
       toRight = newToRight;
     }
     CharSequence word = toLeft.toString() + toRight.toString();
-    Logger.d(host.logTag(), "Starting new prediction on word '%s'.", word);
+    Logger.d(host.logTag(), "Starting new prediction on cursor word len=%d.", word.length());
     currentWord.reset();
 
     final int[] tempNearByKeys = new int[1];

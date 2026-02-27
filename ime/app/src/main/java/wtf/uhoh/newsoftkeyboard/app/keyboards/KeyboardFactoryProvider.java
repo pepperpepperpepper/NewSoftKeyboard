@@ -72,6 +72,15 @@ final class KeyboardFactoryProvider {
                   context.getString(R.string.symbols_time_keyboard),
                   "datetime_symbols_keyboard",
                   keyboardRowMode);
+          case KeyboardSwitcher.SYMBOLS_KEYBOARD_PIN_INDEX ->
+              createGenericKeyboard(
+                  defaultAddOn,
+                  context,
+                  R.xml.simple_pin,
+                  R.xml.simple_pin,
+                  context.getString(R.string.symbols_numbers_keyboard),
+                  "pin_symbols_keyboard",
+                  keyboardRowMode);
           default -> throw new IllegalArgumentException("Unknown keyboardIndex " + keyboardIndex);
         };
 

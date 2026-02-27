@@ -37,6 +37,21 @@ public final class ImeOptionsMenuHost implements OptionsMenuLauncher.Host {
   }
 
   @Override
+  public boolean isContextProfilesEnabled() {
+    return ime.isContextProfilesEnabledForOptionsMenu();
+  }
+
+  @Override
+  public boolean isContextProfilesGloballyEnabled() {
+    return ime.isContextProfilesGloballyEnabledForOptionsMenu();
+  }
+
+  @Override
+  public void setContextProfilesTemporarilyDisabled(boolean disabled) {
+    ime.setContextProfilesTemporarilyDisabledForOptionsMenu(disabled);
+  }
+
+  @Override
   public void launchSettings() {
     ime.hideWindow();
     SettingsLauncher.launch(ime);

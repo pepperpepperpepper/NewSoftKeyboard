@@ -34,7 +34,7 @@ public class ImeServiceViewRelatedTest extends ImeServiceBaseTest {
     Assert.assertEquals(
         ApplicationProvider.getApplicationContext().getText(R.string.ime_name),
         GeneralDialogTestUtil.getTitleFromDialog(latestAlertDialog));
-    Assert.assertEquals(4, latestAlertDialog.getListView().getCount());
+    Assert.assertEquals(5, latestAlertDialog.getListView().getCount());
   }
 
   @Test

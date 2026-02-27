@@ -57,7 +57,13 @@ public final class DeleteActionHelper {
     }
 
     if (host.isPredictionOn() && shouldDeleteUsingCompletion) {
-      inputConnectionRouter.setComposingText(currentComposedWord.getTypedWord(), 1);
+      if (inputConnectionRouter.isComposingTextSupported()) {
+        if (!inputConnectionRouter.setComposingText(currentComposedWord.getTypedWord(), 1)) {
+          inputConnectionRouter.deleteSurroundingText(countToDelete, 0);
+        }
+      } else {
+        inputConnectionRouter.deleteSurroundingText(countToDelete, 0);
+      }
     } else {
       inputConnectionRouter.deleteSurroundingText(countToDelete, 0);
     }
@@ -85,6 +91,13 @@ public final class DeleteActionHelper {
     if (wordManipulation) {
       // NOTE: cannot use deleteSurroundingText with composing text.
       final int charsToDelete = currentComposedWord.deleteCodePointAtCurrentPosition();
+      if (!inputConnectionRouter.isComposingTextSupported()) {
+        if (charsToDelete > 0) {
+          inputConnectionRouter.deleteSurroundingText(charsToDelete, 0);
+        }
+        host.postUpdateSuggestions();
+        return;
+      }
       final int cursorPosition =
           currentComposedWord.cursorPosition() != currentComposedWord.charCount()
               ? host.getCursorPosition()
@@ -92,10 +105,15 @@ public final class DeleteActionHelper {
 
       final boolean batched = cursorPosition >= 0 && inputConnectionRouter.beginBatchEdit();
 
-      inputConnectionRouter.setComposingText(currentComposedWord.getTypedWord(), 1);
-      if (cursorPosition >= 0 && !currentComposedWord.isEmpty()) {
-        inputConnectionRouter.setSelection(
-            cursorPosition - charsToDelete, cursorPosition - charsToDelete);
+      final boolean composed =
+          inputConnectionRouter.setComposingText(currentComposedWord.getTypedWord(), 1);
+      if (composed) {
+        if (cursorPosition >= 0 && !currentComposedWord.isEmpty()) {
+          inputConnectionRouter.setSelection(
+              cursorPosition - charsToDelete, cursorPosition - charsToDelete);
+        }
+      } else if (charsToDelete > 0) {
+        inputConnectionRouter.deleteSurroundingText(charsToDelete, 0);
       }
 
       if (batched) {
@@ -137,7 +155,15 @@ public final class DeleteActionHelper {
             && !currentComposedWord.isEmpty();
 
     if (wordManipulation) {
-      currentComposedWord.deleteForward();
+      final int charsToDelete = currentComposedWord.deleteForward();
+      if (!inputConnectionRouter.isComposingTextSupported()) {
+        host.markExpectingSelectionUpdate();
+        if (charsToDelete > 0) {
+          inputConnectionRouter.deleteSurroundingText(0, charsToDelete);
+        }
+        host.postUpdateSuggestions();
+        return;
+      }
       final int cursorPosition =
           currentComposedWord.cursorPosition() != currentComposedWord.charCount()
               ? host.getCursorPosition()
@@ -146,9 +172,14 @@ public final class DeleteActionHelper {
       final boolean batched = cursorPosition >= 0 && inputConnectionRouter.beginBatchEdit();
 
       host.markExpectingSelectionUpdate();
-      inputConnectionRouter.setComposingText(currentComposedWord.getTypedWord(), 1);
-      if (cursorPosition >= 0 && !currentComposedWord.isEmpty()) {
-        inputConnectionRouter.setSelection(cursorPosition, cursorPosition);
+      final boolean composed =
+          inputConnectionRouter.setComposingText(currentComposedWord.getTypedWord(), 1);
+      if (composed) {
+        if (cursorPosition >= 0 && !currentComposedWord.isEmpty()) {
+          inputConnectionRouter.setSelection(cursorPosition, cursorPosition);
+        }
+      } else if (charsToDelete > 0) {
+        inputConnectionRouter.deleteSurroundingText(0, charsToDelete);
       }
 
       if (batched) {

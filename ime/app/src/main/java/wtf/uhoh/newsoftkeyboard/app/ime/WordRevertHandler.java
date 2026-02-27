@@ -46,7 +46,9 @@ final class WordRevertHandler {
     WordComposer newPreviousWord = currentWord;
     autoCorrectState.wordRevertLength = 0;
     final CharSequence typedWord = newCurrentWord.getTypedWord();
-    inputConnectionRouter.setComposingText(typedWord, 1);
+    if (!inputConnectionRouter.setComposingText(typedWord, 1)) {
+      inputConnectionRouter.commitText(typedWord, 1);
+    }
     host.performUpdateSuggestions();
     if (autoCorrectState.justAutoAddedWord) {
       host.removeFromUserDictionary(typedWord.toString());

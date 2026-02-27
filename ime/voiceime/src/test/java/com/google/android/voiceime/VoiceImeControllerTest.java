@@ -18,6 +18,35 @@ import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 public class VoiceImeControllerTest {
 
   @Test
+  public void onStartInputViewRendersRecordingWhenTriggerStillRecording() {
+    final VoiceRecognitionTrigger trigger = Mockito.mock(VoiceRecognitionTrigger.class);
+    Mockito.when(trigger.isRecording()).thenReturn(true);
+
+    final List<VoiceInputState> states = new ArrayList<>();
+    final VoiceImeController.HostCallbacks host = createHost(states);
+    final VoiceImeController controller = new VoiceImeController(trigger, host);
+
+    controller.onStartInputView();
+    idleMainThread();
+
+    assertEquals(List.of(VoiceInputState.RECORDING), states);
+  }
+
+  @Test
+  public void onFinishInputViewEmitsIdleAndNotifiesTrigger() {
+    final VoiceRecognitionTrigger trigger = Mockito.mock(VoiceRecognitionTrigger.class);
+    final List<VoiceInputState> states = new ArrayList<>();
+    final VoiceImeController.HostCallbacks host = createHost(states);
+    final VoiceImeController controller = new VoiceImeController(trigger, host);
+
+    controller.onFinishInputView();
+    idleMainThread();
+
+    Mockito.verify(trigger).onFinishInputView();
+    assertEquals(List.of(VoiceInputState.IDLE), states);
+  }
+
+  @Test
   public void stopRecordingSuccessDoesNotEmitIdleBeforeWaiting() {
     final CapturedTriggerCallbacks callbacks = new CapturedTriggerCallbacks();
     final VoiceRecognitionTrigger trigger = callbacks.createTriggerMock();

@@ -32,25 +32,6 @@ public class AdditionalLanguageSettingsFragment extends PreferenceFragmentCompat
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
     addPreferencesFromResource(R.xml.prefs_addtional_language_prefs);
-
-    // Debug: Check if the OpenAI preference exists
-    Preference openaiPref =
-        findPreference(getString(R.string.settings_key_speech_to_text_settings));
-    if (openaiPref != null) {
-      android.util.Log.d(
-          "AdditionalLanguageSettings", "OpenAI preference found: " + openaiPref.getTitle());
-    } else {
-      android.util.Log.d("AdditionalLanguageSettings", "OpenAI preference NOT found!");
-    }
-
-    // Debug: Check if the tweaks preference exists
-    Preference tweaksPref = findPreference(getString(R.string.tweaks_group_key));
-    if (tweaksPref != null) {
-      android.util.Log.d(
-          "AdditionalLanguageSettings", "Tweaks preference found: " + tweaksPref.getTitle());
-    } else {
-      android.util.Log.d("AdditionalLanguageSettings", "Tweaks preference NOT found!");
-    }
   }
 
   @Override

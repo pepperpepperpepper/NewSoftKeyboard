@@ -28,6 +28,7 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import io.reactivex.disposables.CompositeDisposable;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +56,8 @@ public class CandidateView extends View implements ThemeableChild {
   private final Paint mPaint;
   private final TextPaint mTextPaint;
   private final GestureDetector mGestureDetector;
+  @Nullable private KeyboardTheme lastSetTheme;
+  private boolean applyUserThemeOverrides = true;
   private CandidateViewHost mHost;
   private boolean mNoticing = false;
   private CharSequence mSelectedString;
@@ -134,10 +137,12 @@ public class CandidateView extends View implements ThemeableChild {
 
   @Override
   public void setKeyboardTheme(@NonNull KeyboardTheme theme) {
+    lastSetTheme = theme;
     setBackgroundDrawable(null);
     setBackgroundColor(Color.BLACK);
     final CandidateViewThemeApplier.Result themeResult =
-        CandidateViewThemeApplier.applyTheme(getContext(), theme, mThemeOverlayCombiner, mPaint);
+        CandidateViewThemeApplier.applyTheme(
+            getContext(), theme, mThemeOverlayCombiner, mPaint, applyUserThemeOverrides);
 
     final float horizontalGap = themeResult.horizontalGap();
     mDivider = themeResult.divider();
@@ -153,6 +158,15 @@ public class CandidateView extends View implements ThemeableChild {
     mBaseSuggestionTextSizePx = themeResult.baseSuggestionTextSizePx();
     applyTextSize();
     mTextPaint.set(mPaint);
+  }
+
+  public void setApplyUserThemeOverrides(boolean apply) {
+    if (applyUserThemeOverrides == apply) return;
+    applyUserThemeOverrides = apply;
+    final KeyboardTheme theme = lastSetTheme;
+    if (theme != null) {
+      setKeyboardTheme(theme);
+    }
   }
 
   private void applyTextSize() {
@@ -311,10 +325,7 @@ public class CandidateView extends View implements ThemeableChild {
         // Fling up should be a hacker's way to delete words (user dictionary words)
         if (y <= 0 && mSelectedString != null && mHost != null) {
           Logger.d(
-              TAG,
-              "Fling up from candidates view. Deleting word at index %d, which is %s",
-              mSelectedIndex,
-              mSelectedString);
+              TAG, "Fling up from candidates view. Deleting word at index %d.", mSelectedIndex);
           mHost.removeFromUserDictionary(mSelectedString.toString());
           clear(); // clear also calls invalidate().
         }
@@ -324,14 +335,14 @@ public class CandidateView extends View implements ThemeableChild {
           if (mShowingAddToDictionary) {
             final CharSequence word = mSuggestions.get(0);
             if (word.length() >= 2 && !mNoticing) {
-              Logger.d(TAG, "User wants to add the word '%s' to the user-dictionary.", word);
+              Logger.d(TAG, "User requested adding a word to the user-dictionary.");
               mHost.addWordToDictionary(word.toString());
             }
           } else if (!mNoticing) {
             mHost.pickSuggestionManually(mSelectedIndex, mSelectedString);
           } else if (mSelectedIndex == 1 && !TextUtils.isEmpty(mJustAddedWord)) {
             // 1 is the index of "Remove?"
-            Logger.d(TAG, "User wants to remove an added word '%s'", mJustAddedWord);
+            Logger.d(TAG, "User requested removing an added word from the user-dictionary.");
             mHost.removeFromUserDictionary(mJustAddedWord.toString());
           }
         }

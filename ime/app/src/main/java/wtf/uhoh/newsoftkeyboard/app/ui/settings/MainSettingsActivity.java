@@ -19,6 +19,8 @@ package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 import android.Manifest;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.KeyEvent;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -26,11 +28,13 @@ import androidx.core.content.ContextCompat;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
+import com.anysoftkeyboard.api.KeyboardApiContract;
 import java.util.Objects;
 import net.evendanan.pixel.EdgeEffectHacker;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.app.api.KeyboardApiSettingsDeepLinks;
 import wtf.uhoh.newsoftkeyboard.notification.NotificationIds;
 import wtf.uhoh.newsoftkeyboard.permissions.PermissionRequestHelper;
 import wtf.uhoh.newsoftkeyboard.prefs.DirectBootAwareSharedPreferences;
@@ -69,6 +73,7 @@ public class MainSettingsActivity extends AppCompatActivity {
     EdgeEffectHacker.brandGlowEffect(this, ContextCompat.getColor(this, R.color.app_accent));
     handlePermissionRequest(getIntent());
     handleOpenAISettingsNavigation(getIntent());
+    handleProgrammableApiOpenSettingsNavigation(getIntent());
   }
 
   @Override
@@ -76,6 +81,37 @@ public class MainSettingsActivity extends AppCompatActivity {
     super.onNewIntent(intent);
     handlePermissionRequest(intent);
     handleOpenAISettingsNavigation(intent);
+    handleProgrammableApiOpenSettingsNavigation(intent);
+  }
+
+  private void handleProgrammableApiOpenSettingsNavigation(@Nullable Intent intent) {
+    if (intent == null) return;
+
+    if (!intent.hasExtra(KeyboardApiContract.EXTRA_DESTINATION_ID)
+        && !intent.hasExtra(KeyboardApiContract.EXTRA_SCROLL_TO_PREF_KEY)) {
+      return;
+    }
+
+    final String destinationId = intent.getStringExtra(KeyboardApiContract.EXTRA_DESTINATION_ID);
+    final String scrollToPrefKey =
+        intent.getStringExtra(KeyboardApiContract.EXTRA_SCROLL_TO_PREF_KEY);
+    intent.removeExtra(KeyboardApiContract.EXTRA_DESTINATION_ID);
+    intent.removeExtra(KeyboardApiContract.EXTRA_SCROLL_TO_PREF_KEY);
+
+    if (TextUtils.isEmpty(destinationId)) return;
+
+    final Integer navDestinationId = KeyboardApiSettingsDeepLinks.toNavDestinationId(destinationId);
+    if (navDestinationId == null) return;
+
+    final Bundle args = new Bundle();
+    if (!TextUtils.isEmpty(scrollToPrefKey)) {
+      args.putString(SettingsSearchFragment.ARG_SCROLL_TO_PREFERENCE_KEY, scrollToPrefKey);
+    }
+    try {
+      requireNavController().navigate(navDestinationId, args);
+    } catch (RuntimeException ignored) {
+      // Defensive: do not crash settings if the nav graph has changed unexpectedly.
+    }
   }
 
   private void handleOpenAISettingsNavigation(Intent intent) {
@@ -83,9 +119,6 @@ public class MainSettingsActivity extends AppCompatActivity {
 
     // Handle navigation to OpenAI settings
     if (intent.hasExtra("navigate_to_openai_settings")) {
-      android.util.Log.d(
-          "MainSettingsActivity",
-          "Found navigate_to_openai_settings extra, calling navigateToOpenAISettings");
       intent.removeExtra("navigate_to_openai_settings");
       navigateToOpenAISettings();
       return;
@@ -134,9 +167,6 @@ public class MainSettingsActivity extends AppCompatActivity {
   }
 
   public void navigateToOpenAISettings(String promptText) {
-    android.util.Log.d(
-        "MainSettingsActivity", "navigateToOpenAISettings called with prompt: " + promptText);
-
     final NavController navController = requireNavController();
 
     // Mark intent so the fragment opens the prompt dialog when we arrive.
@@ -147,8 +177,6 @@ public class MainSettingsActivity extends AppCompatActivity {
 
     if (navController.getCurrentDestination() != null
         && navController.getCurrentDestination().getId() == R.id.openAISpeechSettingsFragment) {
-      android.util.Log.d(
-          "MainSettingsActivity", "Already at OpenAI settings, triggering prompt dialog");
       OpenAISpeechSettingsFragment currentFragment =
           (OpenAISpeechSettingsFragment)
               ((NavHostFragment)
@@ -179,6 +207,32 @@ public class MainSettingsActivity extends AppCompatActivity {
   public void setTitle(CharSequence title) {
     mTitle = title;
     if (getSupportActionBar() != null) getSupportActionBar().setTitle(mTitle);
+  }
+
+  @Override
+  public boolean onKeyDown(int keyCode, KeyEvent event) {
+    if (keyCode == KeyEvent.KEYCODE_MENU) {
+      // Work around a rare crash (seen in Genymotion/Android 16) when a hardware MENU key opens an
+      // overflow PopupWindow and the menu contents are mutated while it is still being laid out.
+      // Touch users still have the overflow button; this only affects legacy hardware keys.
+      return true;
+    }
+    return super.onKeyDown(keyCode, event);
+  }
+
+  @Override
+  public boolean onKeyUp(int keyCode, KeyEvent event) {
+    if (keyCode == KeyEvent.KEYCODE_MENU) return true;
+    return super.onKeyUp(keyCode, event);
+  }
+
+  @Override
+  public void invalidateOptionsMenu() {
+    // Defensive: if an overflow menu popup is currently showing, a fragment-driven menu
+    // invalidation can mutate the underlying MenuAdapter while it is still laid out, which can
+    // crash on some Android/AppCompat combinations.
+    closeOptionsMenu();
+    super.invalidateOptionsMenu();
   }
 
   @Override

@@ -35,6 +35,7 @@
 
         <TextView
             style="@style/Nsk.Text.Normal"
+            android:id="@+id/keyboard_theme_customize_row_summary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/keyboard_theme_customize_current_summary" />

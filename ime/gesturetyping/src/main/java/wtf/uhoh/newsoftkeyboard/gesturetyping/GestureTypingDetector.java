@@ -166,6 +166,8 @@ public class GestureTypingDetector {
     workspaceData.reset();
     // word = Normalizer.normalize(word, Normalizer.Form.NFD);
     char lastLetter = '\0';
+    int lastCenterX = Integer.MIN_VALUE;
+    int lastCenterY = Integer.MIN_VALUE;
 
     // Add points for each key
     for (char c : word) {
@@ -184,8 +186,20 @@ public class GestureTypingDetector {
         }
       }
 
+      final int centerX = keyHit.getCenterX();
+      final int centerY = keyHit.getCenterY();
+
+      // This can happen when a word includes characters that map to the same physical key
+      // (e.g., 'e' and 'é'), or when a key has multiple codes.
+      if (lastCenterX == centerX && lastCenterY == centerY) {
+        lastLetter = c;
+        continue;
+      }
+
       lastLetter = c;
-      workspaceData.addPoint(keyHit.getCenterX(), keyHit.getCenterY());
+      lastCenterX = centerX;
+      lastCenterY = centerY;
+      workspaceData.addPoint(centerX, centerY);
     }
 
     return getPathCorners(workspaceData);
@@ -271,7 +285,12 @@ public class GestureTypingDetector {
 
     final double dotProduct =
         firstSectionXDiff * secondSectionXDiff + firstSectionYDiff * secondSectionYDiff;
-    final double radianValue = Math.acos(dotProduct / firstSectionLength / secondSectionLength);
+    if (firstSectionLength == 0 || secondSectionLength == 0) return false;
+
+    final double cosine = dotProduct / firstSectionLength / secondSectionLength;
+    // Numerical errors can push cosine slightly outside [-1, 1], which would yield NaN.
+    final double clampedCosine = Math.max(-1d, Math.min(1d, cosine));
+    final double radianValue = Math.acos(clampedCosine);
 
     return radianValue <= CURVATURE_THRESHOLD;
   }
@@ -310,16 +329,25 @@ public class GestureTypingDetector {
           continue;
         }
 
+        final double frequencyAdjustment = mFrequencyFactor * ((double) wordFrequencies[i]);
+        final double stopAtDistance;
+        if (mCandidateWeights.size() >= mMaxSuggestions) {
+          // revisedDistance = distanceFromCurve - frequencyAdjustment
+          // to beat our current worst: distanceFromCurve < worst + frequencyAdjustment
+          stopAtDistance = mCandidateWeights.get(mMaxSuggestions - 1) + frequencyAdjustment;
+        } else {
+          stopAtDistance = Double.POSITIVE_INFINITY;
+        }
+
         final double distanceFromCurve =
             calculateDistanceBetweenUserPathAndWord(
-                corners, mWordsCorners.get(i + dictionaryWordsCornersOffset));
+                corners, mWordsCorners.get(i + dictionaryWordsCornersOffset), stopAtDistance);
         if (distanceFromCurve > MINIMUM_DISTANCE_FILTER) {
           continue;
         }
 
         // TODO: convert wordFrequencies to a double[] in the loading phase.
-        final double revisedDistanceFromCurve =
-            distanceFromCurve - (mFrequencyFactor * ((double) wordFrequencies[i]));
+        final double revisedDistanceFromCurve = distanceFromCurve - frequencyAdjustment;
 
         int candidateDistanceSortedIndex = 0;
         while (candidateDistanceSortedIndex < mCandidateWeights.size()
@@ -344,7 +372,7 @@ public class GestureTypingDetector {
   }
 
   private static double calculateDistanceBetweenUserPathAndWord(
-      int[] actualUserPath, int[] generatedWordPath) {
+      int[] actualUserPath, int[] generatedWordPath, double stopAtDistance) {
     // Debugging is still needed, but at least ASK won't crash this way
     if (actualUserPath.length < 2 || generatedWordPath.length == 0) {
       Logger.w(
@@ -357,6 +385,7 @@ public class GestureTypingDetector {
       return Double.MAX_VALUE;
     }
     if (generatedWordPath.length > actualUserPath.length) return Double.MAX_VALUE;
+    if (stopAtDistance <= 0) return Double.MAX_VALUE;
 
     double cumulativeDistance = 0;
     int generatedWordCornerIndex = 0;
@@ -387,6 +416,7 @@ public class GestureTypingDetector {
       }
 
       cumulativeDistance += distanceToGeneratedCorner;
+      if (cumulativeDistance > stopAtDistance) return Double.MAX_VALUE;
     }
 
     // we finished the user-path, but for this word there could still be additional
@@ -402,6 +432,7 @@ public class GestureTypingDetector {
               uy,
               generatedWordPath[generatedWordCornerIndex],
               generatedWordPath[generatedWordCornerIndex + 1]);
+      if (cumulativeDistance > stopAtDistance) return Double.MAX_VALUE;
     }
 
     return cumulativeDistance;

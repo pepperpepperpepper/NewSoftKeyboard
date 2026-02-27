@@ -5,7 +5,9 @@ import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.intent.Intents.intending;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasAction;
+import static androidx.test.espresso.matcher.ViewMatchers.hasDescendant;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
+import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 
 import android.app.Activity;
@@ -16,6 +18,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.SystemClock;
 import androidx.test.core.app.ActivityScenario;
+import androidx.test.espresso.contrib.RecyclerViewActions;
 import androidx.test.espresso.intent.Intents;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
@@ -91,9 +94,12 @@ public class KeyboardThemeCustomizationFragmentTest {
                 .navigate(R.id.keyboardThemeCustomizationFragment);
           });
 
-      onView(withText(R.string.keyboard_theme_wallpaper_customization_pick_title))
-          .check(matches(isDisplayed()));
-      onView(withText(R.string.keyboard_theme_wallpaper_customization_pick_title)).perform(click());
+      onView(withId(androidx.preference.R.id.recycler_view))
+          .perform(
+              RecyclerViewActions.actionOnItem(
+                  hasDescendant(
+                      withText(R.string.keyboard_theme_wallpaper_customization_pick_title)),
+                  click()));
 
       waitForTextDisplayed(
           R.string.keyboard_theme_wallpaper_customization_pick_summary_set, 10_000L);
@@ -158,15 +164,23 @@ public class KeyboardThemeCustomizationFragmentTest {
                 .navigate(R.id.keyboardThemeCustomizationFragment);
           });
 
-      onView(withText(R.string.keyboard_theme_wallpaper_customization_pick_title))
-          .check(matches(isDisplayed()));
-      onView(withText(R.string.keyboard_theme_wallpaper_customization_pick_title)).perform(click());
+      onView(withId(androidx.preference.R.id.recycler_view))
+          .perform(
+              RecyclerViewActions.actionOnItem(
+                  hasDescendant(
+                      withText(R.string.keyboard_theme_wallpaper_customization_pick_title)),
+                  click()));
 
       waitForTextDisplayed(
           R.string.keyboard_theme_wallpaper_customization_pick_summary_set, 10_000L);
 
       // Change mode to "Background + key texture"
-      onView(withText(R.string.keyboard_theme_wallpaper_customization_mode_title)).perform(click());
+      onView(withId(androidx.preference.R.id.recycler_view))
+          .perform(
+              RecyclerViewActions.actionOnItem(
+                  hasDescendant(
+                      withText(R.string.keyboard_theme_wallpaper_customization_mode_title)),
+                  click()));
       onView(withText(R.string.keyboard_theme_wallpaper_customization_mode_background_key_texture))
           .perform(click());
 

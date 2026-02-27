@@ -88,18 +88,14 @@ public class OpenAISavedPromptsFragment extends Fragment {
 
   private void loadPrompts() {
     List<OpenAISavedPrompt> prompts = promptsManager.getAllPrompts();
-    android.util.Log.d("OpenAISavedPrompts", "Loaded " + prompts.size() + " prompts");
     adapter.setPrompts(prompts);
 
     if (prompts.isEmpty()) {
       recyclerView.setVisibility(View.GONE);
       emptyView.setVisibility(View.VISIBLE);
-      android.util.Log.d("OpenAISavedPrompts", "Showing empty view");
     } else {
       recyclerView.setVisibility(View.VISIBLE);
       emptyView.setVisibility(View.GONE);
-      android.util.Log.d(
-          "OpenAISavedPrompts", "Showing recycler view with " + prompts.size() + " items");
     }
   }
 
@@ -152,10 +148,8 @@ public class OpenAISavedPromptsFragment extends Fragment {
     saveButton.setOnClickListener(
         v -> {
           String text = textEdit.getText().toString().trim();
-          android.util.Log.d("OpenAISavedPrompts", "Save button clicked, text: " + text);
 
           if (TextUtils.isEmpty(text)) {
-            android.util.Log.d("OpenAISavedPrompts", "Text is empty, showing error");
             Toast.makeText(
                     getContext(),
                     R.string.openai_saved_prompts_error_text_required,
@@ -165,17 +159,14 @@ public class OpenAISavedPromptsFragment extends Fragment {
           }
 
           if (isEdit) {
-            android.util.Log.d("OpenAISavedPrompts", "Editing existing prompt");
             prompt.setText(text);
             if (promptsManager.updatePrompt(prompt)) {
-              android.util.Log.d("OpenAISavedPrompts", "Update successful");
               Toast.makeText(
                       getContext(), R.string.openai_saved_prompts_save_success, Toast.LENGTH_SHORT)
                   .show();
               loadPrompts();
               dialog.dismiss();
             } else {
-              android.util.Log.e("OpenAISavedPrompts", "Update failed");
               Toast.makeText(
                       getContext(),
                       R.string.openai_saved_prompts_error_save_failed,
@@ -183,17 +174,14 @@ public class OpenAISavedPromptsFragment extends Fragment {
                   .show();
             }
           } else {
-            android.util.Log.d("OpenAISavedPrompts", "Creating new prompt");
             OpenAISavedPrompt newPrompt = new OpenAISavedPrompt(text);
             if (promptsManager.savePrompt(newPrompt)) {
-              android.util.Log.d("OpenAISavedPrompts", "Save successful");
               Toast.makeText(
                       getContext(), R.string.openai_saved_prompts_save_success, Toast.LENGTH_SHORT)
                   .show();
               loadPrompts();
               dialog.dismiss();
             } else {
-              android.util.Log.e("OpenAISavedPrompts", "Save failed");
               Toast.makeText(
                       getContext(),
                       R.string.openai_saved_prompts_error_save_failed,
@@ -236,15 +224,11 @@ public class OpenAISavedPromptsFragment extends Fragment {
 
   private void usePromptInMainField(@NonNull OpenAISavedPrompt prompt) {
     String newPrompt = prompt.getText();
-    android.util.Log.d("OpenAISavedPrompts", "usePromptInMainField called with: " + newPrompt);
 
     // Simply notify the listener and let the dialog handle the rest
     if (listener != null) {
-      android.util.Log.d(
-          "OpenAISavedPrompts", "Calling listener.onPromptSelected with: " + newPrompt);
       listener.onPromptSelected(newPrompt);
     } else {
-      android.util.Log.e("OpenAISavedPrompts", "Listener is null! Cannot handle prompt selection.");
       Toast.makeText(getContext(), "Error: Could not load prompt", Toast.LENGTH_SHORT).show();
     }
   }

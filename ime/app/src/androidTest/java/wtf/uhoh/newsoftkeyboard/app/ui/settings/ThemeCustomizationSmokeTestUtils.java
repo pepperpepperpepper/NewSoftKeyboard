@@ -3,7 +3,10 @@ package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 import android.app.UiAutomation;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.drawable.LayerDrawable;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.os.ParcelFileDescriptor;
 import android.os.SystemClock;
 import android.view.View;
@@ -39,11 +42,27 @@ final class ThemeCustomizationSmokeTestUtils {
   }
 
   static void ensureKeyboardEnabled(@NonNull MainSettingsActivity activity) {
-    final var prefs = DirectBootAwareSharedPreferences.create(activity);
+    ensureKeyboardEnabled((Context) activity);
+  }
+
+  static void ensureKeyboardEnabled(@NonNull Context context) {
+    final var prefs = DirectBootAwareSharedPreferences.create(context);
     prefs
         .edit()
-        .putBoolean(activity.getString(R.string.settings_key_extension_keyboard_enabled), true)
+        .putBoolean(context.getString(R.string.settings_key_extension_keyboard_enabled), true)
         .apply();
+  }
+
+  @NonNull
+  static String ensureDefaultThemeEnabled(@NonNull Context context) {
+    final String themeId = context.getString(R.string.settings_default_keyboard_theme_key);
+    final var prefs = DirectBootAwareSharedPreferences.create(context);
+    final var editor = prefs.edit();
+    for (String key : prefs.getAll().keySet()) {
+      if (key.startsWith("theme_")) editor.remove(key);
+    }
+    editor.putBoolean("theme_" + themeId, true).apply();
+    return themeId;
   }
 
   @Nullable
@@ -74,77 +93,97 @@ final class ThemeCustomizationSmokeTestUtils {
   }
 
   @NonNull
-  static LayerDrawable waitForLivePreviewLayerBackground(
+  static void waitForLivePreviewBackgroundDrawable(
       @NonNull ActivityScenario<MainSettingsActivity> scenario, long timeoutMs) {
     final long deadline = SystemClock.uptimeMillis() + Math.max(1L, timeoutMs);
+    final String[] lastState = new String[] {"unknown"};
     while (SystemClock.uptimeMillis() < deadline) {
-      final LayerDrawable[] found = new LayerDrawable[1];
+      final boolean[] found = new boolean[] {false};
       scenario.onActivity(
           activity -> {
             final View preview = activity.findViewById(R.id.wallpaper_live_preview_keyboard);
-            if (!(preview instanceof DemoKeyboardView)) return;
-            final var bg = preview.getBackground();
-            if (bg instanceof LayerDrawable layer) {
-              found[0] = layer;
+            if (preview == null) {
+              lastState[0] = "missing live preview view";
+              return;
             }
-          });
-      if (found[0] != null) return found[0];
-      SystemClock.sleep(200L);
-    }
-    throw new AssertionError("Timed out waiting for live preview LayerDrawable background.");
-  }
-
-  static void waitForDimOverlayAlpha(
-      @NonNull ActivityScenario<MainSettingsActivity> scenario, int expectedAlpha, long timeoutMs) {
-    final long deadline = SystemClock.uptimeMillis() + Math.max(1L, timeoutMs);
-    final int[] lastAlpha = new int[] {-1};
-    final int[] lastLayerCount = new int[] {-1};
-    final String[] lastBgClass = new String[] {null};
-    final String[] lastLayer0Class = new String[] {null};
-    final String[] lastLayer1Class = new String[] {null};
-    while (SystemClock.uptimeMillis() < deadline) {
-      final int[] foundAlpha = new int[] {-1};
-      scenario.onActivity(
-          activity -> {
-            final View preview = activity.findViewById(R.id.wallpaper_live_preview_keyboard);
-            if (!(preview instanceof DemoKeyboardView)) return;
+            if (!(preview instanceof DemoKeyboardView)) {
+              lastState[0] = "unexpected live preview view class: " + preview.getClass().getName();
+              return;
+            }
             final var bg = preview.getBackground();
-            lastBgClass[0] = bg != null ? bg.getClass().getName() : null;
-            if (!(bg instanceof LayerDrawable layer)) return;
-            if (layer.getNumberOfLayers() < 2) return;
-            foundAlpha[0] = layer.getDrawable(1).getAlpha();
-            lastAlpha[0] = foundAlpha[0];
-            lastLayerCount[0] = layer.getNumberOfLayers();
-            lastLayer0Class[0] =
-                layer.getDrawable(0) != null ? layer.getDrawable(0).getClass().getName() : null;
-            lastLayer1Class[0] =
-                layer.getDrawable(1) != null ? layer.getDrawable(1).getClass().getName() : null;
+            if (bg == null) {
+              lastState[0] = "live preview background is null";
+              return;
+            }
+            lastState[0] = "live preview background: " + bg.getClass().getName();
+            found[0] = true;
           });
-      // Some Android builds appear to quantize background alpha; accept +/- 1 to avoid flakes.
-      if (foundAlpha[0] >= 0 && Math.abs(foundAlpha[0] - expectedAlpha) <= 1) return;
+      if (found[0]) return;
       SystemClock.sleep(200L);
     }
     throw new AssertionError(
-        "Timed out waiting for dim overlay alpha "
-            + expectedAlpha
-            + ". Last alpha="
-            + lastAlpha[0]
-            + ", bg="
-            + lastBgClass[0]
-            + ", layers="
-            + lastLayerCount[0]
-            + ", layer0="
-            + lastLayer0Class[0]
-            + ", layer1="
-            + lastLayer1Class[0]
+        "Timed out waiting for live preview background drawable. Last state: " + lastState[0]);
+  }
+
+  static int captureLivePreviewBackgroundLuma(
+      @NonNull ActivityScenario<MainSettingsActivity> scenario) {
+    final int[] luma = new int[] {-1};
+    scenario.onActivity(
+        activity -> {
+          final View preview = activity.findViewById(R.id.wallpaper_live_preview_keyboard);
+          if (!(preview instanceof DemoKeyboardView)) return;
+          final Drawable bg = preview.getBackground();
+          if (bg == null) return;
+
+          final int size = 64;
+          final Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+          try {
+            final Canvas canvas = new Canvas(bitmap);
+            bg.setBounds(0, 0, size, size);
+            bg.draw(canvas);
+            final int color = bitmap.getPixel(size / 2, size / 2);
+            luma[0] =
+                (299 * Color.red(color) + 587 * Color.green(color) + 114 * Color.blue(color))
+                    / 1000;
+          } finally {
+            bitmap.recycle();
+          }
+        });
+    if (luma[0] < 0) throw new AssertionError("Failed capturing live preview background luma.");
+    return luma[0];
+  }
+
+  static void waitForLivePreviewBackgroundLumaAtMost(
+      @NonNull ActivityScenario<MainSettingsActivity> scenario, int maxLuma, long timeoutMs) {
+    final long deadline = SystemClock.uptimeMillis() + Math.max(1L, timeoutMs);
+    int last = -1;
+    while (SystemClock.uptimeMillis() < deadline) {
+      last = captureLivePreviewBackgroundLuma(scenario);
+      if (last <= maxLuma) return;
+      SystemClock.sleep(200L);
+    }
+    throw new AssertionError(
+        "Timed out waiting for live preview background luma <= "
+            + maxLuma
+            + ". Last="
+            + last
             + ".");
   }
 
   static boolean getAllowExpensiveWallpaperEffects(@NonNull DemoKeyboardView view) {
     try {
-      final Field field = KeyboardViewBase.class.getDeclaredField("allowExpensiveWallpaperEffects");
-      field.setAccessible(true);
-      return Boolean.TRUE.equals(field.get(view));
+      final Field controllerField =
+          KeyboardViewBase.class.getDeclaredField("themeAndDrawController");
+      controllerField.setAccessible(true);
+      final Object controller = controllerField.get(view);
+      if (controller == null) {
+        throw new AssertionError("themeAndDrawController should not be null.");
+      }
+
+      final Field allowField =
+          controller.getClass().getDeclaredField("allowExpensiveWallpaperEffects");
+      allowField.setAccessible(true);
+      return Boolean.TRUE.equals(allowField.get(controller));
     } catch (ReflectiveOperationException e) {
       throw new AssertionError("Failed reading allowExpensiveWallpaperEffects via reflection.", e);
     }

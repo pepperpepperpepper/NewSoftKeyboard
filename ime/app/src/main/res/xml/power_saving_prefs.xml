@@ -42,7 +42,7 @@
         android:title="@string/power_save_mode_gesture_typing_control" />
 
     <androidx.preference.CheckBoxPreference
-        android:defaultValue="@bool/settings_default_true"
+        android:defaultValue="@bool/settings_default_false"
         android:key="@string/settings_key_power_save_mode_sound_control"
         android:persistent="true"
         android:summaryOff=""
@@ -50,7 +50,7 @@
         android:title="@string/power_save_mode_sound_control" />
 
     <androidx.preference.CheckBoxPreference
-        android:defaultValue="@bool/settings_default_true"
+        android:defaultValue="@bool/settings_default_false"
         android:key="@string/settings_key_power_save_mode_vibration_control"
         android:persistent="true"
         android:summaryOff=""

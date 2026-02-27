@@ -40,6 +40,23 @@ public class NextWordsContainer {
     }
   }
 
+  void setNextWordUsedCount(String word, int usedCount) {
+    if (word == null || word.isEmpty()) return;
+    final int normalizedUsedCount = Math.max(1, usedCount);
+    NextWord nextWord = mNextWordLookup.get(word);
+    if (nextWord == null) {
+      nextWord = new NextWord(word, normalizedUsedCount);
+      mNextWordLookup.put(word, nextWord);
+      mOrderedNextWord.add(nextWord);
+    } else if (nextWord.getUsedCount() < normalizedUsedCount) {
+      // NextWord used-count is immutable; swapping the instance is cheaper than incrementing.
+      final NextWord replacement = new NextWord(word, normalizedUsedCount);
+      mNextWordLookup.put(word, replacement);
+      final int orderedIndex = mOrderedNextWord.indexOf(nextWord);
+      if (orderedIndex >= 0) mOrderedNextWord.set(orderedIndex, replacement);
+    }
+  }
+
   public List<NextWord> getNextWordSuggestions() {
     Collections.sort(mOrderedNextWord, msNextWordComparator);
 

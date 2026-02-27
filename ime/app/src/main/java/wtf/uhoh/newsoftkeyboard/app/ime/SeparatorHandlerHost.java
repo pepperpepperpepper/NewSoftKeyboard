@@ -124,6 +124,22 @@ final class SeparatorHandlerHost implements SeparatorHandler.Host {
     return service.prepareWordComposerForNextWord();
   }
 
+  @Override
+  public boolean isInAllUpperCaseState() {
+    return service.mShiftKeyState.isLocked();
+  }
+
+  @NonNull
+  @Override
+  public CharSequence lastCommittedWordForNextSuggestions() {
+    return service.lastCommittedWordForNextSuggestions();
+  }
+
+  @Override
+  public void clearLastCommittedWordForNextSuggestions() {
+    service.clearLastCommittedWordForNextSuggestions();
+  }
+
   @NonNull
   @Override
   public Suggest suggest() {
@@ -138,6 +154,7 @@ final class SeparatorHandlerHost implements SeparatorHandler.Host {
   @Override
   public void setSuggestions(
       @NonNull List<? extends CharSequence> suggestions, int highlightedIndex) {
+    service.markKeepSuggestionsStripWhileIdle();
     service.setSuggestions(suggestions, highlightedIndex);
   }
 }

@@ -1,386 +1,219 @@
 package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
-import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.Toast;
+import android.view.ViewGroup;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
-import androidx.preference.CheckBoxPreference;
-import androidx.preference.ListPreference;
-import androidx.preference.Preference;
-import androidx.preference.PreferenceCategory;
+import androidx.preference.EditTextPreference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
-import androidx.preference.PreferenceViewHolder;
-import androidx.preference.SeekBarPreference;
-import io.reactivex.Single;
-import io.reactivex.disposables.Disposable;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
+import java.util.Objects;
 import net.evendanan.pixel.UiUtils;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
-import wtf.uhoh.newsoftkeyboard.app.debug.TestInputActivity;
-import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
-import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.DemoKeyboardView;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemePresetStore;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemePresetTransfer;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemeUserOverridesStore;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperResolver;
-import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperTransform;
-import wtf.uhoh.newsoftkeyboard.rx.RxSchedulers;
 
 public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat {
 
   private KeyboardWallpaperOverrideStore wallpaperStore;
+  private KeyboardThemeUserOverridesStore themeOverridesStore;
   private KeyboardWallpaperResolver wallpaperPreviewResolver;
+  private KeyboardThemePresetStore presetStore;
   private ActivityResultLauncher<String[]> pickWallpaperLauncher;
-  private Disposable importDisposable;
-  private Disposable previewDisposable;
+  private ActivityResultLauncher<String[]> pickKeyFontLauncher;
+  private ActivityResultLauncher<String> exportPresetLauncher;
+  private ActivityResultLauncher<String[]> importPresetLauncher;
 
-  @Nullable private DemoKeyboardView livePreviewKeyboardView;
+  @Nullable private KeyboardThemeCustomizationOverlaysSection overlaysSection;
 
-  private Preference pickPhotoPref;
-  private CheckBoxPreference highQualityImportPref;
-  private SeekBarPreference dimPref;
-  private ListPreference scaleModePref;
-  private ListPreference anchorPref;
-  private ListPreference wallpaperModePref;
-  private SeekBarPreference keyOpacityPref;
-  private CheckBoxPreference matchKeyShapePref;
-  private Preference tryNowPref;
-  private Preference rotatePhotoPref;
-  private Preference resetPref;
-  private Preference applyToAllPref;
+  @Nullable private KeyboardThemeCustomizationOverlaysSection.Host overlaysSectionHost;
+
+  @Nullable private KeyboardThemeCustomizationLivePreviewSection livePreviewSection;
+
+  @Nullable private KeyboardThemeCustomizationLivePreviewSection.Host livePreviewSectionHost;
+
+  @Nullable private KeyboardThemeCustomizationPresetsSection presetsSection;
+
+  @Nullable private KeyboardThemeCustomizationPresetsSection.Host presetsSectionHost;
+
+  @Nullable private KeyboardThemeCustomizationBackgroundSection backgroundSection;
+
+  @Nullable private KeyboardThemeCustomizationBackgroundSection.Host backgroundSectionHost;
+
+  @Nullable private KeyboardThemeCustomizationColorsSection colorsSection;
+
+  @Nullable private KeyboardThemeCustomizationColorsSection.Host colorsSectionHost;
+
+  @Nullable private KeyboardThemeCustomizationTypographySection typographySection;
+
+  @Nullable private KeyboardThemeCustomizationTypographySection.Host typographySectionHost;
+
+  @Nullable private KeyboardThemeCustomizationShadowsSection shadowsSection;
+
+  @Nullable private KeyboardThemeCustomizationShadowsSection.Host shadowsSectionHost;
+
+  @Nullable private KeyboardThemeCustomizationResetSection resetSection;
+
+  @Nullable private KeyboardThemeCustomizationResetSection.Host resetSectionHost;
+
+  private void initHostsIfNeeded() {
+    if (overlaysSectionHost != null) return;
+    overlaysSectionHost = new KeyboardThemeCustomizationFragmentHosts.OverlaysSectionHost(this);
+    livePreviewSectionHost =
+        new KeyboardThemeCustomizationFragmentHosts.LivePreviewSectionHost(this);
+    presetsSectionHost = new KeyboardThemeCustomizationFragmentHosts.PresetsSectionHost(this);
+    backgroundSectionHost = new KeyboardThemeCustomizationFragmentHosts.BackgroundSectionHost(this);
+    colorsSectionHost = new KeyboardThemeCustomizationFragmentHosts.ColorsSectionHost(this);
+    typographySectionHost = new KeyboardThemeCustomizationFragmentHosts.TypographySectionHost(this);
+    shadowsSectionHost = new KeyboardThemeCustomizationFragmentHosts.ShadowsSectionHost(this);
+    resetSectionHost = new KeyboardThemeCustomizationFragmentHosts.ResetSectionHost(this);
+  }
 
   @Override
   public void onAttach(@NonNull Context context) {
     super.onAttach(context);
     wallpaperStore = new KeyboardWallpaperOverrideStore(context);
+    themeOverridesStore = new KeyboardThemeUserOverridesStore(context);
     wallpaperPreviewResolver = new KeyboardWallpaperResolver(context);
+    presetStore = new KeyboardThemePresetStore(context);
   }
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
+    initHostsIfNeeded();
     pickWallpaperLauncher =
-        registerForActivityResult(new ActivityResultContracts.OpenDocument(), this::onPhotoPicked);
+        registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(),
+            uri -> {
+              final Context context = getContext();
+              final KeyboardThemeCustomizationBackgroundSection background = backgroundSection;
+              if (context == null || background == null) return;
+              background.onPhotoPicked(context, uri);
+            });
+    pickKeyFontLauncher =
+        registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(), this::onCustomKeyFontPicked);
+    exportPresetLauncher =
+        registerForActivityResult(
+            new ActivityResultContracts.CreateDocument(KeyboardThemePresetTransfer.MIME_TYPE_ZIP),
+            this::onPresetExportUri);
+    importPresetLauncher =
+        registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(), this::onPresetImportUri);
     super.onCreate(savedInstanceState);
   }
 
   @Override
+  public View onCreateView(
+      @NonNull LayoutInflater inflater,
+      @Nullable ViewGroup container,
+      @Nullable Bundle savedInstanceState) {
+    final View preferencesView = super.onCreateView(inflater, container, savedInstanceState);
+    final View root =
+        inflater.inflate(R.layout.keyboard_theme_customization_fragment, container, false);
+    final ViewGroup prefsContainer =
+        root.findViewById(R.id.theme_customization_preferences_container);
+    if (preferencesView != null && prefsContainer != null) {
+      prefsContainer.addView(
+          preferencesView,
+          new ViewGroup.LayoutParams(
+              ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+    return root;
+  }
+
+  @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+    initHostsIfNeeded();
     final var context = requireContext();
     if (wallpaperStore == null) {
       wallpaperStore = new KeyboardWallpaperOverrideStore(context);
     }
+    if (themeOverridesStore == null) {
+      themeOverridesStore = new KeyboardThemeUserOverridesStore(context);
+    }
     if (wallpaperPreviewResolver == null) {
       wallpaperPreviewResolver = new KeyboardWallpaperResolver(context);
+    }
+    if (presetStore == null) {
+      presetStore = new KeyboardThemePresetStore(context);
     }
     final PreferenceScreen screen = getPreferenceManager().createPreferenceScreen(context);
     setPreferenceScreen(screen);
 
-    final PreferenceCategory preview = new PreferenceCategory(context);
-    preview.setTitle(R.string.keyboard_theme_wallpaper_customization_preview_title);
-    screen.addPreference(preview);
+    if (livePreviewSection == null) {
+      livePreviewSection =
+          new KeyboardThemeCustomizationLivePreviewSection(
+              Objects.requireNonNull(livePreviewSectionHost),
+              themeOverridesStore,
+              wallpaperStore,
+              wallpaperPreviewResolver);
+    }
 
-    final KeyboardLivePreviewPreference previewPref =
-        new KeyboardLivePreviewPreference(context, this::bindLivePreviewKeyboardView);
-    previewPref.setKey("info:keyboard_theme_wallpaper_preview");
-    preview.addPreference(previewPref);
+    if (presetsSection == null) {
+      presetsSection =
+          new KeyboardThemeCustomizationPresetsSection(
+              Objects.requireNonNull(presetsSectionHost),
+              presetStore,
+              wallpaperStore,
+              themeOverridesStore);
+    }
+    presetsSection.addPreferences(context, screen);
 
-    final PreferenceCategory background = new PreferenceCategory(context);
-    background.setTitle(R.string.keyboard_theme_wallpaper_customization_title);
-    screen.addPreference(background);
+    if (backgroundSection == null) {
+      backgroundSection =
+          new KeyboardThemeCustomizationBackgroundSection(
+              Objects.requireNonNull(backgroundSectionHost), wallpaperStore, themeOverridesStore);
+    }
+    backgroundSection.addPreferences(context, screen);
 
-    pickPhotoPref = new Preference(context);
-    pickPhotoPref.setTitle(R.string.keyboard_theme_wallpaper_customization_pick_title);
-    pickPhotoPref.setSummary(R.string.keyboard_theme_wallpaper_customization_pick_summary);
-    pickPhotoPref.setOnPreferenceClickListener(
-        ignored -> {
-          if (pickWallpaperLauncher == null) {
-            showPickFailedDialog(new IllegalStateException("Wallpaper picker is not available."));
-            refreshState();
-            return true;
-          }
-          try {
-            pickWallpaperLauncher.launch(new String[] {"image/*"});
-          } catch (ActivityNotFoundException e) {
-            showPickFailedDialog(e);
-            refreshState();
-          }
-          return true;
-        });
-    background.addPreference(pickPhotoPref);
+    if (colorsSection == null) {
+      colorsSection =
+          new KeyboardThemeCustomizationColorsSection(
+              Objects.requireNonNull(colorsSectionHost), wallpaperStore, themeOverridesStore);
+    }
+    colorsSection.addPreferences(context, screen);
 
-    highQualityImportPref = new CheckBoxPreference(context);
-    highQualityImportPref.setTitle(
-        R.string.keyboard_theme_wallpaper_customization_high_quality_title);
-    highQualityImportPref.setSummary(
-        R.string.keyboard_theme_wallpaper_customization_high_quality_summary);
-    highQualityImportPref.setChecked(wallpaperStore.isHighQualityImportEnabled());
-    highQualityImportPref.setOnPreferenceChangeListener(
-        (ignored, newValue) -> {
-          wallpaperStore.setHighQualityImportEnabled(Boolean.TRUE.equals(newValue));
-          return true;
-        });
-    background.addPreference(highQualityImportPref);
+    if (typographySection == null) {
+      typographySection =
+          new KeyboardThemeCustomizationTypographySection(
+              Objects.requireNonNull(typographySectionHost), themeOverridesStore);
+    }
+    typographySection.addPreferences(context, screen);
 
-    rotatePhotoPref = new Preference(context);
-    rotatePhotoPref.setTitle(R.string.keyboard_theme_wallpaper_customization_rotate_title);
-    rotatePhotoPref.setSummary(R.string.keyboard_theme_wallpaper_customization_rotate_summary);
-    rotatePhotoPref.setOnPreferenceClickListener(
-        ignored -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return true;
-          wallpaperStore.rotateWallpaperClockwise90(theme.getId());
-          Toast.makeText(
-                  context,
-                  R.string.keyboard_theme_wallpaper_customization_rotate_toast,
-                  Toast.LENGTH_SHORT)
-              .show();
-          refreshState();
-          return true;
-        });
-    background.addPreference(rotatePhotoPref);
+    if (shadowsSection == null) {
+      shadowsSection =
+          new KeyboardThemeCustomizationShadowsSection(
+              Objects.requireNonNull(shadowsSectionHost), themeOverridesStore);
+    }
+    shadowsSection.addPreferences(context, screen);
 
-    scaleModePref = new ListPreference(context);
-    scaleModePref.setKey("keyboard_theme_wallpaper_customization_scale_mode");
-    scaleModePref.setPersistent(false);
-    scaleModePref.setTitle(R.string.keyboard_theme_wallpaper_customization_scale_title);
-    final CharSequence scaleModeSummaryBase =
-        getText(R.string.keyboard_theme_wallpaper_customization_scale_summary);
-    scaleModePref.setSummaryProvider(
-        pref -> {
-          if (!(pref instanceof ListPreference lp)) return scaleModeSummaryBase;
-          final CharSequence entry = lp.getEntry();
-          if (entry == null) return scaleModeSummaryBase;
-          return scaleModeSummaryBase + "\n" + entry;
-        });
-    scaleModePref.setEntries(
-        new CharSequence[] {
-          getString(R.string.keyboard_theme_wallpaper_customization_scale_crop),
-          getString(R.string.keyboard_theme_wallpaper_customization_scale_fit),
-          getString(R.string.keyboard_theme_wallpaper_customization_scale_stretch),
-          getString(R.string.keyboard_theme_wallpaper_customization_scale_tile),
-          getString(R.string.keyboard_theme_wallpaper_customization_scale_mirror)
-        });
-    scaleModePref.setEntryValues(new CharSequence[] {"0", "1", "2", "3", "4"});
-    scaleModePref.setOnPreferenceChangeListener(
-        (ignored, newValue) -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return false;
-          try {
-            wallpaperStore.setWallpaperScaleMode(
-                theme.getId(), Integer.parseInt(String.valueOf(newValue)));
-            refreshState();
-            return true;
-          } catch (NumberFormatException e) {
-            return false;
-          }
-        });
-    background.addPreference(scaleModePref);
+    if (overlaysSection == null) {
+      overlaysSection =
+          new KeyboardThemeCustomizationOverlaysSection(
+              Objects.requireNonNull(overlaysSectionHost));
+    }
+    overlaysSection.addPreferences(context, screen);
 
-    anchorPref = new ListPreference(context);
-    anchorPref.setKey("keyboard_theme_wallpaper_customization_anchor");
-    anchorPref.setPersistent(false);
-    anchorPref.setTitle(R.string.keyboard_theme_wallpaper_customization_anchor_title);
-    final CharSequence anchorSummaryBase =
-        getText(R.string.keyboard_theme_wallpaper_customization_anchor_summary);
-    anchorPref.setSummaryProvider(
-        pref -> {
-          if (!(pref instanceof ListPreference lp)) return anchorSummaryBase;
-          final CharSequence entry = lp.getEntry();
-          if (entry == null) return anchorSummaryBase;
-          return anchorSummaryBase + "\n" + entry;
-        });
-    anchorPref.setEntries(
-        new CharSequence[] {
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_top_left),
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_top),
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_top_right),
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_left),
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_center),
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_right),
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_bottom_left),
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_bottom),
-          getString(R.string.keyboard_theme_wallpaper_customization_anchor_bottom_right)
-        });
-    anchorPref.setEntryValues(new CharSequence[] {"0", "1", "2", "3", "4", "5", "6", "7", "8"});
-    anchorPref.setOnPreferenceChangeListener(
-        (ignored, newValue) -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return false;
-          try {
-            wallpaperStore.setWallpaperAnchor(
-                theme.getId(), Integer.parseInt(String.valueOf(newValue)));
-            refreshState();
-            return true;
-          } catch (NumberFormatException e) {
-            return false;
-          }
-        });
-    background.addPreference(anchorPref);
-
-    dimPref = new SeekBarPreference(context);
-    dimPref.setTitle(R.string.keyboard_theme_wallpaper_customization_dim_title);
-    dimPref.setSummary(R.string.keyboard_theme_wallpaper_customization_dim_summary);
-    dimPref.setMin(0);
-    dimPref.setMax(100);
-    dimPref.setShowSeekBarValue(true);
-    dimPref.setUpdatesContinuously(true);
-    dimPref.setOnPreferenceChangeListener(
-        (ignored, newValue) -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return false;
-          wallpaperStore.setDimPercent(theme.getId(), (Integer) newValue);
-          updateLivePreview();
-          return true;
-        });
-    background.addPreference(dimPref);
-
-    wallpaperModePref = new ListPreference(context);
-    wallpaperModePref.setKey("keyboard_theme_wallpaper_customization_mode");
-    wallpaperModePref.setPersistent(false);
-    wallpaperModePref.setTitle(R.string.keyboard_theme_wallpaper_customization_mode_title);
-    final CharSequence wallpaperModeSummaryBase =
-        getText(R.string.keyboard_theme_wallpaper_customization_mode_summary);
-    wallpaperModePref.setSummaryProvider(
-        pref -> {
-          if (!(pref instanceof ListPreference lp)) return wallpaperModeSummaryBase;
-          final CharSequence entry = lp.getEntry();
-          if (entry == null) return wallpaperModeSummaryBase;
-          return wallpaperModeSummaryBase + "\n" + entry;
-        });
-    wallpaperModePref.setEntries(
-        new CharSequence[] {
-          getString(R.string.keyboard_theme_wallpaper_customization_mode_background_only),
-          getString(R.string.keyboard_theme_wallpaper_customization_mode_background_key_tint),
-          getString(R.string.keyboard_theme_wallpaper_customization_mode_background_key_texture)
-        });
-    wallpaperModePref.setEntryValues(new CharSequence[] {"0", "1", "2"});
-    wallpaperModePref.setOnPreferenceChangeListener(
-        (ignored, newValue) -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return false;
-          try {
-            wallpaperStore.setWallpaperMode(
-                theme.getId(), Integer.parseInt(String.valueOf(newValue)));
-            refreshState();
-            return true;
-          } catch (NumberFormatException e) {
-            return false;
-          }
-        });
-    background.addPreference(wallpaperModePref);
-
-    keyOpacityPref = new SeekBarPreference(context);
-    keyOpacityPref.setTitle(R.string.keyboard_theme_wallpaper_customization_key_opacity_title);
-    final CharSequence keyOpacitySummaryBase =
-        getText(R.string.keyboard_theme_wallpaper_customization_key_opacity_summary);
-    keyOpacityPref.setSummaryProvider(
-        pref -> {
-          if (!(pref instanceof SeekBarPreference seek)) return keyOpacitySummaryBase;
-          return keyOpacitySummaryBase + "\n" + seek.getValue() + "%";
-        });
-    keyOpacityPref.setMin(0);
-    keyOpacityPref.setMax(100);
-    keyOpacityPref.setShowSeekBarValue(true);
-    keyOpacityPref.setUpdatesContinuously(true);
-    keyOpacityPref.setOnPreferenceChangeListener(
-        (ignored, newValue) -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return false;
-          wallpaperStore.setKeyAlphaPercent(theme.getId(), (Integer) newValue);
-          updateLivePreview();
-          return true;
-        });
-    background.addPreference(keyOpacityPref);
-
-    matchKeyShapePref = new CheckBoxPreference(context);
-    matchKeyShapePref.setTitle(
-        R.string.keyboard_theme_wallpaper_customization_match_key_shape_title);
-    matchKeyShapePref.setSummary(
-        R.string.keyboard_theme_wallpaper_customization_match_key_shape_summary);
-    matchKeyShapePref.setOnPreferenceChangeListener(
-        (ignored, newValue) -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return false;
-          wallpaperStore.setMatchKeyShapeEnabled(theme.getId(), Boolean.TRUE.equals(newValue));
-          updateLivePreview();
-          return true;
-        });
-    background.addPreference(matchKeyShapePref);
-
-    tryNowPref = new Preference(context);
-    tryNowPref.setTitle(R.string.keyboard_theme_wallpaper_customization_try_now_title);
-    tryNowPref.setSummary(R.string.keyboard_theme_wallpaper_customization_try_now_summary);
-    tryNowPref.setOnPreferenceClickListener(
-        ignored -> {
-          startActivity(new Intent(context, TestInputActivity.class));
-          return true;
-        });
-    background.addPreference(tryNowPref);
-
-    resetPref = new Preference(context);
-    resetPref.setTitle(R.string.keyboard_theme_wallpaper_customization_reset_title);
-    resetPref.setSummary(R.string.keyboard_theme_wallpaper_customization_reset_summary);
-    resetPref.setOnPreferenceClickListener(
-        ignored -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return true;
-          wallpaperStore.clear(theme.getId());
-          Toast.makeText(
-                  context,
-                  R.string.keyboard_theme_wallpaper_customization_reset_toast,
-                  Toast.LENGTH_SHORT)
-              .show();
-          refreshState();
-          updateLivePreview();
-          return true;
-        });
-    background.addPreference(resetPref);
-
-    applyToAllPref = new Preference(context);
-    applyToAllPref.setTitle(R.string.keyboard_theme_wallpaper_customization_apply_to_all_title);
-    applyToAllPref.setSummary(R.string.keyboard_theme_wallpaper_customization_apply_to_all_summary);
-    applyToAllPref.setOnPreferenceClickListener(
-        ignored -> {
-          final KeyboardTheme theme = getCurrentTheme();
-          if (theme == null) return true;
-
-          final String themeId = theme.getId();
-          if (!wallpaperStore.hasWallpaper(themeId) || wallpaperStore.isWallpaperInvalid(themeId)) {
-            Toast.makeText(
-                    context,
-                    R.string.keyboard_theme_wallpaper_customization_apply_to_all_pick_first_toast,
-                    Toast.LENGTH_SHORT)
-                .show();
-            return true;
-          }
-
-          new AlertDialog.Builder(context)
-              .setTitle(R.string.keyboard_theme_wallpaper_customization_apply_to_all_dialog_title)
-              .setMessage(
-                  R.string.keyboard_theme_wallpaper_customization_apply_to_all_dialog_message)
-              .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
-              .setPositiveButton(
-                  R.string.keyboard_theme_wallpaper_customization_apply_to_all_dialog_apply,
-                  (dialog, which) -> {
-                    dialog.dismiss();
-                    applyWallpaperToAllThemes(themeId);
-                  })
-              .show();
-          return true;
-        });
-    background.addPreference(applyToAllPref);
+    if (resetSection == null) {
+      resetSection =
+          new KeyboardThemeCustomizationResetSection(
+              Objects.requireNonNull(resetSectionHost), wallpaperStore, themeOverridesStore);
+    }
+    resetSection.addPreferences(context, screen);
   }
 
   @Override
@@ -392,15 +225,38 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
 
   @Override
   public void onDestroy() {
-    if (importDisposable != null) {
-      importDisposable.dispose();
-      importDisposable = null;
+    final KeyboardThemeCustomizationPresetsSection presets = presetsSection;
+    if (presets != null) {
+      presets.dispose();
     }
-    if (previewDisposable != null) {
-      previewDisposable.dispose();
-      previewDisposable = null;
+    final KeyboardThemeCustomizationColorsSection colors = colorsSection;
+    if (colors != null) {
+      colors.dispose();
     }
-    livePreviewKeyboardView = null;
+    final KeyboardThemeCustomizationTypographySection typography = typographySection;
+    if (typography != null) {
+      typography.dispose();
+    }
+    final KeyboardThemeCustomizationShadowsSection shadows = shadowsSection;
+    if (shadows != null) {
+      shadows.dispose();
+    }
+    final KeyboardThemeCustomizationBackgroundSection background = backgroundSection;
+    if (background != null) {
+      background.dispose();
+    }
+    final KeyboardThemeCustomizationLivePreviewSection preview = livePreviewSection;
+    if (preview != null) {
+      preview.dispose();
+    }
+    final KeyboardThemeCustomizationOverlaysSection overlays = overlaysSection;
+    if (overlays != null) {
+      overlays.dispose();
+    }
+    final KeyboardThemeCustomizationResetSection reset = resetSection;
+    if (reset != null) {
+      reset.dispose();
+    }
     super.onDestroy();
   }
 
@@ -408,571 +264,327 @@ public class KeyboardThemeCustomizationFragment extends PreferenceFragmentCompat
   public void onResume() {
     super.onResume();
     refreshState();
+    scrollToRequestedPreferenceIfNeeded();
   }
 
   @Override
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
+    final KeyboardThemeCustomizationLivePreviewSection preview = livePreviewSection;
+    if (preview != null) {
+      preview.bindToRootView(view);
+    }
+    bindSectionNav(view);
     refreshState();
   }
 
+  private void bindSectionNav(@NonNull View root) {
+    bindScrollNavButton(root, R.id.theme_customization_nav_presets, "section:presets");
+    bindScrollNavButton(root, R.id.theme_customization_nav_background, "section:background");
+    bindScrollNavButton(root, R.id.theme_customization_nav_colors, "section:colors");
+    bindScrollNavButton(root, R.id.theme_customization_nav_typography, "section:typography");
+    bindScrollNavButton(root, R.id.theme_customization_nav_shadows, "section:shadows");
+    bindScrollNavButton(root, R.id.theme_customization_nav_overlays, "section:overlays");
+    bindScrollNavButton(root, R.id.theme_customization_nav_reset, "section:reset");
+  }
+
+  private void bindScrollNavButton(
+      @NonNull View root, int buttonId, @NonNull String preferenceKey) {
+    final View button = root.findViewById(buttonId);
+    if (button == null) return;
+    button.setOnClickListener(ignored -> scrollToPreference(preferenceKey));
+  }
+
+  private void scrollToRequestedPreferenceIfNeeded() {
+    final Bundle args = getArguments();
+    if (args == null) return;
+    final String key = args.getString(SettingsSearchFragment.ARG_SCROLL_TO_PREFERENCE_KEY);
+    if (TextUtils.isEmpty(key)) return;
+    scrollToPreference(key);
+    args.remove(SettingsSearchFragment.ARG_SCROLL_TO_PREFERENCE_KEY);
+  }
+
   @Nullable
-  private KeyboardTheme getCurrentTheme() {
+  DemoKeyboardView getLivePreviewKeyboardViewOrNull() {
+    final KeyboardThemeCustomizationLivePreviewSection preview = livePreviewSection;
+    return preview != null ? preview.getLivePreviewKeyboardView() : null;
+  }
+
+  @Nullable
+  ActivityResultLauncher<String[]> getPickWallpaperLauncherOrNull() {
+    return pickWallpaperLauncher;
+  }
+
+  @Nullable
+  ActivityResultLauncher<String[]> getPickKeyFontLauncherOrNull() {
+    return pickKeyFontLauncher;
+  }
+
+  @Nullable
+  ActivityResultLauncher<String> getExportPresetLauncherOrNull() {
+    return exportPresetLauncher;
+  }
+
+  @Nullable
+  ActivityResultLauncher<String[]> getImportPresetLauncherOrNull() {
+    return importPresetLauncher;
+  }
+
+  @Nullable
+  KeyboardTheme getCurrentTheme() {
     final var context = getContext();
     if (context == null) return null;
     return NskApplicationBase.getKeyboardThemeFactory(context).getEnabledAddOn();
   }
 
-  private void refreshState() {
+  @NonNull
+  String resolvePresetId(@NonNull KeyboardTheme theme) {
+    final String baseThemeId = theme.getId();
+    final KeyboardThemePresetStore store = presetStore;
+    return store != null ? store.getActivePresetId(baseThemeId) : baseThemeId;
+  }
+
+  void refreshState() {
     final KeyboardTheme theme = getCurrentTheme();
     if (theme == null) return;
 
-    final String themeId = theme.getId();
-    final boolean importInProgress = importDisposable != null && !importDisposable.isDisposed();
-    final boolean hasPhoto = wallpaperStore.hasWallpaper(themeId);
-    final boolean isInvalid = wallpaperStore.isWallpaperInvalid(themeId);
-    final int dim = wallpaperStore.getDimPercent(themeId);
-    final int scaleMode = wallpaperStore.getWallpaperScaleMode(themeId);
-    final int anchor = wallpaperStore.getWallpaperAnchor(themeId);
-    final int mode = wallpaperStore.getWallpaperMode(themeId);
-    final int keyOpacityPercent = wallpaperStore.getKeyAlphaPercent(themeId);
-    final int rotationDegrees = wallpaperStore.getWallpaperRotationDegrees(themeId);
-    final boolean matchKeyShape = wallpaperStore.isMatchKeyShapeEnabled(themeId);
-
-    if (pickPhotoPref != null) {
-      pickPhotoPref.setEnabled(!importInProgress);
-      pickPhotoPref.setSummary(
-          getString(
-              isInvalid
-                  ? R.string.keyboard_theme_wallpaper_customization_pick_summary_invalid
-                  : hasPhoto
-                      ? R.string.keyboard_theme_wallpaper_customization_pick_summary_set
-                      : R.string.keyboard_theme_wallpaper_customization_pick_summary));
-    }
-    refreshPhotoPreview(themeId, hasPhoto, isInvalid, dim, rotationDegrees, scaleMode, anchor);
-
-    if (highQualityImportPref != null) {
-      highQualityImportPref.setChecked(wallpaperStore.isHighQualityImportEnabled());
-      highQualityImportPref.setEnabled(!importInProgress);
+    final KeyboardThemeCustomizationOverlaysSection overlays = overlaysSection;
+    if (overlays != null) {
+      overlays.refreshState();
     }
 
-    if (dimPref != null) {
-      dimPref.setEnabled(hasPhoto && !isInvalid && !importInProgress);
-      dimPref.setValue(dim);
+    final String baseThemeId = theme.getId();
+    final String themeId = resolvePresetId(theme);
+    final KeyboardThemeCustomizationPresetsSection presets = presetsSection;
+    final KeyboardThemeCustomizationTypographySection typography = typographySection;
+    final KeyboardThemeCustomizationBackgroundSection background = backgroundSection;
+    final boolean importInProgress =
+        (background != null && background.isWallpaperImportInProgress())
+            || (typography != null && typography.isFontImportInProgress())
+            || (presets != null && presets.isPresetTransferInProgress());
+    if (presets != null) {
+      presets.refreshState(baseThemeId, themeId, importInProgress);
+    }
+    if (background != null) {
+      background.refreshState(themeId, importInProgress);
     }
 
-    if (rotatePhotoPref != null) {
-      final boolean enabled = hasPhoto && !isInvalid && !importInProgress;
-      rotatePhotoPref.setEnabled(enabled);
-      rotatePhotoPref.setVisible(enabled);
+    final KeyboardThemeCustomizationColorsSection colors = colorsSection;
+    if (colors != null) {
+      colors.refreshState(themeId, importInProgress);
     }
 
-    if (scaleModePref != null) {
-      final boolean enabled = hasPhoto && !isInvalid && !importInProgress;
-      scaleModePref.setEnabled(enabled);
-      scaleModePref.setVisible(enabled);
-      scaleModePref.setValue(String.valueOf(scaleMode));
+    if (typography != null) {
+      typography.refreshState(themeId, importInProgress);
+    }
+    final KeyboardThemeCustomizationShadowsSection shadows = shadowsSection;
+    if (shadows != null) {
+      shadows.refreshState(themeId);
     }
 
-    if (anchorPref != null) {
-      final boolean enabled =
-          hasPhoto
-              && !isInvalid
-              && !importInProgress
-              && (scaleMode == KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP
-                  || scaleMode == KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_FIT);
-      anchorPref.setEnabled(enabled);
-      anchorPref.setVisible(enabled);
-      anchorPref.setValue(String.valueOf(anchor));
+    final boolean hasAnyWallpaperOverride =
+        background != null && background.hasAnyWallpaperOverride(themeId);
+    final boolean hasAnyColorOverride = colors != null && colors.hasAnyColorOverride(themeId);
+    final boolean hasAnyTypographyOverride =
+        typography != null && typography.hasAnyTypographyOverride(themeId);
+    final boolean hasAnyShadowsOverride = shadows != null && shadows.hasAnyShadowsOverride(themeId);
+    final boolean hasAnyAppearanceOverride =
+        hasAnyColorOverride || hasAnyTypographyOverride || hasAnyShadowsOverride;
+
+    if (presets != null) {
+      presets.refreshOverridesSummary(
+          themeId,
+          importInProgress,
+          hasAnyWallpaperOverride,
+          hasAnyColorOverride,
+          hasAnyTypographyOverride,
+          hasAnyShadowsOverride);
     }
 
-    if (wallpaperModePref != null) {
-      final boolean enabled = hasPhoto && !isInvalid && !importInProgress;
-      wallpaperModePref.setEnabled(enabled);
-      wallpaperModePref.setVisible(enabled);
-      wallpaperModePref.setValue(String.valueOf(mode));
+    final KeyboardThemeCustomizationResetSection reset = resetSection;
+    if (reset != null) {
+      reset.refreshState(importInProgress, hasAnyWallpaperOverride, hasAnyAppearanceOverride);
     }
 
-    if (keyOpacityPref != null) {
-      final boolean enabled =
-          hasPhoto
-              && !isInvalid
-              && !importInProgress
-              && mode != KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_ONLY;
-      keyOpacityPref.setEnabled(enabled);
-      keyOpacityPref.setVisible(enabled);
-      keyOpacityPref.setValue(keyOpacityPercent);
-    }
-
-    if (matchKeyShapePref != null) {
-      final boolean enabled =
-          hasPhoto
-              && !isInvalid
-              && !importInProgress
-              && mode == KeyboardWallpaperOverrideStore.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE;
-      matchKeyShapePref.setEnabled(enabled);
-      matchKeyShapePref.setVisible(enabled);
-      matchKeyShapePref.setChecked(matchKeyShape);
-    }
-
-    if (resetPref != null) {
-      resetPref.setEnabled(!importInProgress && (hasPhoto || isInvalid || dim > 0));
-    }
-
-    if (applyToAllPref != null) {
-      applyToAllPref.setEnabled(!importInProgress && hasPhoto && !isInvalid);
-    }
-
-    ensureLivePreviewConfigured();
     updateLivePreview();
   }
 
-  private void bindLivePreviewKeyboardView(@NonNull DemoKeyboardView view) {
-    livePreviewKeyboardView = view;
-    ensureLivePreviewConfigured();
-    updateLivePreview();
+  void updateResetEnabledStates(@NonNull String themeId) {
+    final KeyboardThemeUserOverridesStore overridesStore = themeOverridesStore;
+    final KeyboardThemeCustomizationTypographySection typography = typographySection;
+    final KeyboardThemeCustomizationPresetsSection presets = presetsSection;
+    final KeyboardThemeCustomizationBackgroundSection background = backgroundSection;
+
+    final boolean importInProgress =
+        (background != null && background.isWallpaperImportInProgress())
+            || (typography != null && typography.isFontImportInProgress())
+            || (presets != null && presets.isPresetTransferInProgress());
+    final boolean hasAnyWallpaperOverride =
+        background != null && background.hasAnyWallpaperOverride(themeId);
+
+    final KeyboardThemeCustomizationColorsSection colors = colorsSection;
+    final boolean hasAnyColorOverride = colors != null && colors.hasAnyColorOverride(themeId);
+    final boolean hasAnyTypographyOverride =
+        typography != null && typography.hasAnyTypographyOverride(themeId);
+    final KeyboardThemeCustomizationShadowsSection shadows = shadowsSection;
+    final boolean hasAnyShadowsOverride =
+        shadows != null
+            ? shadows.hasAnyShadowsOverride(themeId)
+            : overridesStore != null
+                && (overridesStore.getKeyTextShadowColor(themeId) != null
+                    || overridesStore.getTokenSecondaryTextShadowColor(themeId) != null
+                    || overridesStore.getTokenSecondaryTextShadowRadiusDp(themeId) != null
+                    || overridesStore.getTokenSecondaryTextShadowOffsetXDp(themeId) != null
+                    || overridesStore.getTokenSecondaryTextShadowOffsetYDp(themeId) != null
+                    || overridesStore.getTokenSecondaryKeyBackgroundShadowColor(themeId) != null
+                    || overridesStore.getTokenSecondaryKeyBackgroundShadowOffsetXDp(themeId) != null
+                    || overridesStore.getTokenSecondaryKeyBackgroundShadowOffsetYDp(themeId) != null
+                    || overridesStore.getTokenSecondaryKeyBackgroundShadowSpreadDp(themeId) != null
+                    || overridesStore.isKeyTextShadowUseTokenSecondary(themeId)
+                    || overridesStore.isSpecialKeyTextShadowUseTokenSecondary(themeId)
+                    || overridesStore.isSpacebarKeyTextShadowUseTokenSecondary(themeId)
+                    || overridesStore.isModifierKeyTextShadowUseTokenSecondary(themeId)
+                    || overridesStore.isEnterKeyTextShadowUseTokenSecondary(themeId)
+                    || overridesStore.isKeyBackgroundShadowUseTokenSecondary(themeId)
+                    || overridesStore.isSpecialKeyBackgroundShadowUseTokenSecondary(themeId)
+                    || overridesStore.isSpacebarKeyBackgroundShadowUseTokenSecondary(themeId)
+                    || overridesStore.isModifierKeyBackgroundShadowUseTokenSecondary(themeId)
+                    || overridesStore.isEnterKeyBackgroundShadowUseTokenSecondary(themeId)
+                    || overridesStore.getKeyTextShadowRadiusDp(themeId) != null
+                    || overridesStore.getKeyTextShadowOffsetXDp(themeId) != null
+                    || overridesStore.getKeyTextShadowOffsetYDp(themeId) != null
+                    || overridesStore.getSpecialKeyTextShadowColor(themeId) != null
+                    || overridesStore.getSpecialKeyTextShadowRadiusDp(themeId) != null
+                    || overridesStore.getSpecialKeyTextShadowOffsetXDp(themeId) != null
+                    || overridesStore.getSpecialKeyTextShadowOffsetYDp(themeId) != null
+                    || overridesStore.getSpacebarKeyTextShadowColor(themeId) != null
+                    || overridesStore.getSpacebarKeyTextShadowRadiusDp(themeId) != null
+                    || overridesStore.getSpacebarKeyTextShadowOffsetXDp(themeId) != null
+                    || overridesStore.getSpacebarKeyTextShadowOffsetYDp(themeId) != null
+                    || overridesStore.getModifierKeyTextShadowColor(themeId) != null
+                    || overridesStore.getModifierKeyTextShadowRadiusDp(themeId) != null
+                    || overridesStore.getModifierKeyTextShadowOffsetXDp(themeId) != null
+                    || overridesStore.getModifierKeyTextShadowOffsetYDp(themeId) != null
+                    || overridesStore.getEnterKeyTextShadowColor(themeId) != null
+                    || overridesStore.getEnterKeyTextShadowRadiusDp(themeId) != null
+                    || overridesStore.getEnterKeyTextShadowOffsetXDp(themeId) != null
+                    || overridesStore.getEnterKeyTextShadowOffsetYDp(themeId) != null
+                    || overridesStore.getKeyBackgroundShadowColor(themeId) != null
+                    || overridesStore.getKeyBackgroundShadowOffsetXDp(themeId) != null
+                    || overridesStore.getKeyBackgroundShadowOffsetYDp(themeId) != null
+                    || overridesStore.getKeyBackgroundShadowSpreadDp(themeId) != null
+                    || overridesStore.getSpecialKeyBackgroundShadowColor(themeId) != null
+                    || overridesStore.getSpecialKeyBackgroundShadowOffsetXDp(themeId) != null
+                    || overridesStore.getSpecialKeyBackgroundShadowOffsetYDp(themeId) != null
+                    || overridesStore.getSpacebarKeyBackgroundShadowColor(themeId) != null
+                    || overridesStore.getSpacebarKeyBackgroundShadowOffsetXDp(themeId) != null
+                    || overridesStore.getSpacebarKeyBackgroundShadowOffsetYDp(themeId) != null
+                    || overridesStore.getModifierKeyBackgroundShadowColor(themeId) != null
+                    || overridesStore.getModifierKeyBackgroundShadowOffsetXDp(themeId) != null
+                    || overridesStore.getModifierKeyBackgroundShadowOffsetYDp(themeId) != null
+                    || overridesStore.getEnterKeyBackgroundShadowColor(themeId) != null
+                    || overridesStore.getEnterKeyBackgroundShadowOffsetXDp(themeId) != null
+                    || overridesStore.getEnterKeyBackgroundShadowOffsetYDp(themeId) != null);
+
+    final boolean hasAnyAppearanceOverride =
+        hasAnyColorOverride || hasAnyTypographyOverride || hasAnyShadowsOverride;
+
+    final KeyboardThemeCustomizationResetSection reset = resetSection;
+    if (reset != null) {
+      reset.refreshState(importInProgress, hasAnyWallpaperOverride, hasAnyAppearanceOverride);
+    }
   }
 
-  private void ensureLivePreviewConfigured() {
-    final DemoKeyboardView preview = livePreviewKeyboardView;
+  void updateLivePreview() {
+    final KeyboardThemeCustomizationLivePreviewSection preview = livePreviewSection;
     if (preview == null) return;
-
-    final KeyboardTheme theme = getCurrentTheme();
-    if (theme == null) return;
-
-    preview.setAllowExpensiveWallpaperEffects(true);
-    preview.setKeyboardTheme(theme);
-
-    final KeyboardDefinition defaultKeyboard =
-        NskApplicationBase.getKeyboardFactory(requireContext())
-            .getEnabledAddOn()
-            .createKeyboard(Keyboard.KEYBOARD_ROW_MODE_NORMAL);
-    defaultKeyboard.loadKeyboard(preview.getThemedKeyboardDimens());
-    preview.setKeyboard(defaultKeyboard, null, null);
+    preview.updateLivePreview();
   }
 
-  private void updateLivePreview() {
-    final DemoKeyboardView preview = livePreviewKeyboardView;
+  private void onPresetExportUri(@Nullable Uri uri) {
+    final KeyboardThemeCustomizationPresetsSection presets = presetsSection;
+    if (presets == null) return;
+    presets.onPresetExportUri(uri);
+  }
+
+  private void onPresetImportUri(@Nullable Uri uri) {
+    final KeyboardThemeCustomizationPresetsSection presets = presetsSection;
+    if (presets == null) return;
+    presets.onPresetImportUri(uri);
+  }
+
+  private void onCustomKeyFontPicked(@Nullable Uri uri) {
+    final Context context = getContext();
+    final KeyboardThemeCustomizationTypographySection typography = typographySection;
+    if (context == null || typography == null) return;
+    typography.onCustomKeyFontPicked(context, uri);
+  }
+
+  void scheduleEnsureReadableUpdateIfEnabled(@NonNull String themeId) {
+    final KeyboardThemeCustomizationColorsSection colors = colorsSection;
+    if (colors == null) return;
+    colors.scheduleEnsureReadableUpdateIfEnabled(themeId);
+  }
+
+  void attachColorPickerDialog(@NonNull EditTextPreference preference) {
+    preference.setOnPreferenceClickListener(
+        ignored -> {
+          suggestLivePreviewFocusForScrollTarget(preference.getKey());
+          KeyboardThemeCustomizationArgbColorPickerDialog.show(preference.getContext(), preference);
+          return true;
+        });
+  }
+
+  @Override
+  public void scrollToPreference(@NonNull String key) {
+    suggestLivePreviewFocusForScrollTarget(key);
+    super.scrollToPreference(key);
+  }
+
+  private void suggestLivePreviewFocusForScrollTarget(@Nullable String key) {
+    if (key == null) return;
+    final KeyboardThemeCustomizationLivePreviewSection preview = livePreviewSection;
     if (preview == null) return;
-    final KeyboardTheme theme = getCurrentTheme();
-    if (theme == null) return;
-
-    if (wallpaperPreviewResolver != null) {
-      wallpaperPreviewResolver.applyPhotoOverrideIfAnyAsync(preview, theme);
-    }
-    preview.invalidate();
+    preview.setEditorSuggestedFocus(focusForScrollTarget(key));
   }
 
-  private void refreshPhotoPreview(
-      @NonNull String themeId,
-      boolean hasPhoto,
-      boolean isInvalid,
-      int dimPercent,
-      int rotationDegrees,
-      int scaleMode,
-      int anchor) {
-    if (pickPhotoPref == null) return;
-
-    if (!hasPhoto || isInvalid) {
-      if (previewDisposable != null) {
-        previewDisposable.dispose();
-        previewDisposable = null;
-      }
-      pickPhotoPref.setIcon(null);
-      pickPhotoPref.setIconSpaceReserved(false);
-      return;
+  @NonNull
+  private static KeyboardThemeCustomizationLivePreviewSection.PreviewFocusArea focusForScrollTarget(
+      @NonNull String key) {
+    if (key.startsWith("section:overlays")
+        || key.contains("night_mode")
+        || key.contains("power_save")
+        || key.contains("apply_remote_app_colors")) {
+      return KeyboardThemeCustomizationLivePreviewSection.PreviewFocusArea.OVERLAYS;
     }
 
-    final File file = wallpaperStore.getWallpaperFile(themeId);
-    if (!file.isFile()) {
-      pickPhotoPref.setIcon(null);
-      pickPhotoPref.setIconSpaceReserved(false);
-      return;
+    if (key.startsWith("section:background")
+        || key.startsWith("keyboard_theme_wallpaper_customization")) {
+      return KeyboardThemeCustomizationLivePreviewSection.PreviewFocusArea.BACKGROUND;
     }
 
-    // Avoid re-decoding if a prior load is in-flight; we only ever show the current theme.
-    if (previewDisposable != null) {
-      previewDisposable.dispose();
-      previewDisposable = null;
+    if (key.startsWith("section:typography")
+        || key.contains("font")
+        || key.contains("text_size")
+        || key.contains("auto_fit")
+        || key.contains("ellipsize")) {
+      return KeyboardThemeCustomizationLivePreviewSection.PreviewFocusArea.TEXT;
     }
 
-    final var context = getContext();
-    if (context == null) return;
-    final float density = context.getResources().getDisplayMetrics().density;
-    final int sizePx = Math.max(64, Math.round(64f * density));
-    final int clampedDim = Math.max(0, Math.min(100, dimPercent));
-    final int normalizedRotation =
-        KeyboardWallpaperOverrideStore.normalizeRotationDegrees(rotationDegrees);
-
-    previewDisposable =
-        Single.fromCallable(
-                () ->
-                    KeyboardWallpaperPreview.create(
-                        context.getResources(),
-                        file,
-                        sizePx,
-                        clampedDim,
-                        normalizedRotation,
-                        scaleMode,
-                        anchor))
-            .subscribeOn(RxSchedulers.background())
-            .observeOn(RxSchedulers.mainThread())
-            .subscribe(
-                preview -> {
-                  if (!isAdded() || pickPhotoPref == null) return;
-                  if (preview == null) {
-                    pickPhotoPref.setIcon(null);
-                    pickPhotoPref.setIconSpaceReserved(false);
-                  } else {
-                    pickPhotoPref.setIcon(preview.drawable);
-                    pickPhotoPref.setIconSpaceReserved(true);
-                  }
-                },
-                ignored -> {
-                  if (!isAdded() || pickPhotoPref == null) return;
-                  pickPhotoPref.setIcon(null);
-                  pickPhotoPref.setIconSpaceReserved(false);
-                });
-  }
-
-  private void onPhotoPicked(@Nullable Uri uri) {
-    if (uri == null) return;
-
-    final var context = getContext();
-    if (context == null) return;
-
-    final KeyboardTheme theme = getCurrentTheme();
-    if (theme == null) return;
-
-    final String themeId = theme.getId();
-    final var metrics = context.getResources().getDisplayMetrics();
-    final int maxSize =
-        Math.max(2048, Math.min(4096, Math.max(metrics.widthPixels, metrics.heightPixels)));
-
-    if (importDisposable != null) {
-      importDisposable.dispose();
-      importDisposable = null;
+    if (key.startsWith("section:shadows") || key.contains("shadow")) {
+      return KeyboardThemeCustomizationLivePreviewSection.PreviewFocusArea.TEXT;
     }
 
-    if (pickPhotoPref != null) {
-      pickPhotoPref.setEnabled(false);
-      pickPhotoPref.setSummary(R.string.keyboard_theme_wallpaper_customization_pick_summary_saving);
-    }
-    if (highQualityImportPref != null) highQualityImportPref.setEnabled(false);
-    if (dimPref != null) dimPref.setEnabled(false);
-    if (resetPref != null) resetPref.setEnabled(false);
-    if (applyToAllPref != null) applyToAllPref.setEnabled(false);
-
-    importDisposable =
-        Single.fromCallable(
-                () -> {
-                  wallpaperStore.importFromUri(themeId, uri, maxSize, maxSize);
-                  return true;
-                })
-            .subscribeOn(RxSchedulers.background())
-            .observeOn(RxSchedulers.mainThread())
-            .subscribe(
-                ignored -> {
-                  if (!isAdded()) return;
-                  Toast.makeText(
-                          context,
-                          R.string.keyboard_theme_wallpaper_customization_pick_toast,
-                          Toast.LENGTH_SHORT)
-                      .show();
-                  refreshState();
-                  updateLivePreview();
-                },
-                error -> {
-                  if (!isAdded()) return;
-                  showPickFailedDialog(error);
-                  refreshState();
-                });
-  }
-
-  private void showPickFailedDialog(@NonNull Throwable error) {
-    final var context = getContext();
-    if (context == null) return;
-
-    final int messageResId;
-    if (error instanceof ActivityNotFoundException) {
-      messageResId = R.string.keyboard_theme_wallpaper_customization_pick_failed_no_picker;
-    } else if (error instanceof SecurityException) {
-      messageResId = R.string.keyboard_theme_wallpaper_customization_pick_failed_permission;
-    } else if (error.getCause() instanceof OutOfMemoryError) {
-      messageResId = R.string.keyboard_theme_wallpaper_customization_pick_failed_too_large;
-    } else {
-      messageResId = R.string.keyboard_theme_wallpaper_customization_pick_failed_generic;
+    if (key.contains("suggestion")) {
+      return KeyboardThemeCustomizationLivePreviewSection.PreviewFocusArea.SUGGESTIONS;
     }
 
-    new AlertDialog.Builder(context)
-        .setTitle(R.string.keyboard_theme_wallpaper_customization_pick_failed_title)
-        .setMessage(messageResId)
-        .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
-        .show();
-  }
-
-  private void applyWallpaperToAllThemes(@NonNull String sourceThemeId) {
-    final var context = requireContext();
-
-    if (importDisposable != null) {
-      importDisposable.dispose();
-      importDisposable = null;
+    if (key.startsWith("section:colors")
+        || key.startsWith("keyboard_theme_override_")
+        || key.startsWith("keyboard_theme_appearance_")) {
+      return KeyboardThemeCustomizationLivePreviewSection.PreviewFocusArea.KEYS;
     }
 
-    if (pickPhotoPref != null) pickPhotoPref.setEnabled(false);
-    if (dimPref != null) dimPref.setEnabled(false);
-    if (resetPref != null) resetPref.setEnabled(false);
-    if (applyToAllPref != null) applyToAllPref.setEnabled(false);
-
-    importDisposable =
-        Single.fromCallable(
-                () -> {
-                  final List<KeyboardTheme> themes =
-                      NskApplicationBase.getKeyboardThemeFactory(context).getAllAddOns();
-                  int applied = 0;
-                  int failed = 0;
-                  for (KeyboardTheme theme : themes) {
-                    if (theme == null) continue;
-                    final String themeId = theme.getId();
-                    if (sourceThemeId.equals(themeId)) continue;
-                    try {
-                      wallpaperStore.copyToTheme(sourceThemeId, themeId);
-                      applied++;
-                    } catch (IOException e) {
-                      failed++;
-                    }
-                  }
-                  return new ApplyToAllResult(applied, failed);
-                })
-            .subscribeOn(RxSchedulers.background())
-            .observeOn(RxSchedulers.mainThread())
-            .subscribe(
-                result -> {
-                  if (!isAdded()) return;
-                  final int applied = result.applied;
-                  final int failed = result.failed;
-                  if (applied > 0 && failed == 0) {
-                    Toast.makeText(
-                            context,
-                            getString(
-                                R.string
-                                    .keyboard_theme_wallpaper_customization_apply_to_all_toast_success,
-                                applied),
-                            Toast.LENGTH_LONG)
-                        .show();
-                  } else if (applied > 0) {
-                    Toast.makeText(
-                            context,
-                            getString(
-                                R.string
-                                    .keyboard_theme_wallpaper_customization_apply_to_all_toast_partial,
-                                applied,
-                                failed),
-                            Toast.LENGTH_LONG)
-                        .show();
-                  } else {
-                    Toast.makeText(
-                            context,
-                            R.string
-                                .keyboard_theme_wallpaper_customization_apply_to_all_toast_failed,
-                            Toast.LENGTH_LONG)
-                        .show();
-                  }
-                  refreshState();
-                  updateLivePreview();
-                },
-                ignored -> {
-                  if (!isAdded()) return;
-                  Toast.makeText(
-                          context,
-                          R.string.keyboard_theme_wallpaper_customization_apply_to_all_toast_failed,
-                          Toast.LENGTH_LONG)
-                      .show();
-                  refreshState();
-                });
-  }
-
-  private static final class KeyboardLivePreviewPreference extends Preference {
-    interface ViewBinder {
-      void bind(@NonNull DemoKeyboardView view);
-    }
-
-    @Nullable private final ViewBinder binder;
-
-    KeyboardLivePreviewPreference(@NonNull Context context, @Nullable ViewBinder binder) {
-      super(context);
-      this.binder = binder;
-      setSelectable(false);
-      setPersistent(false);
-      setLayoutResource(R.layout.keyboard_theme_wallpaper_live_preview);
-    }
-
-    @Override
-    public void onBindViewHolder(@NonNull PreferenceViewHolder holder) {
-      super.onBindViewHolder(holder);
-      final DemoKeyboardView view =
-          (DemoKeyboardView) holder.itemView.findViewById(R.id.wallpaper_live_preview_keyboard);
-      if (view != null && binder != null) {
-        binder.bind(view);
-      }
-    }
-  }
-
-  private static final class ApplyToAllResult {
-    final int applied;
-    final int failed;
-
-    ApplyToAllResult(int applied, int failed) {
-      this.applied = applied;
-      this.failed = failed;
-    }
-  }
-
-  private static final class KeyboardWallpaperPreview {
-    @NonNull final android.graphics.drawable.Drawable drawable;
-
-    private KeyboardWallpaperPreview(@NonNull android.graphics.drawable.Drawable drawable) {
-      this.drawable = drawable;
-    }
-
-    @Nullable
-    static KeyboardWallpaperPreview create(
-        @NonNull android.content.res.Resources resources,
-        @NonNull File file,
-        int targetSizePx,
-        int dimPercent,
-        int rotationDegrees,
-        int scaleMode,
-        int anchor) {
-      final android.graphics.Bitmap bitmap = decodeThumbnail(file, targetSizePx);
-      if (bitmap == null) return null;
-
-      final android.graphics.drawable.Drawable baseDrawable =
-          new WallpaperPreviewDrawable(bitmap, rotationDegrees, scaleMode, anchor);
-
-      if (dimPercent <= 0) {
-        return new KeyboardWallpaperPreview(baseDrawable);
-      }
-
-      final android.graphics.drawable.ColorDrawable dim =
-          new android.graphics.drawable.ColorDrawable(android.graphics.Color.BLACK);
-      dim.setAlpha(Math.round(255f * (Math.max(0, Math.min(100, dimPercent)) / 100f)));
-      final android.graphics.drawable.LayerDrawable out =
-          new android.graphics.drawable.LayerDrawable(
-              new android.graphics.drawable.Drawable[] {baseDrawable, dim});
-      return new KeyboardWallpaperPreview(out);
-    }
-
-    @Nullable
-    private static android.graphics.Bitmap decodeThumbnail(@NonNull File file, int targetSizePx) {
-      final android.graphics.BitmapFactory.Options bounds =
-          new android.graphics.BitmapFactory.Options();
-      bounds.inJustDecodeBounds = true;
-      android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath(), bounds);
-      if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
-
-      final int requested = Math.max(1, targetSizePx);
-      final android.graphics.BitmapFactory.Options options =
-          new android.graphics.BitmapFactory.Options();
-      options.inSampleSize =
-          calculateInSampleSize(bounds.outWidth, bounds.outHeight, requested, requested);
-      options.inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888;
-
-      final android.graphics.Bitmap decoded;
-      try {
-        decoded = android.graphics.BitmapFactory.decodeFile(file.getAbsolutePath(), options);
-      } catch (OutOfMemoryError oom) {
-        return null;
-      }
-      if (decoded == null) return null;
-
-      final int w = decoded.getWidth();
-      final int h = decoded.getHeight();
-      final int maxDim = Math.max(w, h);
-      if (maxDim <= requested) return decoded;
-
-      final float scale = requested / (float) maxDim;
-      final int scaledW = Math.max(1, Math.round(w * scale));
-      final int scaledH = Math.max(1, Math.round(h * scale));
-
-      final android.graphics.Bitmap scaled;
-      try {
-        scaled = android.graphics.Bitmap.createScaledBitmap(decoded, scaledW, scaledH, true);
-      } catch (OutOfMemoryError oom) {
-        decoded.recycle();
-        return null;
-      }
-      if (scaled != decoded) decoded.recycle();
-      return scaled;
-    }
-
-    private static int calculateInSampleSize(int width, int height, int reqWidth, int reqHeight) {
-      int inSampleSize = 1;
-      while ((height / inSampleSize) > reqHeight || (width / inSampleSize) > reqWidth) {
-        inSampleSize *= 2;
-      }
-      return Math.max(1, inSampleSize);
-    }
-
-    private static final class WallpaperPreviewDrawable extends android.graphics.drawable.Drawable {
-      @NonNull private final android.graphics.Bitmap bitmap;
-      @NonNull private final android.graphics.Paint paint;
-      @NonNull private final android.graphics.BitmapShader shader;
-      @NonNull private final android.graphics.Matrix shaderMatrix = new android.graphics.Matrix();
-      private final int rotationDegrees;
-      private final int scaleMode;
-      private final int anchor;
-      private int alpha = 0xFF;
-
-      WallpaperPreviewDrawable(
-          @NonNull android.graphics.Bitmap bitmap, int rotationDegrees, int scaleMode, int anchor) {
-        this.bitmap = bitmap;
-        this.rotationDegrees = rotationDegrees;
-        this.scaleMode = scaleMode;
-        this.anchor = anchor;
-        this.paint = new android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG);
-        final android.graphics.Shader.TileMode tileMode =
-            KeyboardWallpaperTransform.tileModeForScaleMode(scaleMode);
-        this.shader = new android.graphics.BitmapShader(bitmap, tileMode, tileMode);
-        this.paint.setShader(shader);
-      }
-
-      @Override
-      protected void onBoundsChange(android.graphics.Rect bounds) {
-        super.onBoundsChange(bounds);
-        KeyboardWallpaperTransform.updateShaderMatrix(
-            shaderMatrix,
-            bitmap.getWidth(),
-            bitmap.getHeight(),
-            bounds,
-            rotationDegrees,
-            scaleMode,
-            anchor);
-        shader.setLocalMatrix(shaderMatrix);
-      }
-
-      @Override
-      public void draw(@NonNull android.graphics.Canvas canvas) {
-        paint.setAlpha(alpha);
-        canvas.drawRect(getBounds(), paint);
-      }
-
-      @Override
-      public void setAlpha(int alpha) {
-        this.alpha = alpha;
-        invalidateSelf();
-      }
-
-      @Override
-      public void setColorFilter(@Nullable android.graphics.ColorFilter colorFilter) {
-        paint.setColorFilter(colorFilter);
-        invalidateSelf();
-      }
-
-      @Override
-      public int getOpacity() {
-        return android.graphics.PixelFormat.TRANSLUCENT;
-      }
-    }
+    return KeyboardThemeCustomizationLivePreviewSection.PreviewFocusArea.KEYS;
   }
 }

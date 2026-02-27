@@ -30,7 +30,7 @@ public class NextWord {
 
     @Override
     public int compare(NextWord lhs, NextWord rhs) {
-      return lhs.mUsedCount - rhs.mUsedCount;
+      return Integer.compare(rhs.mUsedCount, lhs.mUsedCount);
     }
   }
 

@@ -9,6 +9,7 @@ import android.os.SystemClock;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import com.anysoftkeyboard.api.KeyCodes;
+import java.util.List;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -130,6 +131,31 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
         "hello face hello face hello face hello face hello face ",
         getCurrentTestInputConnection().getCurrentTextInInputConnection());
     verifySuggestions(true, "hello");
+  }
+
+  @Test
+  public void testNextWordSuggestionCasingDoesNotUppercaseAfterSingleCapitalWord() {
+    mImeServiceUnderTest.getSuggest().clearLearningData();
+
+    mImeServiceUnderTest.simulateTextTyping("I face I face I face I face ");
+    mImeServiceUnderTest.simulateTextTyping("I ");
+
+    final List suggestions = verifyAndCaptureSuggestion(true);
+    Assert.assertFalse(suggestions.isEmpty());
+    Assert.assertEquals("face", suggestions.get(0).toString());
+  }
+
+  @Test
+  public void testNextWordSuggestionCasingUppercasesWhenCapsLocked() {
+    mImeServiceUnderTest.getSuggest().clearLearningData();
+
+    mImeServiceUnderTest.simulateTextTyping("I face I face I face I face ");
+    mImeServiceUnderTest.mShiftKeyState.toggleLocked();
+    mImeServiceUnderTest.simulateTextTyping("I ");
+
+    final List suggestions = verifyAndCaptureSuggestion(true);
+    Assert.assertFalse(suggestions.isEmpty());
+    Assert.assertEquals("FACE", suggestions.get(0).toString());
   }
 
   @Test

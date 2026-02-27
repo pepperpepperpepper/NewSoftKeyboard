@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="@string/context_profiles_settings_title">
+
+    <androidx.preference.PreferenceCategory
+        android:key="context_profiles_category"
+        android:title="@string/context_profiles_settings_title">
+
+        <androidx.preference.SwitchPreferenceCompat
+            android:key="context_profiles_enabled"
+            android:persistent="false"
+            android:title="@string/context_profiles_enabled_title"
+            android:summary="@string/context_profiles_enabled_summary"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="context_profiles_manage_presets"
+            android:title="@string/context_profiles_manage_presets_title"
+            android:summary="@string/context_profiles_manage_presets_summary"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="context_profiles_manage_bindings"
+            android:title="@string/context_profiles_manage_bindings_title"
+            android:summary="@string/context_profiles_manage_bindings_summary"
+            app:iconSpaceReserved="false" />
+
+        <Preference
+            android:key="context_profiles_reset"
+            android:title="@string/context_profiles_reset_title"
+            android:summary="@string/context_profiles_reset_summary"
+            app:iconSpaceReserved="false" />
+    </androidx.preference.PreferenceCategory>
+</androidx.preference.PreferenceScreen>

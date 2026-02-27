@@ -27,13 +27,10 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.disposables.Disposables;
 import wtf.uhoh.newsoftkeyboard.BuildConfig;
 import wtf.uhoh.newsoftkeyboard.R;
-import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 import wtf.uhoh.newsoftkeyboard.chewbacca.BugReportDetails;
 import wtf.uhoh.newsoftkeyboard.fileprovider.LocalProxy;
 
 public class SendBugReportUiActivity extends FragmentActivity {
-
-  private static final String TAG = "NSKBugSender";
 
   private BugReportDetails mCrashReportDetails;
   private Disposable mDisposable = Disposables.empty();
@@ -76,6 +73,7 @@ public class SendBugReportUiActivity extends FragmentActivity {
     Intent sendIntent = new Intent();
     sendIntent.setAction(Intent.ACTION_SEND);
     sendIntent.setType("plain/text");
+    sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
     sendIntent.putExtra(Intent.EXTRA_EMAIL, recipients);
     sendIntent.putExtra(Intent.EXTRA_SUBJECT, getText(R.string.ime_crashed_title));
     sendIntent.putExtra(Intent.EXTRA_TEXT, mCrashReportDetails.crashHeader);
@@ -83,7 +81,6 @@ public class SendBugReportUiActivity extends FragmentActivity {
 
     Intent sender =
         Intent.createChooser(sendIntent, getString(R.string.ime_crashed_intent_selector_title));
-    Logger.i(TAG, "Sending crash report intent %s, with attachment %s", sender, fullReportUri);
     try {
       startActivity(sender);
     } catch (android.content.ActivityNotFoundException ex) {

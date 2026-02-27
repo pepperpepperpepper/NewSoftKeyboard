@@ -1,0 +1,86 @@
+# Short evaluation corpus: authored for NSK tests (public/own text).
+# One sentence per line.
+keep me informed about the project status
+please keep me updated on the schedule
+let me know when you arrive home
+call me when you have a moment
+send me the link when you can
+can you share the notes after the meeting
+do you have time to talk today
+i will be there in ten minutes
+we can meet near the coffee shop
+thank you for your help with this
+this looks good to me so far
+can we try a different approach
+let us take a break and continue later
+please write down the steps to reproduce
+the app should show suggestions immediately
+after i tap a word i expect a space
+the keyboard should not hide what i type
+do not swallow characters in command fields
+we should see next word suggestions in keep
+next word suggestions should work everywhere
+the suggestion bar should stay visible
+when i tap a suggestion it should insert a space
+it should be possible to tap suggestions continuously
+do not repeat the same word again and again
+avoid suggesting the same phrase twice
+the model should use the full context window
+please keep me posted about changes
+keep me in the loop on this project
+we need to test this in multiple apps
+focus on correctness before adding new features
+ensure the fix works on a physical device
+the best suggestion should be a complete word
+avoid subword fragments in the suggestion strip
+spaces should never be missing between words
+this should feel modern and responsive
+predictions should not require extra typing
+the next word should appear right away
+when i type a letter it should appear
+do not block typing with suggestions
+commands should not be autocorrected
+keep suggestions simple and relevant
+try to reduce repetition in output
+avoid loops of short function words
+prefer content words when possible
+add tests so regressions are obvious
+write a report that we can compare over time
+measure top one hit rate on a corpus
+measure top three hit rate as well
+compute mean reciprocal rank for matches
+track empty prediction rate
+track latency percentiles
+record immediate repetition in top one
+keep whitespace out of single word candidates
+use a stable deterministic evaluation set
+this sentence exists to exercise common words
+another sentence helps exercise punctuation removal
+today we will test the next word predictor
+tomorrow we will review the results together
+please do not change the evaluation corpus lightly
+quality metrics should be comparable across builds
+some apps disable personalized learning flags
+those flags should not disable predictions
+some editors disable suggestions flags
+we should still provide next word predictions
+we should handle cursor moves correctly
+we should handle selecting suggestions correctly
+the pipeline should not double count context
+reset context at sentence boundaries
+do not leak context between fields
+the evaluator should be best effort
+skip evaluation if models are missing
+do not crash if a model fails to load
+report which models were used
+report which engine mode is active
+ngram neural and hybrid should all be measured
+the hybrid mode should not be dominated by ngram
+neural mode should not fuse words together
+neural mode should not output ofthe style tokens
+we want swiftkey like behavior for chaining
+make it easy to test without google login
+use a local test activity for input
+write down how to run the tests
+include a cap on number of evaluated cases
+this is the final line of the corpus

@@ -33,6 +33,7 @@ AWS_CF_ID="${FDROID_AWS_CF_DISTRIBUTION_ID:-E2RWHYJEODFGYE}"
 BACKUP_DIR="${ROOT}/backups"
 TIMESTAMP="$(date -u +%Y%m%d-%H%M%S)"
 DRY_RUN="${DRY_RUN:-0}"
+KEEP_BACKUPS="${KEEP_BACKUPS:-3}"
 
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
@@ -151,6 +152,28 @@ count=$(find -L "${FDROID_DATA}/repo" "${FDROID_DATA}/archive" -name "wtf.uhoh.n
 
 log "Backup repo+archive+metadata to $BACKUP_DIR"
 mkdir -p "$BACKUP_DIR"
+log "Pruning old backups (keep last ${KEEP_BACKUPS})"
+python - "$BACKUP_DIR" "$KEEP_BACKUPS" <<'PY'
+from pathlib import Path
+import sys
+
+backup_dir = Path(sys.argv[1])
+keep = int(sys.argv[2])
+if keep <= 0:
+    raise SystemExit(0)
+
+files = sorted(
+    backup_dir.glob("fdroid-*.tar.gz"),
+    key=lambda p: p.stat().st_mtime,
+    reverse=True,
+)
+
+for path in files[keep:]:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+PY
 tar czf "$BACKUP_DIR/fdroid-${TIMESTAMP}.tar.gz" -C "$FDROID_DATA" repo archive metadata config.yml
 
 if [[ "$DRY_RUN" == "1" ]]; then

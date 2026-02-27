@@ -10,6 +10,11 @@ if [[ -z "${DEVICE_ID}" ]]; then
   DEVICE_ID="$(adb devices | awk 'NR>1 && $2=="device" {print $1; exit}')"
 fi
 if [[ -z "${DEVICE_ID}" ]]; then
+  echo "No adb device found; starting a Genymotion SaaS instance..." >&2
+  eval "$("${ROOT_DIR}/scripts/gmsaas_start_and_connect.sh")"
+  DEVICE_ID="${GMSAAS_DEVICE_SERIAL:-}"
+fi
+if [[ -z "${DEVICE_ID}" ]]; then
   echo "No adb device found. Set GENYMOTION_DEV or ANDROID_SERIAL, or connect a device."
   exit 1
 fi
@@ -30,31 +35,57 @@ fi
 if [[ -z "${TEST_BUILD_TYPE:-}" ]]; then
   echo "TEST_BUILD_TYPE not set; defaulting to '${TEST_BUILD_TYPE_VALUE}' for Genymotion smoke."
 fi
+if [[ "${TEST_BUILD_TYPE_VALUE}" == "release" ]]; then
+  echo "NOTE: automated UI smoke is debug-only; release mode builds+installs only (manual checklist required)."
+fi
 
 echo "Clearing logcat..."
 "${ADB[@]}" logcat -c || true
 
+disable_animations() {
+  echo "Disabling device animations (Espresso requirement)..."
+  local ok="true"
+  for key in window_animation_scale transition_animation_scale animator_duration_scale; do
+    if ! "${ADB[@]}" shell settings put global "${key}" 0 >/dev/null 2>&1; then
+      ok="false"
+    fi
+  done
+
+  local window_scale
+  local transition_scale
+  local animator_scale
+  window_scale="$("${ADB[@]}" shell settings get global window_animation_scale 2>/dev/null | tr -d '\r' || true)"
+  transition_scale="$("${ADB[@]}" shell settings get global transition_animation_scale 2>/dev/null | tr -d '\r' || true)"
+  animator_scale="$("${ADB[@]}" shell settings get global animator_duration_scale 2>/dev/null | tr -d '\r' || true)"
+
+  echo "Animation scales: window=${window_scale:-?} transition=${transition_scale:-?} animator=${animator_scale:-?}"
+
+  if [[ "${ok}" != "true" ]] || [[ "${window_scale}" != "0" && "${window_scale}" != "0.0" ]]; then
+    echo "WARNING: Could not fully disable animations via adb. If tests fail with 'Animations or transitions are enabled', disable them in Developer options."
+  fi
+}
+
+disable_animations
+
 echo "Building APKs (no Gradle build task)..."
 if [[ "${TEST_BUILD_TYPE_VALUE}" == "debug" ]]; then
   APP_TASK=":ime:app:assembleNskDebug"
-  TEST_TASK=":ime:app:assembleNskDebugAndroidTest"
+  TEST_TASK=":ime:app:assembleAndroidTest"
   APP_APK="ime/app/build/outputs/apk/nsk/debug/app-nsk-debug.apk"
   TEST_APK="ime/app/build/outputs/apk/androidTest/nsk/debug/app-nsk-debug-androidTest.apk"
 else
   APP_TASK=":ime:app:assembleNskRelease"
-  TEST_TASK=":ime:app:assembleNskReleaseAndroidTest"
   APP_APK="ime/app/build/outputs/apk/nsk/release/app-nsk-release.apk"
-  TEST_APK="ime/app/build/outputs/apk/androidTest/nsk/release/app-nsk-release-androidTest.apk"
 fi
 
-TEST_BUILD_TYPE="${TEST_BUILD_TYPE_VALUE}" ./gradlew "${APP_TASK}" "${TEST_TASK}"
+if [[ "${TEST_BUILD_TYPE_VALUE}" == "debug" ]]; then
+  TEST_BUILD_TYPE="${TEST_BUILD_TYPE_VALUE}" ./gradlew "${APP_TASK}" "${TEST_TASK}"
+else
+  TEST_BUILD_TYPE="${TEST_BUILD_TYPE_VALUE}" ./gradlew "${APP_TASK}"
+fi
 
 if [[ ! -f "${APP_APK}" ]]; then
   echo "Missing app APK at ${APP_APK}"
-  exit 1
-fi
-if [[ ! -f "${TEST_APK}" ]]; then
-  echo "Missing androidTest APK at ${TEST_APK}"
   exit 1
 fi
 
@@ -62,6 +93,16 @@ echo "Installing APKs..."
 "${ADB[@]}" uninstall wtf.uhoh.newsoftkeyboard > "${OUT_DIR}/uninstall_app.txt" 2>&1 || true
 "${ADB[@]}" uninstall wtf.uhoh.newsoftkeyboard.test > "${OUT_DIR}/uninstall_test.txt" 2>&1 || true
 "${ADB[@]}" install -r -d "${APP_APK}" > "${OUT_DIR}/install_app.txt"
+if [[ "${TEST_BUILD_TYPE_VALUE}" == "release" ]]; then
+  echo "Release APK installed. Manual Genymotion checklist required (see suggestions.md)."
+  exit 0
+fi
+
+if [[ ! -f "${TEST_APK}" ]]; then
+  echo "Missing androidTest APK at ${TEST_APK}"
+  exit 1
+fi
+
 "${ADB[@]}" install -r -d "${TEST_APK}" > "${OUT_DIR}/install_test.txt"
 
 TEST_RUNNER="wtf.uhoh.newsoftkeyboard.test/androidx.test.runner.AndroidJUnitRunner"
@@ -70,6 +111,7 @@ TEST_CLASSES=(
   "wtf.uhoh.newsoftkeyboard.app.ui.settings.BackgroundPhotoLivePreviewSmokeTest"
   "wtf.uhoh.newsoftkeyboard.app.ui.settings.CheapPreviewGuardSmokeTest"
   "wtf.uhoh.newsoftkeyboard.app.ui.settings.NoMainThreadDecodeSmokeTest"
+  "wtf.uhoh.newsoftkeyboard.app.ui.settings.LivePreviewOpenKeyboardSmokeTest"
 )
 TEST_CLASS_ARG="$(IFS=,; echo "${TEST_CLASSES[*]}")"
 

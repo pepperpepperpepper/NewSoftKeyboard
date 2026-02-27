@@ -531,6 +531,7 @@ public class ImeServiceQuickTextTest extends ImeServiceBaseTest {
   @Test
   public void testDoesNotReShowCandidatesIfNoCandidatesToBeginWith() {
     simulateFinishInputFlow();
+    SharedPrefsHelper.setPrefsValue("settings_key_respect_app_no_suggestions_flag", true);
     simulateOnStartInputFlow(
         false,
         TestableImeService.createEditorInfo(
@@ -539,7 +540,8 @@ public class ImeServiceQuickTextTest extends ImeServiceBaseTest {
 
     Assert.assertEquals(View.VISIBLE, ((View) mImeServiceUnderTest.getInputView()).getVisibility());
     Assert.assertEquals(
-        View.GONE, mImeServiceUnderTest.getInputViewContainer().getCandidateView().getVisibility());
+        View.VISIBLE,
+        mImeServiceUnderTest.getInputViewContainer().getCandidateView().getVisibility());
 
     mImeServiceUnderTest.simulateKeyPress(KeyCodes.QUICK_TEXT_POPUP);
 
@@ -557,7 +559,8 @@ public class ImeServiceQuickTextTest extends ImeServiceBaseTest {
 
     Assert.assertEquals(View.VISIBLE, ((View) mImeServiceUnderTest.getInputView()).getVisibility());
     Assert.assertEquals(
-        View.GONE, mImeServiceUnderTest.getInputViewContainer().getCandidateView().getVisibility());
+        View.VISIBLE,
+        mImeServiceUnderTest.getInputViewContainer().getCandidateView().getVisibility());
     Assert.assertNull(
         mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.quick_text_pager_root));
   }

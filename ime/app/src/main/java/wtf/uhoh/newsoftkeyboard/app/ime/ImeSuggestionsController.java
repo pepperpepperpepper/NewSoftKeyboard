@@ -2,9 +2,12 @@ package wtf.uhoh.newsoftkeyboard.app.ime;
 
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.ExtractedText;
+import android.view.inputmethod.ExtractedTextRequest;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -26,6 +29,7 @@ import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 import wtf.uhoh.newsoftkeyboard.dictionaries.DictionaryBackgroundLoader;
 import wtf.uhoh.newsoftkeyboard.dictionaries.WordComposer;
+import wtf.uhoh.newsoftkeyboard.nextword.prediction.NextWordContextTokenizer;
 
 @SuppressWarnings("this-escape")
 public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListener
@@ -41,6 +45,11 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
 
   private final SuggestionsSessionState suggestionsSessionState =
       new SuggestionsSessionState(NEVER_TIME_STAMP);
+  @VisibleForTesting int mOnStartInputViewCountForTest = 0;
+  @VisibleForTesting boolean mLastOnStartInputViewRestartingForTest = false;
+  @VisibleForTesting int mLastOnStartInputViewInputTypeForTest = 0;
+  @VisibleForTesting int mLastOnStartInputViewImeOptionsForTest = 0;
+  @VisibleForTesting long mLastOnStartInputViewUptimeMsForTest = 0L;
   Suggest mSuggest;
   CandidateView mCandidateView;
   private boolean mFrenchSpacePunctuationBehavior;
@@ -82,8 +91,10 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
               () -> mCandidateView,
               () -> mSuggest,
               this::getCurrentAlphabetKeyboard,
-              (suggestions, highlightedIndex) ->
-                  ImeSuggestionsController.this.setSuggestions(suggestions, highlightedIndex)));
+              (suggestions, highlightedIndex) -> {
+                ImeSuggestionsController.this.markKeepSuggestionsStripWhileIdle();
+                ImeSuggestionsController.this.setSuggestions(suggestions, highlightedIndex);
+              }));
   private final TypingSimulator typingSimulator = new TypingSimulator();
   private final PredictionGate predictionGate = new PredictionGate();
   private final SeparatorHandler separatorHandler = new SeparatorHandler();
@@ -144,6 +155,9 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
     super.onCreate();
 
     mSuggest = createSuggest();
+    if (mSuggest instanceof SuggestImpl) {
+      ((SuggestImpl) mSuggest).setAsyncHybridNeuralListener(this::refreshNextWordSuggestionsIfIdle);
+    }
 
     if (BuildConfig.TESTING_BUILD) {
       try {
@@ -159,6 +173,16 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
     suggestionSettingsController.applySnapshot(this, mSuggest);
   }
 
+  private void refreshNextWordSuggestionsIfIdle() {
+    if (!isPredictionOn() || !suggestionsSessionState.predictionState.showSuggestions) return;
+    if (!suggestionsSessionState.keepSuggestionsStripWhileIdle) return;
+    if (!suggestionsSessionState.wordComposerTracker.currentWord().isEmpty()) return;
+    final CharSequence last = lastCommittedWordForNextSuggestions();
+    if (last.length() == 0) return;
+    markKeepSuggestionsStripWhileIdle();
+    setSuggestions(mSuggest.getNextSuggestions(last, mShiftKeyState.isLocked()), -1);
+  }
+
   @Override
   public void onDestroy() {
     super.onDestroy();
@@ -172,31 +196,105 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
     // removing close request (if it was asked for a previous onFinishInput).
     mKeyboardHandler.removeMessages(KeyboardUIStateHandler.MSG_CLOSE_DICTIONARIES);
 
-    abortCorrectionAndResetPredictionState(false);
+    // Avoid wiping next-word context on onStartInput(...). Editor changes and privacy boundaries
+    // are
+    // handled in onStartInputView(...) where EditorInfo is stable and we can safely decide whether
+    // to reset/preserve the next-word sentence.
+    abortCorrectionAndResetPredictionState(false, /* resetNextWordSentence= */ false);
     keyboardDictionariesLoader.reset();
+  }
+
+  /** Hook for subclasses to preserve next-word context across input restarts when safe. */
+  protected boolean shouldResetNextWordContextOnStartInput(
+      @NonNull EditorInfo attribute, boolean restarting) {
+    return true;
   }
 
   @Override
   public void onStartInputView(final EditorInfo attribute, final boolean restarting) {
     super.onStartInputView(attribute, restarting);
+    mOnStartInputViewCountForTest++;
+    mLastOnStartInputViewRestartingForTest = restarting;
+    mLastOnStartInputViewInputTypeForTest = attribute.inputType;
+    mLastOnStartInputViewImeOptionsForTest = attribute.imeOptions;
+    mLastOnStartInputViewUptimeMsForTest = SystemClock.uptimeMillis();
 
     suggestionsSessionState.predictionState.predictionOn = false;
     keyboardDictionariesLoader.reset();
     completionHandler.reset();
     suggestionsSessionState.predictionState.inputFieldSupportsAutoPick = false;
 
+    final boolean respectNoSuggestionsFlag =
+        prefs()
+            .getBoolean(
+                R.string.settings_key_respect_app_no_suggestions_flag,
+                R.bool.settings_default_respect_app_no_suggestions_flag)
+            .get();
     InputFieldConfigurator.Result inputConfig =
         inputFieldConfigurator.configure(
-            attribute, restarting, getKeyboardSwitcher(), mPrefsAutoSpace, TAG);
+            attribute,
+            restarting,
+            getKeyboardSwitcher(),
+            mPrefsAutoSpace,
+            respectNoSuggestionsFlag,
+            TAG);
 
     predictionStateUpdater.applyInputFieldConfig(
         suggestionsSessionState.predictionState, inputConfig, predictionGate);
 
-    mCancelSuggestionsAction.setCancelIconVisible(false);
+    final boolean showNoSuggestionsAction =
+        shouldShowNoSuggestionsAction(attribute, respectNoSuggestionsFlag);
+    Logger.d(
+        TAG,
+        "Suggestion strip: predictionOn=%s showNoSuggestionsAction=%s",
+        isPredictionOn(),
+        showNoSuggestionsAction);
     suggestionStripController.attachToStrip(getInputViewContainer());
-    getInputViewContainer().setActionsStripVisibility(isPredictionOn());
+    suggestionStripController.showStrip(
+        isPredictionOn(), showNoSuggestionsAction, getInputViewContainer());
     clearSuggestions();
     setDictionariesForCurrentKeyboard();
+  }
+
+  @VisibleForTesting
+  int getOnStartInputViewCountForTest() {
+    return mOnStartInputViewCountForTest;
+  }
+
+  @VisibleForTesting
+  boolean getLastOnStartInputViewRestartingForTest() {
+    return mLastOnStartInputViewRestartingForTest;
+  }
+
+  @VisibleForTesting
+  int getLastOnStartInputViewInputTypeForTest() {
+    return mLastOnStartInputViewInputTypeForTest;
+  }
+
+  @VisibleForTesting
+  int getLastOnStartInputViewImeOptionsForTest() {
+    return mLastOnStartInputViewImeOptionsForTest;
+  }
+
+  @VisibleForTesting
+  long getLastOnStartInputViewUptimeMsForTest() {
+    return mLastOnStartInputViewUptimeMsForTest;
+  }
+
+  private boolean shouldShowNoSuggestionsAction(
+      EditorInfo attribute, boolean respectNoSuggestions) {
+    if (!respectNoSuggestions) return false;
+    if (!suggestionsSessionState.predictionState.showSuggestions) return false;
+
+    final int inputType = attribute.inputType;
+    if ((inputType & EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS) == 0) return false;
+    final int inputClass = inputType & EditorInfo.TYPE_MASK_CLASS;
+    if (inputClass != 0 && inputClass != EditorInfo.TYPE_CLASS_TEXT) return false;
+
+    final int textVariation = inputType & EditorInfo.TYPE_MASK_VARIATION;
+    return textVariation != EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
+        && textVariation != EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        && textVariation != EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD;
   }
 
   @Override
@@ -213,7 +311,9 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
   @Override
   public void onFinishInputView(boolean finishingInput) {
     super.onFinishInputView(finishingInput);
-    abortCorrectionAndResetPredictionState(true);
+    // Avoid wiping next-word context on view tear-down. If we actually switched editors,
+    // onStartInputView(...) will clear context for the new editor as needed.
+    abortCorrectionAndResetPredictionState(true, /* resetNextWordSentence= */ false);
   }
 
   /*
@@ -308,7 +408,7 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
 
   @Override
   protected boolean isSelectionUpdateDelayed() {
-    return suggestionsSessionState.selectionExpectationTracker.isExpecting();
+    return suggestionsSessionState.selectionExpectationTracker.isSelectionUpdatePending();
   }
 
   protected boolean shouldRevertOnDelete() {
@@ -325,6 +425,10 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
 
   void clearExpectingSelectionUpdate() {
     suggestionsSessionState.selectionExpectationTracker.clear();
+  }
+
+  void markSelectionUpdateReceived() {
+    suggestionsSessionState.selectionExpectationTracker.markSelectionUpdateReceived();
   }
 
   void setExpectingSelectionUpdateBy(long value) {
@@ -352,6 +456,7 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
       final Keyboard.Key key,
       final int multiTapIndex,
       int[] nearByKeyCodes) {
+    clearKeepSuggestionsStripWhileIdle();
     characterInputHandler.handleCharacter(
         primaryCode, key, multiTapIndex, nearByKeyCodes, TAG, characterInputHost);
   }
@@ -398,6 +503,7 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
 
   @Override
   public void onText(Keyboard.Key key, CharSequence text) {
+    clearKeepSuggestionsStripWhileIdle();
     textInputDispatcher.onText(text, textInputHost, TAG);
   }
 
@@ -408,8 +514,6 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
 
   protected void setDictionariesForCurrentKeyboard() {
     if (keyboardDictionariesLoader.isLoaded()) return;
-
-    mSuggest.resetNextWordSentence();
 
     keyboardDictionariesLoader.ensureLoaded(
         this,
@@ -453,7 +557,17 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
 
   @CallSuper
   public void abortCorrectionAndResetPredictionState(boolean disabledUntilNextInputStart) {
-    mSuggest.resetNextWordSentence();
+    abortCorrectionAndResetPredictionState(
+        disabledUntilNextInputStart, /* resetNextWordSentence= */ true);
+  }
+
+  @CallSuper
+  public void abortCorrectionAndResetPredictionState(
+      boolean disabledUntilNextInputStart, boolean resetNextWordSentence) {
+    if (resetNextWordSentence) {
+      mSuggest.resetNextWordSentence();
+    }
+    clearKeepSuggestionsStripWhileIdle();
 
     suggestionsSessionState.spaceTimeTracker.clear();
     suggestionsSessionState.autoCorrectState.justAutoAddedWord = false;
@@ -482,8 +596,28 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
   }
 
   public void clearSuggestions() {
+    clearKeepSuggestionsStripWhileIdle();
     mKeyboardHandler.removeAllSuggestionMessages();
     setSuggestions(Collections.emptyList(), -1);
+  }
+
+  void markKeepSuggestionsStripWhileIdle() {
+    suggestionsSessionState.keepSuggestionsStripWhileIdle = true;
+  }
+
+  void clearKeepSuggestionsStripWhileIdle() {
+    suggestionsSessionState.keepSuggestionsStripWhileIdle = false;
+  }
+
+  @VisibleForTesting
+  void setAutoSpaceEnabledForTest(boolean enabled) {
+    mPrefsAutoSpace = enabled;
+    suggestionsSessionState.predictionState.autoSpace = enabled;
+  }
+
+  @VisibleForTesting
+  boolean isAutoSpaceEnabledForTest() {
+    return suggestionsSessionState.predictionState.autoSpace;
   }
 
   public void setSuggestions(
@@ -556,6 +690,19 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
   public void performUpdateSuggestions() {
     mKeyboardHandler.removeMessages(KeyboardUIStateHandler.MSG_UPDATE_SUGGESTIONS);
 
+    // If we're not composing a word but the strip is already populated (for example, showing
+    // next-word suggestions after a manual pick), avoid clobbering the strip with an update that
+    // was scheduled earlier while composing. This helps keep next-word suggestions visible while
+    // idle in "heavier" editors where message timing can be inconsistent.
+    if (suggestionsSessionState.keepSuggestionsStripWhileIdle
+        && suggestionsSessionState.predictionState.isPredictionOn()
+        && suggestionsSessionState.predictionState.showSuggestions
+        && suggestionsSessionState.wordComposerTracker.currentWord().isEmpty()
+        && mCandidateView != null
+        && !mCandidateView.getSuggestions().isEmpty()) {
+      return;
+    }
+
     suggestionRefresher.performUpdateSuggestions(
         suggestionsSessionState.predictionState,
         suggestionsSessionState.wordComposerTracker.currentWord(),
@@ -567,9 +714,28 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
     pickSuggestionManually(index, suggestion, suggestionsSessionState.predictionState.autoSpace);
   }
 
+  /**
+   * Triggers haptic feedback for non-keyboard-view interactions (for example, tapping the
+   * suggestions strip). Default implementation is a no-op and can be overridden by subclasses that
+   * manage vibration/haptics.
+   */
+  protected void performHapticFeedbackForUserAction() {
+    // no-op by default
+  }
+
   @CallSuper
   public void pickSuggestionManually(
       int index, CharSequence suggestion, boolean withAutoSpaceEnabled) {
+    performHapticFeedbackForUserAction();
+    // A manual pick (and optional auto-space) typically causes a selection update from the editor.
+    // If we don't mark it as expected, some editors can trigger the "restart word suggestion"
+    // flow, which clears the next-word strip (making it look like next-word suggestions only
+    // appear after typing the next letter).
+    markExpectingSelectionUpdate();
+    // Cancel any pending "update suggestions" / "restart word" messages that were scheduled while
+    // composing. Otherwise, a delayed MSG_UPDATE_SUGGESTIONS can run after the pick, and since the
+    // word-composer is now empty it may clobber the next-word strip (observed in some apps).
+    mKeyboardHandler.removeAllSuggestionMessages();
     suggestionsSessionState.autoCorrectState.wordRevertLength = 0; // no reverts
     final WordComposer typedWord = prepareWordComposerForNextWord();
 
@@ -593,6 +759,108 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
   public void commitWordToInput(
       @NonNull CharSequence wordToCommit, @NonNull CharSequence typedWord) {
     suggestionCommitter.commitWordToInput(wordToCommit, typedWord);
+    recordLastCommittedWordForNextSuggestions(wordToCommit);
+    mSuggest.notifyWordCommitted(wordToCommit);
+  }
+
+  void commitManuallyPickedWordToInput(
+      @NonNull CharSequence wordToCommit, @NonNull CharSequence typedWordInEditor) {
+    suggestionCommitter.commitManuallyPickedWordToInput(wordToCommit, typedWordInEditor);
+    recordLastCommittedWordForNextSuggestions(wordToCommit);
+    mSuggest.notifyWordCommitted(wordToCommit);
+  }
+
+  @NonNull
+  CharSequence lastCommittedWordForNextSuggestions() {
+    return suggestionsSessionState.lastCommittedWordForNextSuggestions;
+  }
+
+  void clearLastCommittedWordForNextSuggestions() {
+    suggestionsSessionState.lastCommittedWordForNextSuggestions = "";
+  }
+
+  void seedLastCommittedWordForNextSuggestionsFromEditorText(@NonNull CharSequence previousWord) {
+    final String token = previousWord.toString().trim();
+    if (token.isEmpty()) return;
+    suggestionsSessionState.lastCommittedWordForNextSuggestions = token;
+  }
+
+  void onUnexpectedCursorMoveWhileNotPredicting() {
+    // When the user moves the cursor while idle, we should not keep next-word state from the prior
+    // cursor location. Otherwise, separator-driven "fallback" next-word requests can use a stale
+    // token, and next-word learning can connect unrelated words across cursor moves.
+    mSuggest.resetNextWordSentence();
+    clearLastCommittedWordForNextSuggestions();
+    clearSuggestions();
+
+    maybeSeedNextWordContextFromEditorAfterCursorMove();
+  }
+
+  private void maybeSeedNextWordContextFromEditorAfterCursorMove() {
+    if (!suggestionsSessionState.predictionState.showSuggestions) return;
+
+    // If the cursor is touching a word, we expect the word-restart flow to handle suggestion
+    // restart for completions/corrections. Avoid extracting a partial token (cursor inside a word)
+    // as a "previous word" for next-word suggestions.
+    if (isCursorTouchingWord()) return;
+
+    final EditorInfo attribute = currentInputEditorInfo();
+    if (attribute == null) return;
+    if (ImeClipboard.isTextPassword(attribute) || ImeIncognito.isNumberPassword(attribute)) return;
+    if ((attribute.imeOptions & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0) return;
+    if ((attribute.inputType & EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0) return;
+    if (mSuggest.isIncognitoMode()) return;
+
+    final InputConnectionRouter router = getInputConnectionRouter();
+    if (!router.hasConnection()) return;
+
+    CharSequence beforeCursor = null;
+    try {
+      beforeCursor = router.getTextBeforeCursor(4096, 0);
+    } catch (Throwable t) {
+      // Best-effort only; some editors can throw while querying context.
+    }
+    if (TextUtils.isEmpty(beforeCursor)) {
+      try {
+        final ExtractedTextRequest request = new ExtractedTextRequest();
+        request.hintMaxChars = 4096;
+        request.hintMaxLines = 10;
+        final ExtractedText extracted = router.getExtractedText(request);
+        if (extracted != null
+            && !TextUtils.isEmpty(extracted.text)
+            && extracted.selectionEnd >= 0) {
+          final int selEnd = Math.min(extracted.selectionEnd, extracted.text.length());
+          final int start = Math.max(0, selEnd - 4096);
+          beforeCursor = extracted.text.subSequence(start, selEnd);
+        }
+      } catch (Throwable t) {
+        // Best-effort only.
+        return;
+      }
+    }
+    if (TextUtils.isEmpty(beforeCursor)) return;
+
+    final List<String> tokens = NextWordContextTokenizer.tokenizeTextBeforeCursor(beforeCursor, 64);
+    if (tokens.isEmpty()) return;
+    final String previousWord = tokens.get(tokens.size() - 1);
+    if (previousWord.isEmpty()) return;
+
+    // Seed the engine context window without learning/persisting from editor text.
+    mSuggest.seedNextWordEngineContextFromEditorText(beforeCursor);
+    suggestionsSessionState.lastCommittedWordForNextSuggestions = previousWord;
+
+    markKeepSuggestionsStripWhileIdle();
+    setSuggestions(mSuggest.getNextSuggestions(previousWord, mShiftKeyState.isLocked()), -1);
+  }
+
+  private void recordLastCommittedWordForNextSuggestions(@NonNull CharSequence wordToCommit) {
+    final String token = wordToCommit.toString().trim();
+    suggestionsSessionState.lastCommittedWordForNextSuggestions = token;
+  }
+
+  @VisibleForTesting
+  void recordLastCommittedWordForNextSuggestionsForTest(@NonNull CharSequence wordToCommit) {
+    recordLastCommittedWordForNextSuggestions(wordToCommit);
   }
 
   protected boolean canRestartWordSuggestion() {

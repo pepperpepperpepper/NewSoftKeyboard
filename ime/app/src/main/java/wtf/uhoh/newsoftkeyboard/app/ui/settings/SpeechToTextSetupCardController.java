@@ -6,12 +6,12 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.text.TextUtils;
-import android.util.Log;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 import com.google.android.voiceime.backends.SpeechToTextBackend;
 import com.google.android.voiceime.backends.SpeechToTextBackendRegistry;
+import com.google.android.voiceime.utils.SpeechToTextSecretsStore;
 import java.util.ArrayList;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.R;
@@ -61,7 +61,6 @@ final class SpeechToTextSetupCardController {
             + needsPermissions
             + " apiConfigNeeded="
             + needsApiConfiguration);
-    Log.d(TAG, "Registered speech-to-text UI card message=" + message);
   }
 
   private static String buildMessage(
@@ -88,11 +87,31 @@ final class SpeechToTextSetupCardController {
 
   private static boolean needsApiKey(Context context, SharedPreferences prefs, String backendId) {
     if ("elevenlabs".equals(backendId)) {
-      String key = context.getString(R.string.settings_key_elevenlabs_api_key);
-      return TextUtils.isEmpty(prefs.getString(key, ""));
+      String apiKey = SpeechToTextSecretsStore.getElevenLabsApiKey(context);
+      if (!TextUtils.isEmpty(apiKey)) {
+        return false;
+      }
+      String legacyKeyName = context.getString(R.string.settings_key_elevenlabs_api_key);
+      String legacyApiKey = prefs.getString(legacyKeyName, "");
+      if (!TextUtils.isEmpty(legacyApiKey)) {
+        SpeechToTextSecretsStore.setElevenLabsApiKey(context, legacyApiKey);
+        prefs.edit().remove(legacyKeyName).apply();
+        return false;
+      }
+      return true;
     }
-    String key = context.getString(R.string.settings_key_openai_api_key);
-    return TextUtils.isEmpty(prefs.getString(key, ""));
+    String apiKey = SpeechToTextSecretsStore.getOpenAIApiKey(context);
+    if (!TextUtils.isEmpty(apiKey)) {
+      return false;
+    }
+    String legacyKeyName = context.getString(R.string.settings_key_openai_api_key);
+    String legacyApiKey = prefs.getString(legacyKeyName, "");
+    if (!TextUtils.isEmpty(legacyApiKey)) {
+      SpeechToTextSecretsStore.setOpenAIApiKey(context, legacyApiKey);
+      prefs.edit().remove(legacyKeyName).apply();
+      return false;
+    }
+    return true;
   }
 
   private static boolean needsMicrophonePermission(Context context) {

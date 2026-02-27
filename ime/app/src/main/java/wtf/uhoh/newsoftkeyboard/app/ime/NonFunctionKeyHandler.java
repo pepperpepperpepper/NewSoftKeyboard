@@ -116,6 +116,7 @@ public final class NonFunctionKeyHandler {
     if (wtf.uhoh.newsoftkeyboard.utils.IMEUtil.IME_ACTION_CUSTOM_LABEL == imeOptionsActionId) {
       // Either we have an actionLabel and we should performEditorAction with actionId regardless
       // of its value.
+      ime.applyContextProfileTypedRulesForEditorAction(editorInfo);
       inputConnectionRouter.performEditorAction(editorInfo.actionId);
     } else if (EditorInfo.IME_ACTION_NONE != imeOptionsActionId) {
       // We didn't have an actionLabel, but we had another action to execute.
@@ -125,6 +126,7 @@ public final class NonFunctionKeyHandler {
       // code for it - presumably it only handles one. It does not have to be treated
       // in any specific way: anything that is not IME_ACTION_NONE should be sent to
       // performEditorAction.
+      ime.applyContextProfileTypedRulesForEditorAction(editorInfo);
       inputConnectionRouter.performEditorAction(imeOptionsActionId);
     } else {
       ime.handleSeparator(KeyCodes.ENTER);

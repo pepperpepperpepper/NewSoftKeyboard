@@ -60,7 +60,10 @@ final class SubWordSuggestionCallback implements Dictionary.WordCallback {
         suggestionsProvider.getSuggestions(subWord, this);
         // at this point, we have the best adjusted sub-word
         if (currentBestSubWordAdjustedFrequency == 0) {
-          Logger.d(logTag, "Did not find a match for sub-word '%s'", currentSubWord);
+          Logger.d(
+              logTag,
+              "Did not find a match for sub-word (len=%d)",
+              currentSubWord == null ? -1 : currentSubWord.length());
           wordCount = -1;
           break;
         }

@@ -155,4 +155,14 @@
         <item>@string/input_field_type_email</item>
         <item>@string/input_field_type_password</item>
     </string-array>
+
+    <integer-array name="vibration_duration_special_values">
+        <item>-1</item>
+        <item>0</item>
+    </integer-array>
+
+    <string-array name="vibration_duration_special_value_labels">
+        <item>@string/settings_system_default</item>
+        <item>@string/settings_off</item>
+    </string-array>
 </resources>

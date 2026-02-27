@@ -9,6 +9,7 @@ import android.util.Log;
 import android.util.LruCache;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import wtf.uhoh.newsoftkeyboard.BuildConfig;
 
 /**
@@ -37,8 +39,20 @@ final class WallpaperBitmapRepository implements WallpaperBitmapLoader {
 
   private static final WallpaperBitmapRepository INSTANCE = new WallpaperBitmapRepository();
 
+  private static final AtomicInteger MAIN_THREAD_DECODE_COUNT = new AtomicInteger();
+
   static WallpaperBitmapRepository getInstance() {
     return INSTANCE;
+  }
+
+  @VisibleForTesting
+  static void resetMainThreadDecodeCountForTests() {
+    MAIN_THREAD_DECODE_COUNT.set(0);
+  }
+
+  @VisibleForTesting
+  static int getMainThreadDecodeCountForTests() {
+    return MAIN_THREAD_DECODE_COUNT.get();
   }
 
   private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -162,7 +176,8 @@ final class WallpaperBitmapRepository implements WallpaperBitmapLoader {
   @Nullable
   private static Bitmap decodeDownsampled(@NonNull File file, int maxDimPx) {
     if (BuildConfig.DEBUG && Looper.getMainLooper() == Looper.myLooper()) {
-      Log.w(TAG, "Wallpaper decode running on main thread for " + file.getAbsolutePath());
+      MAIN_THREAD_DECODE_COUNT.incrementAndGet();
+      Log.w(TAG, "Wallpaper decode running on main thread.");
     }
 
     Trace.beginSection("NSK.WallpaperDecode");

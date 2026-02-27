@@ -101,4 +101,34 @@ public class SharedPrefsProviderTest {
     Assert.assertEquals(
         0, mSharedPreferences.getStringSet("stringKey", Collections.emptySet()).size());
   }
+
+  @Test
+  public void testStoresKeysWithNonXmlFriendlyChars() throws Exception {
+    final String key = "context_profiles_preset_json::context_preset::123";
+    final String value =
+        "{\"contains_personal_content\":false,\"id\":\"context_preset::123\",\"name\":\"n\",\"created_at\":1}";
+    mSharedPreferences.edit().putString(key, value).commit();
+
+    final PrefsRoot prefsRoot = mUnderTest.getPrefsRoot();
+    clearAllPrefs();
+
+    mUnderTest.storePrefsRoot(prefsRoot);
+
+    Assert.assertEquals(value, mSharedPreferences.getString(key, "empty"));
+  }
+
+  @Test
+  public void testSkipsSensitiveContextProfilePresetJsonFromBackup() throws Exception {
+    final String key = "context_profiles_preset_json::context_preset::123";
+    final String value =
+        "{\"contains_personal_content\":true,\"id\":\"context_preset::123\",\"name\":\"n\",\"created_at\":1}";
+    mSharedPreferences.edit().putString(key, value).commit();
+
+    final PrefsRoot prefsRoot = mUnderTest.getPrefsRoot();
+    clearAllPrefs();
+
+    mUnderTest.storePrefsRoot(prefsRoot);
+
+    Assert.assertFalse(mSharedPreferences.contains(key));
+  }
 }

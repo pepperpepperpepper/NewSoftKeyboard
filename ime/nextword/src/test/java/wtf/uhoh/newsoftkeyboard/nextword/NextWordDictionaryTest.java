@@ -143,4 +143,65 @@ public class NextWordDictionaryTest {
     assertHasNextWordsForWord(false, mNextWordDictionaryUnderTest, "hello");
     assertHasNextWordsForWord(false, mNextWordDictionaryUnderTest, "menny");
   }
+
+  @Test
+  public void testRanksByDescendingUsedCount() throws Exception {
+    final String locale = "test_desc_used_count";
+    getApplicationContext().deleteFile("next_words_" + locale + ".txt");
+    NextWordDictionary dictionary = new NextWordDictionary(getApplicationContext(), locale);
+    dictionary.load();
+
+    dictionary.notifyNextTypedWord("hello");
+    dictionary.notifyNextTypedWord("a");
+    dictionary.notifyNextTypedWord("hello");
+    dictionary.notifyNextTypedWord("b");
+    dictionary.notifyNextTypedWord("hello");
+    dictionary.notifyNextTypedWord("b");
+    dictionary.notifyNextTypedWord("hello");
+    dictionary.notifyNextTypedWord("b");
+
+    Iterator<String> nextWordsIterator = dictionary.getNextWords("hello", 8, 0).iterator();
+    Assert.assertTrue(nextWordsIterator.hasNext());
+    Assert.assertEquals("b", nextWordsIterator.next());
+    Assert.assertTrue(nextWordsIterator.hasNext());
+    Assert.assertEquals("a", nextWordsIterator.next());
+    Assert.assertFalse(nextWordsIterator.hasNext());
+
+    dictionary.close();
+  }
+
+  @Test
+  public void testUsedCountPersistsAndAffectsMinWordUsage() throws Exception {
+    final String locale = "test_min_usage_persist";
+    getApplicationContext().deleteFile("next_words_" + locale + ".txt");
+    NextWordDictionary dictionary = new NextWordDictionary(getApplicationContext(), locale);
+    dictionary.load();
+
+    dictionary.notifyNextTypedWord("hello");
+    dictionary.notifyNextTypedWord("a");
+    dictionary.notifyNextTypedWord("hello");
+    dictionary.notifyNextTypedWord("b");
+    dictionary.notifyNextTypedWord("hello");
+    dictionary.notifyNextTypedWord("b");
+    dictionary.notifyNextTypedWord("hello");
+    dictionary.notifyNextTypedWord("b");
+
+    Iterator<String> nextWordsIterator = dictionary.getNextWords("hello", 8, 2).iterator();
+    Assert.assertTrue(nextWordsIterator.hasNext());
+    Assert.assertEquals("b", nextWordsIterator.next());
+    Assert.assertFalse(nextWordsIterator.hasNext());
+
+    dictionary.close();
+
+    NextWordDictionary loadedDictionary = new NextWordDictionary(getApplicationContext(), locale);
+    loadedDictionary.load();
+
+    Iterator<String> loadedNextWordsIterator =
+        loadedDictionary.getNextWords("hello", 8, 2).iterator();
+    Assert.assertTrue(loadedNextWordsIterator.hasNext());
+    Assert.assertEquals("b", loadedNextWordsIterator.next());
+    Assert.assertFalse(loadedNextWordsIterator.hasNext());
+
+    loadedDictionary.close();
+  }
 }

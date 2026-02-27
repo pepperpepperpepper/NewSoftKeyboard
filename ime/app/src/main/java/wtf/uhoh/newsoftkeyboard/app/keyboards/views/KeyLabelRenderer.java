@@ -7,6 +7,7 @@ import android.text.Layout.Alignment;
 import android.text.Spanned;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.text.TextUtils;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardKey;
 import wtf.uhoh.newsoftkeyboard.utils.EmojiUtils;
 
@@ -15,6 +16,10 @@ final class KeyLabelRenderer {
 
   interface KeyTextPaintSetter {
     void setPaintToKeyText(Paint paint);
+  }
+
+  interface KeyboardNamePaintSetter {
+    void setPaintForKeyboardNameText(Paint paint);
   }
 
   interface LabelTextPaintSetter {
@@ -33,9 +38,10 @@ final class KeyLabelRenderer {
       Rect keyBackgroundPadding,
       boolean keyIsSpace,
       float keyboardNameTextSize,
-      KeyboardNameRenderer keyboardNameRenderer,
+      boolean ellipsizeKeyLabels,
       boolean alwaysUseDrawText,
       KeyTextPaintSetter keyTextPaintSetter,
+      KeyboardNamePaintSetter keyboardNamePaintSetter,
       LabelTextPaintSetter labelTextPaintSetter,
       TextSizeAdjuster textSizeAdjuster,
       float shadowRadius,
@@ -43,7 +49,8 @@ final class KeyLabelRenderer {
       float shadowOffsetY,
       int shadowColor) {
     if (keyIsSpace) {
-      keyboardNameRenderer.preparePaintForKeyboardName(paint, keyboardNameTextSize);
+      keyboardNamePaintSetter.setPaintForKeyboardNameText(paint);
+      paint.setTextSize(keyboardNameTextSize);
     } else if (label.length() > 1 && key.getCodesCount() < 2) {
       labelTextPaintSetter.setPaintForLabelText(paint);
     } else {
@@ -56,7 +63,18 @@ final class KeyLabelRenderer {
 
     paint.setShadowLayer(shadowRadius, shadowOffsetX, shadowOffsetY, shadowColor);
 
-    final float textWidth = textSizeAdjuster.adjust(paint, label, key.width);
+    final int availableWidth =
+        Math.max(1, key.width - keyBackgroundPadding.left - keyBackgroundPadding.right);
+    final float textWidth = textSizeAdjuster.adjust(paint, label, availableWidth);
+    CharSequence labelToDraw = label;
+    float effectiveTextWidth = textWidth;
+    if (ellipsizeKeyLabels && textWidth > availableWidth && label.length() > 1) {
+      final TextPaint ellipsizePaint = new TextPaint(paint);
+      labelToDraw =
+          TextUtils.ellipsize(label, ellipsizePaint, availableWidth, TextUtils.TruncateAt.END);
+      effectiveTextWidth =
+          Math.min(availableWidth, paint.measureText(labelToDraw, 0, labelToDraw.length()));
+    }
     final Paint.FontMetrics fm = paint.getFontMetrics();
     final float labelHeight = -fm.top;
 
@@ -72,12 +90,13 @@ final class KeyLabelRenderer {
     float textY;
     float translateX = textX;
     final boolean labelHasSpans =
-        label instanceof Spanned
-            && ((Spanned) label).getSpans(0, label.length(), Object.class).length > 0;
+        labelToDraw instanceof Spanned
+            && ((Spanned) labelToDraw).getSpans(0, labelToDraw.length(), Object.class).length > 0;
     final boolean shouldUseStaticLayout =
-        (label.length() > 1 && !alwaysUseDrawText) || labelHasSpans;
+        (labelToDraw.length() > 1 && !alwaysUseDrawText) || labelHasSpans;
     if (shouldUseStaticLayout) {
-      final int layoutWidth = Math.max(1, (int) Math.ceil(textWidth));
+      final int layoutWidth =
+          Math.max(1, Math.min((int) Math.ceil(effectiveTextWidth), availableWidth));
       textY = centerY - ((labelHeight - paint.descent()) / 2);
       translateX = textX - (layoutWidth / 2f);
       canvas.translate(translateX, textY);
@@ -85,12 +104,12 @@ final class KeyLabelRenderer {
       layoutPaint.setTextAlign(Paint.Align.LEFT);
       StaticLayout labelText =
           new StaticLayout(
-              label, layoutPaint, layoutWidth, Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+              labelToDraw, layoutPaint, layoutWidth, Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
       labelText.draw(canvas);
     } else {
       textY = centerY + ((labelHeight - paint.descent()) / 2);
       canvas.translate(translateX, textY);
-      canvas.drawText(label, 0, label.length(), 0, 0, paint);
+      canvas.drawText(labelToDraw, 0, labelToDraw.length(), 0, 0, paint);
     }
     canvas.translate(-translateX, -textY);
     paint.setShadowLayer(0, 0, 0, 0);

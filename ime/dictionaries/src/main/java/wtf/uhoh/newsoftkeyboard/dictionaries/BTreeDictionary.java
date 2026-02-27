@@ -109,12 +109,10 @@ public abstract class BTreeDictionary extends EditableDictionary {
 
       Logger.i(
           TAG,
-          "Adding word '"
-              + word
-              + "' to dictionary (in "
-              + getClass().getSimpleName()
-              + ") with frequency "
-              + frequency);
+          "Adding word to dictionary (in %s) with frequency %d (len=%d).",
+          getClass().getSimpleName(),
+          frequency,
+          word.length());
       // first deleting the word, so it wont conflict in the adding (_ID is unique).
       deleteWord(word);
       // add word to in-memory structure

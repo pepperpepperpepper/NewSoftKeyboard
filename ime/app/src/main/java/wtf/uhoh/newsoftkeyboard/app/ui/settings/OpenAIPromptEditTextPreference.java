@@ -67,9 +67,6 @@ public class OpenAIPromptEditTextPreference extends EditTextPreference {
     // Use array to make it effectively final for lambda expressions
     final String[] originalText = {getText()};
 
-    // Log the current text for debugging
-    android.util.Log.d("OpenAIPromptEditTextPreference", "Current prompt text: " + originalText[0]);
-
     editText.setText(originalText[0]);
 
     builder.setView(dialogView);
@@ -164,19 +161,14 @@ public class OpenAIPromptEditTextPreference extends EditTextPreference {
       OpenAISavedPrompt newPrompt = new OpenAISavedPrompt(promptText);
 
       if (promptsManager.savePrompt(newPrompt)) {
-        android.util.Log.d(
-            "OpenAIPromptEditTextPreference", "Prompt saved successfully: " + promptText);
         Toast.makeText(getContext(), "Prompt saved successfully", Toast.LENGTH_SHORT).show();
 
         // Now open the saved prompts dialog to show the newly saved prompt
         openSavedPromptsDialog();
       } else {
-        android.util.Log.e(
-            "OpenAIPromptEditTextPreference", "Failed to save prompt: " + promptText);
         Toast.makeText(getContext(), "Failed to save prompt", Toast.LENGTH_SHORT).show();
       }
     } catch (Exception e) {
-      android.util.Log.e("OpenAIPromptEditTextPreference", "Error saving prompt", e);
       Toast.makeText(getContext(), "Error saving prompt", Toast.LENGTH_SHORT).show();
     }
   }
@@ -196,7 +188,6 @@ public class OpenAIPromptEditTextPreference extends EditTextPreference {
         dialogFragment.show(activity.getSupportFragmentManager(), "OpenAISavedPromptsDialog");
       }
     } catch (Exception e) {
-      e.printStackTrace();
       Toast.makeText(getContext(), "Unable to open saved prompts", Toast.LENGTH_SHORT).show();
     }
   }

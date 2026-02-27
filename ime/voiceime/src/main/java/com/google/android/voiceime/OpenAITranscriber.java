@@ -17,12 +17,19 @@
 package com.google.android.voiceime;
 
 import android.content.Context;
+import android.net.Uri;
+import android.os.SystemClock;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLException;
 import okhttp3.Headers;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -35,7 +42,13 @@ import okhttp3.Response;
 public class OpenAITranscriber {
 
   private static final String TAG = "OpenAITranscriber";
-  private static final OkHttpClient httpClient = new OkHttpClient();
+  private static final OkHttpClient httpClient =
+      new OkHttpClient.Builder()
+          .connectTimeout(15, TimeUnit.SECONDS)
+          .writeTimeout(2, TimeUnit.MINUTES)
+          .readTimeout(2, TimeUnit.MINUTES)
+          .callTimeout(3, TimeUnit.MINUTES)
+          .build();
 
   public interface TranscriptionCallback {
     void onResult(String result);
@@ -85,8 +98,13 @@ public class OpenAITranscriber {
       return;
     }
 
-    if (endpoint.isEmpty()) {
+    String sanitizedEndpoint = endpoint.trim();
+    if (sanitizedEndpoint.isEmpty()) {
       callback.onError(context.getString(R.string.openai_error_endpoint_unset));
+      return;
+    }
+    if (!isHttpsUrl(sanitizedEndpoint)) {
+      callback.onError(context.getString(R.string.openai_error_endpoint_insecure));
       return;
     }
 
@@ -94,12 +112,13 @@ public class OpenAITranscriber {
     new Thread(
             () -> {
               try {
+                final long startElapsedMs = SystemClock.elapsedRealtime();
                 String result =
                     performTranscription(
                         filename,
                         mediaType,
                         apiKey,
-                        endpoint,
+                        sanitizedEndpoint,
                         model,
                         language,
                         temperature,
@@ -110,15 +129,16 @@ public class OpenAITranscriber {
                         defaultPromptType,
                         appendCustomPrompt);
 
+                final long durationMs = SystemClock.elapsedRealtime() - startElapsedMs;
+                if (Log.isLoggable(TAG, Log.DEBUG)) {
+                  Log.d(TAG, "Transcription request completed in " + durationMs + " ms");
+                }
                 // Post result to main thread
                 postResultToMainThread(result, addTrailingSpace, callback);
 
               } catch (Exception e) {
                 Log.e(TAG, "Transcription failed", e);
-                String errorMessage = e.getMessage();
-                if (errorMessage == null) {
-                  errorMessage = context.getString(R.string.openai_error_transcription_failed);
-                }
+                String errorMessage = mapExceptionToUserMessage(context, e);
                 postErrorToMainThread(errorMessage, callback);
               }
             })
@@ -149,9 +169,6 @@ public class OpenAITranscriber {
     if (audioFile.length() == 0) {
       throw new IOException("Audio file is empty: " + filename);
     }
-
-    Log.d(TAG, "Transcribing file: " + filename + " (" + audioFile.length() + " bytes)");
-    Log.d(TAG, "Response format parameter: " + responseFormat);
 
     // Create multipart request body
     RequestBody fileBody = RequestBody.create(audioFile, MediaType.parse(mediaType));
@@ -199,47 +216,53 @@ public class OpenAITranscriber {
           OpenAIDefaultPrompts.PromptType.fromValue(defaultPromptType);
       String defaultPrompt = OpenAIDefaultPrompts.getDefaultPrompt(model, promptTypeEnum);
       finalPrompt = OpenAIDefaultPrompts.combinePrompts(defaultPrompt, prompt, appendCustomPrompt);
-      Log.d(
-          TAG,
-          "Using default prompt type: "
-              + defaultPromptType
-              + ", append custom: "
-              + appendCustomPrompt);
     }
 
     // Add prompt parameter if not empty
     if (!finalPrompt.isEmpty()) {
-      Log.d(TAG, "Adding final prompt to request: " + finalPrompt);
       requestBodyBuilder.addFormDataPart("prompt", finalPrompt);
-      formFieldValues.put("prompt", finalPrompt);
-    } else {
-      Log.d(TAG, "Final prompt is empty, not adding to request");
+      formFieldValues.put("prompt", "<set>");
     }
 
     RequestBody requestBody = requestBodyBuilder.build();
 
     // Build request with headers
-    Headers headers =
-        new Headers.Builder()
-            .add("Authorization", "Bearer " + apiKey)
-            .add("Content-Type", "multipart/form-data")
-            .build();
+    Headers headers = new Headers.Builder().add("Authorization", "Bearer " + apiKey).build();
 
     Request request =
         new Request.Builder().url(endpoint).headers(headers).post(requestBody).build();
 
-    Log.d(TAG, "Sending request to: " + endpoint);
-
     // Execute request
+    final long startElapsedMs = SystemClock.elapsedRealtime();
     try (Response response = httpClient.newCall(request).execute()) {
+      final long durationMs = SystemClock.elapsedRealtime() - startElapsedMs;
+      final String requestId = response.header("x-request-id");
 
       String responseBody = response.body() != null ? response.body().string() : "No response body";
+
+      if (Log.isLoggable(TAG, Log.DEBUG)) {
+        final String requestIdInfo = requestId != null ? (" request_id=" + requestId) : "";
+        Log.d(
+            TAG,
+            "HTTP "
+                + response.code()
+                + " "
+                + response.message()
+                + " in "
+                + durationMs
+                + " ms"
+                + requestIdInfo);
+      }
 
       if (!response.isSuccessful()) {
         if ("debug".equals(responseFormat)) {
           return createDebugOutput(request, response, responseBody, null, formFieldValues);
         } else {
-          throw new IOException("HTTP " + response.code() + ": " + responseBody);
+          final String compactBody = compactForException(responseBody);
+          final String base = "HTTP " + response.code() + " " + response.message();
+          final String withRequestId =
+              requestId != null ? (base + " (request_id=" + requestId + ")") : base;
+          throw new IOException(withRequestId + ": " + compactBody);
         }
       }
 
@@ -256,22 +279,48 @@ public class OpenAITranscriber {
       result = result.replaceAll("\\n+", " ");
       // Replace multiple spaces with single space
       result = result.replaceAll(" +", " ");
-      Log.d(TAG, "Transcription result: " + result);
-      Log.d(
-          TAG,
-          "Checking if debug format - responseFormat: '"
-              + responseFormat
-              + "', equals debug: "
-              + "debug".equals(responseFormat));
 
       // If debug format, return debug information
       if ("debug".equals(responseFormat)) {
-        Log.d(TAG, "Creating debug output");
         return createDebugOutput(request, response, result, null, formFieldValues);
       }
 
       return result;
     }
+  }
+
+  @NonNull
+  private static String mapExceptionToUserMessage(@NonNull Context context, @NonNull Exception e) {
+    if (e instanceof SocketTimeoutException
+        || e instanceof UnknownHostException
+        || e instanceof ConnectException
+        || e instanceof SSLException
+        || e instanceof java.io.InterruptedIOException) {
+      return context.getString(R.string.openai_error_network);
+    }
+
+    final String errorMessage = e.getMessage();
+    if (errorMessage == null || errorMessage.trim().isEmpty()) {
+      return context.getString(R.string.openai_error_transcription_failed);
+    }
+
+    final String trimmed = errorMessage.trim();
+    if (trimmed.startsWith("HTTP ")) {
+      return context.getString(R.string.openai_error_api_error, compactForException(trimmed));
+    }
+    if (trimmed.startsWith("Audio file does not exist:")
+        || trimmed.startsWith("Audio file is empty:")) {
+      return context.getString(R.string.openai_error_recording_failed);
+    }
+    return trimmed;
+  }
+
+  @NonNull
+  private static String compactForException(@NonNull String raw) {
+    final String singleLine = raw.replace('\n', ' ').replace('\r', ' ').trim();
+    final int maxLen = 500;
+    if (singleLine.length() <= maxLen) return singleLine;
+    return singleLine.substring(0, maxLen) + "…";
   }
 
   private String createDebugOutput(
@@ -386,6 +435,15 @@ public class OpenAITranscriber {
       Log.w(TAG, "Error extracting field name from Content-Disposition: " + contentDisposition, e);
     }
     return null;
+  }
+
+  private static boolean isHttpsUrl(@NonNull String rawUrl) {
+    try {
+      Uri uri = Uri.parse(rawUrl);
+      return uri != null && "https".equalsIgnoreCase(uri.getScheme());
+    } catch (Exception e) {
+      return false;
+    }
   }
 
   private void postResultToMainThread(

@@ -52,6 +52,8 @@ import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardKey;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.extradraw.ExtraDraw;
 import wtf.uhoh.newsoftkeyboard.app.testing.ViewTestUtils;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemeFactory;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemePresetStore;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideConstants;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperOverrideStore;
 import wtf.uhoh.newsoftkeyboard.overlay.OverlayDataImpl;
 import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
@@ -251,6 +253,109 @@ public class KeyboardViewTest extends KeyboardViewWithMiniKeyboardTest {
     }
     Assert.assertNotNull(overrideBackground);
     Assert.assertTrue(overrideBackground instanceof LayerDrawable);
+  }
+
+  @Test
+  public void testWallpaperKeyOverlayOptimizedPathRespectsSpecialKeyAlpha() throws Exception {
+    final Context context = mViewUnderTest.getContext();
+    final KeyboardWallpaperOverrideStore store = new KeyboardWallpaperOverrideStore(context);
+    final KeyboardThemeFactory keyboardThemeFactory =
+        NskApplicationBase.getKeyboardThemeFactory(context);
+    final var theme = keyboardThemeFactory.getEnabledAddOn();
+    final String baseThemeId = theme.getId();
+    final KeyboardThemePresetStore presetStore = new KeyboardThemePresetStore(context);
+    final String themeId = presetStore.getActivePresetId(baseThemeId);
+
+    store.clear(themeId);
+    mViewUnderTest.setKeyboardTheme(theme);
+
+    final Bitmap bitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
+    bitmap.eraseColor(Color.RED);
+    try (FileOutputStream out = new FileOutputStream(store.getWallpaperFile(themeId))) {
+      Assert.assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, out));
+    } finally {
+      bitmap.recycle();
+    }
+
+    store.setWallpaperMode(
+        themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE);
+    store.setWallpaperQuality(themeId, KeyboardWallpaperOverrideConstants.WALLPAPER_QUALITY_HIGH);
+    store.setMatchKeyShapeEnabled(themeId, true);
+    store.setKeyAlphaPercent(themeId, 60);
+    store.setSpecialKeyAlphaPercent(themeId, 60);
+    store.setDimPercent(themeId, 50);
+
+    // Force a theme re-apply without switching themes (theme is reference-equality cached).
+    mViewUnderTest.setThemeOverlay(new OverlayDataImpl());
+    // Apply happens async once the view has bounds.
+    mViewUnderTest.layout(0, 0, 480, 320);
+
+    final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+    Drawable overrideBackground = null;
+    while (System.nanoTime() < deadline) {
+      Shadows.shadowOf(Looper.getMainLooper()).idle();
+      overrideBackground = mViewUnderTest.getBackground();
+      if (overrideBackground instanceof LayerDrawable) break;
+      sleep(10);
+    }
+    Assert.assertNotNull(overrideBackground);
+    Assert.assertTrue(overrideBackground instanceof LayerDrawable);
+
+    final java.lang.reflect.Field keyDrawHelperField =
+        KeyboardViewBase.class.getDeclaredField("keyDrawHelper");
+    keyDrawHelperField.setAccessible(true);
+    final Object keyDrawHelper = keyDrawHelperField.get(mViewUnderTest);
+    Assert.assertNotNull(keyDrawHelper);
+
+    final java.lang.reflect.Field overlayMaskRendererField =
+        keyDrawHelper.getClass().getDeclaredField("overlayMaskRenderer");
+    overlayMaskRendererField.setAccessible(true);
+    final Object overlayMaskRenderer = overlayMaskRendererField.get(keyDrawHelper);
+    Assert.assertNotNull(overlayMaskRenderer);
+
+    final java.lang.reflect.Field unionMaskField =
+        overlayMaskRenderer.getClass().getDeclaredField("cachedKeyFaceUnionMask");
+    unionMaskField.setAccessible(true);
+    final java.lang.reflect.Field splitSpecialField =
+        overlayMaskRenderer.getClass().getDeclaredField("cachedKeyFaceUnionMaskSplitSpecial");
+    splitSpecialField.setAccessible(true);
+    final java.lang.reflect.Field specialMaskField =
+        overlayMaskRenderer.getClass().getDeclaredField("cachedKeyFaceUnionMaskSpecial");
+    specialMaskField.setAccessible(true);
+
+    final long maskDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+    Bitmap unionMask = null;
+    while (System.nanoTime() < maskDeadline) {
+      mViewUnderTest.invalidateAllKeys();
+      final Bitmap out =
+          Bitmap.createBitmap(
+              mViewUnderTest.getWidth(), mViewUnderTest.getHeight(), Bitmap.Config.ARGB_8888);
+      mViewUnderTest.draw(new Canvas(out));
+      out.recycle();
+
+      unionMask = (Bitmap) unionMaskField.get(overlayMaskRenderer);
+      if (unionMask != null && !unionMask.isRecycled()) break;
+      Shadows.shadowOf(Looper.getMainLooper()).idle();
+      sleep(10);
+    }
+    Assert.assertNotNull("Expected optimized overlay union mask to be created.", unionMask);
+    Assert.assertFalse(unionMask.isRecycled());
+
+    Assert.assertFalse(splitSpecialField.getBoolean(overlayMaskRenderer));
+    Assert.assertNull(specialMaskField.get(overlayMaskRenderer));
+
+    store.setSpecialKeyAlphaPercent(themeId, 0);
+    mViewUnderTest.invalidateAllKeys();
+    final Bitmap out =
+        Bitmap.createBitmap(
+            mViewUnderTest.getWidth(), mViewUnderTest.getHeight(), Bitmap.Config.ARGB_8888);
+    mViewUnderTest.draw(new Canvas(out));
+    out.recycle();
+
+    Assert.assertTrue(splitSpecialField.getBoolean(overlayMaskRenderer));
+    final Bitmap specialMask = (Bitmap) specialMaskField.get(overlayMaskRenderer);
+    Assert.assertNotNull(specialMask);
+    Assert.assertFalse(specialMask.isRecycled());
   }
 
   @Test
@@ -512,7 +617,7 @@ public class KeyboardViewTest extends KeyboardViewWithMiniKeyboardTest {
     // flinging up
     final Keyboard.Key spaceKey = findKey(' ');
     final Point upPoint = getKeyCenterPoint(spaceKey);
-    upPoint.offset(0, -(mViewUnderTest.getSwipeYDistanceThreshold() + 1));
+    upPoint.offset(0, -(mViewUnderTest.getSwipeConfiguration().getSwipeYDistanceThreshold() + 1));
     Assert.assertFalse(mViewUnderTest.areTouchesDisabled(null));
     ViewTestUtils.navigateFromTo(
         mViewUnderTest, getKeyCenterPoint(spaceKey), upPoint, 30, true, true);

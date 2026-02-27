@@ -100,17 +100,30 @@ final class CharacterInputHandler {
       Host host) {
     final WordComposer word = host.word();
     if (router.current() != null) {
-      final int newCursorPosition =
-          computeCursorPositionAfterChar(primaryCode, key, multiTapIndex, word, host);
-      if (newCursorPosition > 0) {
-        router.beginBatchEdit();
-      }
+      if (router.isComposingTextSupported()) {
+        final int newCursorPosition =
+            computeCursorPositionAfterChar(primaryCode, key, multiTapIndex, word, host);
+        if (newCursorPosition > 0) {
+          router.beginBatchEdit();
+        }
 
-      host.markExpectingSelectionUpdate();
-      router.setComposingText(word.getTypedWord(), 1);
-      if (newCursorPosition > 0) {
-        router.setSelection(newCursorPosition, newCursorPosition);
-        router.endBatchEdit();
+        host.markExpectingSelectionUpdate();
+        final boolean composed = router.setComposingText(word.getTypedWord(), 1);
+        if (composed && newCursorPosition > 0) {
+          router.setSelection(newCursorPosition, newCursorPosition);
+        } else if (!composed) {
+          for (char c : Character.toChars(primaryCode)) {
+            host.sendKeyChar(c);
+          }
+        }
+        if (newCursorPosition > 0) {
+          router.endBatchEdit();
+        }
+      } else {
+        host.markExpectingSelectionUpdate();
+        for (char c : Character.toChars(primaryCode)) {
+          host.sendKeyChar(c);
+        }
       }
     }
     if (host.isSuggestionAffectingCharacter(primaryCode)) {

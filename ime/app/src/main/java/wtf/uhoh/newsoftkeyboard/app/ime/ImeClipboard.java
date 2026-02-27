@@ -15,14 +15,18 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.app.AlertDialog;
 import com.anysoftkeyboard.api.KeyCodes;
+import io.reactivex.Single;
+import io.reactivex.disposables.SerialDisposable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import net.evendanan.pixel.GeneralDialogController;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.devicespecific.Clipboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.rx.GenericOnError;
+import wtf.uhoh.newsoftkeyboard.rx.RxSchedulers;
 
 public abstract class ImeClipboard extends ImeSwipeListener {
 
@@ -32,6 +36,10 @@ public abstract class ImeClipboard extends ImeSwipeListener {
   private static final long MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_ENTRY = 15 * 1000;
   private static final long MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT = 120 * 1000;
   private long mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
+  private boolean mOsClipboardSyncEnabled = false;
+  private boolean mClipboardActionAlwaysVisible = false;
+  private final SerialDisposable mClipboardTextAutoHideDisposable = new SerialDisposable();
+  private final SerialDisposable mClipboardActionAutoHideDisposable = new SerialDisposable();
   private final Clipboard.ClipboardUpdatedListener mClipboardUpdatedListener =
       new Clipboard.ClipboardUpdatedListener() {
         @Override
@@ -89,6 +97,8 @@ public abstract class ImeClipboard extends ImeSwipeListener {
     super.onCreate();
     mClipboard = NskApplicationBase.getDeviceSpecific().createClipboard(getApplicationContext());
     mSuggestionClipboardEntry = new ClipboardStripActionProvider(mClipboardActionOwnerImpl);
+    addDisposable(mClipboardTextAutoHideDisposable);
+    addDisposable(mClipboardActionAutoHideDisposable);
     addDisposable(
         prefs()
             .getBoolean(
@@ -97,23 +107,53 @@ public abstract class ImeClipboard extends ImeSwipeListener {
             .distinctUntilChanged()
             .subscribe(
                 syncClipboard -> {
+                  mOsClipboardSyncEnabled = syncClipboard;
                   mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
+                  mLastSyncedClipboardLabel = null;
+                  mLastSyncedClipboardEntryInSecureInput = false;
+                  cancelClipboardActionAutoHide();
+                  cancelClipboardTextAutoHide();
                   mClipboard.setClipboardUpdatedListener(
                       syncClipboard ? mClipboardUpdatedListener : null);
+                  final var inputViewContainer = getInputViewContainer();
+                  if (!syncClipboard && inputViewContainer != null) {
+                    inputViewContainer.removeStripAction(mSuggestionClipboardEntry);
+                  }
                 },
                 GenericOnError.onError("settings_key_os_clipboard_sync")));
+    addDisposable(
+        prefs()
+            .getBoolean(
+                R.string.settings_key_clipboard_action_always_visible,
+                R.bool.settings_default_clipboard_action_always_visible)
+            .asObservable()
+            .distinctUntilChanged()
+            .subscribe(
+                alwaysVisible -> {
+                  mClipboardActionAlwaysVisible = alwaysVisible;
+                  if (alwaysVisible) {
+                    cancelClipboardActionAutoHide();
+                  } else {
+                    scheduleClipboardActionAutoHideIfNeeded();
+                  }
+                  updateClipboardActionIconVisibility(currentInputEditorInfo());
+                },
+                GenericOnError.onError("settings_key_clipboard_action_always_visible")));
+  }
+
+  public void clearClipboardHistoryForProgrammableApi() {
+    if (mClipboard != null) {
+      mClipboard.deleteAllEntries();
+    }
   }
 
   private void onClipboardEntryChanged(@Nullable CharSequence clipboardEntry) {
     if (TextUtils.isEmpty(clipboardEntry)) {
       mLastSyncedClipboardLabel = null;
       mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
-      // this method could be called before the IM view was created, but the
-      // service already alive.
-      var inputViewContainer = getInputViewContainer();
-      if (inputViewContainer != null) {
-        inputViewContainer.removeStripAction(mSuggestionClipboardEntry);
-      }
+      cancelClipboardActionAutoHide();
+      cancelClipboardTextAutoHide();
+      updateClipboardActionIconVisibility(currentInputEditorInfo());
     } else {
       mLastSyncedClipboardLabel = clipboardEntry;
       EditorInfo editorInfo = currentInputEditorInfo();
@@ -121,31 +161,57 @@ public abstract class ImeClipboard extends ImeSwipeListener {
       mLastSyncedClipboardEntryTime = SystemClock.uptimeMillis();
       // if we already showing the view, we want to update it contents
       if (isInputViewShown()) {
-        showClipboardActionIcon(editorInfo);
+        updateClipboardActionIconVisibility(editorInfo);
+      }
+      scheduleClipboardTextAutoHide();
+      if (!mClipboardActionAlwaysVisible) {
+        scheduleClipboardActionAutoHideIfNeeded();
       }
     }
   }
 
-  private void showClipboardActionIcon(EditorInfo info) {
-    getInputViewContainer().addStripAction(mSuggestionClipboardEntry, true);
-    getInputViewContainer().setActionsStripVisibility(true);
+  private boolean shouldShowClipboardActionIcon() {
+    if (!mOsClipboardSyncEnabled || mClipboard == null) return false;
+    if (mClipboardActionAlwaysVisible) {
+      return !mClipboard.isOsClipboardEmpty() || mClipboard.getClipboardEntriesCount() > 0;
+    }
+    return mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT
+            > SystemClock.uptimeMillis()
+        && !TextUtils.isEmpty(mLastSyncedClipboardLabel);
+  }
 
-    mSuggestionClipboardEntry.setClipboardText(
-        mLastSyncedClipboardLabel, mLastSyncedClipboardEntryInSecureInput || isTextPassword(info));
+  private void updateClipboardActionIconVisibility(@Nullable EditorInfo info) {
+    // This method can be called before the IM view is created, while the service is already alive.
+    final var inputViewContainer = getInputViewContainer();
+    if (inputViewContainer == null) return;
+
+    if (!shouldShowClipboardActionIcon()) {
+      inputViewContainer.removeStripAction(mSuggestionClipboardEntry);
+      return;
+    }
+
+    inputViewContainer.addStripAction(mSuggestionClipboardEntry, true);
+    inputViewContainer.setActionsStripVisibility(true);
+
+    if (!TextUtils.isEmpty(mLastSyncedClipboardLabel)) {
+      mSuggestionClipboardEntry.setClipboardText(
+          mLastSyncedClipboardLabel,
+          mLastSyncedClipboardEntryInSecureInput || isTextPassword(info));
+      if (mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_ENTRY
+          <= SystemClock.uptimeMillis()) {
+        mSuggestionClipboardEntry.setAsHint(true);
+      }
+    } else {
+      // Keep the icon visible, but hide any previous text hint.
+      mSuggestionClipboardEntry.setAsHint(true);
+    }
   }
 
   @Override
   public void onStartInputView(EditorInfo info, boolean restarting) {
     super.onStartInputView(info, restarting);
-    final long now = SystemClock.uptimeMillis();
-    final long startTime = mLastSyncedClipboardEntryTime;
-    final boolean osClipHasSomething = !mClipboard.isOsClipboardEmpty();
-    if (startTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT > now && osClipHasSomething) {
-      showClipboardActionIcon(info);
-      if (startTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_ENTRY <= now && !restarting) {
-        mSuggestionClipboardEntry.setAsHint(true);
-      }
-    }
+    updateClipboardActionIconVisibility(info);
+    scheduleClipboardActionAutoHideIfNeeded();
   }
 
   protected static boolean isTextPassword(@Nullable EditorInfo info) {
@@ -164,11 +230,17 @@ public abstract class ImeClipboard extends ImeSwipeListener {
   public void onKey(
       int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI) {
     if (mSuggestionClipboardEntry.isVisible()) {
-      final long now = SystemClock.uptimeMillis();
-      if (mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT <= now) {
-        getInputViewContainer().removeStripAction(mSuggestionClipboardEntry);
-      } else {
+      if (mClipboardActionAlwaysVisible) {
+        // Keep the clipboard icon visible, but hide the preview text once the user starts typing.
         mSuggestionClipboardEntry.setAsHint(false);
+      } else {
+        // Default behavior: hide the clipboard action once the user starts typing to avoid clutter.
+        mLastSyncedClipboardLabel = null;
+        mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
+        mLastSyncedClipboardEntryInSecureInput = false;
+        cancelClipboardActionAutoHide();
+        cancelClipboardTextAutoHide();
+        updateClipboardActionIconVisibility(currentInputEditorInfo());
       }
     }
     super.onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
@@ -178,6 +250,46 @@ public abstract class ImeClipboard extends ImeSwipeListener {
   public void onFinishInputView(boolean finishingInput) {
     super.onFinishInputView(finishingInput);
     getInputViewContainer().removeStripAction(mSuggestionClipboardEntry);
+  }
+
+  private void scheduleClipboardTextAutoHide() {
+    cancelClipboardTextAutoHide();
+    mClipboardTextAutoHideDisposable.set(
+        Single.timer(
+                MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_ENTRY,
+                TimeUnit.MILLISECONDS,
+                RxSchedulers.mainThread())
+            .subscribe(
+                ignored -> {
+                  if (!mSuggestionClipboardEntry.isVisible()) return;
+                  if (!mSuggestionClipboardEntry.isFullyVisible()) return;
+                  mSuggestionClipboardEntry.setAsHint(false);
+                },
+                GenericOnError.onError("scheduleClipboardTextAutoHide")));
+  }
+
+  private void cancelClipboardTextAutoHide() {
+    mClipboardTextAutoHideDisposable.set(io.reactivex.disposables.Disposables.disposed());
+  }
+
+  private void scheduleClipboardActionAutoHideIfNeeded() {
+    cancelClipboardActionAutoHide();
+    if (mClipboardActionAlwaysVisible) return;
+    if (mLastSyncedClipboardEntryTime == Long.MIN_VALUE) return;
+    final long now = SystemClock.uptimeMillis();
+    final long hideAt = mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT;
+    final long delay = hideAt - now;
+    if (delay <= 0) return;
+
+    mClipboardActionAutoHideDisposable.set(
+        Single.timer(delay, TimeUnit.MILLISECONDS, RxSchedulers.mainThread())
+            .subscribe(
+                ignored -> updateClipboardActionIconVisibility(currentInputEditorInfo()),
+                GenericOnError.onError("scheduleClipboardActionAutoHideIfNeeded")));
+  }
+
+  private void cancelClipboardActionAutoHide() {
+    mClipboardActionAutoHideDisposable.set(io.reactivex.disposables.Disposables.disposed());
   }
 
   private void showAllClipboardEntries(Keyboard.Key key) {

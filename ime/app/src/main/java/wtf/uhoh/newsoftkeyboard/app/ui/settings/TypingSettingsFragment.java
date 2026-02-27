@@ -17,6 +17,7 @@ public class TypingSettingsFragment extends PreferenceFragmentCompat {
   private static final String KEY_USER_DICTIONARY_EDITOR = "nav:user_dictionary_editor";
   private static final String KEY_ABBREVIATIONS_EDITOR = "nav:abbreviation_editor";
   private static final String KEY_NEXT_WORD_SETTINGS = "nav:next_word_settings";
+  private static final String KEY_CONTEXT_PROFILES = "nav:context_profiles";
 
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -29,6 +30,7 @@ public class TypingSettingsFragment extends PreferenceFragmentCompat {
     bindNav(KEY_USER_DICTIONARY_EDITOR, R.id.userDictionaryEditorFragment);
     bindNav(KEY_ABBREVIATIONS_EDITOR, R.id.abbreviationDictionaryEditorFragment);
     bindNav(KEY_NEXT_WORD_SETTINGS, R.id.nextWordSettingsFragment);
+    bindNav(KEY_CONTEXT_PROFILES, R.id.contextProfilesSettingsFragment);
 
     final Preference contactsDictionary =
         findPreference(getString(R.string.settings_key_use_contacts_dictionary));

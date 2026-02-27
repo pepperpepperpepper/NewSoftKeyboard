@@ -21,6 +21,7 @@ import android.content.pm.PackageManager;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.PowerManager;
+import android.os.SystemClock;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -31,8 +32,9 @@ import java.io.IOException;
 public class AudioRecorderManager {
 
   private static final String TAG = "AudioRecorderManager";
-  private static final int MAX_RECORDING_DURATION_MS = 30 * 1000; // 30 seconds max
-  private static final int WAKE_LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes timeout
+  private static final int MAX_RECORDING_DURATION_MS = 2 * 60 * 1000; // 2 minutes max
+  private static final int WAKE_LOCK_TIMEOUT_MS =
+      MAX_RECORDING_DURATION_MS + 15 * 1000; // Slight buffer above max recording duration
 
   public interface RecordingCallback {
     void onRecordingStopped(boolean success, String errorMessage);
@@ -49,6 +51,10 @@ public class AudioRecorderManager {
   private boolean mIsRecording = false;
   private Thread mAmplitudeUpdateThread;
   private PowerManager.WakeLock mWakeLock;
+  private long mRecordingStartedAtElapsedMs = 0;
+  private final Object mAutoStopLock = new Object();
+  private int mRecordingSessionId = 0;
+  private Thread mAutoStopThread;
 
   public AudioRecorderManager(@NonNull Context context) {
     mContext = context.getApplicationContext();
@@ -148,8 +154,14 @@ public class AudioRecorderManager {
       // Acquire wake lock to keep device awake during recording
       acquireWakeLock();
 
+      mRecordingStartedAtElapsedMs = SystemClock.elapsedRealtime();
+      synchronized (mAutoStopLock) {
+        mRecordingSessionId++;
+      }
       mIsRecording = true;
-      Log.d(TAG, "Recording started to: " + outputFilePath);
+      if (Log.isLoggable(TAG, Log.DEBUG)) {
+        Log.d(TAG, "Recording started");
+      }
 
       // Start amplitude updates
       startAmplitudeUpdates();
@@ -169,10 +181,21 @@ public class AudioRecorderManager {
   public void stopRecording() {
     if (!mIsRecording || mMediaRecorder == null) {
       Log.w(TAG, "Not recording, nothing to stop");
+      cancelAutoStop();
       return;
     }
 
-    Log.d(TAG, "Stopping recording");
+    final long durationMs =
+        mRecordingStartedAtElapsedMs > 0
+            ? (SystemClock.elapsedRealtime() - mRecordingStartedAtElapsedMs)
+            : -1;
+    if (durationMs >= 0) {
+      Log.d(TAG, "Stopping recording after " + durationMs + " ms");
+    } else {
+      Log.d(TAG, "Stopping recording");
+    }
+
+    cancelAutoStop();
 
     try {
       // Stop recording FIRST before stopping amplitude updates to prevent interference
@@ -263,8 +286,22 @@ public class AudioRecorderManager {
     // Ensure wake lock is released during cleanup
     releaseWakeLock();
 
+    cancelAutoStop();
     stopAmplitudeUpdates();
     mIsRecording = false;
+  }
+
+  private void cancelAutoStop() {
+    synchronized (mAutoStopLock) {
+      if (mAutoStopThread != null) {
+        try {
+          mAutoStopThread.interrupt();
+        } catch (Exception ignored) {
+          // Best-effort only.
+        }
+        mAutoStopThread = null;
+      }
+    }
   }
 
   /** Acquires the wake lock to keep the device awake during recording. */
@@ -296,22 +333,50 @@ public class AudioRecorderManager {
    * recording to set up auto-stop.
    */
   public void setupAutoStop() {
-    new Thread(
-            () -> {
-              try {
-                Thread.sleep(WAKE_LOCK_TIMEOUT_MS); // Use 5-minute timeout instead of 30 seconds
-                if (mIsRecording) {
-                  Log.d(
-                      TAG,
-                      "Auto-stopping recording after "
-                          + (WAKE_LOCK_TIMEOUT_MS / 1000)
-                          + " seconds");
-                  stopRecording();
+    final int sessionId;
+    final Thread autoStopThread;
+
+    synchronized (mAutoStopLock) {
+      if (!mIsRecording) {
+        return;
+      }
+
+      sessionId = mRecordingSessionId;
+      cancelAutoStop();
+      autoStopThread =
+          new Thread(
+              () -> {
+                try {
+                  Thread.sleep(MAX_RECORDING_DURATION_MS);
+                } catch (InterruptedException e) {
+                  Thread.currentThread().interrupt();
+                  return;
                 }
-              } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-              }
-            })
-        .start();
+
+                synchronized (mAutoStopLock) {
+                  if (sessionId != mRecordingSessionId) {
+                    return;
+                  }
+                  if (!mIsRecording) {
+                    return;
+                  }
+                  // Avoid self-interrupt in stopRecording().
+                  if (mAutoStopThread == Thread.currentThread()) {
+                    mAutoStopThread = null;
+                  }
+                }
+
+                Log.d(
+                    TAG,
+                    "Auto-stopping recording after "
+                        + (MAX_RECORDING_DURATION_MS / 1000)
+                        + " seconds");
+                stopRecording();
+              },
+              "AudioRecorderAutoStop");
+      mAutoStopThread = autoStopThread;
+    }
+
+    autoStopThread.start();
   }
 }

@@ -1,5 +1,7 @@
 package wtf.uhoh.newsoftkeyboard.app.ime;
 
+import android.text.TextUtils;
+import android.view.KeyEvent;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import wtf.uhoh.newsoftkeyboard.app.dictionaries.Suggest;
@@ -34,13 +36,16 @@ public final class SuggestionPicker {
 
     void commitWordToInput(CharSequence wordToCommit, CharSequence typedWord);
 
-    void sendKeyChar(char c);
+    void commitManuallyPickedWordToInput(CharSequence wordToCommit, CharSequence typedWordInEditor);
 
     void setSpaceTimeStamp(boolean isSpace);
 
     boolean isPredictionOn();
 
     boolean isAutoCompleteEnabled();
+
+    /** Returns true when the keyboard is in an ALL-CAPS mode (caps-lock). */
+    boolean isInAllUpperCaseState();
 
     AddToDictionaryHintController addToDictionaryHintController();
   }
@@ -69,15 +74,35 @@ public final class SuggestionPicker {
         return;
       }
 
-      host.commitWordToInput(suggestion, suggestion /* manual pick; not a correction */);
+      host.commitManuallyPickedWordToInput(suggestion, typedWord.getTypedWord());
 
       if (autoSpaceEnabled && (index == 0 || !typedWord.isAtTagsSearchState())) {
-        host.sendKeyChar((char) com.anysoftkeyboard.api.KeyCodes.SPACE);
+        boolean needsSpaceFallback = !inputConnectionRouter.commitText(" ", 1);
+        if (!needsSpaceFallback) {
+          final CharSequence beforeCursor = inputConnectionRouter.getTextBeforeCursor(1, 0);
+          if (beforeCursor != null && !java.util.Objects.equals(beforeCursor, " ")) {
+            needsSpaceFallback = true;
+          }
+        }
+        if (needsSpaceFallback) {
+          // Some editors (e.g., some rich text wrappers) may ignore commitText(" ") but still
+          // respond to key events for SPACE. Fall back to key events so users can chain
+          // suggestions into sentences.
+          final boolean downOk =
+              inputConnectionRouter.sendKeyEvent(
+                  new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_SPACE));
+          final boolean upOk =
+              inputConnectionRouter.sendKeyEvent(
+                  new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_SPACE));
+          if (!(downOk && upOk)) {
+            inputConnectionRouter.commitText(" ", 1);
+          }
+        }
         host.setSpaceTimeStamp(true);
       }
 
       if (!typedWord.isAtTagsSearchState()) {
-        if (index == 0) {
+        if (TextUtils.equals(suggestion, typedWord.getTypedWord())) {
           host.checkAddToDictionaryWithAutoDictionary(
               typedWord.getTypedWord(), SuggestImpl.AdditionType.Picked);
         }
@@ -88,7 +113,7 @@ public final class SuggestionPicker {
                 showSuggestions,
                 justAutoAddedWord,
                 typedWord.isAtTagsSearchState(),
-                typedWord.isAllUpperCase(),
+                host.isInAllUpperCaseState(),
                 suggestion,
                 typedWord);
       }

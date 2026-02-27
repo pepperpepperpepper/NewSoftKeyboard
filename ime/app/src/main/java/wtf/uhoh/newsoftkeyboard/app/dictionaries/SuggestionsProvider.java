@@ -2,19 +2,25 @@ package wtf.uhoh.newsoftkeyboard.app.dictionaries;
 
 import android.content.Context;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import io.reactivex.disposables.CompositeDisposable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import wtf.uhoh.newsoftkeyboard.BuildConfig;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.dictionaries.content.ContactsDictionary;
+import wtf.uhoh.newsoftkeyboard.app.dictionaries.sqlite.ContextProfileWordListDictionary;
 import wtf.uhoh.newsoftkeyboard.dictionaries.Dictionary;
 import wtf.uhoh.newsoftkeyboard.dictionaries.DictionaryBackgroundLoader;
+import wtf.uhoh.newsoftkeyboard.dictionaries.EditableDictionary;
 import wtf.uhoh.newsoftkeyboard.dictionaries.KeyCodesProvider;
+import wtf.uhoh.newsoftkeyboard.nextword.NextWordSuggestions;
 import wtf.uhoh.newsoftkeyboard.nextword.pipeline.NextWordSuggestionsPipeline;
 import wtf.uhoh.newsoftkeyboard.nextword.prediction.NextWordPredictionEngines;
 import wtf.uhoh.newsoftkeyboard.prefs.RxSharedPrefs;
+import wtf.uhoh.newsoftkeyboard.prefs.context.ContextProfilesStore;
 
 @SuppressWarnings("this-escape")
 public class SuggestionsProvider {
@@ -23,6 +29,13 @@ public class SuggestionsProvider {
 
   @NonNull private final Context mContext;
   @NonNull private final SuggestionsDictionariesManager mDictionariesManager;
+
+  @NonNull
+  private final List<NextWordSuggestions> mUserNextWordDictionariesForPipeline = new ArrayList<>();
+
+  @NonNull
+  private ContextProfilesStore.SafeToggles mContextSafeToggles =
+      ContextProfilesStore.SafeToggles.DEFAULT;
 
   @NonNull
   private NextWordSuggestionsPipeline.Config mNextWordConfig =
@@ -42,7 +55,10 @@ public class SuggestionsProvider {
     mContext = context.getApplicationContext();
     mDictionariesManager =
         new SuggestionsDictionariesManager(
-            mContext, this::createUserDictionaryForLocale, this::createRealContactsDictionary);
+            mContext,
+            this::createUserDictionaryForLocale,
+            this::createContextProfileWordListDictionaryForLocale,
+            this::createRealContactsDictionary);
     final RxSharedPrefs rxSharedPrefs = NskApplicationBase.prefs(mContext);
     mPredictionEngines =
         new NextWordPredictionEngines(
@@ -50,9 +66,10 @@ public class SuggestionsProvider {
     mNextWordPipeline =
         new NextWordSuggestionsPipeline(
             mPredictionEngines,
-            mDictionariesManager.userNextWordDictionaries(),
+            mUserNextWordDictionariesForPipeline,
             mDictionariesManager::contactsNextWordDictionary,
-            mDictionariesManager.initialSuggestionsList());
+            mDictionariesManager.initialSuggestionsList(),
+            BuildConfig.TESTING_BUILD);
     SuggestionsProviderPrefsBinder.wire(
         rxSharedPrefs,
         mPrefsDisposables,
@@ -61,8 +78,32 @@ public class SuggestionsProvider {
         mDictionariesManager::setContactsDictionaryEnabled,
         mDictionariesManager::setUserDictionaryEnabled,
         this::onPredictionEngineModeChanged,
+        this::setPredictionContextWindowWords,
         this::setNextWordAggressiveness,
         this::setNextWordDictionaryType);
+  }
+
+  private void setPredictionContextWindowWords(int contextWindowWords) {
+    mPredictionEngines.setContextWindowWords(contextWindowWords);
+  }
+
+  public void setContextProfileSafeToggles(@Nullable ContextProfilesStore.SafeToggles safeToggles) {
+    final ContextProfilesStore.SafeToggles normalized =
+        safeToggles == null ? ContextProfilesStore.SafeToggles.DEFAULT : safeToggles;
+    if (mContextSafeToggles.equals(normalized)) return;
+    mContextSafeToggles = normalized;
+    mDictionariesManager.setContextProfileSafeToggles(normalized);
+    syncNextWordUserDictionariesForPipeline();
+  }
+
+  public void setContextProfileWordList(@Nullable String presetId, long generation) {
+    mDictionariesManager.setContextProfileWordList(presetId, generation);
+  }
+
+  private void syncNextWordUserDictionariesForPipeline() {
+    mUserNextWordDictionariesForPipeline.clear();
+    if (mContextSafeToggles.disableUserDictionary) return;
+    mUserNextWordDictionariesForPipeline.addAll(mDictionariesManager.userNextWordDictionaries());
   }
 
   private void onPredictionEngineModeChanged(@NonNull String modeValue) {
@@ -75,16 +116,19 @@ public class SuggestionsProvider {
     int minWordUsage;
     switch (aggressiveness) {
       case "medium_aggressiveness":
-        maxNextWordSuggestionsCount = 5;
+        // This value is intentionally larger than the UI max-suggestions count so the pipeline
+        // can collect a broader candidate pool for reranking and for prefix-conditioned UX while
+        // composing (next-word candidates injected into typed suggestions).
+        maxNextWordSuggestionsCount = 24;
         minWordUsage = 3;
         break;
       case "maximum_aggressiveness":
-        maxNextWordSuggestionsCount = 8;
+        maxNextWordSuggestionsCount = 48;
         minWordUsage = 1;
         break;
       case "minimal_aggressiveness":
       default:
-        maxNextWordSuggestionsCount = 3;
+        maxNextWordSuggestionsCount = 8;
         minWordUsage = 5;
         break;
     }
@@ -94,6 +138,10 @@ public class SuggestionsProvider {
             mNextWordConfig.alsoSuggestNextPunctuations,
             maxNextWordSuggestionsCount,
             minWordUsage);
+  }
+
+  int nextWordCandidatePoolLimit() {
+    return mNextWordConfig.maxNextWordSuggestionsCount;
   }
 
   private void setNextWordDictionaryType(@NonNull String type) {
@@ -138,7 +186,9 @@ public class SuggestionsProvider {
 
     mDictionariesManager.setCurrentSetupHashCode(newSetupHashCode);
     mDictionariesManager.buildDictionaries(dictionaryBuilders, cb, BuildConfig.TESTING_BUILD);
+    syncNextWordUserDictionariesForPipeline();
     mPredictionEngines.activatePresageIfNeeded();
+    mPredictionEngines.warmUpNeuralIfNeeded();
   }
 
   @NonNull
@@ -152,8 +202,19 @@ public class SuggestionsProvider {
     return new UserDictionary(mContext, locale);
   }
 
+  @NonNull
+  protected EditableDictionary createContextProfileWordListDictionaryForLocale(
+      @NonNull String presetId, @NonNull String locale) {
+    return new ContextProfileWordListDictionary(mContext, presetId, locale);
+  }
+
   public void removeWordFromUserDictionary(String word) {
     mDictionariesManager.removeWordFromUserDictionary(word);
+  }
+
+  public void clearLearningData() {
+    mDictionariesManager.clearLearningData();
+    mPredictionEngines.resetSentence();
   }
 
   public boolean addWordToUserDictionary(String word) {
@@ -175,8 +236,12 @@ public class SuggestionsProvider {
   }
 
   public void close() {
-    mDictionariesManager.closeDictionariesForShutdown(this::resetNextWordSentence);
-    mPredictionEngines.close();
+    // Closing dictionaries is a resource-management action and should not implicitly reset the
+    // next-word sentence context. Sentence/context resets are handled explicitly when switching
+    // editors (see IME lifecycle hooks).
+    mDictionariesManager.closeDictionariesForShutdown(() -> {});
+    mPredictionEngines.hibernate();
+    mUserNextWordDictionariesForPipeline.clear();
   }
 
   public void destroy() {
@@ -194,17 +259,39 @@ public class SuggestionsProvider {
 
   public void getAbbreviations(
       KeyCodesProvider wordComposer, Dictionary.WordCallback wordCallback) {
+    if (mContextSafeToggles.disableQuickFixes) return;
     mDictionariesManager.getAbbreviations(wordComposer, wordCallback);
   }
 
   public void getAutoText(KeyCodesProvider wordComposer, Dictionary.WordCallback wordCallback) {
+    if (mContextSafeToggles.disableQuickFixes) return;
     mDictionariesManager.getAutoText(wordComposer, wordCallback);
   }
 
   public void getNextWords(
       String currentWord, Collection<CharSequence> suggestionsHolder, int maxSuggestions) {
+    if (mContextSafeToggles.disableNextWordSuggestions) return;
     mNextWordPipeline.appendNextWords(
         currentWord, suggestionsHolder, maxSuggestions, mIncognitoMode, mNextWordConfig);
+  }
+
+  public void notifyWordCommitted(@NonNull String committedWord) {
+    if (mContextSafeToggles.disableNextWordSuggestions) return;
+    if (!mNextWordConfig.enabled) return;
+    mNextWordPipeline.notifyWordCommitted(committedWord, mIncognitoMode);
+  }
+
+  /**
+   * Seeds the next-word prediction engines' in-memory context window from existing editor text.
+   *
+   * <p>This is intentionally <b>not</b> wired into next-word dictionaries (no
+   * learning/persistence).
+   */
+  public void seedNextWordEngineContextTokens(@NonNull Collection<String> contextTokens) {
+    if (mIncognitoMode) return;
+    if (mContextSafeToggles.disableNextWordSuggestions) return;
+    if (!mNextWordConfig.enabled) return;
+    mPredictionEngines.seedContextTokens(contextTokens);
   }
 
   public boolean isPresageEnabled() {
@@ -216,8 +303,59 @@ public class SuggestionsProvider {
     return mPredictionEngines.isNeuralEnabled();
   }
 
+  public void setAsyncHybridNeuralListener(@Nullable Runnable listener) {
+    mPredictionEngines.setAsyncHybridNeuralListener(listener);
+  }
+
+  @VisibleForTesting
+  public int getHybridNeuralAsyncListenerInvocationCountForTest() {
+    return mPredictionEngines.getHybridNeuralAsyncListenerInvocationCountForTest();
+  }
+
+  @VisibleForTesting
+  @NonNull
+  public String dumpHybridNeuralAsyncDebugStateForTest() {
+    return mPredictionEngines.dumpHybridNeuralAsyncDebugStateForTest();
+  }
+
+  @VisibleForTesting
+  public void resetNeuralInferenceSamplesForTest() {
+    mPredictionEngines.resetNeuralInferenceSamplesForTest();
+  }
+
+  @VisibleForTesting
+  @NonNull
+  public String dumpNeuralInferenceSamplesForTest() {
+    return mPredictionEngines.dumpNeuralInferenceSamplesForTest();
+  }
+
+  @VisibleForTesting
+  public void clearNextWordPipelineDebugStateForTest() {
+    mNextWordPipeline.clearNextWordPipelineDebugStateForTest();
+  }
+
+  @VisibleForTesting
+  @NonNull
+  public String dumpNextWordPipelineDebugStateForTest() {
+    return mNextWordPipeline.dumpNextWordPipelineDebugStateForTest();
+  }
+
+  @VisibleForTesting
+  @NonNull
+  public java.util.Deque<String> getNextWordEngineContextSnapshotForTest() {
+    return mPredictionEngines.getContextSnapshot();
+  }
+
+  @NonNull
+  public List<String> sortCandidatesByNeuralFirstTokenLogProbIfAvailable(
+      @NonNull List<String> candidates) {
+    return mPredictionEngines.sortCandidatesByNeuralFirstTokenLogProbIfAvailable(candidates);
+  }
+
   public boolean tryToLearnNewWord(CharSequence newWord, int frequencyDelta) {
-    if (mIncognitoMode || !mNextWordConfig.enabled) return false;
+    if (mIncognitoMode
+        || !mNextWordConfig.enabled
+        || mContextSafeToggles.disableNextWordSuggestions) return false;
     return mDictionariesManager.tryToLearnNewWord(newWord, frequencyDelta);
   }
 }

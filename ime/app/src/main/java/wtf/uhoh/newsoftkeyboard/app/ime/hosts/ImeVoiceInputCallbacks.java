@@ -6,6 +6,7 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
+import androidx.preference.PreferenceManager;
 import com.google.android.voiceime.VoiceImeController;
 import com.google.android.voiceime.VoiceImeController.VoiceInputState;
 import java.util.function.BooleanSupplier;
@@ -191,6 +192,12 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
       return service.getString(R.string.voice_error_default_message);
     }
 
+    final String openAiApiErrorPrefix =
+        service.getString(R.string.openai_error_api_error, "").trim();
+    if (!openAiApiErrorPrefix.isEmpty() && trimmed.startsWith(openAiApiErrorPrefix)) {
+      return trimmed;
+    }
+
     // Allow-list known error strings that already come from our own resources (localized).
     // For everything else, show a short localized message and keep details in logs.
     if (trimmed.equals(service.getString(R.string.openai_error_api_key_unset))
@@ -229,10 +236,12 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
     final KeyboardViewContainerView container = service.getInputViewContainer();
     if (container == null) return;
 
-    final int messageId =
-        state == VoiceInputState.RECORDING
-            ? R.string.voice_spacebar_badge_recording
-            : R.string.voice_spacebar_badge_waiting;
+    final int messageId;
+    if (state == VoiceInputState.RECORDING) {
+      messageId = R.string.voice_spacebar_badge_recording;
+    } else {
+      messageId = resolveTranscribingMessageResId();
+    }
     final String message = service.getString(messageId);
 
     final VoiceStatusStripActionProvider provider = currentStatusStripAction;
@@ -248,6 +257,23 @@ public final class ImeVoiceInputCallbacks implements VoiceImeController.HostCall
 
     currentStatusStripAction = new VoiceStatusStripActionProvider(service, message);
     container.addStripAction(currentStatusStripAction, true);
+  }
+
+  private int resolveTranscribingMessageResId() {
+    try {
+      final String selectedBackendId =
+          PreferenceManager.getDefaultSharedPreferences(service)
+              .getString(service.getString(R.string.settings_key_speech_to_text_backend), "");
+      if ("elevenlabs".equals(selectedBackendId)) {
+        return R.string.elevenlabs_status_transcribing;
+      }
+      if ("openai".equals(selectedBackendId)) {
+        return R.string.openai_status_transcribing;
+      }
+    } catch (Exception ignored) {
+      // Best-effort only. Fall back to a generic status message.
+    }
+    return R.string.voice_spacebar_badge_waiting;
   }
 
   private void dismissStatusStripAction() {

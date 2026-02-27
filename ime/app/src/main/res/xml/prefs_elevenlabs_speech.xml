@@ -1,18 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.preference.PreferenceScreen
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/elevenlabs_speech_settings_title">
+
+    <Preference
+        android:key="elevenlabs_speech_privacy_notice"
+        android:title="@string/speech_to_text_privacy_notice_title"
+        android:summary="@string/elevenlabs_speech_privacy_notice_summary"
+        android:selectable="false"
+        app:iconSpaceReserved="false" />
 
     <androidx.preference.PreferenceCategory
         android:title="@string/elevenlabs_api_settings_group">
 
-        <androidx.preference.EditTextPreference
+        <wtf.uhoh.newsoftkeyboard.app.ui.settings.SpeechToTextApiKeyPreference
             android:key="@string/settings_key_elevenlabs_api_key"
             android:title="@string/elevenlabs_api_key_title"
             android:summary="@string/elevenlabs_api_key_summary"
             android:dialogTitle="@string/elevenlabs_api_key_dialog_title"
             android:inputType="textPassword"
-            android:persistent="true" />
+            android:persistent="false" />
 
         <androidx.preference.EditTextPreference
             android:key="@string/settings_key_elevenlabs_endpoint"

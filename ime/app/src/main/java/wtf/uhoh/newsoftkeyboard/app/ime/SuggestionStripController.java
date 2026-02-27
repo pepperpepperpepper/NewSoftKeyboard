@@ -8,11 +8,13 @@ import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView;
 final class SuggestionStripController {
 
   private final CancelSuggestionsAction cancelSuggestionsAction;
+  private final NoSuggestionsStripAction noSuggestionsStripAction;
   private final CandidateView candidateView;
 
   SuggestionStripController(
       CancelSuggestionsAction cancelSuggestionsAction, CandidateView candidateView) {
     this.cancelSuggestionsAction = cancelSuggestionsAction;
+    this.noSuggestionsStripAction = new NoSuggestionsStripAction();
     this.candidateView = candidateView;
     this.cancelSuggestionsAction.setOwningCandidateView(candidateView);
   }
@@ -23,10 +25,13 @@ final class SuggestionStripController {
 
   void attachToStrip(KeyboardViewContainerView container) {
     container.addStripAction(cancelSuggestionsAction, false);
+    container.addStripAction(noSuggestionsStripAction, true);
   }
 
-  void showStrip(boolean predictionOn, KeyboardViewContainerView container) {
+  void showStrip(
+      boolean predictionOn, boolean showNoSuggestionsAction, KeyboardViewContainerView container) {
     cancelSuggestionsAction.setCancelIconVisible(false);
-    container.setActionsStripVisibility(predictionOn);
+    noSuggestionsStripAction.setVisible(showNoSuggestionsAction);
+    container.setActionsStripVisibility(predictionOn || showNoSuggestionsAction);
   }
 }

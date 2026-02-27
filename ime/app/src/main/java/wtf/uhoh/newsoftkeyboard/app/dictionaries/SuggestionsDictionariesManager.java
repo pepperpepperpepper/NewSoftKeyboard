@@ -3,11 +3,14 @@ package wtf.uhoh.newsoftkeyboard.app.dictionaries;
 import android.content.Context;
 import android.text.TextUtils;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import io.reactivex.disposables.CompositeDisposable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import wtf.uhoh.newsoftkeyboard.app.dictionaries.content.ContactsDictionary;
@@ -19,7 +22,9 @@ import wtf.uhoh.newsoftkeyboard.dictionaries.Dictionary;
 import wtf.uhoh.newsoftkeyboard.dictionaries.DictionaryBackgroundLoader;
 import wtf.uhoh.newsoftkeyboard.dictionaries.EditableDictionary;
 import wtf.uhoh.newsoftkeyboard.dictionaries.KeyCodesProvider;
+import wtf.uhoh.newsoftkeyboard.nextword.NextWordDictionary;
 import wtf.uhoh.newsoftkeyboard.nextword.NextWordSuggestions;
+import wtf.uhoh.newsoftkeyboard.prefs.context.ContextProfilesStore;
 
 final class SuggestionsDictionariesManager {
 
@@ -27,22 +32,35 @@ final class SuggestionsDictionariesManager {
 
   @NonNull private final Context mContext;
   @NonNull private final Function<String, UserDictionary> mUserDictionaryFactory;
+
+  @NonNull
+  private final BiFunction<String, String, EditableDictionary> mContextProfileWordListFactory;
+
   @NonNull private final Supplier<ContactsDictionary> mContactsDictionaryFactory;
 
   @NonNull private final List<String> mInitialSuggestionsList = new ArrayList<>();
   @NonNull private final List<Dictionary> mMainDictionary = new ArrayList<>();
   @NonNull private final List<EditableDictionary> mUserDictionary = new ArrayList<>();
+  @NonNull private final List<EditableDictionary> mContextProfileWordList = new ArrayList<>();
   @NonNull private final List<NextWordSuggestions> mUserNextWordDictionary = new ArrayList<>();
   @NonNull private final List<Dictionary> mAbbreviationDictionary = new ArrayList<>();
   @NonNull private final List<AutoText> mQuickFixesAutoText = new ArrayList<>();
 
   @NonNull private CompositeDisposable mDictionaryDisposables = new CompositeDisposable();
 
+  @NonNull
+  private CompositeDisposable mContextProfileWordListDisposables = new CompositeDisposable();
+
   private int mCurrentSetupHashCode;
   private boolean mQuickFixesEnabled;
   private boolean mQuickFixesSecondDisabled;
   private boolean mContactsDictionaryEnabled;
   private boolean mUserDictionaryEnabled;
+  private boolean mContextAllowsContactsDictionary = true;
+  private boolean mContextAllowsUserDictionary = true;
+  @Nullable private String mContextProfileWordListPresetId;
+  private long mContextProfileWordListGeneration;
+  @NonNull private final List<String> mCurrentLocales = new ArrayList<>();
 
   @NonNull private EditableDictionary mAutoDictionary = SuggestionsProviderNulls.NULL_DICTIONARY;
   @NonNull private Dictionary mContactsDictionary = SuggestionsProviderNulls.NULL_DICTIONARY;
@@ -62,9 +80,11 @@ final class SuggestionsDictionariesManager {
   SuggestionsDictionariesManager(
       @NonNull Context context,
       @NonNull Function<String, UserDictionary> userDictionaryFactory,
+      @NonNull BiFunction<String, String, EditableDictionary> contextProfileWordListFactory,
       @NonNull Supplier<ContactsDictionary> contactsDictionaryFactory) {
     mContext = context.getApplicationContext();
     mUserDictionaryFactory = userDictionaryFactory;
+    mContextProfileWordListFactory = contextProfileWordListFactory;
     mContactsDictionaryFactory = contactsDictionaryFactory;
   }
 
@@ -97,7 +117,51 @@ final class SuggestionsDictionariesManager {
 
   @NonNull
   NextWordSuggestions contactsNextWordDictionary() {
-    return mContactsNextWordDictionary;
+    return mContextAllowsContactsDictionary
+        ? mContactsNextWordDictionary
+        : SuggestionsProviderNulls.NULL_NEXT_WORD_SUGGESTIONS;
+  }
+
+  void setContextProfileSafeToggles(@NonNull ContextProfilesStore.SafeToggles safeToggles) {
+    mContextAllowsContactsDictionary = !safeToggles.disableContactsDictionary;
+    mContextAllowsUserDictionary = !safeToggles.disableUserDictionary;
+  }
+
+  void setContextProfileWordList(@Nullable String presetId, long generation) {
+    final String normalized = presetId == null ? null : presetId.trim();
+    final boolean samePreset = Objects.equals(mContextProfileWordListPresetId, normalized);
+    final boolean sameGeneration = mContextProfileWordListGeneration == generation;
+    if (samePreset && sameGeneration) return;
+
+    mContextProfileWordListPresetId =
+        (normalized == null || normalized.isEmpty()) ? null : normalized;
+    mContextProfileWordListGeneration = generation;
+
+    reloadContextProfileWordListDictionaries();
+  }
+
+  private void reloadContextProfileWordListDictionaries() {
+    closeContextProfileWordListDictionaries();
+
+    final String presetId = mContextProfileWordListPresetId;
+    if (presetId == null) return;
+
+    for (String locale : mCurrentLocales) {
+      final EditableDictionary dictionary = mContextProfileWordListFactory.apply(presetId, locale);
+      mContextProfileWordList.add(dictionary);
+      mContextProfileWordListDisposables.add(
+          DictionaryBackgroundLoader.loadDictionaryInBackground(
+              DictionaryBackgroundLoader.SILENT_LISTENER, dictionary));
+    }
+  }
+
+  private void closeContextProfileWordListDictionaries() {
+    for (EditableDictionary dictionary : mContextProfileWordList) {
+      dictionary.close();
+    }
+    mContextProfileWordList.clear();
+    mContextProfileWordListDisposables.dispose();
+    mContextProfileWordListDisposables = new CompositeDisposable();
   }
 
   void setQuickFixesEnabled(boolean enabled) {
@@ -145,6 +209,7 @@ final class SuggestionsDictionariesManager {
       @NonNull DictionaryBackgroundLoader.Listener cb,
       boolean logDictionarySetup) {
     final CompositeDisposable disposablesHolder = mDictionaryDisposables;
+    mCurrentLocales.clear();
 
     if (logDictionarySetup) {
       Logger.d(TAG, "setupSuggestionsFor %d dictionaries", dictionaryBuilders.size());
@@ -159,6 +224,9 @@ final class SuggestionsDictionariesManager {
 
     for (int i = 0; i < dictionaryBuilders.size(); i++) {
       DictionaryAddOnAndBuilder dictionaryBuilder = dictionaryBuilders.get(i);
+      final String language = dictionaryBuilder.getLanguage();
+      if (!mCurrentLocales.contains(language)) mCurrentLocales.add(language);
+
       try {
         Logger.d(
             TAG,
@@ -179,15 +247,24 @@ final class SuggestionsDictionariesManager {
       }
 
       if (mUserDictionaryEnabled) {
-        final UserDictionary userDictionary =
-            mUserDictionaryFactory.apply(dictionaryBuilder.getLanguage());
+        final UserDictionary userDictionary = mUserDictionaryFactory.apply(language);
         mUserDictionary.add(userDictionary);
-        Logger.d(TAG, " Loading user dictionary for %s...", dictionaryBuilder.getLanguage());
+        Logger.d(TAG, " Loading user dictionary for %s...", language);
         disposablesHolder.add(
             DictionaryBackgroundLoader.loadDictionaryInBackground(cb, userDictionary));
         mUserNextWordDictionary.add(userDictionary.getUserNextWordGetter());
       } else {
         Logger.d(TAG, " User does not want user dictionary, skipping...");
+      }
+
+      final String contextProfilePresetId = mContextProfileWordListPresetId;
+      if (contextProfilePresetId != null) {
+        final EditableDictionary dictionary =
+            mContextProfileWordListFactory.apply(contextProfilePresetId, language);
+        mContextProfileWordList.add(dictionary);
+        mContextProfileWordListDisposables.add(
+            DictionaryBackgroundLoader.loadDictionaryInBackground(
+                DictionaryBackgroundLoader.SILENT_LISTENER, dictionary));
       }
       // if mQuickFixesEnabled and mQuickFixesSecondDisabled are true
       // it activates autotext only to the current keyboard layout language
@@ -207,8 +284,8 @@ final class SuggestionsDictionariesManager {
       mInitialSuggestionsList.addAll(dictionaryBuilder.createInitialSuggestions());
 
       // only one auto-dictionary. There is no way to know to which language the typed word belongs.
-      mAutoDictionary = new AutoDictionary(mContext, dictionaryBuilder.getLanguage());
-      Logger.d(TAG, " Loading auto dictionary for %s...", dictionaryBuilder.getLanguage());
+      mAutoDictionary = new AutoDictionary(mContext, language);
+      Logger.d(TAG, " Loading auto dictionary for %s...", language);
       disposablesHolder.add(DictionaryBackgroundLoader.loadDictionaryInBackground(mAutoDictionary));
     }
 
@@ -233,8 +310,11 @@ final class SuggestionsDictionariesManager {
     mQuickFixesAutoText.clear();
     mUserNextWordDictionary.clear();
     mInitialSuggestionsList.clear();
+    mCurrentLocales.clear();
 
     resetNextWordSentence.run();
+
+    closeContextProfileWordListDictionaries();
 
     mContactsNextWordDictionary = SuggestionsProviderNulls.NULL_NEXT_WORD_SUGGESTIONS;
     mAutoDictionary = SuggestionsProviderNulls.NULL_DICTIONARY;
@@ -246,8 +326,13 @@ final class SuggestionsDictionariesManager {
 
   void getSuggestions(
       @NonNull KeyCodesProvider wordComposer, @NonNull Dictionary.WordCallback callback) {
-    mContactsDictionary.getSuggestions(wordComposer, callback);
-    allDictionariesGetWords(mUserDictionary, wordComposer, callback);
+    if (mContextAllowsContactsDictionary) {
+      mContactsDictionary.getSuggestions(wordComposer, callback);
+    }
+    if (mContextAllowsUserDictionary) {
+      allDictionariesGetWords(mUserDictionary, wordComposer, callback);
+    }
+    allDictionariesGetWords(mContextProfileWordList, wordComposer, callback);
     allDictionariesGetWords(mMainDictionary, wordComposer, callback);
   }
 
@@ -271,13 +356,30 @@ final class SuggestionsDictionariesManager {
     }
 
     return allDictionariesIsValid(mMainDictionary, word)
-        || allDictionariesIsValid(mUserDictionary, word)
-        || mContactsDictionary.isValidWord(word);
+        || allDictionariesIsValid(mContextProfileWordList, word)
+        || (mContextAllowsUserDictionary && allDictionariesIsValid(mUserDictionary, word))
+        || (mContextAllowsContactsDictionary && mContactsDictionary.isValidWord(word));
   }
 
   void removeWordFromUserDictionary(@NonNull String word) {
     for (EditableDictionary dictionary : mUserDictionary) {
       dictionary.deleteWord(word);
+    }
+  }
+
+  void clearLearningData() {
+    if (mAutoDictionary instanceof AutoDictionary) {
+      ((AutoDictionary) mAutoDictionary).clearAllWords();
+    }
+
+    for (NextWordSuggestions suggestions : mUserNextWordDictionary) {
+      if (suggestions instanceof NextWordDictionary) {
+        final NextWordDictionary nextWordDictionary = (NextWordDictionary) suggestions;
+        nextWordDictionary.clearData();
+        nextWordDictionary.close();
+      } else {
+        suggestions.resetSentence();
+      }
     }
   }
 

@@ -23,6 +23,12 @@ public final class OptionsMenuLauncher {
 
     void setIncognito(boolean incognito, boolean notify);
 
+    boolean isContextProfilesEnabled();
+
+    boolean isContextProfilesGloballyEnabled();
+
+    void setContextProfilesTemporarilyDisabled(boolean disabled);
+
     void launchSettings();
 
     void launchDictionaryOverriding();
@@ -39,7 +45,20 @@ public final class OptionsMenuLauncher {
           host.getContext()
               .getString(
                   R.string.switch_incognito_template,
-                  host.getContext().getText(R.string.switch_incognito))
+                  host.getContext().getText(R.string.switch_incognito)),
+          host.getContext()
+              .getString(
+                  R.string.context_profiles_options_menu_template,
+                  host.isContextProfilesGloballyEnabled()
+                      ? (host.isContextProfilesEnabled()
+                          ? host.getContext()
+                              .getText(R.string.context_profiles_options_menu_state_on)
+                          : host.getContext()
+                              .getText(
+                                  R.string.context_profiles_options_menu_state_temporarily_off))
+                      : host.getContext()
+                          .getText(
+                              R.string.context_profiles_options_menu_state_disabled_in_settings))
         };
 
     host.showOptionsDialogWithData(
@@ -59,6 +78,13 @@ public final class OptionsMenuLauncher {
               break;
             case 3:
               host.setIncognito(!host.isIncognito(), true);
+              break;
+            case 4:
+              if (!host.isContextProfilesGloballyEnabled()) {
+                host.launchSettings();
+              } else {
+                host.setContextProfilesTemporarilyDisabled(host.isContextProfilesEnabled());
+              }
               break;
             default:
               throw new IllegalArgumentException(

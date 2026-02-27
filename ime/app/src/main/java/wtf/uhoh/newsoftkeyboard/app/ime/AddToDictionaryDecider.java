@@ -18,6 +18,7 @@ final class AddToDictionaryDecider {
       Suggest suggest,
       CharSequence suggestion,
       Locale locale) {
+    if (suggest.isIncognitoMode()) return false;
     if (justAutoAddedWord) return false;
     if (pickedIndex != 0) return false;
     if (!showSuggestions) return false;

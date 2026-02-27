@@ -106,6 +106,11 @@ class IntentApiTrigger implements Trigger {
     }
   }
 
+  @Override
+  public void onFinishInputView() {
+    // No-op. We only commit results when the IME is shown again.
+  }
+
   private void scheduleCommit() {
     mHandler.post(
         new Runnable() {
@@ -159,6 +164,8 @@ class IntentApiTrigger implements Trigger {
         result = format(et, result);
       }
 
+      result = postProcessBeforeCommit(result);
+
       if (!conn.commitText(result, 0)) {
         Log.i(TAG, "Unable to commit recognition result");
         return;
@@ -167,6 +174,19 @@ class IntentApiTrigger implements Trigger {
       mLastRecognitionResult = null;
     } finally {
       conn.endBatchEdit();
+    }
+  }
+
+  private String postProcessBeforeCommit(String formattedText) {
+    if (!(mInputMethodService instanceof VoiceImeTextPrecommitProcessor)) return formattedText;
+    try {
+      final String processed =
+          ((VoiceImeTextPrecommitProcessor) mInputMethodService)
+              .onVoiceTextPreCommit(formattedText);
+      return processed == null ? formattedText : processed;
+    } catch (Throwable t) {
+      Log.w(TAG, "Voice pre-commit post-processing failed.", t);
+      return formattedText;
     }
   }
 

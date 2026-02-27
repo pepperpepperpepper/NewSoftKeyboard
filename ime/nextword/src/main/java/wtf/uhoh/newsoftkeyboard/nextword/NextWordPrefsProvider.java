@@ -54,7 +54,14 @@ public class NextWordPrefsProvider implements PrefsProvider {
       for (PrefItem word : localePref.getChildren()) {
         NextWordsContainer container = new NextWordsContainer(word.getValue("word"));
         for (PrefItem nextWord : word.getChildren()) {
-          container.markWordAsUsed(nextWord.getValue("nextWord"));
+          final String nextWordText = nextWord.getValue("nextWord");
+          int usedCount = 1;
+          try {
+            usedCount = Integer.parseInt(nextWord.getValue("usedCount"));
+          } catch (Exception ignored) {
+            // keep default usedCount
+          }
+          container.setNextWordUsedCount(nextWordText, usedCount);
         }
         wordsToStore.add(container);
       }

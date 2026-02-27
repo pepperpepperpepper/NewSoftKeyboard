@@ -7,7 +7,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -23,6 +22,8 @@ final class Gpt2Tokenizer {
 
   private final Map<String, Integer> vocab = new HashMap<>();
   private final Map<Integer, String> idToToken = new HashMap<>();
+  private String[] idToTokenArray;
+  private String[] decodedIdCache;
   private static final Map<Integer, Integer> BYTE_DECODER = buildByteDecoder();
   private static final Map<Integer, Integer> BYTE_ENCODER = buildByteEncoder();
   private static final Pattern GPT2_PATTERN =
@@ -82,6 +83,7 @@ final class Gpt2Tokenizer {
     final String jsonText = readAll(vocabJson).trim();
     final Matcher matcher = VOCAB_ENTRY_PATTERN.matcher(jsonText);
     int count = 0;
+    int maxId = -1;
     while (matcher.find()) {
       final String rawKey = matcher.group(1);
       final String key = unescapeJsonString(rawKey);
@@ -89,9 +91,20 @@ final class Gpt2Tokenizer {
       vocab.put(key, val);
       idToToken.putIfAbsent(val, key);
       count++;
+      if (val > maxId) maxId = val;
     }
     if (count == 0) {
       throw new IOException("Failed to parse vocab.json entries.");
+    }
+    if (maxId >= 0) {
+      idToTokenArray = new String[maxId + 1];
+      decodedIdCache = new String[maxId + 1];
+      for (Map.Entry<Integer, String> e : idToToken.entrySet()) {
+        final int id = e.getKey();
+        if (id >= 0 && id < idToTokenArray.length) {
+          idToTokenArray[id] = e.getValue();
+        }
+      }
     }
   }
 
@@ -163,6 +176,18 @@ final class Gpt2Tokenizer {
 
   @NonNull
   String decodeId(int id) {
+    final String[] decodedCache = decodedIdCache;
+    final String[] tokenArray = idToTokenArray;
+    if (decodedCache != null && tokenArray != null && id >= 0 && id < decodedCache.length) {
+      final String cached = decodedCache[id];
+      if (cached != null) return cached;
+      final String token = tokenArray[id];
+      if (token == null) return String.valueOf(id);
+      final String decoded = decodeToken(token);
+      decodedCache[id] = decoded;
+      return decoded;
+    }
+
     final String token = idToToken.get(id);
     if (token == null) return String.valueOf(id);
     return decodeToken(token);
@@ -171,19 +196,15 @@ final class Gpt2Tokenizer {
   @NonNull
   private String decodeToken(@NonNull String token) {
     // GPT-2 byte-level BPE: map each UTF-8 pseudo-char back to the original byte.
-    final ArrayDeque<Byte> bytes = new ArrayDeque<>(token.length());
+    final byte[] bytes = new byte[token.length()];
+    int bytesCount = 0;
     for (int i = 0; i < token.length(); i++) {
       final int codePoint = token.charAt(i);
       final Integer decoded = BYTE_DECODER.get(codePoint);
       if (decoded == null) continue;
-      bytes.add((byte) decoded.intValue());
+      bytes[bytesCount++] = (byte) decoded.intValue();
     }
-    final byte[] out = new byte[bytes.size()];
-    int idx = 0;
-    while (!bytes.isEmpty()) {
-      out[idx++] = bytes.removeFirst();
-    }
-    String text = new String(out, StandardCharsets.UTF_8);
+    String text = new String(bytes, 0, bytesCount, StandardCharsets.UTF_8);
     // GPT-2 uses a leading-space marker \u0120 (Ġ) and newline marker \u010a
     text = text.replace('\u0120', ' ');
     text = text.replace('\u010a', '\n');

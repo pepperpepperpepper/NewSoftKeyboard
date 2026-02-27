@@ -66,8 +66,9 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
   }
 
   @Override
-  public void sendKeyChar(char c) {
-    host.sendKeyChar(c);
+  public void commitManuallyPickedWordToInput(
+      CharSequence wordToCommit, CharSequence typedWordInEditor) {
+    host.commitManuallyPickedWordToInput(wordToCommit, typedWordInEditor);
   }
 
   @Override
@@ -83,6 +84,11 @@ final class SuggestionPickerHost implements SuggestionPicker.Host {
   @Override
   public boolean isAutoCompleteEnabled() {
     return host.isAutoCompleteEnabled();
+  }
+
+  @Override
+  public boolean isInAllUpperCaseState() {
+    return host.mShiftKeyState.isLocked();
   }
 
   @Override

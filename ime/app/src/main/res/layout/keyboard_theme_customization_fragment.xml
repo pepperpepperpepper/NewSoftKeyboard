@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <include layout="@layout/keyboard_theme_wallpaper_live_preview" />
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:paddingStart="@dimen/global_content_padding_side"
+        android:paddingEnd="@dimen/global_content_padding_side"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/theme_customization_nav_presets"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/keyboard_theme_presets_title"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/theme_customization_nav_background"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/keyboard_theme_appearance_background_title"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/theme_customization_nav_colors"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/keyboard_theme_appearance_colors_title"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/theme_customization_nav_typography"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/keyboard_theme_appearance_typography_title"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/theme_customization_nav_shadows"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/keyboard_theme_appearance_shadows_title"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/theme_customization_nav_overlays"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:text="@string/keyboard_theme_appearance_overlays_title"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/theme_customization_nav_reset"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/keyboard_theme_appearance_reset_section_title"
+                android:textAllCaps="false" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <FrameLayout
+        android:id="@+id/theme_customization_preferences_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+</LinearLayout>

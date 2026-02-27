@@ -19,6 +19,9 @@ final class KeyboardDrawCoordinator {
   private final KeyTextStyleState keyTextStyleState;
   private final KeyDisplayState keyDisplayState;
   private final KeyShadowStyle keyShadowStyle;
+  private final KeyBackgroundShadowStyle keyBackgroundShadowStyle;
+  private final PerKeyTextShadowOverrides perKeyTextShadowOverrides;
+  private final PerKeyBackgroundShadowOverrides perKeyBackgroundShadowOverrides;
   private final KeyDetector keyDetector;
 
   KeyboardDrawCoordinator(
@@ -29,6 +32,9 @@ final class KeyboardDrawCoordinator {
       KeyTextStyleState keyTextStyleState,
       KeyDisplayState keyDisplayState,
       KeyShadowStyle keyShadowStyle,
+      KeyBackgroundShadowStyle keyBackgroundShadowStyle,
+      PerKeyTextShadowOverrides perKeyTextShadowOverrides,
+      PerKeyBackgroundShadowOverrides perKeyBackgroundShadowOverrides,
       KeyDetector keyDetector) {
     this.invalidateHelper = invalidateHelper;
     this.clipRegionHolder = clipRegionHolder;
@@ -37,6 +43,9 @@ final class KeyboardDrawCoordinator {
     this.keyTextStyleState = keyTextStyleState;
     this.keyDisplayState = keyDisplayState;
     this.keyShadowStyle = keyShadowStyle;
+    this.keyBackgroundShadowStyle = keyBackgroundShadowStyle;
+    this.perKeyTextShadowOverrides = perKeyTextShadowOverrides;
+    this.perKeyBackgroundShadowOverrides = perKeyBackgroundShadowOverrides;
     this.keyDetector = keyDetector;
   }
 
@@ -48,6 +57,14 @@ final class KeyboardDrawCoordinator {
       @Nullable KeyDrawableStateProvider drawableStateProvider,
       CharSequence keyboardName,
       @Nullable CharSequence spacebarVoiceBadgeText,
+      @Nullable Integer specialKeyTextColorOverride,
+      @Nullable Integer modifierKeyTextColorOverride,
+      @Nullable Integer enterKeyTextColorOverride,
+      @Nullable Integer userKeyBackgroundTint,
+      @Nullable Integer userSpecialKeyBackgroundTint,
+      @Nullable Integer userSpacebarBackgroundTint,
+      @Nullable Integer userModifierKeyBackgroundTint,
+      @Nullable Integer userEnterKeyBackgroundTint,
       boolean allowExpensiveWallpaperEffects,
       int viewWidth,
       int viewHeight,
@@ -73,6 +90,9 @@ final class KeyboardDrawCoordinator {
             keyboard,
             keyboardName,
             spacebarVoiceBadgeText,
+            specialKeyTextColorOverride,
+            modifierKeyTextColorOverride,
+            enterKeyTextColorOverride,
             keys,
             invalidateHelper.invalidatedKey(),
             clipRegionHolder.rect(),
@@ -87,12 +107,27 @@ final class KeyboardDrawCoordinator {
             keyShadowStyle.offsetX(),
             keyShadowStyle.offsetY(),
             keyShadowStyle.color(),
+            perKeyTextShadowOverrides,
+            keyBackgroundShadowStyle.enabled(),
+            keyBackgroundShadowStyle.offsetX(),
+            keyBackgroundShadowStyle.offsetY(),
+            keyBackgroundShadowStyle.spread(),
+            keyBackgroundShadowStyle.color(),
+            perKeyBackgroundShadowOverrides,
             keyTextStyleState.textCaseForceOverrideType(),
             keyTextStyleState.textCaseType(),
             keyDetector,
             keyTextStyleState.keyTextSize(),
+            keyTextStyleState.autoFitKeyLabels(),
+            keyTextStyleState.keyLabelAutoFitMinScale(),
+            keyTextStyleState.ellipsizeKeyLabels(),
             keyTextStyleState.themeHintLabelAlign(),
             keyTextStyleState.themeHintLabelVAlign(),
+            userKeyBackgroundTint,
+            userSpecialKeyBackgroundTint,
+            userSpacebarBackgroundTint,
+            userModifierKeyBackgroundTint,
+            userEnterKeyBackgroundTint,
             allowExpensiveWallpaperEffects,
             drawableStateProvider);
     keyDrawHelper.drawKeys(canvas, dirtyRect, drawInputs);

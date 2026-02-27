@@ -5,6 +5,7 @@ import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.NinePatchDrawable;
 import android.text.TextUtils;
+import androidx.core.graphics.drawable.DrawableCompat;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardKey;
 
 /** Draws key icons centered on the key surface. */
@@ -21,6 +22,7 @@ final class KeyIconDrawer {
       KeyIconResolver keyIconResolver,
       CharSequence currentLabel,
       Rect keyBackgroundPadding,
+      int iconTintColor,
       KeyLabelGuesser keyLabelGuesser) {
     CharSequence label = currentLabel;
     final Drawable keyIcon = key.icon;
@@ -35,11 +37,13 @@ final class KeyIconDrawer {
     }
 
     if (iconToDraw != null) {
-      iconToDraw.setState(drawableState);
-      final boolean is9Patch = iconToDraw.getCurrent() instanceof NinePatchDrawable;
+      final Drawable tinted = DrawableCompat.wrap(iconToDraw.mutate());
+      DrawableCompat.setTint(tinted, iconTintColor);
+      tinted.setState(drawableState);
+      final boolean is9Patch = tinted.getCurrent() instanceof NinePatchDrawable;
 
-      final int drawableWidth = is9Patch ? key.width : iconToDraw.getIntrinsicWidth();
-      final int drawableHeight = is9Patch ? key.height : iconToDraw.getIntrinsicHeight();
+      final int drawableWidth = is9Patch ? key.width : tinted.getIntrinsicWidth();
+      final int drawableHeight = is9Patch ? key.height : tinted.getIntrinsicHeight();
       final int drawableX =
           (key.width + keyBackgroundPadding.left - keyBackgroundPadding.right - drawableWidth) / 2;
       final int drawableY =
@@ -47,8 +51,8 @@ final class KeyIconDrawer {
               / 2;
 
       canvas.translate(drawableX, drawableY);
-      iconToDraw.setBounds(0, 0, drawableWidth, drawableHeight);
-      iconToDraw.draw(canvas);
+      tinted.setBounds(0, 0, drawableWidth, drawableHeight);
+      tinted.draw(canvas);
       canvas.translate(-drawableX, -drawableY);
 
       // We drew an icon, do not draw a label on top of it.

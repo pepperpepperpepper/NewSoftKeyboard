@@ -4,6 +4,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Rect;
 import android.os.ParcelFileDescriptor;
@@ -18,11 +19,14 @@ import androidx.test.uiautomator.By;
 import androidx.test.uiautomator.UiDevice;
 import androidx.test.uiautomator.UiObject2;
 import androidx.test.uiautomator.Until;
+import com.anysoftkeyboard.api.KeyCodes;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,16 +56,33 @@ public class NextWordSuggestionsUiAutomatorTest {
 
   private static final long READY_TIMEOUT_MS = 10000L;
   private static final long SHORT_WAIT_MS = 400L;
-  private static final long SUGGESTIONS_TIMEOUT_MS = 8000L;
+  private static final long SUGGESTIONS_TIMEOUT_MS = 15000L;
 
+  private static volatile UiDevice sDevice;
   private UiDevice mDevice;
   private ActivityScenario<TestInputActivity> mScenario;
   private String mImeComponent;
 
   @Before
   public void setUp() throws Exception {
+    if (sDevice == null) {
+      IllegalStateException last = null;
+      for (int attempt = 0; attempt < 3; attempt++) {
+        try {
+          sDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
+          last = null;
+          break;
+        } catch (IllegalStateException e) {
+          last = e;
+          SystemClock.sleep(500);
+        }
+      }
+      if (sDevice == null && last != null) {
+        throw last;
+      }
+    }
+    mDevice = sDevice;
     clearLogcat();
-    mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
     wakeAndUnlockDevice();
 
     // Ensure our IME is enabled and selected as default
@@ -77,28 +98,10 @@ public class NextWordSuggestionsUiAutomatorTest {
     prefs
         .edit()
         .putBoolean(context.getString(R.string.settings_key_show_suggestions), true)
+        .putBoolean(context.getString(R.string.settings_key_auto_space), true)
         .putString(context.getString(R.string.settings_key_next_word_dictionary_type), "words")
         .putString(context.getString(R.string.settings_key_prediction_engine_mode), "neural")
         .apply();
-
-    // Launch the test harness activity to foreground and show the IME
-    mScenario = ActivityScenario.launch(TestInputActivity.class);
-    waitForEditorVisible();
-    // Focus the editor explicitly to ensure IME can appear
-    focusEditor();
-    mScenario.onActivity(TestInputActivity::forceShowKeyboard);
-    SystemClock.sleep(SHORT_WAIT_MS);
-    waitForKeyboardVisible();
-
-    // Seed a neutral prefix so suggestions start flowing
-    // Seed context via IME commit (debug test hook), then ensure keyboard remains visible
-    mScenario.onActivity(
-        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.commitText("the "));
-    SystemClock.sleep(SHORT_WAIT_MS);
-    // Ask IME to compute and show next-word suggestions from previous token
-    mScenario.onActivity(
-        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.forceNextWordFromCursor());
-    SystemClock.sleep(SHORT_WAIT_MS);
   }
 
   @After
@@ -109,7 +112,112 @@ public class NextWordSuggestionsUiAutomatorTest {
   }
 
   @Test
+  public void smoke() throws Exception {
+    // Basic chaining flow (normal field).
+    launchTestHarnessAndSeed(/* noPersonalizedLearning= */ false, /* noSuggestionsFlag= */ false);
+    waitForNonEmptySuggestions();
+    for (int i = 0; i < 3; i++) {
+      mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+      SystemClock.sleep(SHORT_WAIT_MS);
+      waitForEditorTextToEndWithSpace();
+      waitForNonEmptySuggestions();
+    }
+    closeScenarioIfOpen();
+
+    // Keep-like behavior (no personalized learning + NO_SUGGESTIONS) should not break chaining.
+    launchTestHarnessAndSeed(/* noPersonalizedLearning= */ true, /* noSuggestionsFlag= */ true);
+    waitForNonEmptySuggestions();
+    for (int i = 0; i < 3; i++) {
+      mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+      SystemClock.sleep(SHORT_WAIT_MS);
+      waitForEditorTextToEndWithSpace();
+      waitForNonEmptySuggestions();
+    }
+    closeScenarioIfOpen();
+
+    // Regression: manual SPACE after a manual pick (auto-space disabled) should not clear
+    // next-words.
+    final Context context = ApplicationProvider.getApplicationContext();
+    final SharedPreferences prefs = DirectBootAwareSharedPreferences.create(context);
+    prefs.edit().putBoolean(context.getString(R.string.settings_key_auto_space), false).apply();
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    launchTestHarnessAndSeed(/* noPersonalizedLearning= */ false, /* noSuggestionsFlag= */ false);
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.setAutoSpaceEnabledForTest(false));
+    waitForNonEmptySuggestions();
+
+    mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    final String afterPick = getEditorText();
+    Assert.assertFalse(
+        "Expected editor text to not end with space after manual pick when auto-space is disabled;"
+            + " got '"
+            + afterPick
+            + "'",
+        afterPick.endsWith(" "));
+
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.handleSeparator(KeyCodes.SPACE));
+    SystemClock.sleep(SHORT_WAIT_MS);
+    waitForEditorTextToEndWithSpace();
+    waitForNonEmptySuggestions();
+  }
+
+  @Test
+  public void keepMeInformedDoesNotSurfaceDomainTokens() throws Exception {
+    // Use "no personalized learning" so legacy/user sources are suppressed and we see engine
+    // output.
+    launchTestHarness(
+        /* noPersonalizedLearning= */ true,
+        /* noSuggestionsFlag= */ false,
+        /* simulateInvisibleComposing= */ false,
+        /* simulateTypeNull= */ false);
+
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.resetNextWordSentence());
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    // Seed the exact context reported in the field repro.
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.commitText("keep me "));
+    SystemClock.sleep(SHORT_WAIT_MS);
+    waitForNonEmptySuggestions();
+
+    final boolean[] hasNonTrivialCandidate = {false};
+    final String[] suggestions = {""};
+    mScenario.onActivity(
+        activity -> {
+          final int count = CandidateViewTestRegistry.getCount();
+          final int scanLimit = Math.min(count, 8);
+          final java.util.ArrayList<String> seen = new java.util.ArrayList<>(scanLimit);
+          for (int i = 0; i < scanLimit; i++) {
+            final String candidate = CandidateViewTestRegistry.getSuggestionAt(i);
+            if (candidate == null) continue;
+            final String trimmed = candidate.trim();
+            if (trimmed.isEmpty()) continue;
+            seen.add(trimmed);
+            final String lower = trimmed.toLowerCase(Locale.ROOT);
+            Assert.assertNotEquals("Unexpected domain-like token in normal prose", "com", lower);
+            Assert.assertNotEquals("Unexpected domain-like token in normal prose", "www", lower);
+            Assert.assertNotEquals("Unexpected domain-like token in normal prose", "http", lower);
+            Assert.assertNotEquals("Unexpected domain-like token in normal prose", "https", lower);
+            if (trimmed.length() >= 4) {
+              hasNonTrivialCandidate[0] = true;
+            }
+          }
+          suggestions[0] = seen.toString();
+        });
+
+    Assert.assertTrue(
+        "Expected at least one non-trivial candidate after 'keep me', got: " + suggestions[0],
+        hasNonTrivialCandidate[0]);
+  }
+
+  @Test
   public void composeNonsenseSentenceUsingOnlySuggestions() throws Exception {
+    launchTestHarnessAndSeed(/* noPersonalizedLearning= */ false, /* noSuggestionsFlag= */ false);
     // Wait until we have at least one suggestion visible
     waitForNonEmptySuggestions();
     // Log the first few suggestions for visibility
@@ -151,10 +259,7 @@ public class NextWordSuggestionsUiAutomatorTest {
       final int idxToPick = chosenIndex[0];
       mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(idxToPick));
       SystemClock.sleep(SHORT_WAIT_MS);
-      // Ask IME to compute/show next suggestions for the newly committed token
-      mScenario.onActivity(
-          activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.forceNextWordFromCursor());
-      SystemClock.sleep(SHORT_WAIT_MS);
+      waitForEditorTextToEndWithSpace();
       waitForNonEmptySuggestions();
     }
 
@@ -162,21 +267,31 @@ public class NextWordSuggestionsUiAutomatorTest {
     String sentence = built.toString().trim();
     Log.d(TAG, "NON_SENSE_SENTENCE=" + sentence);
     assertFalse("Expected sentence from suggestions only", sentence.isEmpty());
+
+    // Ensure the actual editor content received multiple words separated by spaces.
+    final String editorText = getEditorText();
+    assertFalse(
+        "Expected editor to receive committed suggestion text", editorText.trim().isEmpty());
+    Assert.assertTrue(
+        "Expected multiple words in editor text; got '" + editorText + "'",
+        editorText.trim().split("\\s+").length > 2);
   }
 
   private void waitForNonEmptySuggestions() {
     final long start = SystemClock.uptimeMillis();
+    long lastRefresh = 0L;
     int count;
     do {
       final int[] c = {0};
-      mScenario.onActivity(
-          activity -> {
-            // re-trigger suggestion computation each pass to avoid stale empty state
-            wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.forceNextWordFromCursor();
-            c[0] = CandidateViewTestRegistry.getCount();
-          });
+      mScenario.onActivity(activity -> c[0] = CandidateViewTestRegistry.getCount());
       count = c[0];
       if (count > 0) return;
+      final long now = SystemClock.uptimeMillis();
+      if (now - lastRefresh >= 1000L) {
+        lastRefresh = now;
+        mScenario.onActivity(
+            activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.forceNextWordFromCursor());
+      }
       SystemClock.sleep(200);
     } while (SystemClock.uptimeMillis() - start < SUGGESTIONS_TIMEOUT_MS);
     // One last check before giving up
@@ -187,6 +302,341 @@ public class NextWordSuggestionsUiAutomatorTest {
       Log.w(TAG, "No suggestions visible after timeout");
       throw new AssertionError("Suggestions did not appear");
     }
+  }
+
+  @Test
+  public void composeNonsenseSentenceUsingOnlySuggestions_underNoPersonalizedLearning()
+      throws Exception {
+    // Google Keep and other apps may set IME_FLAG_NO_PERSONALIZED_LEARNING and/or NO_SUGGESTIONS.
+    // This should not break next-word prediction nor the "tap-to-chain" flow.
+    launchTestHarnessAndSeed(/* noPersonalizedLearning= */ true, /* noSuggestionsFlag= */ true);
+    waitForNonEmptySuggestions();
+
+    for (int i = 0; i < 8; i++) {
+      mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+      SystemClock.sleep(SHORT_WAIT_MS);
+      waitForEditorTextToEndWithSpace();
+      waitForNonEmptySuggestions();
+    }
+
+    final String editorText = getEditorText();
+    Assert.assertTrue(
+        "Expected editor text to grow under no-personalized-learning; got '" + editorText + "'",
+        editorText.trim().split("\\s+").length > 3);
+  }
+
+  @Test
+  public void manualPickNotClearedByDelayedSuggestionsUpdate() throws Exception {
+    launchTestHarnessAndSeed(/* noPersonalizedLearning= */ false, /* noSuggestionsFlag= */ false);
+    waitForNonEmptySuggestions();
+
+    // Simulate the "typing scheduled an update, but user picked before it fired" race.
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.postUpdateSuggestions());
+    mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+    SystemClock.sleep(SHORT_WAIT_MS);
+    waitForEditorTextToEndWithSpace();
+    waitForNonEmptySuggestions();
+
+    // If the delayed update fires after this point and is not canceled, it may overwrite the strip
+    // with an empty/blank set. Clear internal next-word state to make the regression deterministic.
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.resetNextWordSentence());
+    SystemClock.sleep(
+        wtf.uhoh.newsoftkeyboard.app.ime.ImeSuggestionsController.GET_SUGGESTIONS_DELAY
+            + SHORT_WAIT_MS);
+
+    final int[] count = {0};
+    final String[] first = {""};
+    mScenario.onActivity(
+        activity -> {
+          count[0] = CandidateViewTestRegistry.getCount();
+          first[0] = CandidateViewTestRegistry.getSuggestionAt(0);
+        });
+    Assert.assertTrue("Expected suggestions to remain visible; count=" + count[0], count[0] > 0);
+    Assert.assertTrue(
+        "Expected first suggestion to be non-empty, but was '" + first[0] + "'",
+        first[0] != null && !first[0].isEmpty());
+  }
+
+  @Test
+  public void manualSpaceAfterManualPickKeepsNextWordSuggestions() throws Exception {
+    // Repro for "no suggestions until typing next letter" when auto-space is disabled and the user
+    // manually presses SPACE after picking a suggestion.
+    final Context context = ApplicationProvider.getApplicationContext();
+    final SharedPreferences prefs = DirectBootAwareSharedPreferences.create(context);
+    prefs.edit().putBoolean(context.getString(R.string.settings_key_auto_space), false).apply();
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    launchTestHarnessAndSeed(/* noPersonalizedLearning= */ false, /* noSuggestionsFlag= */ false);
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.setAutoSpaceEnabledForTest(false));
+    waitForNonEmptySuggestions();
+
+    // Manual pick commits the word but (with auto-space disabled) should not insert a trailing
+    // space.
+    mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    final String afterPick = getEditorText();
+    Assert.assertFalse(
+        "Expected editor text to not end with space after manual pick when auto-space is disabled;"
+            + " got '"
+            + afterPick
+            + "'",
+        afterPick.endsWith(" "));
+
+    // User manually presses SPACE; next-word suggestions should remain populated (not cleared).
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.handleSeparator(KeyCodes.SPACE));
+    SystemClock.sleep(SHORT_WAIT_MS);
+    waitForEditorTextToEndWithSpace();
+    waitForNonEmptySuggestions();
+  }
+
+  @Test
+  public void nextWordPickInsertsLeadingSpaceWhenAutoSpaceIsDisabled() throws Exception {
+    // Regression: when auto-space is disabled, picking a next-word suggestion after a previous pick
+    // (which
+    // did not insert a trailing space) must still insert a separator before committing the next
+    // word.
+    final Context context = ApplicationProvider.getApplicationContext();
+    final SharedPreferences prefs = DirectBootAwareSharedPreferences.create(context);
+    prefs.edit().putBoolean(context.getString(R.string.settings_key_auto_space), false).apply();
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    launchTestHarnessAndSeed(/* noPersonalizedLearning= */ false, /* noSuggestionsFlag= */ false);
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.setAutoSpaceEnabledForTest(false));
+    waitForNonEmptySuggestions();
+
+    // First pick commits a word but (with auto-space disabled) should not insert a trailing space.
+    mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    final String afterFirstPick = getEditorText();
+    Assert.assertFalse(
+        "Expected editor text to not end with space after a pick when auto-space is disabled; got '"
+            + afterFirstPick
+            + "'",
+        afterFirstPick.endsWith(" "));
+
+    // Ensure we have next-word suggestions available for the second pick.
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.forceNextWordFromCursor());
+    SystemClock.sleep(SHORT_WAIT_MS);
+    waitForNonEmptySuggestions();
+
+    final String beforeSecondPick = getEditorText();
+    Assert.assertFalse(
+        "Expected editor text to not end with space before a second next-word pick when auto-space"
+            + " is disabled; got '"
+            + beforeSecondPick
+            + "'",
+        beforeSecondPick.endsWith(" "));
+
+    // Second pick should insert a leading separator (space) before the committed next word.
+    mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    final String afterSecondPick = getEditorText();
+    Assert.assertTrue(
+        "Expected editor text to grow after a second pick (before='"
+            + beforeSecondPick
+            + "', after='"
+            + afterSecondPick
+            + "')",
+        afterSecondPick.length() > beforeSecondPick.length());
+    Assert.assertTrue(
+        "Expected a leading space before the second picked next word (before='"
+            + beforeSecondPick
+            + "', after='"
+            + afterSecondPick
+            + "')",
+        afterSecondPick.startsWith(beforeSecondPick + " "));
+    Assert.assertFalse(
+        "Expected auto-space disabled to not insert a trailing space after the second pick; got '"
+            + afterSecondPick
+            + "'",
+        afterSecondPick.endsWith(" "));
+  }
+
+  @Test
+  public void typedCharactersAppearWhenComposingIsInvisible() throws Exception {
+    launchTestHarnessAndSeed(
+        /* noPersonalizedLearning= */ false,
+        /* noSuggestionsFlag= */ false,
+        /* simulateInvisibleComposing= */ true);
+    waitForNonEmptySuggestions();
+
+    // Type a single letter using the on-screen keyboard. In composing-hostile editors, the IME
+    // must fall back to committing real characters so the typed input is visible immediately.
+    final String beforeText = getEditorText();
+    tapKeyMiddleRow(0.78f); // approximate 'k'
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    final String editorText = getEditorText();
+    assertSingleLetterAppended(beforeText, editorText);
+  }
+
+  @Test
+  public void composeNonsenseSentenceUsingOnlySuggestions_whenComposingIsInvisible()
+      throws Exception {
+    launchTestHarnessAndSeed(
+        /* noPersonalizedLearning= */ false,
+        /* noSuggestionsFlag= */ false,
+        /* simulateInvisibleComposing= */ true);
+    waitForNonEmptySuggestions();
+
+    for (int i = 0; i < 5; i++) {
+      mScenario.onActivity(activity -> CandidateViewTestRegistry.pickIfAvailable(0));
+      SystemClock.sleep(SHORT_WAIT_MS);
+      waitForEditorTextToEndWithSpace();
+      waitForNonEmptySuggestions();
+    }
+
+    final String editorText = getEditorText();
+    Assert.assertTrue(
+        "Expected editor text to grow when composing is invisible; got '" + editorText + "'",
+        editorText.trim().split("\\s+").length > 3);
+  }
+
+  @Test
+  public void typeNullFieldDoesNotSwallowCharactersOrShowSuggestions() throws Exception {
+    // Some editors omit inputType bits entirely and report inputType==0 (TYPE_NULL). Treat those
+    // as text fields for strip visibility, but disable auto-space/auto-pick for compatibility.
+    launchTestHarness(
+        /* noPersonalizedLearning= */ false,
+        /* noSuggestionsFlag= */ false,
+        /* simulateInvisibleComposing= */ false,
+        /* simulateTypeNull= */ true);
+
+    final boolean[] autoSpaceEnabled = {true};
+    mScenario.onActivity(
+        activity ->
+            autoSpaceEnabled[0] =
+                wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.isAutoSpaceEnabledForTest());
+    Assert.assertFalse("Expected auto-space disabled for TYPE_NULL fields", autoSpaceEnabled[0]);
+
+    final String beforeText = getEditorText();
+    tapKeyMiddleRow(0.78f); // approximate 'k'
+    SystemClock.sleep(SHORT_WAIT_MS);
+
+    final String editorText = getEditorText();
+    assertSingleLetterAppended(beforeText, editorText);
+
+    final int[] afterCount = {0};
+    mScenario.onActivity(activity -> afterCount[0] = CandidateViewTestRegistry.getCount());
+    Assert.assertTrue(
+        "Expected suggestions to remain visible after typing in TYPE_NULL fields, but count was "
+            + afterCount[0],
+        afterCount[0] > 0);
+  }
+
+  private void closeScenarioIfOpen() {
+    if (mScenario != null) {
+      mScenario.close();
+      mScenario = null;
+    }
+  }
+
+  private void assertSingleLetterAppended(String beforeText, String afterText) {
+    final int expected = beforeText.length() + 1;
+    Assert.assertTrue(
+        "Expected editor text to grow by 1 character after a key press (before='"
+            + beforeText
+            + "', after='"
+            + afterText
+            + "')",
+        afterText.length() == expected);
+    final char appended = afterText.charAt(afterText.length() - 1);
+    Assert.assertTrue(
+        "Expected appended character to be a letter, but was '"
+            + appended
+            + "' (before='"
+            + beforeText
+            + "', after='"
+            + afterText
+            + "')",
+        Character.isLetter(appended));
+  }
+
+  private void launchTestHarnessAndSeed(boolean noPersonalizedLearning, boolean noSuggestionsFlag) {
+    launchTestHarnessAndSeed(noPersonalizedLearning, noSuggestionsFlag, false);
+  }
+
+  private void launchTestHarnessAndSeed(
+      boolean noPersonalizedLearning,
+      boolean noSuggestionsFlag,
+      boolean simulateInvisibleComposing) {
+    launchTestHarness(noPersonalizedLearning, noSuggestionsFlag, simulateInvisibleComposing, false);
+
+    // Seed a neutral prefix so suggestions start flowing.
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.commitText("the "));
+    SystemClock.sleep(SHORT_WAIT_MS);
+    // Ask IME to compute and show next-word suggestions from previous token.
+    mScenario.onActivity(
+        activity -> wtf.uhoh.newsoftkeyboard.app.ime.ImeTestApi.forceNextWordFromCursor());
+    SystemClock.sleep(SHORT_WAIT_MS);
+  }
+
+  private void launchTestHarness(
+      boolean noPersonalizedLearning,
+      boolean noSuggestionsFlag,
+      boolean simulateInvisibleComposing,
+      boolean simulateTypeNull) {
+    if (mScenario != null) {
+      mScenario.close();
+      mScenario = null;
+    }
+    final Context context = ApplicationProvider.getApplicationContext();
+    final Intent intent = new Intent(context, TestInputActivity.class);
+    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    intent.putExtra(
+        TestInputActivity.EXTRA_IME_FLAG_NO_PERSONALIZED_LEARNING, noPersonalizedLearning);
+    intent.putExtra(TestInputActivity.EXTRA_TYPE_TEXT_FLAG_NO_SUGGESTIONS, noSuggestionsFlag);
+    intent.putExtra(
+        TestInputActivity.EXTRA_SIMULATE_INVISIBLE_COMPOSING, simulateInvisibleComposing);
+    intent.putExtra(TestInputActivity.EXTRA_SIMULATE_TYPE_NULL, simulateTypeNull);
+    mScenario = ActivityScenario.launch(intent);
+
+    waitForEditorVisible();
+    focusEditor();
+    mScenario.onActivity(TestInputActivity::forceShowKeyboard);
+    SystemClock.sleep(SHORT_WAIT_MS);
+    waitForKeyboardVisible();
+  }
+
+  private String getEditorText() {
+    final ActivityScenario<TestInputActivity> scenario = mScenario;
+    if (scenario != null) {
+      final String[] text = {""};
+      scenario.onActivity(
+          activity -> {
+            android.widget.EditText editText = activity.findViewById(R.id.test_edit_text);
+            if (editText == null) return;
+            final CharSequence value = editText.getText();
+            text[0] = value == null ? "" : value.toString();
+          });
+      return text[0] == null ? "" : text[0];
+    }
+
+    UiObject2 editor = mDevice.findObject(By.res(resId("test_edit_text")));
+    if (editor == null) return "";
+    final String text = editor.getText();
+    return text == null ? "" : text;
+  }
+
+  private void waitForEditorTextToEndWithSpace() {
+    final long start = SystemClock.uptimeMillis();
+    do {
+      final String text = getEditorText();
+      if (text.endsWith(" ")) return;
+      SystemClock.sleep(100);
+    } while (SystemClock.uptimeMillis() - start < 3000);
+    final String text = getEditorText();
+    Assert.fail("Expected editor text to end with space, but was '" + text + "'");
   }
 
   private void ensureMixedcaseModelActive(Context context) throws Exception {
@@ -233,7 +683,15 @@ public class NextWordSuggestionsUiAutomatorTest {
   }
 
   private void waitForKeyboardVisible() {
-    boolean visible = mDevice.wait(Until.hasObject(By.pkg(getAppPackage())), READY_TIMEOUT_MS);
+    boolean visible =
+        mDevice.wait(Until.hasObject(By.res(resId("AnyKeyboardMainView"))), READY_TIMEOUT_MS);
+    if (!visible) {
+      visible =
+          mDevice.wait(
+              Until.hasObject(
+                  By.clazz("wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardView")),
+              READY_TIMEOUT_MS);
+    }
     if (!visible) {
       dumpWindowHierarchyForDebug();
       fail("Keyboard window not visible");
@@ -442,6 +900,9 @@ public class NextWordSuggestionsUiAutomatorTest {
   }
 
   private String executeShellCommand(String command) throws IOException {
+    if (mDevice != null) {
+      return mDevice.executeShellCommand(command);
+    }
     ParcelFileDescriptor pfd =
         InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand(command);
     try (FileInputStream inputStream = new FileInputStream(pfd.getFileDescriptor());

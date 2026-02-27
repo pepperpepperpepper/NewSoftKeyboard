@@ -32,9 +32,11 @@ class NskGestureEventsListener implements NskOnGestureListener {
   private static final String TAG = "NSKGestureEventsListener";
 
   private final KeyboardViewBase mKeyboardView;
+  private final SwipeConfiguration swipeConfiguration;
 
   public NskGestureEventsListener(KeyboardViewBase keyboardView) {
     mKeyboardView = keyboardView;
+    swipeConfiguration = keyboardView.getSwipeConfiguration();
   }
 
   @Override
@@ -61,12 +63,12 @@ class NskGestureEventsListener implements NskOnGestureListener {
         velocityY);
     if (velocityX > velocityY) {
       Logger.v(TAG, "Scrolling on X axis");
-      if (velocityX > mKeyboardView.getSwipeVelocityThreshold()) {
+      if (velocityX > swipeConfiguration.getSwipeVelocityThreshold()) {
         Logger.v(TAG, "Scroll broke the velocity barrier");
         final int swipeXDistance =
             mKeyboardView.isFirstDownEventInsideSpaceBar()
-                ? mKeyboardView.getSwipeSpaceXDistanceThreshold()
-                : mKeyboardView.getSwipeXDistanceThreshold();
+                ? swipeConfiguration.getSwipeSpaceXDistanceThreshold()
+                : swipeConfiguration.getSwipeXDistanceThreshold();
         if (scrollXDistance > swipeXDistance) {
           Logger.v(TAG, "Scroll broke the distance barrier");
           mKeyboardView.disableTouchesTillFingersAreUp();
@@ -138,8 +140,8 @@ class NskGestureEventsListener implements NskOnGestureListener {
       Logger.d(
           TAG,
           "mSwipeVelocityThreshold %d, mSwipeYDistanceThreshold %d",
-          mKeyboardView.getSwipeVelocityThreshold(),
-          mKeyboardView.getSwipeYDistanceThreshold());
+          swipeConfiguration.getSwipeVelocityThreshold(),
+          swipeConfiguration.getSwipeYDistanceThreshold());
       Logger.d(
           TAG,
           "onFling vx %f, vy %f, deltaX %f, deltaY %f, isHorizontalFling: %s",
@@ -151,32 +153,32 @@ class NskGestureEventsListener implements NskOnGestureListener {
     }
     final int swipeXDistance =
         mKeyboardView.isFirstDownEventInsideSpaceBar()
-            ? mKeyboardView.getSwipeSpaceXDistanceThreshold()
-            : mKeyboardView.getSwipeXDistanceThreshold();
-    if (velocityX > mKeyboardView.getSwipeVelocityThreshold()
+            ? swipeConfiguration.getSwipeSpaceXDistanceThreshold()
+            : swipeConfiguration.getSwipeXDistanceThreshold();
+    if (velocityX > swipeConfiguration.getSwipeVelocityThreshold()
         && isHorizontalFling
         && deltaX > swipeXDistance) {
       Logger.d(TAG, "onSwipeRight");
       mKeyboardView.disableTouchesTillFingersAreUp();
       mKeyboardView.getOnKeyboardActionListener().onSwipeRight(mKeyboardView.isAtTwoFingersState());
       return true;
-    } else if (velocityX < -mKeyboardView.getSwipeVelocityThreshold()
+    } else if (velocityX < -swipeConfiguration.getSwipeVelocityThreshold()
         && isHorizontalFling
         && deltaX < -swipeXDistance) {
       Logger.d(TAG, "onSwipeLeft");
       mKeyboardView.disableTouchesTillFingersAreUp();
       mKeyboardView.getOnKeyboardActionListener().onSwipeLeft(mKeyboardView.isAtTwoFingersState());
       return true;
-    } else if (velocityY < -mKeyboardView.getSwipeVelocityThreshold()
+    } else if (velocityY < -swipeConfiguration.getSwipeVelocityThreshold()
         && !isHorizontalFling
-        && deltaY < -mKeyboardView.getSwipeYDistanceThreshold()) {
+        && deltaY < -swipeConfiguration.getSwipeYDistanceThreshold()) {
       Logger.d(TAG, "onSwipeUp");
       mKeyboardView.disableTouchesTillFingersAreUp();
       mKeyboardView.getOnKeyboardActionListener().onSwipeUp();
       return true;
-    } else if (velocityY > mKeyboardView.getSwipeVelocityThreshold()
+    } else if (velocityY > swipeConfiguration.getSwipeVelocityThreshold()
         && !isHorizontalFling
-        && deltaY > mKeyboardView.getSwipeYDistanceThreshold()) {
+        && deltaY > swipeConfiguration.getSwipeYDistanceThreshold()) {
       Logger.d(TAG, "onSwipeDown");
       mKeyboardView.disableTouchesTillFingersAreUp();
       mKeyboardView.getOnKeyboardActionListener().onSwipeDown();

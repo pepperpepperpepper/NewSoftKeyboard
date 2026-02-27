@@ -5,7 +5,6 @@ import android.graphics.Paint;
 import android.graphics.Paint.Align;
 import android.graphics.Paint.FontMetrics;
 import android.graphics.Rect;
-import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import androidx.core.graphics.drawable.DrawableCompat;
@@ -19,8 +18,12 @@ import wtf.uhoh.newsoftkeyboard.overlay.ThemeResourcesHolder;
  */
 final class KeyHintRenderer {
 
+  interface HintTextPaintSetter {
+    void setPaintForHintText(Paint paint);
+  }
+
   private final HintLayoutCalculator hintLayoutCalculator;
-  private FontMetrics hintTextFontMetrics;
+  private final FontMetrics hintTextFontMetrics = new FontMetrics();
 
   KeyHintRenderer(HintLayoutCalculator hintLayoutCalculator) {
     this.hintLayoutCalculator = hintLayoutCalculator;
@@ -45,12 +48,9 @@ final class KeyHintRenderer {
       hintText = hintText.toUpperCase(keyboardLocale);
     }
 
-    paint.setTypeface(Typeface.DEFAULT);
     paint.setColor(themeResourcesHolder.getHintTextColor());
     paint.setTextSize(hintTextSize * hintTextSizeMultiplier);
-    if (hintTextFontMetrics == null) {
-      hintTextFontMetrics = paint.getFontMetrics();
-    }
+    paint.getFontMetrics(hintTextFontMetrics);
 
     final float hintX;
     final float hintY;

@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:title="@string/settings_category_clipboard">
+
+    <Preference
+        android:key="clipboard_privacy_notice"
+        android:title="@string/clipboard_privacy_notice_title"
+        android:summary="@string/clipboard_privacy_notice_summary"
+        android:selectable="false"
+        app:iconSpaceReserved="false" />
 
     <androidx.preference.PreferenceCategory
         android:key="clipboard_group"
@@ -13,6 +21,21 @@
             android:summaryOff="@string/settings_os_clipboard_sync_summary_off"
             android:summaryOn="@string/settings_os_clipboard_sync_summary_on"
             android:title="@string/settings_os_clipboard_sync" />
+
+        <androidx.preference.CheckBoxPreference
+            android:defaultValue="@bool/settings_default_clipboard_action_always_visible"
+            android:dependency="@string/settings_key_os_clipboard_sync"
+            android:key="@string/settings_key_clipboard_action_always_visible"
+            android:persistent="true"
+            android:summaryOff="@string/settings_clipboard_action_always_visible_summary_off"
+            android:summaryOn="@string/settings_clipboard_action_always_visible_summary_on"
+            android:title="@string/settings_clipboard_action_always_visible_title" />
+
+        <Preference
+            android:key="clipboard_history_tip"
+            android:title="@string/clipboard_history_tip_title"
+            android:summary="@string/clipboard_history_tip_summary"
+            android:selectable="false"
+            app:iconSpaceReserved="false" />
     </androidx.preference.PreferenceCategory>
 </androidx.preference.PreferenceScreen>
-

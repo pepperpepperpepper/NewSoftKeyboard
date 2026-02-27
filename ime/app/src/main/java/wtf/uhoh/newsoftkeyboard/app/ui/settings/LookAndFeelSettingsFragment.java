@@ -39,9 +39,9 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
   @Override
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
-    bindNav(KEY_THEME_SELECTOR, R.id.keyboardThemeSelectorFragment);
-    bindNav(KEY_KEYBOARD_WALLPAPER, R.id.keyboardThemeCustomizationFragment);
-    bindNav(KEY_NIGHT_MODE_SETTINGS, R.id.nightModeSettingsFragment);
+    bindOwnerShortcut(view, KEY_THEME_SELECTOR);
+    bindOwnerShortcut(view, KEY_KEYBOARD_WALLPAPER);
+    bindOwnerShortcut(view, KEY_NIGHT_MODE_SETTINGS);
     bindNav(KEY_TOOLBAR_TOP_ROW, R.id.topRowAddOnBrowserFragment);
     bindNav(KEY_TOOLBAR_SWIPE_ROW, R.id.extensionAddOnBrowserFragment);
     bindNav(KEY_TOOLBAR_BOTTOM_ROW, R.id.bottomRowAddOnBrowserFragment);
@@ -49,12 +49,8 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
     applyRemoteAppColorsPref =
         findPreference(getString(R.string.settings_key_apply_remote_app_colors));
     if (applyRemoteAppColorsPref != null) {
-      applyRemoteAppColorsPref.setOnPreferenceClickListener(
-          ignored -> {
-            Navigation.findNavController(requireView())
-                .navigate(R.id.keyboardThemeSelectorFragment);
-            return true;
-          });
+      AppearanceOwnerNavigation.bindPreference(
+          applyRemoteAppColorsPref, view, getString(R.string.settings_key_apply_remote_app_colors));
     }
 
     final Preference rowModes = findPreference(KEY_TOOLBAR_ROW_MODES);
@@ -67,6 +63,7 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
     }
 
     applySdkVisibilityRules();
+    bindSystemVibrationFallbackPref();
   }
 
   @Override
@@ -130,15 +127,43 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void applySdkVisibilityRules() {
-    if (Build.VERSION.SDK_INT < 29) {
-      hidePref(findPreference(getString(R.string.settings_key_use_system_vibration)));
-      hidePref(findPreference(getString(R.string.settings_key_vibrate_on_key_press_duration_int)));
-    }
-
     if (Build.VERSION.SDK_INT >= 35) {
       hidePref(findPreference(getString(R.string.settings_key_colorize_nav_bar)));
       hidePref(findPreference(getString(R.string.settings_key_bottom_extra_padding_in_portrait)));
     }
+  }
+
+  private void bindSystemVibrationFallbackPref() {
+    final Preference vibrationDuration =
+        findPreference(getString(R.string.settings_key_vibrate_on_key_press_duration_int));
+    final Preference fallbackDuration =
+        findPreference(getString(R.string.settings_key_system_vibration_fallback_duration_int));
+    if (fallbackDuration == null) return;
+
+    if (Build.VERSION.SDK_INT < 29 || vibrationDuration == null) {
+      hidePref(fallbackDuration);
+      return;
+    }
+
+    final int initialDuration =
+        NskApplicationBase.prefs(requireContext())
+            .getInteger(
+                R.string.settings_key_vibrate_on_key_press_duration_int,
+                R.integer.settings_default_vibrate_on_key_press_duration_int)
+            .get();
+    final boolean initialEnabled = initialDuration < 0;
+    fallbackDuration.setVisible(initialEnabled);
+    fallbackDuration.setEnabled(initialEnabled);
+    fallbackDuration.setSelectable(initialEnabled);
+
+    vibrationDuration.setOnPreferenceChangeListener(
+        (preference, newValue) -> {
+          final boolean enabled = (newValue instanceof Integer) && ((Integer) newValue) < 0;
+          fallbackDuration.setVisible(enabled);
+          fallbackDuration.setEnabled(enabled);
+          fallbackDuration.setSelectable(enabled);
+          return true;
+        });
   }
 
   private void showRowModesDialog() {
@@ -191,6 +216,12 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
           Navigation.findNavController(requireView()).navigate(destinationId);
           return true;
         });
+  }
+
+  private void bindOwnerShortcut(@NonNull View view, @NonNull String key) {
+    final Preference preference = findPreference(key);
+    if (preference == null) return;
+    AppearanceOwnerNavigation.bindPreference(preference, view, key);
   }
 
   private static void hidePref(@Nullable Preference preference) {

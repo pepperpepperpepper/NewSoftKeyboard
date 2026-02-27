@@ -19,6 +19,7 @@ final class SuggestionsProviderPrefsBinder {
       Consumer<Boolean> contactsDictionaryEnabledConsumer,
       Consumer<Boolean> userDictionaryEnabledConsumer,
       Consumer<String> predictionEngineModeConsumer,
+      Consumer<Integer> predictionContextWindowWordsConsumer,
       Consumer<String> nextWordAggressivenessConsumer,
       Consumer<String> nextWordDictionaryTypeConsumer) {
 
@@ -68,6 +69,16 @@ final class SuggestionsProviderPrefsBinder {
             .subscribe(
                 predictionEngineModeConsumer::accept,
                 GenericOnError.onError("settings_key_prediction_engine_mode")));
+
+    disposables.add(
+        prefs
+            .getInteger(
+                R.string.settings_key_prediction_context_window_words,
+                R.integer.settings_default_prediction_context_window_words)
+            .asObservable()
+            .subscribe(
+                predictionContextWindowWordsConsumer::accept,
+                GenericOnError.onError("settings_key_prediction_context_window_words")));
 
     disposables.add(
         prefs

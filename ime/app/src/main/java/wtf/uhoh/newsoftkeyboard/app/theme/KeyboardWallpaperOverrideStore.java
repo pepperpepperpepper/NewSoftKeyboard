@@ -1,158 +1,390 @@
 package wtf.uhoh.newsoftkeyboard.app.theme;
 
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.Build;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import wtf.uhoh.newsoftkeyboard.prefs.DirectBootAwareSharedPreferences;
 
 /** Stores user-selected keyboard wallpaper overrides per theme id. */
 public class KeyboardWallpaperOverrideStore {
 
-  private static final String PREF_DIM_PREFIX = "photo_wallpaper_dim::";
-  private static final String PREF_CHANGE_PREFIX = "photo_wallpaper_change::";
-  private static final String PREF_INVALID_PREFIX = "photo_wallpaper_invalid::";
-  private static final String PREF_MODE_PREFIX = "photo_wallpaper_mode::";
-  private static final String PREF_KEY_ALPHA_PREFIX = "photo_wallpaper_key_alpha::";
-  private static final String PREF_ROTATION_PREFIX = "photo_wallpaper_rotation::";
-  private static final String PREF_SCALE_MODE_PREFIX = "photo_wallpaper_scale_mode::";
-  private static final String PREF_ANCHOR_PREFIX = "photo_wallpaper_anchor::";
-  private static final String PREF_MATCH_KEY_SHAPE_PREFIX = "photo_wallpaper_match_key_shape::";
-  private static final String PREF_IMPORT_HIGH_QUALITY = "photo_wallpaper_import_high_quality";
+  public static final int WALLPAPER_MODE_BACKGROUND_ONLY =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_ONLY;
+  public static final int WALLPAPER_MODE_BACKGROUND_KEY_TINT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TINT;
+  public static final int WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE;
 
-  public static final int WALLPAPER_MODE_BACKGROUND_ONLY = 0;
-  public static final int WALLPAPER_MODE_BACKGROUND_KEY_TINT = 1;
-  public static final int WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE = 2;
+  public static final int WALLPAPER_BLEND_MODE_NORMAL =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_NORMAL;
+  public static final int WALLPAPER_BLEND_MODE_MULTIPLY =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_MULTIPLY;
+  public static final int WALLPAPER_BLEND_MODE_SCREEN =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_SCREEN;
+  public static final int WALLPAPER_BLEND_MODE_OVERLAY =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_OVERLAY;
+  public static final int WALLPAPER_BLEND_MODE_SOFT_LIGHT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_BLEND_MODE_SOFT_LIGHT;
 
-  public static final int WALLPAPER_SCALE_MODE_CROP = 0;
-  public static final int WALLPAPER_SCALE_MODE_FIT = 1;
-  public static final int WALLPAPER_SCALE_MODE_STRETCH = 2;
-  public static final int WALLPAPER_SCALE_MODE_TILE = 3;
-  public static final int WALLPAPER_SCALE_MODE_MIRROR = 4;
+  public static final int KEY_LAYER_COLOR_WASH =
+      KeyboardWallpaperOverrideConstants.KEY_LAYER_COLOR_WASH;
+  public static final int KEY_LAYER_HIGHLIGHT =
+      KeyboardWallpaperOverrideConstants.KEY_LAYER_HIGHLIGHT;
+  public static final int KEY_LAYER_GRADIENT =
+      KeyboardWallpaperOverrideConstants.KEY_LAYER_GRADIENT;
+  public static final int KEY_LAYER_VIGNETTE =
+      KeyboardWallpaperOverrideConstants.KEY_LAYER_VIGNETTE;
+  public static final int KEY_LAYER_GRAIN = KeyboardWallpaperOverrideConstants.KEY_LAYER_GRAIN;
 
-  public static final int WALLPAPER_ANCHOR_TOP_LEFT = 0;
-  public static final int WALLPAPER_ANCHOR_TOP = 1;
-  public static final int WALLPAPER_ANCHOR_TOP_RIGHT = 2;
-  public static final int WALLPAPER_ANCHOR_LEFT = 3;
-  public static final int WALLPAPER_ANCHOR_CENTER = 4;
-  public static final int WALLPAPER_ANCHOR_RIGHT = 5;
-  public static final int WALLPAPER_ANCHOR_BOTTOM_LEFT = 6;
-  public static final int WALLPAPER_ANCHOR_BOTTOM = 7;
-  public static final int WALLPAPER_ANCHOR_BOTTOM_RIGHT = 8;
+  public static final int BACKGROUND_LAYER_TINT =
+      KeyboardWallpaperOverrideConstants.BACKGROUND_LAYER_TINT;
+  public static final int BACKGROUND_LAYER_DIM =
+      KeyboardWallpaperOverrideConstants.BACKGROUND_LAYER_DIM;
+  public static final int BACKGROUND_LAYER_GRADIENT =
+      KeyboardWallpaperOverrideConstants.BACKGROUND_LAYER_GRADIENT;
+  public static final int BACKGROUND_LAYER_VIGNETTE =
+      KeyboardWallpaperOverrideConstants.BACKGROUND_LAYER_VIGNETTE;
+  public static final int BACKGROUND_LAYER_GRAIN =
+      KeyboardWallpaperOverrideConstants.BACKGROUND_LAYER_GRAIN;
 
-  public static final int DEFAULT_KEY_ALPHA_PERCENT = 20;
+  public static final int WALLPAPER_QUALITY_LOW =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_QUALITY_LOW;
+  public static final int WALLPAPER_QUALITY_BALANCED =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_QUALITY_BALANCED;
+  public static final int WALLPAPER_QUALITY_HIGH =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_QUALITY_HIGH;
 
-  private final Context appContext;
-  private final SharedPreferences prefs;
+  public static final int WALLPAPER_SCALE_MODE_CROP =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_CROP;
+  public static final int WALLPAPER_SCALE_MODE_FIT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_FIT;
+  public static final int WALLPAPER_SCALE_MODE_STRETCH =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_STRETCH;
+  public static final int WALLPAPER_SCALE_MODE_TILE =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_TILE;
+  public static final int WALLPAPER_SCALE_MODE_MIRROR =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_MIRROR;
+
+  public static final int WALLPAPER_ANCHOR_TOP_LEFT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_TOP_LEFT;
+  public static final int WALLPAPER_ANCHOR_TOP =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_TOP;
+  public static final int WALLPAPER_ANCHOR_TOP_RIGHT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_TOP_RIGHT;
+  public static final int WALLPAPER_ANCHOR_LEFT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_LEFT;
+  public static final int WALLPAPER_ANCHOR_CENTER =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_CENTER;
+  public static final int WALLPAPER_ANCHOR_RIGHT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_RIGHT;
+  public static final int WALLPAPER_ANCHOR_BOTTOM_LEFT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_BOTTOM_LEFT;
+  public static final int WALLPAPER_ANCHOR_BOTTOM =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_BOTTOM;
+  public static final int WALLPAPER_ANCHOR_BOTTOM_RIGHT =
+      KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_BOTTOM_RIGHT;
+
+  public static final int DEFAULT_KEY_ALPHA_PERCENT =
+      KeyboardWallpaperOverrideConstants.DEFAULT_KEY_ALPHA_PERCENT;
+
+  public static int normalizeBlendMode(int blendMode) {
+    return KeyboardWallpaperOverrideConstants.normalizeBlendMode(blendMode);
+  }
+
+  public static int normalizeRotationDegrees(int rotationDegrees) {
+    return KeyboardWallpaperOverrideConstants.normalizeRotationDegrees(rotationDegrees);
+  }
+
+  private final KeyboardWallpaperFileStore fileStore;
+  private final KeyboardWallpaperOverridePrefs prefsDelegate;
 
   public KeyboardWallpaperOverrideStore(@NonNull Context context) {
-    appContext = context.getApplicationContext();
-    prefs = DirectBootAwareSharedPreferences.create(appContext);
-  }
-
-  @NonNull
-  public static String dimKey(@NonNull String themeId) {
-    return PREF_DIM_PREFIX + themeId;
-  }
-
-  @NonNull
-  public static String changeKey(@NonNull String themeId) {
-    return PREF_CHANGE_PREFIX + themeId;
-  }
-
-  @NonNull
-  public static String invalidKey(@NonNull String themeId) {
-    return PREF_INVALID_PREFIX + themeId;
-  }
-
-  @NonNull
-  public static String modeKey(@NonNull String themeId) {
-    return PREF_MODE_PREFIX + themeId;
-  }
-
-  @NonNull
-  public static String keyAlphaKey(@NonNull String themeId) {
-    return PREF_KEY_ALPHA_PREFIX + themeId;
-  }
-
-  @NonNull
-  public static String rotationKey(@NonNull String themeId) {
-    return PREF_ROTATION_PREFIX + themeId;
-  }
-
-  @NonNull
-  public static String scaleModeKey(@NonNull String themeId) {
-    return PREF_SCALE_MODE_PREFIX + themeId;
-  }
-
-  @NonNull
-  public static String anchorKey(@NonNull String themeId) {
-    return PREF_ANCHOR_PREFIX + themeId;
-  }
-
-  @NonNull
-  public static String matchKeyShapeKey(@NonNull String themeId) {
-    return PREF_MATCH_KEY_SHAPE_PREFIX + themeId;
+    final Context appContext = context.getApplicationContext();
+    final SharedPreferences prefs = DirectBootAwareSharedPreferences.create(appContext);
+    fileStore = new KeyboardWallpaperFileStore(appContext);
+    prefsDelegate = new KeyboardWallpaperOverridePrefs(prefs, fileStore);
   }
 
   public int getDimPercent(@NonNull String themeId) {
-    return prefs.getInt(dimKey(themeId), 0);
+    return prefsDelegate.getDimPercent(themeId);
   }
 
   public void setDimPercent(@NonNull String themeId, int dimPercent) {
-    prefs.edit().putInt(dimKey(themeId), clampPercent(dimPercent)).apply();
+    prefsDelegate.setDimPercent(themeId, dimPercent);
   }
 
   public int getWallpaperMode(@NonNull String themeId) {
-    final boolean hasModeOverride = prefs.contains(modeKey(themeId));
-    final int defaultMode =
-        hasModeOverride || !hasWallpaper(themeId)
-            ? WALLPAPER_MODE_BACKGROUND_ONLY
-            : WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE;
-    return normalizeMode(prefs.getInt(modeKey(themeId), defaultMode));
+    return prefsDelegate.getWallpaperMode(themeId);
   }
 
   public void setWallpaperMode(@NonNull String themeId, int mode) {
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.putInt(modeKey(themeId), normalizeMode(mode));
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
+    prefsDelegate.setWallpaperMode(themeId, mode);
   }
 
   public int getKeyAlphaPercent(@NonNull String themeId) {
-    return clampPercent(prefs.getInt(keyAlphaKey(themeId), DEFAULT_KEY_ALPHA_PERCENT));
+    return prefsDelegate.getKeyAlphaPercent(themeId);
   }
 
   public void setKeyAlphaPercent(@NonNull String themeId, int alphaPercent) {
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.putInt(keyAlphaKey(themeId), clampPercent(alphaPercent));
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
+    prefsDelegate.setKeyAlphaPercent(themeId, alphaPercent);
+  }
+
+  public int getKeyBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getKeyBlendMode(themeId);
+  }
+
+  public void setKeyBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setKeyBlendMode(themeId, blendMode);
+  }
+
+  public boolean hasKeyLayerStackOverride(@NonNull String themeId) {
+    return prefsDelegate.hasKeyLayerStackOverride(themeId);
+  }
+
+  @NonNull
+  public KeyboardWallpaperLayer[] getKeyLayerStack(@NonNull String themeId) {
+    return prefsDelegate.getKeyLayerStack(themeId);
+  }
+
+  public void setKeyLayerStack(@NonNull String themeId, @NonNull KeyboardWallpaperLayer[] layers) {
+    prefsDelegate.setKeyLayerStack(themeId, layers);
+  }
+
+  public void clearKeyLayerStack(@NonNull String themeId) {
+    prefsDelegate.clearKeyLayerStack(themeId);
+  }
+
+  @NonNull
+  public int[] getKeyLayerOrder(@NonNull String themeId) {
+    return prefsDelegate.getKeyLayerOrder(themeId);
+  }
+
+  public boolean hasKeyLayerOrderOverride(@NonNull String themeId) {
+    return prefsDelegate.hasKeyLayerOrderOverride(themeId);
+  }
+
+  public void setKeyLayerOrder(@NonNull String themeId, @NonNull int[] layerOrder) {
+    prefsDelegate.setKeyLayerOrder(themeId, layerOrder);
+  }
+
+  public void clearKeyLayerOrder(@NonNull String themeId) {
+    prefsDelegate.clearKeyLayerOrder(themeId);
+  }
+
+  public boolean hasKeyColorWashColorOverride(@NonNull String themeId) {
+    return prefsDelegate.hasKeyColorWashColorOverride(themeId);
+  }
+
+  @Nullable
+  public Integer getKeyColorWashColor(@NonNull String themeId) {
+    return prefsDelegate.getKeyColorWashColor(themeId);
+  }
+
+  public void setKeyColorWashColor(@NonNull String themeId, @NonNull Integer argbColor) {
+    prefsDelegate.setKeyColorWashColor(themeId, argbColor);
+  }
+
+  public void clearKeyColorWashColor(@NonNull String themeId) {
+    prefsDelegate.clearKeyColorWashColor(themeId);
+  }
+
+  public int getKeyColorWashBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getKeyColorWashBlendMode(themeId);
+  }
+
+  public void setKeyColorWashBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setKeyColorWashBlendMode(themeId, blendMode);
+  }
+
+  public int getKeyHighlightPercent(@NonNull String themeId) {
+    return prefsDelegate.getKeyHighlightPercent(themeId);
+  }
+
+  public void setKeyHighlightPercent(@NonNull String themeId, int highlightPercent) {
+    prefsDelegate.setKeyHighlightPercent(themeId, highlightPercent);
+  }
+
+  public int getKeyHighlightBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getKeyHighlightBlendMode(themeId);
+  }
+
+  public void setKeyHighlightBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setKeyHighlightBlendMode(themeId, blendMode);
+  }
+
+  public int getKeyGradientBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getKeyGradientBlendMode(themeId);
+  }
+
+  public void setKeyGradientBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setKeyGradientBlendMode(themeId, blendMode);
+  }
+
+  public int getKeyVignetteBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getKeyVignetteBlendMode(themeId);
+  }
+
+  public void setKeyVignetteBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setKeyVignetteBlendMode(themeId, blendMode);
+  }
+
+  public int getKeyGrainBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getKeyGrainBlendMode(themeId);
+  }
+
+  public void setKeyGrainBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setKeyGrainBlendMode(themeId, blendMode);
+  }
+
+  @NonNull
+  public int[] getBackgroundLayerOrder(@NonNull String themeId) {
+    return prefsDelegate.getBackgroundLayerOrder(themeId);
+  }
+
+  public boolean hasBackgroundLayerOrderOverride(@NonNull String themeId) {
+    return prefsDelegate.hasBackgroundLayerOrderOverride(themeId);
+  }
+
+  public boolean hasBackgroundLayerStackOverride(@NonNull String themeId) {
+    return prefsDelegate.hasBackgroundLayerStackOverride(themeId);
+  }
+
+  @NonNull
+  public KeyboardWallpaperLayer[] getBackgroundLayerStack(@NonNull String themeId) {
+    return prefsDelegate.getBackgroundLayerStack(themeId);
+  }
+
+  public void setBackgroundLayerStack(
+      @NonNull String themeId, @NonNull KeyboardWallpaperLayer[] layers) {
+    prefsDelegate.setBackgroundLayerStack(themeId, layers);
+  }
+
+  public void clearBackgroundLayerStack(@NonNull String themeId) {
+    prefsDelegate.clearBackgroundLayerStack(themeId);
+  }
+
+  public void setBackgroundLayerOrder(@NonNull String themeId, @NonNull int[] layerOrder) {
+    prefsDelegate.setBackgroundLayerOrder(themeId, layerOrder);
+  }
+
+  public void clearBackgroundLayerOrder(@NonNull String themeId) {
+    prefsDelegate.clearBackgroundLayerOrder(themeId);
+  }
+
+  public int getBackgroundTintBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getBackgroundTintBlendMode(themeId);
+  }
+
+  public void setBackgroundTintBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setBackgroundTintBlendMode(themeId, blendMode);
+  }
+
+  public int getBackgroundDimBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getBackgroundDimBlendMode(themeId);
+  }
+
+  public void setBackgroundDimBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setBackgroundDimBlendMode(themeId, blendMode);
+  }
+
+  public int getBackgroundGradientBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getBackgroundGradientBlendMode(themeId);
+  }
+
+  public void setBackgroundGradientBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setBackgroundGradientBlendMode(themeId, blendMode);
+  }
+
+  public int getBackgroundVignetteBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getBackgroundVignetteBlendMode(themeId);
+  }
+
+  public void setBackgroundVignetteBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setBackgroundVignetteBlendMode(themeId, blendMode);
+  }
+
+  public int getBackgroundGrainBlendMode(@NonNull String themeId) {
+    return prefsDelegate.getBackgroundGrainBlendMode(themeId);
+  }
+
+  public void setBackgroundGrainBlendMode(@NonNull String themeId, int blendMode) {
+    prefsDelegate.setBackgroundGrainBlendMode(themeId, blendMode);
+  }
+
+  public boolean hasSpecialKeyAlphaPercentOverride(@NonNull String themeId) {
+    return prefsDelegate.hasSpecialKeyAlphaPercentOverride(themeId);
+  }
+
+  public int getSpecialKeyAlphaPercent(@NonNull String themeId) {
+    return prefsDelegate.getSpecialKeyAlphaPercent(themeId);
+  }
+
+  public void setSpecialKeyAlphaPercent(@NonNull String themeId, int alphaPercent) {
+    prefsDelegate.setSpecialKeyAlphaPercent(themeId, alphaPercent);
+  }
+
+  public void clearSpecialKeyAlphaPercent(@NonNull String themeId) {
+    prefsDelegate.clearSpecialKeyAlphaPercent(themeId);
+  }
+
+  public boolean hasSpacebarAlphaPercentOverride(@NonNull String themeId) {
+    return prefsDelegate.hasSpacebarAlphaPercentOverride(themeId);
+  }
+
+  public int getSpacebarAlphaPercent(@NonNull String themeId) {
+    return prefsDelegate.getSpacebarAlphaPercent(themeId);
+  }
+
+  public void setSpacebarAlphaPercent(@NonNull String themeId, int alphaPercent) {
+    prefsDelegate.setSpacebarAlphaPercent(themeId, alphaPercent);
+  }
+
+  public void clearSpacebarAlphaPercent(@NonNull String themeId) {
+    prefsDelegate.clearSpacebarAlphaPercent(themeId);
+  }
+
+  public boolean hasModifierKeyAlphaPercentOverride(@NonNull String themeId) {
+    return prefsDelegate.hasModifierKeyAlphaPercentOverride(themeId);
+  }
+
+  public int getModifierKeyAlphaPercent(@NonNull String themeId) {
+    return prefsDelegate.getModifierKeyAlphaPercent(themeId);
+  }
+
+  public void setModifierKeyAlphaPercent(@NonNull String themeId, int alphaPercent) {
+    prefsDelegate.setModifierKeyAlphaPercent(themeId, alphaPercent);
+  }
+
+  public void clearModifierKeyAlphaPercent(@NonNull String themeId) {
+    prefsDelegate.clearModifierKeyAlphaPercent(themeId);
+  }
+
+  public boolean hasEnterKeyAlphaPercentOverride(@NonNull String themeId) {
+    return prefsDelegate.hasEnterKeyAlphaPercentOverride(themeId);
+  }
+
+  public int getEnterKeyAlphaPercent(@NonNull String themeId) {
+    return prefsDelegate.getEnterKeyAlphaPercent(themeId);
+  }
+
+  public void setEnterKeyAlphaPercent(@NonNull String themeId, int alphaPercent) {
+    prefsDelegate.setEnterKeyAlphaPercent(themeId, alphaPercent);
+  }
+
+  public void clearEnterKeyAlphaPercent(@NonNull String themeId) {
+    prefsDelegate.clearEnterKeyAlphaPercent(themeId);
   }
 
   public int getWallpaperRotationDegrees(@NonNull String themeId) {
-    return normalizeRotationDegrees(prefs.getInt(rotationKey(themeId), 0));
+    return prefsDelegate.getWallpaperRotationDegrees(themeId);
   }
 
   public void setWallpaperRotationDegrees(@NonNull String themeId, int rotationDegrees) {
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.putInt(rotationKey(themeId), normalizeRotationDegrees(rotationDegrees));
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
+    prefsDelegate.setWallpaperRotationDegrees(themeId, rotationDegrees);
   }
 
   public void rotateWallpaperClockwise90(@NonNull String themeId) {
@@ -162,129 +394,138 @@ public class KeyboardWallpaperOverrideStore {
   }
 
   public int getWallpaperScaleMode(@NonNull String themeId) {
-    return normalizeScaleMode(prefs.getInt(scaleModeKey(themeId), WALLPAPER_SCALE_MODE_CROP));
+    return prefsDelegate.getWallpaperScaleMode(themeId);
   }
 
   public void setWallpaperScaleMode(@NonNull String themeId, int scaleMode) {
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.putInt(scaleModeKey(themeId), normalizeScaleMode(scaleMode));
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
+    prefsDelegate.setWallpaperScaleMode(themeId, scaleMode);
   }
 
   public int getWallpaperAnchor(@NonNull String themeId) {
-    return normalizeAnchor(prefs.getInt(anchorKey(themeId), WALLPAPER_ANCHOR_CENTER));
+    return prefsDelegate.getWallpaperAnchor(themeId);
   }
 
   public void setWallpaperAnchor(@NonNull String themeId, int anchor) {
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.putInt(anchorKey(themeId), normalizeAnchor(anchor));
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
+    prefsDelegate.setWallpaperAnchor(themeId, anchor);
   }
 
   public boolean isMatchKeyShapeEnabled(@NonNull String themeId) {
-    return prefs.getBoolean(matchKeyShapeKey(themeId), false);
+    return prefsDelegate.isMatchKeyShapeEnabled(themeId);
   }
 
   public void setMatchKeyShapeEnabled(@NonNull String themeId, boolean enabled) {
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.putBoolean(matchKeyShapeKey(themeId), enabled);
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
+    prefsDelegate.setMatchKeyShapeEnabled(themeId, enabled);
+  }
+
+  public int getWallpaperQuality(@NonNull String themeId) {
+    return prefsDelegate.getWallpaperQuality(themeId);
+  }
+
+  public void setWallpaperQuality(@NonNull String themeId, int quality) {
+    prefsDelegate.setWallpaperQuality(themeId, quality);
+  }
+
+  public int getVignettePercent(@NonNull String themeId) {
+    return prefsDelegate.getVignettePercent(themeId);
+  }
+
+  public void setVignettePercent(@NonNull String themeId, int vignettePercent) {
+    prefsDelegate.setVignettePercent(themeId, vignettePercent);
+  }
+
+  public int getGradientPercent(@NonNull String themeId) {
+    return prefsDelegate.getGradientPercent(themeId);
+  }
+
+  public void setGradientPercent(@NonNull String themeId, int gradientPercent) {
+    prefsDelegate.setGradientPercent(themeId, gradientPercent);
+  }
+
+  public int getGrainPercent(@NonNull String themeId) {
+    return prefsDelegate.getGrainPercent(themeId);
+  }
+
+  public void setGrainPercent(@NonNull String themeId, int grainPercent) {
+    prefsDelegate.setGrainPercent(themeId, grainPercent);
+  }
+
+  public int getSaturationPercent(@NonNull String themeId) {
+    return prefsDelegate.getSaturationPercent(themeId);
+  }
+
+  public void setSaturationPercent(@NonNull String themeId, int saturationPercent) {
+    prefsDelegate.setSaturationPercent(themeId, saturationPercent);
+  }
+
+  public int getContrastPercent(@NonNull String themeId) {
+    return prefsDelegate.getContrastPercent(themeId);
+  }
+
+  public void setContrastPercent(@NonNull String themeId, int contrastPercent) {
+    prefsDelegate.setContrastPercent(themeId, contrastPercent);
+  }
+
+  public int getBrightnessPercent(@NonNull String themeId) {
+    return prefsDelegate.getBrightnessPercent(themeId);
+  }
+
+  public void setBrightnessPercent(@NonNull String themeId, int brightnessPercent) {
+    prefsDelegate.setBrightnessPercent(themeId, brightnessPercent);
+  }
+
+  public int getTemperaturePercent(@NonNull String themeId) {
+    return prefsDelegate.getTemperaturePercent(themeId);
+  }
+
+  public void setTemperaturePercent(@NonNull String themeId, int temperaturePercent) {
+    prefsDelegate.setTemperaturePercent(themeId, temperaturePercent);
   }
 
   public boolean isWallpaperInvalid(@NonNull String themeId) {
-    return prefs.getBoolean(invalidKey(themeId), false);
+    return prefsDelegate.isWallpaperInvalid(themeId);
   }
 
   public void markWallpaperInvalid(@NonNull String themeId) {
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.putBoolean(invalidKey(themeId), true);
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
+    prefsDelegate.markWallpaperInvalid(themeId);
   }
 
   public int getWallpaperChangeToken(@NonNull String themeId) {
-    return prefs.getInt(changeKey(themeId), 0);
+    return prefsDelegate.getWallpaperChangeToken(themeId);
   }
 
   public boolean isHighQualityImportEnabled() {
-    return prefs.getBoolean(PREF_IMPORT_HIGH_QUALITY, false);
+    return prefsDelegate.isHighQualityImportEnabled();
   }
 
   public void setHighQualityImportEnabled(boolean enabled) {
-    prefs.edit().putBoolean(PREF_IMPORT_HIGH_QUALITY, enabled).apply();
-  }
-
-  private void markWallpaperChanged(@NonNull String themeId) {
-    final SharedPreferences.Editor editor = prefs.edit();
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
-  }
-
-  private void markWallpaperChanged(
-      @NonNull String themeId, @NonNull SharedPreferences.Editor editor) {
-    final String key = changeKey(themeId);
-    final int current = prefs.getInt(key, 0);
-    editor.putInt(key, current + 1);
+    prefsDelegate.setHighQualityImportEnabled(enabled);
   }
 
   public void clear(@NonNull String themeId) {
-    final File file = getWallpaperFile(themeId);
-    // best-effort; this is user storage and must never crash
-    //noinspection ResultOfMethodCallIgnored
-    file.delete();
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.remove(dimKey(themeId));
-    editor.remove(modeKey(themeId));
-    editor.remove(keyAlphaKey(themeId));
-    editor.remove(rotationKey(themeId));
-    editor.remove(scaleModeKey(themeId));
-    editor.remove(anchorKey(themeId));
-    editor.remove(matchKeyShapeKey(themeId));
-    editor.remove(invalidKey(themeId));
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
+    fileStore.deleteWallpaperBestEffort(themeId);
+    prefsDelegate.clearPrefs(themeId);
+  }
+
+  /** Deletes the stored wallpaper bitmap but keeps other per-preset overrides. */
+  public void clearWallpaperFile(@NonNull String themeId) {
+    fileStore.deleteWallpaperBestEffort(themeId);
+    prefsDelegate.onWallpaperFileDeleted(themeId);
   }
 
   public void copyToTheme(@NonNull String sourceThemeId, @NonNull String targetThemeId)
       throws IOException {
     if (sourceThemeId.equals(targetThemeId)) return;
-
-    final File source = getWallpaperFile(sourceThemeId);
-    if (!source.isFile()) {
-      throw new IOException("No wallpaper found for theme " + sourceThemeId);
-    }
-
-    final File target = getWallpaperFile(targetThemeId);
-    copyFile(source, target);
-
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.putInt(dimKey(targetThemeId), getDimPercent(sourceThemeId));
-    editor.putInt(modeKey(targetThemeId), getWallpaperMode(sourceThemeId));
-    editor.putInt(keyAlphaKey(targetThemeId), getKeyAlphaPercent(sourceThemeId));
-    editor.putInt(rotationKey(targetThemeId), getWallpaperRotationDegrees(sourceThemeId));
-    editor.putInt(scaleModeKey(targetThemeId), getWallpaperScaleMode(sourceThemeId));
-    editor.putInt(anchorKey(targetThemeId), getWallpaperAnchor(sourceThemeId));
-    editor.putBoolean(matchKeyShapeKey(targetThemeId), isMatchKeyShapeEnabled(sourceThemeId));
-    editor.remove(invalidKey(targetThemeId));
-    markWallpaperChanged(targetThemeId, editor);
-    editor.apply();
+    fileStore.copyToTheme(sourceThemeId, targetThemeId);
+    prefsDelegate.copyToTheme(sourceThemeId, targetThemeId);
   }
 
   @NonNull
   public File getWallpaperFile(@NonNull String themeId) {
-    final File dir = new File(appContext.getFilesDir(), "wallpapers");
-    if (!dir.isDirectory()) {
-      //noinspection ResultOfMethodCallIgnored
-      dir.mkdirs();
-    }
-    return new File(dir, hashToFileName(themeId) + ".webp");
+    return fileStore.getWallpaperFile(themeId);
   }
 
   public boolean hasWallpaper(@NonNull String themeId) {
-    return getWallpaperFile(themeId).isFile();
+    return fileStore.hasWallpaper(themeId);
   }
 
   /**
@@ -305,243 +546,10 @@ public class KeyboardWallpaperOverrideStore {
   public void importFromUri(
       @NonNull String themeId, @NonNull Uri sourceUri, int maxWidth, int maxHeight)
       throws IOException {
-    final ContentResolver resolver = appContext.getContentResolver();
-    final int exifRotationDegrees = readExifRotationDegrees(resolver, sourceUri);
-    final Bitmap decoded =
-        decodeDownscaledBitmap(resolver, sourceUri, Math.max(1, maxWidth), Math.max(1, maxHeight));
-    if (decoded == null) {
-      throw new IOException("Failed to decode bitmap from " + sourceUri);
-    }
-
-    final File target = getWallpaperFile(themeId);
-    final boolean hadExistingWallpaper = target.isFile();
-    final FileOutputStream output = new FileOutputStream(target);
-    try {
-      final int quality = isHighQualityImportEnabled() ? 100 : 90;
-      try {
-        if (!decoded.compress(Bitmap.CompressFormat.WEBP, quality, output)) {
-          throw new IOException("Failed to write wallpaper for theme " + themeId);
-        }
-      } catch (OutOfMemoryError oom) {
-        throw new IOException("Out of memory while encoding wallpaper for theme " + themeId, oom);
-      }
-    } finally {
-      try {
-        output.close();
-      } catch (IOException ignored) {
-        // ignore
-      }
-      decoded.recycle();
-    }
-
-    final SharedPreferences.Editor editor = prefs.edit();
-    editor.remove(invalidKey(themeId));
-    // Default to a visible mode when a user first imports a wallpaper, since many themes have an
-    // opaque keyboard background and "background only" would appear to do nothing.
-    // Use key tint by default since it is significantly cheaper than key texture overlays.
-    //
-    // Also: if an older build persisted "background only" before any wallpaper existed, treat the
-    // first import as a migration and still default to a visible mode.
-    if (!prefs.contains(modeKey(themeId))
-        || (!hadExistingWallpaper
-            && normalizeMode(prefs.getInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_ONLY))
-                == WALLPAPER_MODE_BACKGROUND_ONLY)) {
-      editor.putInt(modeKey(themeId), WALLPAPER_MODE_BACKGROUND_KEY_TINT);
-    }
-    // When importing a wallpaper for the first time, default the key overlay opacity to a visible
-    // value so the photo doesn't appear "invisible" on opaque themes.
-    if (!hadExistingWallpaper && !prefs.contains(keyAlphaKey(themeId))) {
-      editor.putInt(keyAlphaKey(themeId), 60);
-    }
-    if (exifRotationDegrees != 0) {
-      editor.putInt(rotationKey(themeId), exifRotationDegrees);
-    } else {
-      editor.remove(rotationKey(themeId));
-    }
-    markWallpaperChanged(themeId, editor);
-    editor.apply();
-  }
-
-  private static int readExifRotationDegrees(@NonNull ContentResolver resolver, @NonNull Uri uri) {
-    // Best-effort: framework ExifInterface exists from API 24+. Use reflection so we don't risk
-    // class-verification issues on older Android versions.
-    if (Build.VERSION.SDK_INT < 24) return 0;
-
-    try (InputStream in = resolver.openInputStream(uri)) {
-      if (in == null) return 0;
-
-      final Class<?> exifClass = Class.forName("android.media.ExifInterface");
-      final Constructor<?> ctor = exifClass.getConstructor(InputStream.class);
-      final Object exif = ctor.newInstance(in);
-
-      final Method getAttributeInt =
-          exifClass.getMethod("getAttributeInt", String.class, int.class);
-      final int orientation = (int) getAttributeInt.invoke(exif, "Orientation", 1 /*normal*/);
-      switch (orientation) {
-        case 3: // ORIENTATION_ROTATE_180
-        case 4: // ORIENTATION_FLIP_VERTICAL (mirror unsupported; keep rotation)
-          return 180;
-        case 6: // ORIENTATION_ROTATE_90
-        case 5: // ORIENTATION_TRANSPOSE (mirror unsupported; keep rotation)
-          return 90;
-        case 8: // ORIENTATION_ROTATE_270
-        case 7: // ORIENTATION_TRANSVERSE (mirror unsupported; keep rotation)
-          return 270;
-        default:
-          return 0;
-      }
-    } catch (Exception ignored) {
-      return 0;
-    }
-  }
-
-  private static Bitmap decodeDownscaledBitmap(
-      @NonNull ContentResolver resolver, @NonNull Uri uri, int maxWidth, int maxHeight)
-      throws IOException {
-    final BitmapFactory.Options bounds = new BitmapFactory.Options();
-    bounds.inJustDecodeBounds = true;
-
-    try (InputStream in = resolver.openInputStream(uri)) {
-      if (in == null) throw new IOException("ContentResolver returned null InputStream for " + uri);
-      BitmapFactory.decodeStream(in, null, bounds);
-    }
-
-    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
-
-    final BitmapFactory.Options decodeOptions = new BitmapFactory.Options();
-    decodeOptions.inSampleSize =
-        calculateInSampleSize(bounds.outWidth, bounds.outHeight, maxWidth, maxHeight);
-    decodeOptions.inPreferredConfig = Bitmap.Config.ARGB_8888;
-
-    final Bitmap decoded;
-    try (InputStream in = resolver.openInputStream(uri)) {
-      if (in == null) throw new IOException("ContentResolver returned null InputStream for " + uri);
-      try {
-        decoded = BitmapFactory.decodeStream(in, null, decodeOptions);
-      } catch (OutOfMemoryError oom) {
-        throw new IOException("Out of memory while decoding bitmap from " + uri, oom);
-      }
-    }
-    if (decoded == null) return null;
-
-    final int width = decoded.getWidth();
-    final int height = decoded.getHeight();
-    final float scale = Math.min((float) maxWidth / width, (float) maxHeight / height);
-    if (scale >= 1f) return decoded;
-
-    final int targetW = Math.max(1, Math.round(width * scale));
-    final int targetH = Math.max(1, Math.round(height * scale));
-    final Bitmap scaled;
-    try {
-      scaled = Bitmap.createScaledBitmap(decoded, targetW, targetH, true);
-    } catch (OutOfMemoryError oom) {
-      decoded.recycle();
-      throw new IOException("Out of memory while scaling bitmap from " + uri, oom);
-    }
-    if (scaled != decoded) {
-      decoded.recycle();
-    }
-    return scaled;
-  }
-
-  private static void copyFile(@NonNull File source, @NonNull File target) throws IOException {
-    final File parent = target.getParentFile();
-    if (parent != null && !parent.isDirectory()) {
-      //noinspection ResultOfMethodCallIgnored
-      parent.mkdirs();
-    }
-
-    try (FileInputStream in = new FileInputStream(source);
-        FileOutputStream out = new FileOutputStream(target, false)) {
-      final byte[] buffer = new byte[16 * 1024];
-      int read;
-      while ((read = in.read(buffer)) != -1) {
-        out.write(buffer, 0, read);
-      }
-    }
-  }
-
-  private static int calculateInSampleSize(int width, int height, int reqWidth, int reqHeight) {
-    int inSampleSize = 1;
-    while ((height / inSampleSize) > reqHeight || (width / inSampleSize) > reqWidth) {
-      inSampleSize *= 2;
-    }
-    return Math.max(1, inSampleSize);
-  }
-
-  private static int clampPercent(int value) {
-    if (value < 0) return 0;
-    if (value > 100) return 100;
-    return value;
-  }
-
-  private static int normalizeMode(int mode) {
-    switch (mode) {
-      case WALLPAPER_MODE_BACKGROUND_KEY_TINT:
-      case WALLPAPER_MODE_BACKGROUND_KEY_TEXTURE:
-      case WALLPAPER_MODE_BACKGROUND_ONLY:
-        return mode;
-      default:
-        return WALLPAPER_MODE_BACKGROUND_ONLY;
-    }
-  }
-
-  public static int normalizeRotationDegrees(int rotationDegrees) {
-    final int normalized = ((rotationDegrees % 360) + 360) % 360;
-    switch (normalized) {
-      case 0:
-      case 90:
-      case 180:
-      case 270:
-        return normalized;
-      default:
-        return 0;
-    }
-  }
-
-  private static int normalizeScaleMode(int scaleMode) {
-    switch (scaleMode) {
-      case WALLPAPER_SCALE_MODE_CROP:
-      case WALLPAPER_SCALE_MODE_FIT:
-      case WALLPAPER_SCALE_MODE_STRETCH:
-      case WALLPAPER_SCALE_MODE_TILE:
-      case WALLPAPER_SCALE_MODE_MIRROR:
-        return scaleMode;
-      default:
-        return WALLPAPER_SCALE_MODE_CROP;
-    }
-  }
-
-  private static int normalizeAnchor(int anchor) {
-    switch (anchor) {
-      case WALLPAPER_ANCHOR_TOP_LEFT:
-      case WALLPAPER_ANCHOR_TOP:
-      case WALLPAPER_ANCHOR_TOP_RIGHT:
-      case WALLPAPER_ANCHOR_LEFT:
-      case WALLPAPER_ANCHOR_CENTER:
-      case WALLPAPER_ANCHOR_RIGHT:
-      case WALLPAPER_ANCHOR_BOTTOM_LEFT:
-      case WALLPAPER_ANCHOR_BOTTOM:
-      case WALLPAPER_ANCHOR_BOTTOM_RIGHT:
-        return anchor;
-      default:
-        return WALLPAPER_ANCHOR_CENTER;
-    }
-  }
-
-  private static String hashToFileName(@NonNull String raw) {
-    try {
-      final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      final byte[] hash = digest.digest(raw.getBytes(StandardCharsets.UTF_8));
-      final StringBuilder hex = new StringBuilder(hash.length * 2);
-      for (byte b : hash) {
-        hex.append(Character.forDigit((b >> 4) & 0xF, 16));
-        hex.append(Character.forDigit(b & 0xF, 16));
-      }
-      return hex.toString();
-    } catch (NoSuchAlgorithmException e) {
-      // should never happen on Android, but keep it safe
-      return Integer.toHexString(raw.hashCode());
-    }
+    final KeyboardWallpaperFileStore.ImportResult result =
+        fileStore.importFromUri(
+            themeId, sourceUri, maxWidth, maxHeight, prefsDelegate.isHighQualityImportEnabled());
+    prefsDelegate.onWallpaperImported(
+        themeId, result.hadExistingWallpaper, result.exifRotationDegrees);
   }
 }

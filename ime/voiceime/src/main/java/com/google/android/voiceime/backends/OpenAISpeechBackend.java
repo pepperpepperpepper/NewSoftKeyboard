@@ -19,15 +19,17 @@ package com.google.android.voiceime.backends;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.inputmethodservice.InputMethodService;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.google.android.voiceime.OpenAIDefaultPrompts;
 import com.google.android.voiceime.OpenAITranscriber;
 import com.google.android.voiceime.R;
-import com.google.android.voiceime.utils.SpeechToTextFileUtils;
+import com.google.android.voiceime.utils.SpeechToTextSecretsStore;
 import java.io.File;
 
 /** Speech-to-text backend for OpenAI Whisper / GPT transcription APIs. */
@@ -61,8 +63,7 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
     if (!isSelected(context, prefs)) {
       return false;
     }
-    String apiKey = prefs.getString(context.getString(R.string.settings_key_openai_api_key), "");
-    return apiKey != null && !apiKey.isEmpty();
+    return readAndMigrateApiKey(context, prefs) != null;
   }
 
   @Override
@@ -87,8 +88,8 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
 
     Context context = ime.getApplicationContext();
 
-    String apiKey = prefs.getString(context.getString(R.string.settings_key_openai_api_key), "");
-    if (apiKey == null || apiKey.isEmpty()) {
+    String apiKey = readAndMigrateApiKey(context, prefs);
+    if (apiKey == null) {
       callback.onError(context.getString(R.string.openai_error_api_key_unset));
       return;
     }
@@ -97,6 +98,15 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
         prefs.getString(
             context.getString(R.string.settings_key_openai_endpoint),
             "https://api.openai.com/v1/audio/transcriptions");
+    endpoint = endpoint != null ? endpoint.trim() : null;
+    if (endpoint == null || endpoint.isEmpty()) {
+      callback.onError(context.getString(R.string.openai_error_endpoint_unset));
+      return;
+    }
+    if (!isHttpsUrl(endpoint)) {
+      callback.onError(context.getString(R.string.openai_error_endpoint_insecure));
+      return;
+    }
     String model =
         prefs.getString(context.getString(R.string.settings_key_openai_model), "gpt-4o-transcribe");
     String language =
@@ -132,29 +142,11 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
       defaultPromptType = recommended.getValue();
     }
 
-    File fileForUpload = audioFile;
-    String destinationPreference =
-        prefs.getString(context.getString(R.string.settings_key_openai_copy_destination), "");
-    if (destinationPreference != null && !destinationPreference.isEmpty()) {
-      File copied =
-          SpeechToTextFileUtils.copyToDirectory(
-              audioFile, destinationPreference, "recorded", "m4a");
-      if (copied != null) {
-        fileForUpload = copied;
-      } else {
-        Log.w(
-            TAG,
-            "Failed to copy audio to "
-                + destinationPreference
-                + "; will keep original recording until cleanup.");
-      }
-    }
-
     callback.onTranscriptionStarted();
     try {
       mTranscriber.startAsync(
           context,
-          fileForUpload.getAbsolutePath(),
+          audioFile.getAbsolutePath(),
           mediaType,
           apiKey,
           endpoint,
@@ -222,5 +214,33 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
       return strategy;
     }
     return "none";
+  }
+
+  private static boolean isHttpsUrl(@NonNull String rawUrl) {
+    try {
+      Uri uri = Uri.parse(rawUrl);
+      return uri != null && "https".equalsIgnoreCase(uri.getScheme());
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  @Nullable
+  private static String readAndMigrateApiKey(
+      @NonNull Context context, @NonNull SharedPreferences prefs) {
+    String apiKey = SpeechToTextSecretsStore.getOpenAIApiKey(context);
+    if (apiKey != null && !apiKey.isEmpty()) {
+      return apiKey;
+    }
+
+    String legacyKeyName = context.getString(R.string.settings_key_openai_api_key);
+    String legacyApiKey = prefs.getString(legacyKeyName, "");
+    if (legacyApiKey == null || legacyApiKey.isEmpty()) {
+      return null;
+    }
+
+    SpeechToTextSecretsStore.setOpenAIApiKey(context, legacyApiKey);
+    prefs.edit().remove(legacyKeyName).apply();
+    return legacyApiKey;
   }
 }

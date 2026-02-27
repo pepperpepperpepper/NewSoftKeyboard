@@ -19,12 +19,15 @@ package com.google.android.voiceime.backends;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.inputmethodservice.InputMethodService;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.google.android.voiceime.ElevenLabsTranscriber;
 import com.google.android.voiceime.R;
+import com.google.android.voiceime.utils.SpeechToTextSecretsStore;
 import java.io.File;
 
 /** Speech-to-text backend for the ElevenLabs transcription API. */
@@ -52,9 +55,7 @@ public final class ElevenLabsSpeechBackend implements SpeechToTextBackend {
     if (!isSelected(context, prefs)) {
       return false;
     }
-    String apiKey =
-        prefs.getString(context.getString(R.string.settings_key_elevenlabs_api_key), "");
-    return apiKey != null && !apiKey.isEmpty();
+    return readAndMigrateApiKey(context, prefs) != null;
   }
 
   @Override
@@ -79,9 +80,8 @@ public final class ElevenLabsSpeechBackend implements SpeechToTextBackend {
 
     Context context = ime.getApplicationContext();
 
-    String apiKey =
-        prefs.getString(context.getString(R.string.settings_key_elevenlabs_api_key), "");
-    if (apiKey == null || apiKey.isEmpty()) {
+    String apiKey = readAndMigrateApiKey(context, prefs);
+    if (apiKey == null) {
       callback.onError(context.getString(R.string.elevenlabs_error_api_key_unset));
       return;
     }
@@ -90,6 +90,15 @@ public final class ElevenLabsSpeechBackend implements SpeechToTextBackend {
         prefs.getString(
             context.getString(R.string.settings_key_elevenlabs_endpoint),
             "https://api.elevenlabs.io/v1/speech-to-text");
+    endpoint = endpoint != null ? endpoint.trim() : null;
+    if (endpoint == null || endpoint.isEmpty()) {
+      callback.onError(context.getString(R.string.elevenlabs_error_endpoint_unset));
+      return;
+    }
+    if (!isHttpsUrl(endpoint)) {
+      callback.onError(context.getString(R.string.elevenlabs_error_endpoint_insecure));
+      return;
+    }
     String modelId =
         prefs.getString(context.getString(R.string.settings_key_elevenlabs_model), "scribe_v1");
     String language =
@@ -119,5 +128,33 @@ public final class ElevenLabsSpeechBackend implements SpeechToTextBackend {
             callback.onError(errorMessage);
           }
         });
+  }
+
+  private static boolean isHttpsUrl(@NonNull String rawUrl) {
+    try {
+      Uri uri = Uri.parse(rawUrl);
+      return uri != null && "https".equalsIgnoreCase(uri.getScheme());
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  @Nullable
+  private static String readAndMigrateApiKey(
+      @NonNull Context context, @NonNull SharedPreferences prefs) {
+    String apiKey = SpeechToTextSecretsStore.getElevenLabsApiKey(context);
+    if (apiKey != null && !apiKey.isEmpty()) {
+      return apiKey;
+    }
+
+    String legacyKeyName = context.getString(R.string.settings_key_elevenlabs_api_key);
+    String legacyApiKey = prefs.getString(legacyKeyName, "");
+    if (legacyApiKey == null || legacyApiKey.isEmpty()) {
+      return null;
+    }
+
+    SpeechToTextSecretsStore.setElevenLabsApiKey(context, legacyApiKey);
+    prefs.edit().remove(legacyKeyName).apply();
+    return legacyApiKey;
   }
 }

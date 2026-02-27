@@ -3,6 +3,8 @@ package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -12,6 +14,7 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import java.lang.ref.WeakReference;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
@@ -24,6 +27,11 @@ public class DemoKeyboardView extends KeyboardView {
   @Nullable private OnViewBitmapReadyListener mOnViewBitmapReadyListener = null;
   private final int mInitialKeyboardWidth;
   private float mKeyboardScale = 1f;
+
+  @Nullable private RectF mHighlightRect = null;
+  private long mHighlightStartTimeMs = 0;
+  private long mHighlightDurationMs = 0;
+  @Nullable private Paint mHighlightPaint = null;
 
   public DemoKeyboardView(Context context, AttributeSet attrs) {
     this(context, attrs, 0);
@@ -62,6 +70,7 @@ public class DemoKeyboardView extends KeyboardView {
   public void onDraw(Canvas canvas) {
     canvas.scale(mKeyboardScale, mKeyboardScale);
     super.onDraw(canvas);
+    drawHighlight(canvas);
   }
 
   @Override
@@ -70,12 +79,12 @@ public class DemoKeyboardView extends KeyboardView {
     return false;
   }
 
-  private void simulateKeyTouchEvent(char keyChar, boolean isDownEvent) {
+  private void simulateKeyTouchEvent(int primaryCode, boolean isDownEvent) {
     final KeyboardDefinition keyboard = getKeyboard();
     if (keyboard == null) return;
 
     for (Keyboard.Key key : keyboard.getKeys()) {
-      if (key.getPrimaryCode() == keyChar) {
+      if (key.getPrimaryCode() == primaryCode) {
         final long eventTime = SystemClock.uptimeMillis();
         final long downEventTime = eventTime - (isDownEvent ? 0 : TypingSimulator.KEY_DOWN_DELAY);
         MotionEvent motionEvent =
@@ -98,6 +107,62 @@ public class DemoKeyboardView extends KeyboardView {
         MotionEvent.obtain(eventTime, eventTime, MotionEvent.ACTION_CANCEL, 0, 0, 0);
     super.onTouchEvent(motionEvent);
     motionEvent.recycle();
+  }
+
+  public void simulateKeyDown(int primaryCode) {
+    simulateKeyTouchEvent(primaryCode, true);
+  }
+
+  public void simulateKeyUp(int primaryCode) {
+    simulateKeyTouchEvent(primaryCode, false);
+  }
+
+  public void simulateCancel() {
+    simulateCancelTouchEvent();
+  }
+
+  public void highlightKey(@NonNull Keyboard.Key key) {
+    highlightRect(key.x, key.y, key.x + key.width, key.y + key.height, 1200);
+  }
+
+  public void highlightRect(int left, int top, int right, int bottom, long durationMs) {
+    mHighlightRect = new RectF(left, top, right, bottom);
+    mHighlightStartTimeMs = SystemClock.uptimeMillis();
+    mHighlightDurationMs = durationMs;
+    postInvalidateOnAnimation();
+  }
+
+  private void drawHighlight(@NonNull Canvas canvas) {
+    final RectF rect = mHighlightRect;
+    if (rect == null) return;
+
+    final long now = SystemClock.uptimeMillis();
+    final long elapsed = now - mHighlightStartTimeMs;
+    if (elapsed >= mHighlightDurationMs) {
+      mHighlightRect = null;
+      return;
+    }
+
+    final float fractionLeft =
+        1f - (mHighlightDurationMs == 0 ? 1f : (elapsed / (float) mHighlightDurationMs));
+    final int alpha = (int) (200f * Math.max(0f, Math.min(1f, fractionLeft)));
+
+    Paint paint = mHighlightPaint;
+    if (paint == null) {
+      paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+      paint.setStyle(Paint.Style.STROKE);
+      final float density = getResources().getDisplayMetrics().density;
+      paint.setStrokeWidth(2f * density);
+      paint.setColor(
+          ContextCompat.getColor(getContext(), wtf.uhoh.newsoftkeyboard.R.color.app_accent));
+      mHighlightPaint = paint;
+    }
+    paint.setAlpha(alpha);
+
+    final float density = getResources().getDisplayMetrics().density;
+    final float radius = 6f * density;
+    canvas.drawRoundRect(rect, radius, radius, paint);
+    postInvalidateOnAnimation();
   }
 
   public void setOnViewBitmapReadyListener(@NonNull OnViewBitmapReadyListener listener) {

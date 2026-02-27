@@ -8,6 +8,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 public class ThemeOverlayCombiner {
 
@@ -18,8 +19,25 @@ public class ThemeOverlayCombiner {
   private final ThemeResourcesHolderImpl mThemeOriginalResources = new ThemeResourcesHolderImpl();
   private final ThemeResourcesHolderImpl mCalculatedResources = new ThemeResourcesHolderImpl();
 
+  @Nullable @ColorInt private Integer mUserKeyBackgroundTint;
+  @Nullable @ColorInt private Integer mUserKeyboardBackgroundTint;
+
   public void setOverlayData(@NonNull OverlayData data) {
     mOverlayData = data;
+    recalculateResources();
+  }
+
+  public boolean isOverlayActive() {
+    return mOverlayData.isValid();
+  }
+
+  public void setUserKeyBackgroundTint(@Nullable @ColorInt Integer color) {
+    mUserKeyBackgroundTint = color;
+    recalculateResources();
+  }
+
+  public void setUserKeyboardBackgroundTint(@Nullable @ColorInt Integer color) {
+    mUserKeyboardBackgroundTint = color;
     recalculateResources();
   }
 
@@ -32,6 +50,11 @@ public class ThemeOverlayCombiner {
       mThemeOriginalResources.mKeyBackground.clearColorFilter();
     }
 
+    if (!mOverlayData.isValid()) {
+      applyUserBackgroundTintsIfAny();
+      return;
+    }
+
     if (mOverlayData.isValid()) {
       mCalculatedResources.mKeyBackground =
           overlayDrawable(mThemeOriginalResources.mKeyBackground, mOverlayData.getPrimaryColor());
@@ -42,6 +65,18 @@ public class ThemeOverlayCombiner {
           new ColorStateList(NO_STATES, new int[] {mOverlayData.getPrimaryTextColor()});
       mCalculatedResources.mNameTextColor =
           mCalculatedResources.mHintTextColor = mOverlayData.getSecondaryTextColor();
+    }
+  }
+
+  private void applyUserBackgroundTintsIfAny() {
+    if (mUserKeyBackgroundTint != null && mThemeOriginalResources.mKeyBackground != null) {
+      mThemeOriginalResources.mKeyBackground.setColorFilter(
+          new LightingColorFilter(0xFF333333, mUserKeyBackgroundTint));
+    }
+    if (mUserKeyboardBackgroundTint != null
+        && mThemeOriginalResources.mKeyboardBackground != null) {
+      mThemeOriginalResources.mKeyboardBackground.setColorFilter(
+          new LightingColorFilter(0xFF333333, mUserKeyboardBackgroundTint));
     }
   }
 
@@ -80,8 +115,8 @@ public class ThemeOverlayCombiner {
   }
 
   public void setThemeKeyboardBackground(Drawable drawable) {
-    if (mThemeOriginalResources.mKeyBackground != null) {
-      mThemeOriginalResources.mKeyBackground.clearColorFilter();
+    if (mThemeOriginalResources.mKeyboardBackground != null) {
+      mThemeOriginalResources.mKeyboardBackground.clearColorFilter();
     }
     mThemeOriginalResources.mKeyboardBackground = drawable;
     recalculateResources();

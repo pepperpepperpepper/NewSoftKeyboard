@@ -45,9 +45,12 @@ public class ThirdPartySpeechTrigger implements Trigger {
   private String mRecordedAudioFilename;
   private String mAudioMediaType;
   private volatile boolean mHasPendingRecording;
+  private volatile boolean mAutoTranscribeAfterStop = true;
 
   private volatile boolean mIsRecording = false;
   private volatile boolean mIsTranscribing = false;
+  private final Object mTranscriptionLock = new Object();
+  private int mTranscriptionSessionId = 0;
 
   /** Callback interface for recording state changes */
   public interface RecordingStateCallback {
@@ -155,21 +158,29 @@ public class ThirdPartySpeechTrigger implements Trigger {
           mIsRecording = false;
           notifyRecordingStateChanged(false);
           if (success) {
-            notifyRecordingEnded();
-            startTranscription();
+            if (mAutoTranscribeAfterStop) {
+              notifyRecordingEnded();
+              startTranscription();
+            } else {
+              // Recording ended due to an IME lifecycle event (e.g., input-view finished). Treat as
+              // cancellation to avoid committing or surfacing errors while the IME is hidden.
+              mAutoTranscribeAfterStop = true;
+              mHasPendingRecording = false;
+              mLastRecognitionResult = null;
+              cleanupAudioFile();
+            }
           } else if (errorMessage != null) {
             Log.e(TAG, "Recording failed: " + errorMessage);
             reportError(errorMessage);
           }
         });
-
-    mAudioRecorderManager.setOnUpdateMicrophoneAmplitude(
-        amplitude -> Log.d(TAG, "Microphone amplitude: " + amplitude));
   }
 
   @Override
   public void startVoiceRecognition(String language) {
-    Log.d(TAG, "Voice recognition triggered for language: " + language);
+    if (Log.isLoggable(TAG, Log.DEBUG)) {
+      Log.d(TAG, "Voice recognition triggered for language: " + language);
+    }
 
     if (!mBackend.isConfigured(mInputMethodService, mSharedPreferences)) {
       mBackend.showConfigurationError(mInputMethodService);
@@ -192,10 +203,7 @@ public class ThirdPartySpeechTrigger implements Trigger {
   }
 
   private void setupAudioFormat() {
-    File cacheDir = mInputMethodService.getExternalCacheDir();
-    if (cacheDir == null) {
-      cacheDir = mInputMethodService.getCacheDir();
-    }
+    File cacheDir = mInputMethodService.getCacheDir();
     File target = new File(cacheDir, "recorded.m4a");
     mRecordedAudioFilename = target.getAbsolutePath();
     mAudioMediaType = "audio/mp4";
@@ -208,11 +216,14 @@ public class ThirdPartySpeechTrigger implements Trigger {
     }
 
     try {
+      mAutoTranscribeAfterStop = true;
       mAudioRecorderManager.startRecording(mRecordedAudioFilename, false);
       mAudioRecorderManager.setupAutoStop();
       mIsRecording = true;
       notifyRecordingStateChanged(true);
-      Log.d(TAG, "Started recording to: " + mRecordedAudioFilename);
+      if (Log.isLoggable(TAG, Log.DEBUG)) {
+        Log.d(TAG, "Started recording.");
+      }
     } catch (Exception e) {
       Log.e(TAG, "Error starting recording", e);
       reportError(mInputMethodService.getString(R.string.openai_error_recording_failed));
@@ -232,9 +243,13 @@ public class ThirdPartySpeechTrigger implements Trigger {
       Log.w(TAG, "Already transcribing, ignoring startTranscription request.");
       return;
     }
+    final int transcriptionSessionId;
+    synchronized (mTranscriptionLock) {
+      transcriptionSessionId = ++mTranscriptionSessionId;
+    }
     File audioFile = new File(mRecordedAudioFilename);
     if (!audioFile.exists()) {
-      Log.e(TAG, "Audio file not found: " + audioFile.getAbsolutePath());
+      Log.e(TAG, "Audio file not found");
       reportError(mInputMethodService.getString(R.string.openai_error_recording_failed));
       mHasPendingRecording = false;
       return;
@@ -258,13 +273,24 @@ public class ThirdPartySpeechTrigger implements Trigger {
           new TranscriptionResultCallback() {
             @Override
             public void onTranscriptionStarted() {
-              runOnMainThread(() -> notifyTranscriptionStateChanged(true));
+              runOnMainThread(
+                  () -> {
+                    if (!isTranscriptionSessionCurrent(transcriptionSessionId)) {
+                      cleanupAudioFile();
+                      return;
+                    }
+                    notifyTranscriptionStateChanged(true);
+                  });
             }
 
             @Override
             public void onSuccess(@NonNull String text) {
               runOnMainThread(
                   () -> {
+                    if (!isTranscriptionSessionCurrent(transcriptionSessionId)) {
+                      cleanupAudioFile();
+                      return;
+                    }
                     mIsTranscribing = false;
                     notifyTranscriptionStateChanged(false);
                     onTranscriptionResult(text);
@@ -275,6 +301,10 @@ public class ThirdPartySpeechTrigger implements Trigger {
             public void onError(@NonNull String errorMessage) {
               runOnMainThread(
                   () -> {
+                    if (!isTranscriptionSessionCurrent(transcriptionSessionId)) {
+                      cleanupAudioFile();
+                      return;
+                    }
                     mIsTranscribing = false;
                     notifyTranscriptionStateChanged(false);
                     notifyTranscriptionError(errorMessage);
@@ -292,6 +322,12 @@ public class ThirdPartySpeechTrigger implements Trigger {
             notifyTranscriptionStateChanged(false);
             notifyTranscriptionError(message);
           });
+    }
+  }
+
+  private boolean isTranscriptionSessionCurrent(int transcriptionSessionId) {
+    synchronized (mTranscriptionLock) {
+      return transcriptionSessionId == mTranscriptionSessionId;
     }
   }
 
@@ -327,7 +363,8 @@ public class ThirdPartySpeechTrigger implements Trigger {
       }
 
       try {
-        if (conn.commitText(mLastRecognitionResult, 1)) {
+        final String toCommit = postProcessBeforeCommit(mLastRecognitionResult);
+        if (conn.commitText(toCommit, 1)) {
           mLastRecognitionResult = null;
           return true;
         }
@@ -340,6 +377,19 @@ public class ThirdPartySpeechTrigger implements Trigger {
     return false;
   }
 
+  private String postProcessBeforeCommit(String formattedText) {
+    if (!(mInputMethodService instanceof VoiceImeTextPrecommitProcessor)) return formattedText;
+    try {
+      final String processed =
+          ((VoiceImeTextPrecommitProcessor) mInputMethodService)
+              .onVoiceTextPreCommit(formattedText);
+      return processed == null ? formattedText : processed;
+    } catch (Throwable t) {
+      Log.w(TAG, "Voice pre-commit post-processing failed.", t);
+      return formattedText;
+    }
+  }
+
   private void cleanupAudioFile() {
     if (mRecordedAudioFilename == null) {
       return;
@@ -347,9 +397,11 @@ public class ThirdPartySpeechTrigger implements Trigger {
     try {
       File file = new File(mRecordedAudioFilename);
       if (file.exists() && !file.delete()) {
-        Log.w(TAG, "Failed to delete audio file: " + mRecordedAudioFilename);
+        Log.w(TAG, "Failed to delete audio file");
       } else {
-        Log.d(TAG, "Deleted audio file: " + mRecordedAudioFilename);
+        if (Log.isLoggable(TAG, Log.DEBUG)) {
+          Log.d(TAG, "Deleted audio file");
+        }
       }
     } catch (Exception e) {
       Log.e(TAG, "Error cleaning up audio file", e);
@@ -430,14 +482,30 @@ public class ThirdPartySpeechTrigger implements Trigger {
 
   @Override
   public void onStartInputView() {
-    mIsRecording = false;
-    mIsTranscribing = false;
-    notifyRecordingStateChanged(false);
-    mAudioRecorderManager.stopRecording();
-    if (!mHasPendingRecording) {
+    // InputView may restart frequently (some apps call restartInput()). Do not treat this as a
+    // cancellation point for an active session, otherwise the microphone can stop "by itself" and
+    // produce partial transcriptions.
+    notifyRecordingStateChanged(mIsRecording);
+    notifyTranscriptionStateChanged(mIsTranscribing);
+    if (!mIsRecording && !mIsTranscribing && !mHasPendingRecording) {
       mLastRecognitionResult = null;
       cleanupAudioFile();
     }
+  }
+
+  @Override
+  public void onFinishInputView() {
+    // When the input-view is finished/hidden, stop recording and cancel any in-flight work.
+    mAutoTranscribeAfterStop = false;
+    synchronized (mTranscriptionLock) {
+      mTranscriptionSessionId++;
+    }
+    mIsTranscribing = false;
+    notifyTranscriptionStateChanged(false);
+    stopRecording();
+    mHasPendingRecording = false;
+    mLastRecognitionResult = null;
+    cleanupAudioFile();
   }
 
   private void runOnMainThread(@NonNull Runnable action) {

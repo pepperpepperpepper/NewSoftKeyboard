@@ -66,6 +66,7 @@ public class KeyboardSwitcher {
   public static final int INPUT_MODE_IM = 6;
   public static final int INPUT_MODE_DATETIME = 7;
   public static final int INPUT_MODE_NUMBERS = 8;
+  public static final int INPUT_MODE_PIN = 9;
   private final CompositeDisposable mDisposable = new CompositeDisposable();
   private boolean mUse16KeysSymbolsKeyboards;
   private boolean mPersistLayoutForPackageId;
@@ -88,7 +89,8 @@ public class KeyboardSwitcher {
     INPUT_MODE_EMAIL,
     INPUT_MODE_IM,
     INPUT_MODE_DATETIME,
-    INPUT_MODE_NUMBERS
+    INPUT_MODE_NUMBERS,
+    INPUT_MODE_PIN
   })
   protected @interface InputModeId {}
 
@@ -101,7 +103,8 @@ public class KeyboardSwitcher {
   static final int SYMBOLS_KEYBOARD_NUMBERS_INDEX = 3;
   static final int SYMBOLS_KEYBOARD_PHONE_INDEX = 4;
   static final int SYMBOLS_KEYBOARD_DATETIME_INDEX = 5;
-  static final int SYMBOLS_KEYBOARDS_COUNT = 6;
+  static final int SYMBOLS_KEYBOARD_PIN_INDEX = 6;
+  static final int SYMBOLS_KEYBOARDS_COUNT = 7;
   private static final String TAG = "NSKKbdSwitcher";
   @NonNull private final KeyboardSwitchedListener mKeyboardSwitchedListener;
   @NonNull private final Context mContext;
@@ -109,6 +112,7 @@ public class KeyboardSwitcher {
   private final KeyboardSwitcherState mState = new KeyboardSwitcherState();
   // this will hold the last used keyboard ID per app's package ID
   private final ArrayMap<String, CharSequence> mAlphabetKeyboardIndexByPackageId = new ArrayMap<>();
+  private boolean mSuppressRememberKeyboardForPackageId;
   private final KeyboardDimens mKeyboardDimens;
   private final DefaultAddOn mDefaultAddOn;
   @Nullable private ThemedKeyboardDimensProvider mThemedKeyboardDimensProvider;
@@ -373,6 +377,17 @@ public class KeyboardSwitcher {
     return current;
   }
 
+  public KeyboardDefinition nextAlphabetKeyboardForSessionOverride(
+      @NonNull EditorInfo currentEditorInfo, @NonNull String keyboardId) {
+    final boolean previous = mSuppressRememberKeyboardForPackageId;
+    mSuppressRememberKeyboardForPackageId = true;
+    try {
+      return nextAlphabetKeyboard(currentEditorInfo, keyboardId);
+    } finally {
+      mSuppressRememberKeyboardForPackageId = previous;
+    }
+  }
+
   @Nullable
   private KeyboardDefinition getLockedKeyboard(EditorInfo currentEditorInfo) {
     if (mState.keyboardLocked) {
@@ -592,6 +607,7 @@ public class KeyboardSwitcher {
 
   private void rememberKeyboardForPackage(
       @Nullable EditorInfo editorInfo, KeyboardDefinition keyboard) {
+    if (mSuppressRememberKeyboardForPackageId) return;
     if (editorInfo != null && !TextUtils.isEmpty(editorInfo.packageName)) {
       mAlphabetKeyboardIndexByPackageId.put(
           editorInfo.packageName, keyboard.getKeyboardAddOn().getId());

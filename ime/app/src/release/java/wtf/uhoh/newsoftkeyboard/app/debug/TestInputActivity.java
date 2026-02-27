@@ -1,14 +1,30 @@
 package wtf.uhoh.newsoftkeyboard.app.debug;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import wtf.uhoh.newsoftkeyboard.R;
 
 /** Minimal release stub for the test harness activity used by instrumentation. */
 public class TestInputActivity extends Activity {
+  public static final String EXTRA_IME_FLAG_NO_PERSONALIZED_LEARNING =
+      "wtf.uhoh.newsoftkeyboard.debug.ime_flag_no_personalized_learning";
+  public static final String EXTRA_TYPE_TEXT_FLAG_NO_SUGGESTIONS =
+      "wtf.uhoh.newsoftkeyboard.debug.type_text_flag_no_suggestions";
+  public static final String EXTRA_SIMULATE_INVISIBLE_COMPOSING =
+      "wtf.uhoh.newsoftkeyboard.debug.simulate_invisible_composing";
+  public static final String EXTRA_SIMULATE_TYPE_NULL =
+      "wtf.uhoh.newsoftkeyboard.debug.simulate_type_null";
+  public static final String EXTRA_PREFILL_TEXT = "wtf.uhoh.newsoftkeyboard.debug.prefill_text";
+  public static final String EXTRA_PREFILL_CURSOR_POSITION =
+      "wtf.uhoh.newsoftkeyboard.debug.prefill_cursor_position";
+  public static final String EXTRA_EDITOR_INPUT_TYPE_OVERRIDE =
+      "wtf.uhoh.newsoftkeyboard.debug.editor_input_type_override";
+
   private static final String TAG = "TestInputActivity";
   private static volatile boolean sLastShowResult = false;
   private EditText mEditText;
@@ -37,6 +53,7 @@ public class TestInputActivity extends Activity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_test_input);
     mEnsureEditor.run();
+    applyEditorFlagOverridesFromIntent(getIntent());
   }
 
   @Override
@@ -44,6 +61,38 @@ public class TestInputActivity extends Activity {
     super.onResume();
     // Re-validate the editor in case the view was stripped or the activity was recreated.
     mEnsureEditor.run();
+    applyEditorFlagOverridesFromIntent(getIntent());
+  }
+
+  private void applyEditorFlagOverridesFromIntent(Intent intent) {
+    if (intent == null || mEditText == null) return;
+    if (mEditText instanceof TestInputEditText) {
+      ((TestInputEditText) mEditText)
+          .setSimulateInvisibleComposing(
+              intent.getBooleanExtra(EXTRA_SIMULATE_INVISIBLE_COMPOSING, false));
+      ((TestInputEditText) mEditText)
+          .setSimulateTypeNull(intent.getBooleanExtra(EXTRA_SIMULATE_TYPE_NULL, false));
+    }
+
+    final int inputTypeOverride = intent.getIntExtra(EXTRA_EDITOR_INPUT_TYPE_OVERRIDE, -1);
+    if (inputTypeOverride >= 0) {
+      mEditText.setInputType(inputTypeOverride);
+    }
+    if (intent.getBooleanExtra(EXTRA_IME_FLAG_NO_PERSONALIZED_LEARNING, false)) {
+      mEditText.setImeOptions(
+          mEditText.getImeOptions() | EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING);
+    }
+    if (intent.getBooleanExtra(EXTRA_TYPE_TEXT_FLAG_NO_SUGGESTIONS, false)) {
+      mEditText.setInputType(mEditText.getInputType() | EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+    }
+
+    final String prefill = intent.getStringExtra(EXTRA_PREFILL_TEXT);
+    if (prefill != null) {
+      mEditText.setText(prefill);
+      int cursor = intent.getIntExtra(EXTRA_PREFILL_CURSOR_POSITION, -1);
+      if (cursor < 0 || cursor > prefill.length()) cursor = prefill.length();
+      mEditText.setSelection(cursor);
+    }
   }
 
   public static boolean getLastShowResult() {

@@ -13,7 +13,8 @@ Quick links
 
 - Build and test: see `BUILDING.md`.
 - Refactor roadmap + architecture: `plan.md`.
-- Neural/suggestions progress: `suggestions-progress.md`.
+- Theme customization (current behavior): `docs/theme-customization-current.md`.
+- Theme customization (redesign decisions): `suggestions.md`.
 - F-Droid: see `FDROID_PUBLISHING.md` and run `fdroid/scripts/publish.sh`.
 
 Supported Android: API 21+ (test matrix targets API 30/34). Older 4.x references have been removed.

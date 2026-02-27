@@ -6,5 +6,12 @@
             android:label="Keyboard Test Harness"
             android:permission="wtf.uhoh.newsoftkeyboard.permission.INTERNAL_TEST_HARNESS"
             android:windowSoftInputMode="adjustResize|stateVisible" />
+
+        <activity
+            android:name="wtf.uhoh.newsoftkeyboard.app.debug.TestInputTypesActivity"
+            android:exported="true"
+            android:label="Keyboard InputType Harness"
+            android:permission="wtf.uhoh.newsoftkeyboard.permission.INTERNAL_TEST_HARNESS"
+            android:windowSoftInputMode="adjustResize|stateVisible" />
     </application>
 </manifest>

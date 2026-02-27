@@ -5,6 +5,13 @@
     android:key="openai_speech_screen"
     android:title="@string/openai_speech_settings_title">
 
+    <Preference
+        android:key="openai_speech_privacy_notice"
+        android:title="@string/speech_to_text_privacy_notice_title"
+        android:summary="@string/openai_speech_privacy_notice_summary"
+        android:selectable="false"
+        app:iconSpaceReserved="false" />
+
     <androidx.preference.PreferenceCategory
         android:key="openai_behavior_settings_group"
         android:title="@string/openai_behavior_settings_group">
@@ -22,13 +29,13 @@
         android:key="openai_api_settings_group"
         android:title="@string/openai_api_settings_group">
 
-        <androidx.preference.EditTextPreference
+        <wtf.uhoh.newsoftkeyboard.app.ui.settings.SpeechToTextApiKeyPreference
             android:key="@string/settings_key_openai_api_key"
             android:title="@string/openai_api_key_title"
             android:summary="@string/openai_api_key_summary"
             android:dialogTitle="@string/openai_api_key_dialog_title"
             android:inputType="textPassword"
-            android:persistent="true" />
+            android:persistent="false" />
 
         <androidx.preference.EditTextPreference
             android:key="@string/settings_key_openai_endpoint"
@@ -142,14 +149,6 @@
             android:title="@string/openai_timestamps_title"
             android:summary="@string/openai_timestamps_summary"
             android:defaultValue="false"
-            android:persistent="true" />
-
-        <androidx.preference.EditTextPreference
-            android:key="@string/settings_key_openai_copy_destination"
-            android:title="@string/openai_copy_destination_title"
-            android:summary="@string/openai_copy_destination_summary"
-            android:dialogTitle="@string/openai_copy_destination_dialog_title"
-            android:defaultValue=""
             android:persistent="true" />
 
     </androidx.preference.PreferenceCategory>

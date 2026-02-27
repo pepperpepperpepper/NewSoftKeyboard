@@ -42,7 +42,9 @@ final class TextInputDispatcher {
   }
 
   void onText(CharSequence text, Host host, String logTag) {
-    Logger.d(logTag, "onText: '%s'", text);
+    if (BuildConfig.DEBUG) {
+      Logger.d(logTag, "onText len=%d", text == null ? -1 : text.length());
+    }
     final InputConnectionRouter router = host.inputConnectionRouter();
     if (router.current() == null) {
       return;
@@ -63,7 +65,7 @@ final class TextInputDispatcher {
 
   void onTyping(Keyboard.Key key, CharSequence text, Host host, String logTag) {
     if (BuildConfig.DEBUG) {
-      Logger.d(logTag, "onTyping: '%s'", text);
+      Logger.d(logTag, "onTyping len=%d", text == null ? -1 : text.length());
     }
     typingSimulator.simulate(
         text,

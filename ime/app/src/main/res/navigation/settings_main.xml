@@ -12,52 +12,115 @@
     <fragment
         android:id="@+id/settingsSearchFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.SettingsSearchFragment"
-        android:label="@string/settings_search_title" />
+        android:label="@string/settings_search_title" >
+        <deepLink
+            android:id="@+id/deepLink_settings_search"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_settings_search" />
+    </fragment>
 
     <fragment
         android:id="@+id/keyboardsAndLanguagePacksFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.KeyboardsAndLanguagePacksFragment"
-        android:label="@string/settings_category_keyboards_language_packs" />
+        android:label="@string/settings_category_keyboards_language_packs" >
+        <deepLink
+            android:id="@+id/deepLink_keyboards_language_packs"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_keyboards_language_packs" />
+    </fragment>
 
     <fragment
         android:id="@+id/typingSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.TypingSettingsFragment"
-        android:label="@string/settings_category_typing" />
+        android:label="@string/settings_category_typing" >
+        <deepLink
+            android:id="@+id/deepLink_typing"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_typing" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/contextProfilesSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.ContextProfilesSettingsFragment"
+        android:label="@string/context_profiles_settings_title" >
+        <action
+            android:id="@+id/action_contextProfilesSettingsFragment_to_contextProfileWordListEditorFragment"
+            app:destination="@id/contextProfileWordListEditorFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
 
     <fragment
         android:id="@+id/lookAndFeelSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.LookAndFeelSettingsFragment"
-        android:label="@string/settings_category_look_and_feel" />
+        android:label="@string/settings_category_look_and_feel" >
+        <deepLink
+            android:id="@+id/deepLink_look_and_feel"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_look_and_feel" />
+    </fragment>
 
     <fragment
         android:id="@+id/gesturesAndQuickKeysSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.GesturesAndQuickKeysSettingsFragment"
-        android:label="@string/settings_category_gestures_quick_keys" />
+        android:label="@string/settings_category_gestures_quick_keys" >
+        <deepLink
+            android:id="@+id/deepLink_gestures_quick_keys"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_gestures_quick_keys" />
+    </fragment>
 
     <fragment
         android:id="@+id/clipboardSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.ClipboardSettingsFragment"
-        android:label="@string/settings_category_clipboard" />
+        android:label="@string/settings_category_clipboard" >
+        <deepLink
+            android:id="@+id/deepLink_clipboard"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_clipboard" />
+    </fragment>
 
     <fragment
         android:id="@+id/voiceSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.VoiceSettingsFragment"
-        android:label="@string/settings_category_voice" />
+        android:label="@string/settings_category_voice" >
+        <deepLink
+            android:id="@+id/deepLink_voice"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_voice" />
+    </fragment>
 
     <fragment
         android:id="@+id/troubleshootingAndBackupSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.TroubleshootingAndBackupSettingsFragment"
-        android:label="@string/settings_category_troubleshooting_backup" />
+        android:label="@string/settings_category_troubleshooting_backup" >
+        <deepLink
+            android:id="@+id/deepLink_troubleshooting_backup"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_troubleshooting_backup" />
+    </fragment>
 
     <fragment
         android:id="@+id/settingsUiAndLauncherFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.SettingsUiAndLauncherFragment"
-        android:label="@string/settings_category_settings_ui_launcher" />
+        android:label="@string/settings_category_settings_ui_launcher" >
+        <deepLink
+            android:id="@+id/deepLink_settings_ui_launcher"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_settings_ui_launcher" />
+    </fragment>
 
     <fragment
         android:id="@+id/helpAndAboutFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.HelpAndAboutFragment"
-        android:label="@string/settings_category_help_about" />
+        android:label="@string/settings_category_help_about" >
+        <deepLink
+            android:id="@+id/deepLink_help_about"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_help_about" />
+    </fragment>
 
     <fragment
         android:id="@+id/mainFragment"
@@ -227,12 +290,28 @@
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.MainTweaksFragment"
         android:label="MainTweaksFragment" >
         <action
+            android:id="@+id/action_mainTweaksFragment_to_programmableApiSettingsFragment"
+            app:destination="@id/programmableApiSettingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
+        <action
             android:id="@+id/action_mainTweaksFragment_to_developerToolsFragment"
             app:destination="@id/developerToolsFragment"
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+    </fragment>
+    <fragment
+        android:id="@+id/programmableApiSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.ProgrammableApiSettingsFragment"
+        android:label="ProgrammableApiSettingsFragment" >
+        <deepLink
+            android:id="@+id/deepLink_programmable_api_settings"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_programmable_api_settings" />
     </fragment>
     <fragment
         android:id="@+id/additionalSoftwareLicensesFragment"
@@ -362,6 +441,18 @@
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.wordseditor.AbbreviationDictionaryEditorFragment"
         android:label="AbbreviationDictionaryEditorFragment" />
     <fragment
+        android:id="@+id/contextProfileWordListEditorFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.wordseditor.ContextProfileWordListEditorFragment"
+        android:label="@string/context_profiles_word_list_title_generic" >
+        <argument
+            android:name="preset_id"
+            app:argType="string" />
+        <argument
+            android:name="preset_name"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+    <fragment
         android:id="@+id/nextWordSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.NextWordSettingsFragment"
         android:label="NextWordSettingsFragment" >
@@ -460,11 +551,21 @@
     <fragment
         android:id="@+id/powerSavingSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.PowerSavingSettingsFragment"
-        android:label="PowerSavingSettingsFragment" />
+        android:label="PowerSavingSettingsFragment" >
+        <deepLink
+            android:id="@+id/deepLink_power_saving"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_power_saving" />
+    </fragment>
     <fragment
         android:id="@+id/nightModeSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.NightModeSettingsFragment"
-        android:label="NightModeSettingsFragment" />
+        android:label="NightModeSettingsFragment" >
+        <deepLink
+            android:id="@+id/deepLink_night_mode"
+            app:action="android.intent.action.VIEW"
+            app:uri="@string/deeplink_url_night_mode" />
+    </fragment>
     <fragment
         android:id="@+id/uiTweaksFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.UiTweaksFragment"

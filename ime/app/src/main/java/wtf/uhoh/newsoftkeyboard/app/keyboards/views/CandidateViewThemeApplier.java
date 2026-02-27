@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.util.TypedValue;
 import androidx.annotation.NonNull;
@@ -12,6 +13,8 @@ import androidx.core.content.ContextCompat;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.addons.AddOn;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemePresetStore;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardThemeUserOverridesStore;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 import wtf.uhoh.newsoftkeyboard.overlay.ThemeOverlayCombiner;
 
@@ -32,7 +35,8 @@ final class CandidateViewThemeApplier {
       @NonNull Context context,
       @NonNull KeyboardTheme theme,
       @NonNull ThemeOverlayCombiner themeOverlayCombiner,
-      @NonNull Paint paint) {
+      @NonNull Paint paint,
+      boolean applyUserThemeOverrides) {
     final AddOn.AddOnResourceMapping remoteAttrs = theme.getResourceMapping();
     final int[] remoteStyleableArray =
         remoteAttrs.getRemoteStyleableArrayFromLocal(R.styleable.AnyKeyboardViewTheme);
@@ -149,13 +153,107 @@ final class CandidateViewThemeApplier {
             TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP, 1, context.getResources().getDisplayMetrics()));
 
+    final float suggestionTextSizeScale =
+        applyUserThemeOverrides
+            ? applySuggestionStripTypographyOverridesIfAny(context, theme, paint)
+            : 1f;
+
     return new Result(
         horizontalGap,
         requireDrawable(divider, "divider"),
         requireDrawable(closeDrawable, "closeDrawable"),
         requireDrawable(selectionHighlight, "selectionHighlight"),
         backgroundDrawable,
-        safeTextSizePx);
+        safeTextSizePx * suggestionTextSizeScale);
+  }
+
+  private static float applySuggestionStripTypographyOverridesIfAny(
+      @NonNull Context context, @NonNull KeyboardTheme theme, @NonNull Paint paint) {
+    final KeyboardThemePresetStore presetStore = new KeyboardThemePresetStore(context);
+    final KeyboardThemeUserOverridesStore overridesStore =
+        new KeyboardThemeUserOverridesStore(context);
+    final String themeId = presetStore.getActivePresetId(theme.getId());
+
+    final Integer tokenSecondaryTextSizePercent =
+        overridesStore.getTokenSecondaryTextSizePercent(themeId);
+
+    final Integer suggestionTextSizePercent =
+        firstNotNull(
+            resolveTokenSecondaryInt(
+                overridesStore.getSuggestionTextSizePercent(themeId),
+                tokenSecondaryTextSizePercent),
+            overridesStore.getKeyLabelTextSizePercent(themeId));
+    final float suggestionTextSizeScale = percentToScale(suggestionTextSizePercent);
+
+    final String suggestionFontFamily =
+        resolveTokenSecondaryFontFamily(
+            overridesStore.getSuggestionFontFamily(themeId),
+            overridesStore.getTokenSecondaryFontFamily(themeId));
+    final Integer suggestionFontStyle =
+        resolveTokenSecondaryInt(
+            overridesStore.getSuggestionFontStyle(themeId),
+            overridesStore.getTokenSecondaryFontStyle(themeId));
+    final boolean suggestionTypographyTouched =
+        suggestionFontFamily != null || suggestionFontStyle != null;
+
+    final String fallbackKeyFontFamily =
+        suggestionTypographyTouched ? null : overridesStore.getKeyFontFamily(themeId);
+    final Integer fallbackKeyFontStyle =
+        suggestionTypographyTouched ? null : overridesStore.getKeyFontStyle(themeId);
+
+    final Typeface fontFamilyOverride =
+        resolveKeyFontFamilyOverride(
+            suggestionTypographyTouched ? suggestionFontFamily : fallbackKeyFontFamily,
+            themeId,
+            overridesStore);
+    final Integer fontStyleOverride =
+        suggestionTypographyTouched ? suggestionFontStyle : fallbackKeyFontStyle;
+
+    if (fontFamilyOverride == null && fontStyleOverride == null) return suggestionTextSizeScale;
+
+    final Typeface baseTypeface =
+        paint.getTypeface() != null ? paint.getTypeface() : Typeface.DEFAULT;
+    final Typeface familyTypeface = fontFamilyOverride != null ? fontFamilyOverride : baseTypeface;
+    final int resolvedStyle =
+        fontStyleOverride != null
+            ? Math.max(Typeface.NORMAL, Math.min(Typeface.BOLD_ITALIC, fontStyleOverride))
+            : baseTypeface.getStyle();
+    paint.setTypeface(Typeface.create(familyTypeface, resolvedStyle));
+
+    return suggestionTextSizeScale;
+  }
+
+  @Nullable
+  private static Integer resolveTokenSecondaryInt(
+      @Nullable Integer raw, @Nullable Integer tokenSecondary) {
+    if (raw == null) return null;
+    if (raw != KeyboardThemeUserOverridesStore.TOKEN_SECONDARY_INT) return raw;
+    return tokenSecondary;
+  }
+
+  @Nullable
+  private static String resolveTokenSecondaryFontFamily(
+      @Nullable String raw, @Nullable String tokenSecondary) {
+    if (raw == null) return null;
+    if (!KeyboardThemeUserOverridesStore.KEY_FONT_FAMILY_TOKEN_SECONDARY.equals(raw)) return raw;
+    return tokenSecondary;
+  }
+
+  @Nullable
+  private static Typeface resolveKeyFontFamilyOverride(
+      @Nullable String fontFamilyId,
+      @NonNull String themeId,
+      @NonNull KeyboardThemeUserOverridesStore overridesStore) {
+    if (fontFamilyId == null) return null;
+    return switch (fontFamilyId) {
+      case "default" -> Typeface.DEFAULT;
+      case "sans" -> Typeface.SANS_SERIF;
+      case "serif" -> Typeface.SERIF;
+      case "monospace" -> Typeface.MONOSPACE;
+      case KeyboardThemeUserOverridesStore.KEY_FONT_FAMILY_CUSTOM ->
+          overridesStore.getCustomKeyFontTypefaceIfAny(themeId);
+      default -> null;
+    };
   }
 
   @NonNull
@@ -164,5 +262,16 @@ final class CandidateViewThemeApplier {
       throw new IllegalStateException("Expected non-null drawable for " + name);
     }
     return drawable;
+  }
+
+  @Nullable
+  private static <T> T firstNotNull(@Nullable T first, @Nullable T second) {
+    return first != null ? first : second;
+  }
+
+  private static float percentToScale(@Nullable Integer percent) {
+    if (percent == null) return 1f;
+    final int clamped = Math.max(50, Math.min(200, percent));
+    return clamped / 100f;
   }
 }

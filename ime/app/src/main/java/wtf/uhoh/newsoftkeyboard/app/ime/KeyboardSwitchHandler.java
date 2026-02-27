@@ -2,6 +2,7 @@ package wtf.uhoh.newsoftkeyboard.app.ime;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import wtf.uhoh.newsoftkeyboard.BuildConfig;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardKey;
@@ -112,7 +113,9 @@ public final class KeyboardSwitchHandler {
     if (android.text.TextUtils.isEmpty(targetKeyboardId)) {
       return;
     }
-    android.util.Log.d("CustomKeyboardSwitch", targetKeyboardId);
+    if (BuildConfig.DEBUG) {
+      android.util.Log.d("CustomKeyboardSwitch", targetKeyboardId);
+    }
     host.getKeyboardSwitcher().showAlphabetKeyboardById(null, targetKeyboardId);
   }
 

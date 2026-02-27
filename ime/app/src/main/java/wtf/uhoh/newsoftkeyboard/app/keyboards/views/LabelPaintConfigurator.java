@@ -13,13 +13,17 @@ final class LabelPaintConfigurator {
   }
 
   float adjustTextSizeForLabel(
-      @NonNull Paint paint, @NonNull CharSequence label, int width, float keyTextSize) {
-    return textWidthCache.getOrMeasure(paint, label, width, keyTextSize);
+      @NonNull Paint paint,
+      @NonNull CharSequence label,
+      int width,
+      float keyTextSize,
+      float minScale) {
+    return textWidthCache.getOrMeasure(paint, label, width, keyTextSize, minScale);
   }
 
-  void setPaintForLabelText(Paint paint, float labelTextSize) {
+  void setPaintForLabelText(Paint paint, float labelTextSize, @NonNull Typeface labelTypeface) {
     paint.setTextSize(labelTextSize);
-    paint.setTypeface(Typeface.DEFAULT_BOLD);
+    paint.setTypeface(labelTypeface);
   }
 
   void setPaintToKeyText(Paint paint, float keyTextSize, Typeface keyTextStyle) {

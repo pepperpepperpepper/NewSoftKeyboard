@@ -19,6 +19,7 @@ package wtf.uhoh.newsoftkeyboard.app.dictionaries;
 import android.content.Context;
 import android.text.TextUtils;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,6 +36,8 @@ import wtf.uhoh.newsoftkeyboard.dictionaries.Dictionary;
 import wtf.uhoh.newsoftkeyboard.dictionaries.DictionaryBackgroundLoader;
 import wtf.uhoh.newsoftkeyboard.dictionaries.SuggestionWordMatcher;
 import wtf.uhoh.newsoftkeyboard.dictionaries.WordComposer;
+import wtf.uhoh.newsoftkeyboard.nextword.prediction.NextWordContextTokenizer;
+import wtf.uhoh.newsoftkeyboard.prefs.context.ContextProfilesStore;
 import wtf.uhoh.newsoftkeyboard.utils.IMEUtil;
 
 /**
@@ -42,9 +45,11 @@ import wtf.uhoh.newsoftkeyboard.utils.IMEUtil;
  * characters. This includes corrections and completions.
  */
 @SuppressWarnings("this-escape")
-public class SuggestImpl implements Suggest {
+public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
   private static final String TAG = "NSKSuggest";
   private static final int POSSIBLE_FIX_THRESHOLD_FREQUENCY = Integer.MAX_VALUE / 2;
+  private static final int MAX_PREFIX_MATCHING_NEXT_WORDS_IN_TYPED_SUGGESTIONS = 3;
+  private static final int MAX_PREFIX_MATCHING_TYPED_SUGGESTIONS_TO_RERANK_BY_CONTEXT = 8;
   private static final int ABBREVIATION_TEXT_FREQUENCY = Integer.MAX_VALUE - 10;
   private static final int AUTO_TEXT_FREQUENCY = Integer.MAX_VALUE - 20;
   private static final int VALID_TYPED_WORD_FREQUENCY = Integer.MAX_VALUE - 25;
@@ -53,6 +58,7 @@ public class SuggestImpl implements Suggest {
   @NonNull private final SuggestionsProvider mSuggestionsProvider;
   private final List<CharSequence> mSuggestions = new ArrayList<>();
   private final List<CharSequence> mNextSuggestions = new ArrayList<>();
+  private final List<CharSequence> mNextSuggestionCandidates = new ArrayList<>();
   private final List<CharSequence> mStringPool = new ArrayList<>();
   private final Dictionary.WordCallback mAutoTextWordCallback;
   private final Dictionary.WordCallback mAbbreviationWordCallback;
@@ -140,20 +146,23 @@ public class SuggestImpl implements Suggest {
   @Override
   public void resetNextWordSentence() {
     mNextSuggestions.clear();
+    mNextSuggestionCandidates.clear();
     mSuggestionsProvider.resetNextWordSentence();
   }
 
   @Override
   public List<CharSequence> getNextSuggestions(
       final CharSequence previousWord, final boolean inAllUpperCaseState) {
-    if (previousWord.length() == 0) {
+    final String currentWord = previousWord.toString().trim();
+    mNextSuggestions.clear();
+    mNextSuggestionCandidates.clear();
+    if (currentWord.isEmpty()) {
       return Collections.emptyList();
     }
 
-    mNextSuggestions.clear();
     mIsAllUpperCase = inAllUpperCaseState;
 
-    final boolean validWord = isValidWord(previousWord);
+    final boolean validWord = isValidWord(currentWord);
     final boolean presageEnabled = mSuggestionsProvider.isPresageEnabled();
     final boolean neuralEnabled = mSuggestionsProvider.isNeuralEnabled();
 
@@ -161,13 +170,17 @@ public class SuggestImpl implements Suggest {
       Logger.d(
           TAG,
           "getNextSuggestions for '%s' is invalid and no third-party engine (ngram/neural) is"
-              + " active.",
-          previousWord);
-      return mNextSuggestions;
+              + " active. Falling back to legacy next-word sources.",
+          currentWord);
     }
 
-    final String currentWord = previousWord.toString();
-    mSuggestionsProvider.getNextWords(currentWord, mNextSuggestions, mPrefMaxSuggestions);
+    final int candidatePoolLimit =
+        Math.max(mPrefMaxSuggestions, mSuggestionsProvider.nextWordCandidatePoolLimit());
+    mSuggestionsProvider.getNextWords(currentWord, mNextSuggestionCandidates, candidatePoolLimit);
+    final int displayLimit = Math.min(mPrefMaxSuggestions, mNextSuggestionCandidates.size());
+    for (int i = 0; i < displayLimit; i++) {
+      mNextSuggestions.add(mNextSuggestionCandidates.get(i));
+    }
     if (BuildConfig.DEBUG) {
       Logger.d(
           TAG,
@@ -187,6 +200,13 @@ public class SuggestImpl implements Suggest {
     }
 
     if (mIsAllUpperCase) {
+      for (int suggestionIndex = 0;
+          suggestionIndex < mNextSuggestionCandidates.size();
+          suggestionIndex++) {
+        mNextSuggestionCandidates.set(
+            suggestionIndex,
+            mNextSuggestionCandidates.get(suggestionIndex).toString().toUpperCase(mLocale));
+      }
       for (int suggestionIndex = 0; suggestionIndex < mNextSuggestions.size(); suggestionIndex++) {
         mNextSuggestions.set(
             suggestionIndex, mNextSuggestions.get(suggestionIndex).toString().toUpperCase(mLocale));
@@ -194,6 +214,22 @@ public class SuggestImpl implements Suggest {
     }
 
     return mNextSuggestions;
+  }
+
+  @Override
+  public void notifyWordCommitted(@NonNull CharSequence committedWord) {
+    final String token = committedWord.toString().trim();
+    if (token.isEmpty()) return;
+    mSuggestionsProvider.notifyWordCommitted(token);
+  }
+
+  @Override
+  public void seedNextWordEngineContextFromEditorText(@NonNull CharSequence textBeforeCursor) {
+    if (TextUtils.isEmpty(textBeforeCursor)) return;
+    final List<String> tokens =
+        NextWordContextTokenizer.tokenizeTextBeforeCursor(textBeforeCursor, 64);
+    if (tokens.isEmpty()) return;
+    mSuggestionsProvider.seedNextWordEngineContextTokens(tokens);
   }
 
   @Override
@@ -238,23 +274,82 @@ public class SuggestImpl implements Suggest {
     // now, we'll look at the next-words-suggestions list, and add all the ones that begins
     // with the typed word. These suggestions are top priority, so they will be added
     // at the top of the list
+    final List<CharSequence> nextSuggestionCandidates =
+        mNextSuggestionCandidates.isEmpty() ? mNextSuggestions : mNextSuggestionCandidates;
     final int typedWordLength = mLowerOriginalWord.length();
-    // next-word beats any suggestion OTHER than identical typed
-    int nextWordInsertionIndex = mCorrectSuggestionIndex == 0 ? 1 : 0;
-    // since the next-word-suggestions are order by usage, we'd like to add them at the
-    // same order
-    for (CharSequence nextWordSuggestion : mNextSuggestions) {
-      if (nextWordSuggestion.length() >= typedWordLength
-          && TextUtils.equals(
-              nextWordSuggestion.subSequence(0, typedWordLength), mTypedOriginalWord)) {
-        mSuggestions.add(nextWordInsertionIndex, nextWordSuggestion);
-        // next next-word will have lower usage, so it should be added after this one.
-        nextWordInsertionIndex++;
-      }
+    int nextWordInsertionIndex = 1; // keep the typed word at the top while composing
+    if (typedWordLength == 1) {
+      // For 1-letter prefixes, prefer stable "word completion" ordering from the dictionaries
+      // (otherwise next-word injection can dominate and feel random).
+      nextWordInsertionIndex = Math.min(mSuggestions.size(), 1 + 3);
     }
+    if (mCorrectSuggestionIndex >= 1 && nextWordInsertionIndex <= mCorrectSuggestionIndex) {
+      // Never insert before the best correction candidate: it keeps auto-correct highlighting
+      // stable and avoids confusing suggestion ordering when quick-fix candidates exist.
+      nextWordInsertionIndex = mCorrectSuggestionIndex + 1;
+    }
+    int injectedCount = 0;
+    // Next-word suggestions are ordered by usage/probability; keep that order, but limit how much
+    // they dominate the list when only a short prefix is typed (prevents the strip from feeling
+    // "random" or overly context-heavy).
+    for (CharSequence nextWordSuggestion : nextSuggestionCandidates) {
+      if (injectedCount >= MAX_PREFIX_MATCHING_NEXT_WORDS_IN_TYPED_SUGGESTIONS) break;
+      if (nextWordSuggestion == null) continue;
+      if (nextWordSuggestion.length() < typedWordLength) continue;
+      final String suggestionText = nextWordSuggestion.toString();
+      if (!suggestionText.regionMatches(
+          /* ignoreCase= */ true,
+          /* toffset= */ 0,
+          mTypedOriginalWord,
+          /* ooffset= */ 0,
+          typedWordLength)) {
+        continue;
+      }
+      final CharSequence cased = applyTypedCasingToSuggestion(suggestionText);
+      final String casedString = cased.toString();
+      int existingIndex = -1;
+      // Prefer promoting candidates which already exist below the injection point (this gives
+      // "SwiftKey-like" behavior where context re-ranks typed completions, instead of only
+      // appending extra items).
+      for (int suggestionIndex = nextWordInsertionIndex;
+          suggestionIndex < mSuggestions.size();
+          suggestionIndex++) {
+        final CharSequence existing = mSuggestions.get(suggestionIndex);
+        if (existing == null) continue;
+        if (TextUtils.equals(existing, cased)
+            || existing.toString().equalsIgnoreCase(casedString)) {
+          existingIndex = suggestionIndex;
+          break;
+        }
+      }
+      if (existingIndex != -1) {
+        mSuggestions.remove(existingIndex);
+        mSuggestions.add(nextWordInsertionIndex++, cased);
+        injectedCount++;
+        continue;
+      }
+      // If the candidate already exists above the injection point, skip it (don't insert a dupe).
+      for (int suggestionIndex = 0;
+          suggestionIndex < Math.min(nextWordInsertionIndex, mSuggestions.size());
+          suggestionIndex++) {
+        final CharSequence existing = mSuggestions.get(suggestionIndex);
+        if (existing == null) continue;
+        if (TextUtils.equals(existing, cased)
+            || existing.toString().equalsIgnoreCase(casedString)) {
+          existingIndex = suggestionIndex;
+          break;
+        }
+      }
+      if (existingIndex != -1) continue;
+      mSuggestions.add(nextWordInsertionIndex++, cased);
+      injectedCount++;
+    }
+
+    maybeRerankPrefixMatchingTypedSuggestionsByContext(typedWordLength);
 
     // removing possible duplicates to typed.
     IMEUtil.removeDupes(mSuggestions, mStringPool);
+    IMEUtil.tripSuggestions(mSuggestions, mPrefMaxSuggestions, mStringPool);
 
     return mSuggestions;
   }
@@ -286,6 +381,164 @@ public class SuggestImpl implements Suggest {
     mSuggestions.clear();
   }
 
+  @NonNull
+  private CharSequence applyTypedCasingToSuggestion(@NonNull String suggestion) {
+    if (mIsAllUpperCase) {
+      return suggestion.toUpperCase(mLocale);
+    }
+    if (mIsFirstCharCapitalized && suggestion.length() > 0) {
+      final char first = suggestion.charAt(0);
+      final char upper = Character.toUpperCase(first);
+      if (first == upper) {
+        return suggestion;
+      }
+      if (suggestion.length() == 1) {
+        return String.valueOf(upper);
+      }
+      return upper + suggestion.substring(1);
+    }
+    return suggestion;
+  }
+
+  private void maybeRerankPrefixMatchingTypedSuggestionsByContext(int typedWordLength) {
+    if (typedWordLength < 2) return;
+
+    final int rerankStartIndex = mCorrectSuggestionIndex >= 1 ? mCorrectSuggestionIndex + 1 : 1;
+    if (rerankStartIndex >= mSuggestions.size() - 1) return;
+
+    final int rerankEndExclusive =
+        Math.min(
+            mSuggestions.size(),
+            rerankStartIndex + MAX_PREFIX_MATCHING_TYPED_SUGGESTIONS_TO_RERANK_BY_CONTEXT);
+
+    final List<Integer> suggestionIndicesToRerank = new ArrayList<>();
+    final List<String> normalizedCandidates = new ArrayList<>();
+    for (int suggestionIndex = rerankStartIndex;
+        suggestionIndex < rerankEndExclusive;
+        suggestionIndex++) {
+      final CharSequence candidate = mSuggestions.get(suggestionIndex);
+      if (candidate == null) continue;
+      if (candidate.length() < typedWordLength) continue;
+      final String candidateString = candidate.toString();
+      if (!candidateString.regionMatches(
+          /* ignoreCase= */ true,
+          /* toffset= */ 0,
+          mTypedOriginalWord,
+          /* ooffset= */ 0,
+          typedWordLength)) {
+        continue;
+      }
+      suggestionIndicesToRerank.add(suggestionIndex);
+      normalizedCandidates.add(candidateString.toLowerCase(mLocale));
+    }
+
+    if (normalizedCandidates.size() <= 1) return;
+
+    final List<String> candidatesToScore = new ArrayList<>(normalizedCandidates);
+    final List<String> sortedCandidates =
+        mSuggestionsProvider.sortCandidatesByNeuralFirstTokenLogProbIfAvailable(candidatesToScore);
+    if (sortedCandidates == null || sortedCandidates.size() != normalizedCandidates.size()) return;
+
+    final boolean neuralReordered = !isSameStringOrder(sortedCandidates, normalizedCandidates);
+    final List<String> effectiveSortedCandidates;
+    if (neuralReordered) {
+      effectiveSortedCandidates = sortedCandidates;
+    } else {
+      final List<String> contextSorted =
+          sortCandidatesByNextWordContextOrderIfAvailable(normalizedCandidates, typedWordLength);
+      if (contextSorted == null || contextSorted.size() != normalizedCandidates.size()) return;
+      if (isSameStringOrder(contextSorted, normalizedCandidates)) return;
+      effectiveSortedCandidates = contextSorted;
+    }
+
+    final List<CharSequence> sortedSuggestions = new ArrayList<>(suggestionIndicesToRerank.size());
+    final boolean[] used = new boolean[normalizedCandidates.size()];
+    for (String sortedCandidate : effectiveSortedCandidates) {
+      int matchedIndex = -1;
+      for (int i = 0; i < normalizedCandidates.size(); i++) {
+        if (used[i]) continue;
+        if (TextUtils.equals(normalizedCandidates.get(i), sortedCandidate)) {
+          matchedIndex = i;
+          break;
+        }
+      }
+      if (matchedIndex == -1) return;
+      used[matchedIndex] = true;
+      sortedSuggestions.add(mSuggestions.get(suggestionIndicesToRerank.get(matchedIndex)));
+    }
+
+    for (int i = 0; i < suggestionIndicesToRerank.size(); i++) {
+      mSuggestions.set(suggestionIndicesToRerank.get(i), sortedSuggestions.get(i));
+    }
+  }
+
+  private boolean isSameStringOrder(@NonNull List<String> a, @NonNull List<String> b) {
+    if (a.size() != b.size()) return false;
+    for (int i = 0; i < a.size(); i++) {
+      if (!TextUtils.equals(a.get(i), b.get(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Nullable
+  private List<String> sortCandidatesByNextWordContextOrderIfAvailable(
+      @NonNull List<String> normalizedCandidates, int typedWordLength) {
+    final List<CharSequence> nextSuggestionCandidates =
+        mNextSuggestionCandidates.isEmpty() ? mNextSuggestions : mNextSuggestionCandidates;
+    if (nextSuggestionCandidates.isEmpty()) {
+      return null;
+    }
+
+    final java.util.HashMap<String, Integer> contextRankByCandidate = new java.util.HashMap<>();
+    for (int i = 0; i < nextSuggestionCandidates.size(); i++) {
+      final CharSequence candidate = nextSuggestionCandidates.get(i);
+      if (candidate == null) continue;
+      final String trimmed = candidate.toString().trim();
+      if (trimmed.isEmpty()) continue;
+      final String normalized = trimmed.toLowerCase(mLocale);
+      contextRankByCandidate.putIfAbsent(normalized, i);
+    }
+    if (contextRankByCandidate.isEmpty()) {
+      return null;
+    }
+
+    final int maxContextRankToConsider = typedWordLength == 2 ? 12 : Integer.MAX_VALUE;
+
+    final List<Integer> indices = new ArrayList<>(normalizedCandidates.size());
+    for (int i = 0; i < normalizedCandidates.size(); i++) {
+      indices.add(i);
+    }
+
+    indices.sort(
+        (leftIndex, rightIndex) -> {
+          final String left = normalizedCandidates.get(leftIndex);
+          final String right = normalizedCandidates.get(rightIndex);
+          final int leftRank = contextRank(contextRankByCandidate, left, maxContextRankToConsider);
+          final int rightRank =
+              contextRank(contextRankByCandidate, right, maxContextRankToConsider);
+          final int cmp = Integer.compare(leftRank, rightRank);
+          if (cmp != 0) return cmp;
+          return Integer.compare(leftIndex, rightIndex);
+        });
+
+    final List<String> sorted = new ArrayList<>(normalizedCandidates.size());
+    for (int index : indices) {
+      sorted.add(normalizedCandidates.get(index));
+    }
+    return sorted;
+  }
+
+  private int contextRank(
+      @NonNull java.util.HashMap<String, Integer> contextRankByCandidate,
+      @NonNull String candidate,
+      int maxContextRankToConsider) {
+    final Integer rank = contextRankByCandidate.get(candidate);
+    if (rank == null) return Integer.MAX_VALUE;
+    return rank < maxContextRankToConsider ? rank : Integer.MAX_VALUE;
+  }
+
   @Override
   public boolean addWordToUserDictionary(String word) {
     return mSuggestionsProvider.addWordToUserDictionary(word);
@@ -294,6 +547,11 @@ public class SuggestImpl implements Suggest {
   @Override
   public void removeWordFromUserDictionary(String word) {
     mSuggestionsProvider.removeWordFromUserDictionary(word);
+  }
+
+  @Override
+  public void clearLearningData() {
+    mSuggestionsProvider.clearLearningData();
   }
 
   @Override
@@ -307,8 +565,61 @@ public class SuggestImpl implements Suggest {
   }
 
   @Override
+  public void setContextProfileSafeToggles(@Nullable ContextProfilesStore.SafeToggles safeToggles) {
+    mSuggestionsProvider.setContextProfileSafeToggles(safeToggles);
+  }
+
+  @Override
+  public void setContextProfileWordList(@Nullable String presetId, long generation) {
+    mSuggestionsProvider.setContextProfileWordList(presetId, generation);
+  }
+
+  @Override
   public void setIncognitoMode(boolean incognitoMode) {
     mSuggestionsProvider.setIncognitoMode(incognitoMode);
+  }
+
+  public void setAsyncHybridNeuralListener(@Nullable Runnable listener) {
+    mSuggestionsProvider.setAsyncHybridNeuralListener(listener);
+  }
+
+  @VisibleForTesting
+  public int getHybridNeuralAsyncListenerInvocationCountForTest() {
+    return mSuggestionsProvider.getHybridNeuralAsyncListenerInvocationCountForTest();
+  }
+
+  @VisibleForTesting
+  @NonNull
+  public String dumpHybridNeuralAsyncDebugStateForTest() {
+    return mSuggestionsProvider.dumpHybridNeuralAsyncDebugStateForTest();
+  }
+
+  @VisibleForTesting
+  public void resetNeuralInferenceSamplesForTest() {
+    mSuggestionsProvider.resetNeuralInferenceSamplesForTest();
+  }
+
+  @VisibleForTesting
+  @NonNull
+  public String dumpNeuralInferenceSamplesForTest() {
+    return mSuggestionsProvider.dumpNeuralInferenceSamplesForTest();
+  }
+
+  @VisibleForTesting
+  public void clearNextWordPipelineDebugStateForTest() {
+    mSuggestionsProvider.clearNextWordPipelineDebugStateForTest();
+  }
+
+  @VisibleForTesting
+  @NonNull
+  public String dumpNextWordPipelineDebugStateForTest() {
+    return mSuggestionsProvider.dumpNextWordPipelineDebugStateForTest();
+  }
+
+  @VisibleForTesting
+  @NonNull
+  public java.util.Deque<String> getNextWordEngineContextSnapshotForTest() {
+    return mSuggestionsProvider.getNextWordEngineContextSnapshotForTest();
   }
 
   @Override
@@ -318,6 +629,7 @@ public class SuggestImpl implements Suggest {
 
   @Override
   public void destroy() {
+    setAsyncHybridNeuralListener(null);
     closeDictionaries();
     mSuggestionsProvider.destroy();
   }

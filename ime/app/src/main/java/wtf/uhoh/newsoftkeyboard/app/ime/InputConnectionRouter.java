@@ -1,8 +1,11 @@
 package wtf.uhoh.newsoftkeyboard.app.ime;
 
+import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.ExtractedText;
+import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,6 +22,8 @@ import java.util.function.Supplier;
 public final class InputConnectionRouter {
 
   private final Supplier<InputConnection> connectionProvider;
+  private boolean composingTextSupported = true;
+  private boolean composingTextValidated = false;
 
   public InputConnectionRouter(Supplier<InputConnection> connectionProvider) {
     this.connectionProvider = connectionProvider;
@@ -40,6 +45,15 @@ public final class InputConnectionRouter {
 
   public boolean hasConnection() {
     return current() != null;
+  }
+
+  public boolean isComposingTextSupported() {
+    return composingTextSupported;
+  }
+
+  public void resetComposingTextSupport() {
+    composingTextSupported = true;
+    composingTextValidated = false;
   }
 
   public boolean sendKeyEvent(@NonNull KeyEvent event) {
@@ -89,7 +103,40 @@ public final class InputConnectionRouter {
 
   public boolean setComposingText(@NonNull CharSequence text, int newCursorPosition) {
     InputConnection ic = current();
-    return ic != null && ic.setComposingText(text, newCursorPosition);
+    if (ic == null) {
+      return false;
+    }
+    final boolean setOk = ic.setComposingText(text, newCursorPosition);
+    if (!setOk) {
+      composingTextSupported = false;
+      return false;
+    }
+
+    // Some composing-hostile editors return true from setComposingText(...) but don't reflect the
+    // composing text in the editor (symptom: typed chars don't appear until a suggestion is
+    // picked). Validate composing once per input-session and fall back to commitText/key-events.
+    if (composingTextSupported && !composingTextValidated) {
+      composingTextValidated = true;
+
+      final int validateLen = Math.min(8, text.length());
+      if (validateLen > 0) {
+        final CharSequence expectedSuffix =
+            text.subSequence(text.length() - validateLen, text.length());
+        final CharSequence observedSuffix = ic.getTextBeforeCursor(validateLen, 0);
+        final boolean composingVisible =
+            observedSuffix != null && TextUtils.equals(observedSuffix, expectedSuffix);
+        if (!composingVisible) {
+          // Stop using composing for this editor to avoid "invisible typing" UX. Since we already
+          // called setComposingText(...) successfully, attempt to clear the composing region so
+          // callers can safely fall back to commitText/key-events without duplicating text.
+          composingTextSupported = false;
+          ic.setComposingText("", 0);
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   public boolean setSelection(int start, int end) {
@@ -123,6 +170,15 @@ public final class InputConnectionRouter {
       return null;
     }
     return ic.getTextAfterCursor(length, flags);
+  }
+
+  @Nullable
+  public ExtractedText getExtractedText(@NonNull ExtractedTextRequest request) {
+    InputConnection ic = current();
+    if (ic == null) {
+      return null;
+    }
+    return ic.getExtractedText(request, 0);
   }
 
   public boolean clearMetaKeyStates(int states) {

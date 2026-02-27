@@ -1,6 +1,5 @@
 package wtf.uhoh.newsoftkeyboard.app.ime;
 
-import android.os.SystemClock;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 import wtf.uhoh.newsoftkeyboard.dictionaries.WordComposer;
 
@@ -14,6 +13,15 @@ final class SelectionUpdateProcessor {
     boolean isPredictionOn();
 
     boolean isCurrentlyPredicting();
+
+    /**
+     * Called when the user moved the cursor/selection unexpectedly while we are idle (not composing
+     * a word). This is a good time to reset next-word state and prevent stale fallback suggestions.
+     */
+    void onUnexpectedCursorMoveWhileNotPredicting();
+
+    /** Returns true when we're still waiting for a selection update from our own edits. */
+    boolean isSelectionUpdateDelayed();
 
     InputConnectionRouter inputConnectionRouter();
 
@@ -32,6 +40,8 @@ final class SelectionUpdateProcessor {
     long getExpectingSelectionUpdateBy();
 
     void clearExpectingSelectionUpdate();
+
+    void markSelectionUpdateReceived();
 
     void setExpectingSelectionUpdateBy(long value);
 
@@ -66,18 +76,18 @@ final class SelectionUpdateProcessor {
             && oldSelEnd == newSelEnd
             && oldCandidateStart == candidatesStart
             && oldCandidateEnd == candidatesEnd;
-    final boolean isExpectedEvent =
-        SystemClock.uptimeMillis() < host.getExpectingSelectionUpdateBy();
+    final boolean isExpectedEvent = host.isSelectionUpdateDelayed();
     if (noChange) {
       Logger.v(host.logTag(), "onUpdateSelection: no-change. Discarding.");
       return;
     }
-    host.clearExpectingSelectionUpdate();
 
     if (isExpectedEvent) {
+      host.markSelectionUpdateReceived();
       Logger.v(host.logTag(), "onUpdateSelection: Expected event. Discarding.");
       return;
     }
+    host.clearExpectingSelectionUpdate();
 
     final boolean cursorMovedUnexpectedly = (oldSelStart != newSelStart || oldSelEnd != newSelEnd);
     if (cursorMovedUnexpectedly) {
@@ -97,6 +107,10 @@ final class SelectionUpdateProcessor {
 
     if (!host.inputConnectionRouter().hasConnection()) {
       return; // can't do anything without this connection
+    }
+
+    if (cursorMovedUnexpectedly && !host.isCurrentlyPredicting()) {
+      host.onUnexpectedCursorMoveWhileNotPredicting();
     }
 
     Logger.d(host.logTag(), "onUpdateSelection: ok, let's see what can be done");

@@ -13,13 +13,13 @@ public final class KeyboardWallpaperTransform {
   @NonNull
   public static Shader.TileMode tileModeForScaleMode(int scaleMode) {
     switch (scaleMode) {
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_TILE:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_TILE:
         return Shader.TileMode.REPEAT;
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_MIRROR:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_MIRROR:
         return Shader.TileMode.MIRROR;
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP:
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_FIT:
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_STRETCH:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_CROP:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_FIT:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_STRETCH:
       default:
         return Shader.TileMode.CLAMP;
     }
@@ -39,7 +39,8 @@ public final class KeyboardWallpaperTransform {
     final float boundsH = bounds.height();
     if (boundsW <= 0f || boundsH <= 0f) return;
 
-    final int rotation = KeyboardWallpaperOverrideStore.normalizeRotationDegrees(rotationDegrees);
+    final int rotation =
+        KeyboardWallpaperOverrideConstants.normalizeRotationDegrees(rotationDegrees);
     final int normalizedScaleMode = normalizeScaleMode(scaleMode);
     final int normalizedAnchor = normalizeAnchor(anchor);
 
@@ -49,21 +50,21 @@ public final class KeyboardWallpaperTransform {
     final float scaleX;
     final float scaleY;
     switch (normalizedScaleMode) {
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_STRETCH:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_STRETCH:
         scaleX = boundsW / effectiveW;
         scaleY = boundsH / effectiveH;
         break;
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_FIT:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_FIT:
         final float fit = Math.min(boundsW / effectiveW, boundsH / effectiveH);
         scaleX = fit;
         scaleY = fit;
         break;
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_TILE:
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_MIRROR:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_TILE:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_MIRROR:
         scaleX = 1f;
         scaleY = 1f;
         break;
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_CROP:
       default:
         final float crop = Math.max(boundsW / effectiveW, boundsH / effectiveH);
         scaleX = crop;
@@ -127,22 +128,22 @@ public final class KeyboardWallpaperTransform {
 
   private static int normalizeScaleMode(int scaleMode) {
     switch (scaleMode) {
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP:
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_FIT:
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_STRETCH:
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_TILE:
-      case KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_MIRROR:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_CROP:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_FIT:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_STRETCH:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_TILE:
+      case KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_MIRROR:
         return scaleMode;
       default:
-        return KeyboardWallpaperOverrideStore.WALLPAPER_SCALE_MODE_CROP;
+        return KeyboardWallpaperOverrideConstants.WALLPAPER_SCALE_MODE_CROP;
     }
   }
 
   private static int normalizeAnchor(int anchor) {
-    return anchor >= KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_TOP_LEFT
-            && anchor <= KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_BOTTOM_RIGHT
+    return anchor >= KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_TOP_LEFT
+            && anchor <= KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_BOTTOM_RIGHT
         ? anchor
-        : KeyboardWallpaperOverrideStore.WALLPAPER_ANCHOR_CENTER;
+        : KeyboardWallpaperOverrideConstants.WALLPAPER_ANCHOR_CENTER;
   }
 
   private static int anchorInOriginalForRotation(int anchor, int rotationDegrees) {

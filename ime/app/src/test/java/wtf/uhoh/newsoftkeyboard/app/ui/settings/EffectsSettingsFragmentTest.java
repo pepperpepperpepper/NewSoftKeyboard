@@ -23,7 +23,7 @@ public class EffectsSettingsFragmentTest
   public void testNavigateToPowerSavingFragment() {
     final EffectsSettingsFragment fragment = startFragment();
 
-    ViewTestUtils.performClick(fragment.findPreference("settings_key_power_save_mode"));
+    ViewTestUtils.performClick(fragment.findPreference("nav:power_saving_settings"));
 
     TestRxSchedulers.foregroundFlushAllJobs();
     final Fragment next = getCurrentFragment();

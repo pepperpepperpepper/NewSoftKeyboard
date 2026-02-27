@@ -951,6 +951,131 @@ public class SuggestTest {
   }
 
   @Test
+  public void testNextWordPrefixMatchesInjectedAfterTypedWordAndLimited() {
+    mUnderTest.setCorrectionMode(true, 1, 1, false);
+    Mockito.doReturn(true).when(mProvider).isValidWord(Mockito.any());
+    Mockito.doAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              final List<CharSequence> holder = invocation.getArgument(1);
+              holder.addAll(List.of("there", "then", "thus", "tomorrow"));
+              return null;
+            })
+        .when(mProvider)
+        .getNextWords(Mockito.anyString(), Mockito.anyList(), Mockito.anyInt());
+
+    mUnderTest.getNextSuggestions("hello", false);
+
+    final WordComposer wordComposer = new WordComposer();
+    typeWord(wordComposer, "t");
+
+    final List<CharSequence> suggestions = mUnderTest.getSuggestions(wordComposer);
+    Assert.assertEquals(List.of("t", "there", "then", "thus"), suggestions);
+  }
+
+  @Test
+  public void testNextWordPrefixMatchesInjectedAfterDictionaryForSingleLetter() {
+    mUnderTest.setCorrectionMode(true, 1, 1, false);
+    Mockito.doReturn(true).when(mProvider).isValidWord(Mockito.any());
+    Mockito.doAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              final List<CharSequence> holder = invocation.getArgument(1);
+              holder.addAll(List.of("there", "then", "thus"));
+              return null;
+            })
+        .when(mProvider)
+        .getNextWords(Mockito.anyString(), Mockito.anyList(), Mockito.anyInt());
+    Mockito.doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              final Dictionary dictionary = Mockito.mock(Dictionary.class);
+              callback.addWord("the".toCharArray(), 0, 3, 100, dictionary);
+              callback.addWord("to".toCharArray(), 0, 2, 90, dictionary);
+              callback.addWord("that".toCharArray(), 0, 4, 80, dictionary);
+              return null;
+            })
+        .when(mProvider)
+        .getSuggestions(Mockito.any(), Mockito.any());
+
+    mUnderTest.getNextSuggestions("hello", false);
+
+    final WordComposer wordComposer = new WordComposer();
+    typeWord(wordComposer, "t");
+
+    final List<CharSequence> suggestions = mUnderTest.getSuggestions(wordComposer);
+    Assert.assertEquals(7, suggestions.size());
+    Assert.assertEquals("t", suggestions.get(0).toString());
+    Assert.assertEquals("to", suggestions.get(1).toString());
+    Assert.assertEquals("the", suggestions.get(2).toString());
+    Assert.assertEquals("that", suggestions.get(3).toString());
+    Assert.assertEquals("there", suggestions.get(4).toString());
+    Assert.assertEquals("then", suggestions.get(5).toString());
+    Assert.assertEquals("thus", suggestions.get(6).toString());
+  }
+
+  @Test
+  public void testNextWordPrefixInjectionMatchesIgnoringCaseAndPreservesTypedCasing() {
+    mUnderTest.setCorrectionMode(true, 1, 1, false);
+    Mockito.doReturn(true).when(mProvider).isValidWord(Mockito.any());
+    Mockito.doAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              final List<CharSequence> holder = invocation.getArgument(1);
+              holder.addAll(List.of("the", "there", "then"));
+              return null;
+            })
+        .when(mProvider)
+        .getNextWords(Mockito.anyString(), Mockito.anyList(), Mockito.anyInt());
+
+    mUnderTest.getNextSuggestions("hello", false);
+
+    final WordComposer wordComposer = new WordComposer();
+    typeWord(wordComposer, "Th");
+    wordComposer.setFirstCharCapitalized(true);
+
+    final List<CharSequence> suggestions = mUnderTest.getSuggestions(wordComposer);
+    Assert.assertEquals(List.of("Th", "The", "There", "Then"), suggestions);
+  }
+
+  @Test
+  public void testNextWordPrefixInjectionDoesNotShiftAutoCorrectCandidate() {
+    mUnderTest.setCorrectionMode(true, 1, 1, false);
+    Mockito.doReturn(true).when(mProvider).isValidWord(Mockito.any());
+    Mockito.doAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              final List<CharSequence> holder = invocation.getArgument(1);
+              holder.addAll(List.of("haven", "having", "have"));
+              return null;
+            })
+        .when(mProvider)
+        .getNextWords(Mockito.anyString(), Mockito.anyList(), Mockito.anyInt());
+    Mockito.doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              final Dictionary dictionary = Mockito.mock(Dictionary.class);
+              callback.addWord("have".toCharArray(), 0, 4, 23, dictionary);
+              return null;
+            })
+        .when(mProvider)
+        .getSuggestions(Mockito.any(), Mockito.any());
+
+    mUnderTest.getNextSuggestions("hello", false);
+
+    final WordComposer wordComposer = new WordComposer();
+    typeWord(wordComposer, "hav");
+
+    final List<CharSequence> suggestions = mUnderTest.getSuggestions(wordComposer);
+    Assert.assertEquals(4, suggestions.size());
+    Assert.assertEquals("hav", suggestions.get(0).toString());
+    Assert.assertEquals("have", suggestions.get(1).toString());
+    Assert.assertEquals("haven", suggestions.get(2).toString());
+    Assert.assertEquals("having", suggestions.get(3).toString());
+    Assert.assertEquals(1, mUnderTest.getLastValidSuggestionIndex());
+  }
+
+  @Test
   public void testNextSuggestionsUsePresageWhenWordInvalid() {
     Mockito.doReturn(false).when(mProvider).isValidWord(Mockito.any());
     Mockito.doReturn(true).when(mProvider).isPresageEnabled();
@@ -974,14 +1099,14 @@ public class SuggestTest {
   }
 
   @Test
-  public void testNextSuggestionsSkippedForInvalidWhenPresageDisabled() {
+  public void testNextSuggestionsFallsBackToLegacySourcesForInvalidWhenEnginesInactive() {
     Mockito.doReturn(false).when(mProvider).isValidWord(Mockito.any());
     Mockito.doReturn(false).when(mProvider).isPresageEnabled();
+    Mockito.doReturn(false).when(mProvider).isNeuralEnabled();
 
     final List<CharSequence> suggestions = mUnderTest.getNextSuggestions("zorg", false);
 
     Assert.assertTrue(suggestions.isEmpty());
-    Mockito.verify(mProvider, Mockito.never())
-        .getNextWords(Mockito.anyString(), Mockito.anyList(), Mockito.anyInt());
+    Mockito.verify(mProvider).getNextWords(Mockito.eq("zorg"), Mockito.anyList(), Mockito.eq(12));
   }
 }

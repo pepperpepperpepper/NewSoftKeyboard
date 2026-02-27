@@ -53,12 +53,10 @@ public class KeyboardAddOnBrowserFragment
   @Override
   public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
     super.onCreateOptionsMenu(menu, inflater);
-    menu.add(
-            Menu.NONE,
-            R.id.custom_keyboards_menu_option,
-            Menu.NONE,
-            R.string.custom_keyboards_menu_title)
-        .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+    final MenuItem customKeyboards = menu.findItem(R.id.custom_keyboards_menu_option);
+    if (customKeyboards != null) {
+      customKeyboards.setVisible(true);
+    }
   }
 
   @Override

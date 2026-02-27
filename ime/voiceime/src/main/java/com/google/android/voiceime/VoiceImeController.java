@@ -56,14 +56,37 @@ public final class VoiceImeController {
   }
 
   public void onStartInputView() {
+    trigger.onStartInputView();
+    postToMainThread(
+        () -> {
+          final boolean recordingNow = trigger.isRecording();
+          isRecording = recordingNow;
+
+          VoiceInputState stateToRender = currentState;
+          if (recordingNow) {
+            stateToRender = VoiceInputState.RECORDING;
+          } else if (stateToRender == VoiceInputState.RECORDING
+              || stateToRender == VoiceInputState.ERROR) {
+            stateToRender = VoiceInputState.IDLE;
+          }
+
+          currentState = stateToRender;
+          host.updateVoiceInputStatus(stateToRender);
+          host.updateVoiceKeyState();
+          host.updateSpaceBarRecordingStatus(recordingNow);
+        });
+  }
+
+  public void onFinishInputView() {
+    trigger.onFinishInputView();
     postToMainThread(
         () -> {
           isRecording = false;
-          emitState(VoiceInputState.IDLE);
+          currentState = VoiceInputState.IDLE;
+          host.updateVoiceInputStatus(VoiceInputState.IDLE);
           host.updateVoiceKeyState();
           host.updateSpaceBarRecordingStatus(false);
         });
-    trigger.onStartInputView();
   }
 
   public void startVoiceRecognition(@NonNull String language) {

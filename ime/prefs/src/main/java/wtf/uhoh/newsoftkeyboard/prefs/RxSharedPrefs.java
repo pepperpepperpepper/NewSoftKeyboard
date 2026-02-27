@@ -39,6 +39,8 @@ import java.io.File;
 import java.util.Calendar;
 import java.util.Map;
 import java.util.Set;
+import org.json.JSONException;
+import org.json.JSONObject;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 import wtf.uhoh.newsoftkeyboard.prefs.backup.PrefItem;
 import wtf.uhoh.newsoftkeyboard.prefs.backup.PrefsProvider;
@@ -208,13 +210,10 @@ public class RxSharedPrefs {
       final File autoApplyFile =
           new File(context.getExternalFilesDir(null), AUTO_APPLY_PREFS_FILENAME);
       if (autoApplyFile.isFile()) {
-        Logger.i(autoApplyLogTag, "Applying prefs file '%s'...", autoApplyFile.getAbsolutePath());
+        Logger.i(autoApplyLogTag, "Applying prefs file '%s'...", autoApplyFile.getName());
         try {
           restorer.accept(autoApplyFile);
-          Logger.i(
-              autoApplyLogTag,
-              "Prefs from file '%s' were applied!",
-              autoApplyFile.getAbsolutePath());
+          Logger.i(autoApplyLogTag, "Prefs from file '%s' were applied!", autoApplyFile.getName());
           final CharSequence appliedTime =
               DateFormat.format("yyyy-MM-dd__HH_mm_ss_zzz", Calendar.getInstance());
           final File appliedFile =
@@ -225,8 +224,8 @@ public class RxSharedPrefs {
           Logger.i(
               autoApplyLogTag,
               "Renaming applied prefs file from '%s' to '%s'...",
-              autoApplyFile.getAbsolutePath(),
-              appliedFile.getAbsolutePath());
+              autoApplyFile.getName(),
+              appliedFile.getName());
           if (!autoApplyFile.renameTo(appliedFile.getAbsoluteFile())) {
             Logger.w(autoApplyLogTag, "Failed to rename prefs file!");
           }
@@ -236,11 +235,10 @@ public class RxSharedPrefs {
               autoApplyLogTag,
               e,
               "Failed to restore prefs from the file '%s'.",
-              autoApplyFile.getAbsolutePath());
+              autoApplyFile.getName());
         }
       } else {
-        Logger.i(
-            autoApplyLogTag, "The file '%s' does not exists.", autoApplyFile.getAbsolutePath());
+        Logger.i(autoApplyLogTag, "The file '%s' does not exists.", autoApplyFile.getName());
       }
     } else {
       Logger.i(
@@ -290,6 +288,14 @@ public class RxSharedPrefs {
   public static class SharedPrefsProvider implements PrefsProvider {
 
     private final SharedPreferences mSharedPreferences;
+    private static final String FIELD_KEY = "key";
+    private static final String FIELD_VALUE = "value";
+
+    // Context Profiles preset JSON can contain personal content; exclude it from backup by default.
+    private static final String CONTEXT_PROFILES_PRESET_JSON_PREFIX =
+        "context_profiles_preset_json::";
+    private static final String CONTEXT_PROFILES_CONTAINS_PERSONAL_CONTENT =
+        "contains_personal_content";
 
     public SharedPrefsProvider(SharedPreferences sharedPreferences) {
       mSharedPreferences = sharedPreferences;
@@ -342,9 +348,11 @@ public class RxSharedPrefs {
       for (Map.Entry<String, ?> entry : mSharedPreferences.getAll().entrySet()) {
         final String typeOfPref = getTypeOf(entry.getValue());
         if (typeOfPref != null && entry.getValue() != null) {
+          if (shouldSkipBackupEntry(entry.getKey(), typeOfPref, entry.getValue())) continue;
           final PrefItem prefEntry = root.createChild();
           prefEntry.addValue("type", typeOfPref);
-          prefEntry.addValue(entry.getKey(), entry.getValue().toString());
+          prefEntry.addValue(FIELD_KEY, entry.getKey());
+          prefEntry.addValue(FIELD_VALUE, entry.getValue().toString());
         }
       }
       return root;
@@ -367,20 +375,42 @@ public class RxSharedPrefs {
             case "type":
               convertFunction = getConvertFunctionFor(value.getValue());
               break;
+            case FIELD_KEY:
+              storedKey = value.getValue();
+              break;
+            case FIELD_VALUE:
+              storedValue = value.getValue();
+              break;
             default:
               storedKey = value.getKey();
               storedValue = value.getValue();
               break;
           }
-
-          if (convertFunction != null && storedValue != null && storedKey != null) {
-            convertFunction.storeToEditor(editor, storedKey, storedValue);
-          }
+        }
+        if (convertFunction != null && storedValue != null && storedKey != null) {
+          convertFunction.storeToEditor(editor, storedKey, storedValue);
         }
       }
       editor.apply();
       // upgrading anything that needs to be fixed
       upgradeSettingsValues(mSharedPreferences);
+    }
+
+    private static boolean shouldSkipBackupEntry(
+        @NonNull String key, @NonNull String valueType, @NonNull Object value) {
+      if (!"string".equals(valueType)) return false;
+      if (!key.startsWith(CONTEXT_PROFILES_PRESET_JSON_PREFIX)) return false;
+      if (!(value instanceof String)) return false;
+      final String jsonRaw = ((String) value).trim();
+      if (jsonRaw.isEmpty()) return false;
+      try {
+        final JSONObject json = new JSONObject(jsonRaw);
+        return json.optBoolean(CONTEXT_PROFILES_CONTAINS_PERSONAL_CONTENT, true);
+      } catch (JSONException ignored) {
+        // Treat malformed preset JSON as sensitive (skip backup) to avoid exporting unexpected
+        // data.
+        return true;
+      }
     }
 
     private interface StoreToSharedPrefsFunction<T> {

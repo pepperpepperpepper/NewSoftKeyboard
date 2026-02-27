@@ -91,19 +91,31 @@ public class NextWordPrefsProviderTest {
     Assert.assertEquals(
         "you", TestUtils.convertToList(loadedHelloWord.getChildren()).get(0).getValue("nextWord"));
     Assert.assertEquals(
-        "2", TestUtils.convertToList(loadedHelloWord.getChildren()).get(0).getValue("usedCount"));
+        "10", TestUtils.convertToList(loadedHelloWord.getChildren()).get(0).getValue("usedCount"));
     Assert.assertEquals(
         "there",
         TestUtils.convertToList(loadedHelloWord.getChildren()).get(1).getValue("nextWord"));
     Assert.assertEquals(
-        "2", TestUtils.convertToList(loadedHelloWord.getChildren()).get(1).getValue("usedCount"));
+        "7", TestUtils.convertToList(loadedHelloWord.getChildren()).get(1).getValue("usedCount"));
 
     final PrefItem loadedByeWord = TestUtils.convertToList(loadedEn.getChildren()).get(1);
     Assert.assertEquals("bye", loadedByeWord.getValue("word"));
-    Assert.assertEquals(2, TestUtils.convertToList(loadedHelloWord.getChildren()).size());
+    Assert.assertEquals(2, TestUtils.convertToList(loadedByeWord.getChildren()).size());
+    Assert.assertEquals(
+        "bye", TestUtils.convertToList(loadedByeWord.getChildren()).get(0).getValue("nextWord"));
+    Assert.assertEquals(
+        "22", TestUtils.convertToList(loadedByeWord.getChildren()).get(0).getValue("usedCount"));
+    Assert.assertEquals(
+        "you", TestUtils.convertToList(loadedByeWord.getChildren()).get(1).getValue("nextWord"));
+    Assert.assertEquals(
+        "4", TestUtils.convertToList(loadedByeWord.getChildren()).get(1).getValue("usedCount"));
 
     final PrefItem loadedBonWord = TestUtils.convertToList(loadedFr.getChildren()).get(0);
     Assert.assertEquals("bon", loadedBonWord.getValue("word"));
     Assert.assertEquals(1, TestUtils.convertToList(loadedBonWord.getChildren()).size());
+    Assert.assertEquals(
+        "jour", TestUtils.convertToList(loadedBonWord.getChildren()).get(0).getValue("nextWord"));
+    Assert.assertEquals(
+        "9", TestUtils.convertToList(loadedBonWord.getChildren()).get(0).getValue("usedCount"));
   }
 }

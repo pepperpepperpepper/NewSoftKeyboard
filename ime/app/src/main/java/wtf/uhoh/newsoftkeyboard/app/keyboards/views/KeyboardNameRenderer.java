@@ -1,7 +1,5 @@
 package wtf.uhoh.newsoftkeyboard.app.keyboards.views;
 
-import android.graphics.Paint;
-import android.graphics.Typeface;
 import android.text.TextUtils;
 
 /**
@@ -29,10 +27,5 @@ final class KeyboardNameRenderer {
       }
     }
     return currentLabel;
-  }
-
-  void preparePaintForKeyboardName(Paint paint, float textSize) {
-    paint.setTextSize(textSize);
-    paint.setTypeface(Typeface.DEFAULT_BOLD);
   }
 }

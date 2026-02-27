@@ -20,6 +20,7 @@ import androidx.annotation.RequiresApi;
 import androidx.annotation.VisibleForTesting;
 import androidx.core.view.inputmethod.InputContentInfoCompat;
 import androidx.test.core.app.ApplicationProvider;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -72,6 +73,7 @@ public class TestableImeService extends NewSoftKeyboardService {
   private boolean mHidden = true;
   private boolean mCandidateShowsHint = false;
   private int mCandidateVisibility = View.VISIBLE;
+  private final List<CharSequence> mMockCandidateSuggestions = new ArrayList<>();
   private InputMethodManager mSpiedInputMethodManager;
   private int mLastOnKeyPrimaryCode;
   private AbstractInputMethodImpl mCreatedInputMethodInterface;
@@ -272,6 +274,7 @@ public class TestableImeService extends NewSoftKeyboardService {
 
   public void resetMockCandidateView() {
     Mockito.reset(mMockCandidateView);
+    mMockCandidateSuggestions.clear();
 
     setupMockCandidateView();
   }
@@ -317,6 +320,19 @@ public class TestableImeService extends NewSoftKeyboardService {
     Mockito.doAnswer(invocation -> mCandidateVisibility = invocation.getArgument(0))
         .when(mMockCandidateView)
         .setVisibility(anyInt());
+
+    Mockito.doAnswer(
+            invocation -> {
+              final List<? extends CharSequence> suggestions = invocation.getArgument(0);
+              mMockCandidateSuggestions.clear();
+              if (suggestions != null) {
+                mMockCandidateSuggestions.addAll(suggestions);
+              }
+              return null;
+            })
+        .when(mMockCandidateView)
+        .setSuggestions(org.mockito.ArgumentMatchers.anyList(), anyInt());
+    Mockito.doReturn(mMockCandidateSuggestions).when(mMockCandidateView).getSuggestions();
   }
 
   @Override
@@ -758,6 +774,11 @@ public class TestableImeService extends NewSoftKeyboardService {
     }
 
     @Override
+    public void notifyWordCommitted(@NonNull CharSequence committedWord) {
+      mDelegate.notifyWordCommitted(committedWord);
+    }
+
+    @Override
     public List<CharSequence> getSuggestions(WordComposer wordComposer) {
       return mDelegate.getSuggestions(wordComposer);
     }
@@ -780,6 +801,11 @@ public class TestableImeService extends NewSoftKeyboardService {
     @Override
     public void removeWordFromUserDictionary(String word) {
       mDelegate.removeWordFromUserDictionary(word);
+    }
+
+    @Override
+    public void clearLearningData() {
+      mDelegate.clearLearningData();
     }
 
     @Override

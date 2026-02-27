@@ -7,6 +7,7 @@ import java.util.Locale;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyDrawableStateProvider;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
+import wtf.uhoh.newsoftkeyboard.app.theme.KeyFaceOverlay;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardTheme;
 import wtf.uhoh.newsoftkeyboard.app.theme.KeyboardWallpaperResolver;
 import wtf.uhoh.newsoftkeyboard.overlay.ThemeOverlayCombiner;
@@ -47,6 +48,9 @@ final class DrawInputsBuilder {
       KeyboardDefinition keyboard,
       CharSequence keyboardName,
       @Nullable CharSequence spacebarVoiceBadgeText,
+      @Nullable Integer specialKeyTextColorOverride,
+      @Nullable Integer modifierKeyTextColorOverride,
+      @Nullable Integer enterKeyTextColorOverride,
       Keyboard.Key[] keys,
       @Nullable Keyboard.Key invalidKey,
       Rect clipRegion,
@@ -61,17 +65,33 @@ final class DrawInputsBuilder {
       int shadowOffsetX,
       int shadowOffsetY,
       int shadowColor,
+      PerKeyTextShadowOverrides perKeyTextShadowOverrides,
+      boolean keyBackgroundShadowEnabled,
+      int keyBackgroundShadowOffsetX,
+      int keyBackgroundShadowOffsetY,
+      int keyBackgroundShadowSpread,
+      int keyBackgroundShadowColor,
+      PerKeyBackgroundShadowOverrides perKeyBackgroundShadowOverrides,
       int textCaseForceOverrideType,
       int textCaseType,
       KeyDetector keyDetector,
       float keyTextSize,
+      boolean autoFitKeyLabels,
+      float keyLabelAutoFitMinScale,
+      boolean ellipsizeKeyLabels,
       int themeHintLabelAlign,
       int themeHintLabelVAlign,
+      @Nullable Integer userKeyBackgroundTint,
+      @Nullable Integer userSpecialKeyBackgroundTint,
+      @Nullable Integer userSpacebarBackgroundTint,
+      @Nullable Integer userModifierKeyBackgroundTint,
+      @Nullable Integer userEnterKeyBackgroundTint,
       boolean allowExpensiveWallpaperEffects,
       @Nullable KeyDrawableStateProvider drawableStatesProvider) {
 
     final ThemeResourcesHolder themeResourcesHolder = themeOverlayCombiner.getThemeResources();
     final var keyTextColor = themeResourcesHolder.getKeyTextColor();
+    final boolean themeOverlayActive = themeOverlayCombiner.isOverlayActive();
 
     final DrawDecisions.ModifierStates modifierStates = drawDecisions.modifierStates(keyboard);
     int modifierActiveTextColor =
@@ -89,7 +109,7 @@ final class DrawInputsBuilder {
         dirtyRegionDecider.shouldDrawSingleKey(
             canvas, invalidKey, clipRegion, paddingLeft, paddingTop);
 
-    final KeyboardWallpaperResolver.KeyFaceOverlay keyFaceOverlay =
+    final KeyFaceOverlay keyFaceOverlay =
         keyboardWallpaperResolver.resolveKeyFaceOverlay(
             theme, keyboardViewBounds, allowExpensiveWallpaperEffects, requestInvalidateAllKeys);
 
@@ -100,6 +120,10 @@ final class DrawInputsBuilder {
         keyboard,
         keyboardName,
         spacebarVoiceBadgeText,
+        specialKeyTextColorOverride,
+        modifierKeyTextColorOverride,
+        enterKeyTextColorOverride,
+        themeOverlayActive,
         keyboardNameHintController.shouldShowKeyboardName() && effectiveKeyboardNameTextSize > 1f,
         hintTextSize > 1 && keyboardNameHintController.shouldShowHints(),
         keyboard != null && keyboard.isShifted(),
@@ -110,6 +134,11 @@ final class DrawInputsBuilder {
         modifierActiveTextColor,
         hintAlign,
         hintVAlign,
+        userKeyBackgroundTint,
+        userSpecialKeyBackgroundTint,
+        userSpacebarBackgroundTint,
+        userModifierKeyBackgroundTint,
+        userEnterKeyBackgroundTint,
         keyBackground,
         keys,
         invalidKey,
@@ -126,13 +155,30 @@ final class DrawInputsBuilder {
         shadowOffsetX,
         shadowOffsetY,
         shadowColor,
+        perKeyTextShadowOverrides,
+        keyBackgroundShadowEnabled,
+        keyBackgroundShadowOffsetX,
+        keyBackgroundShadowOffsetY,
+        keyBackgroundShadowSpread,
+        keyBackgroundShadowColor,
+        perKeyBackgroundShadowOverrides,
         textCaseForceOverrideType,
         textCaseType,
         keyDetector,
         keyTextSize,
+        autoFitKeyLabels,
+        keyLabelAutoFitMinScale,
+        ellipsizeKeyLabels,
+        allowExpensiveWallpaperEffects,
         keyFaceOverlay.mode(),
+        keyFaceOverlay.blendMode(),
+        keyFaceOverlay.layerStack(),
         keyFaceOverlay.matchKeyShape(),
         keyFaceOverlay.paint(),
+        keyFaceOverlay.specialKeyAlpha(),
+        keyFaceOverlay.spacebarAlpha(),
+        keyFaceOverlay.modifierKeyAlpha(),
+        keyFaceOverlay.enterKeyAlpha(),
         drawableStatesProvider);
   }
 }

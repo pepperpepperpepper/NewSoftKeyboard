@@ -1,8 +1,8 @@
 package wtf.uhoh.newsoftkeyboard.testing;
 
 import android.os.Looper;
+import androidx.annotation.NonNull;
 import java.lang.reflect.Method;
-import javax.annotation.Nonnull;
 import net.evendanan.testgrouping.TestClassHashingStrategy;
 import net.evendanan.testgrouping.TestsGroupingFilter;
 import org.junit.runner.notification.RunNotifier;
@@ -37,7 +37,7 @@ public class NskRobolectricTestRunner extends RobolectricTestRunner {
         this, new TestClassHashingStrategy(), false /*so running from AS will work*/);
   }
 
-  @Nonnull
+  @NonNull
   @Override
   @SuppressWarnings("rawtypes")
   protected Class<? extends TestLifecycle> getTestLifecycleClass() {

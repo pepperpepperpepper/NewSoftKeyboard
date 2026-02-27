@@ -43,7 +43,9 @@ public final class GestureTypingCommitter {
       }
     }
 
-    inputConnectionRouter.setComposingText(currentComposedWord.getTypedWord(), 1);
+    if (!inputConnectionRouter.setComposingText(currentComposedWord.getTypedWord(), 1)) {
+      inputConnectionRouter.commitText(currentComposedWord.getTypedWord(), 1);
+    }
     return true;
   }
 }

@@ -28,8 +28,10 @@ import android.content.Context;
 import android.content.res.TypedArray;
 import android.text.TextUtils;
 import android.util.AttributeSet;
+import android.util.SparseArray;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceViewHolder;
@@ -47,6 +49,7 @@ public class SlidePreference extends Preference implements SeekBar.OnSeekBarChan
   private final int mMax;
   private final int mMin;
   private int mValue;
+  @Nullable private final SparseArray<String> mSpecialValueLabels;
 
   public SlidePreference(Context context, AttributeSet attrs) {
     super(context, attrs);
@@ -68,23 +71,60 @@ public class SlidePreference extends Preference implements SeekBar.OnSeekBarChan
       mTitle = context.getString(titleResId);
     }
 
+    final int specialValuesResId =
+        array.getResourceId(R.styleable.SlidePreferenceAttributes_specialValues, 0);
+    final int specialValueLabelsResId =
+        array.getResourceId(R.styleable.SlidePreferenceAttributes_specialValueLabels, 0);
     array.recycle();
+
+    SparseArray<String> specialValueLabels = null;
+    if (specialValuesResId != 0 && specialValueLabelsResId != 0) {
+      final int[] specialValues = context.getResources().getIntArray(specialValuesResId);
+      final String[] specialLabels = context.getResources().getStringArray(specialValueLabelsResId);
+      if (specialValues.length == specialLabels.length) {
+        specialValueLabels = new SparseArray<>(specialValues.length);
+        for (int index = 0; index < specialValues.length; index++) {
+          specialValueLabels.put(specialValues[index], specialLabels[index]);
+        }
+      }
+    }
+    mSpecialValueLabels = specialValueLabels;
+  }
+
+  private String formatValue(int value) {
+    if (mSpecialValueLabels != null) {
+      final String label = mSpecialValueLabels.get(value);
+      if (label != null) return label;
+    }
+    return String.format(Locale.ROOT, mValueTemplate, value);
+  }
+
+  private String formatBoundary(int value) {
+    if (mSpecialValueLabels != null) {
+      final String label = mSpecialValueLabels.get(value);
+      if (label != null) return label;
+    }
+    return Integer.toString(value);
   }
 
   @Override
   public void onBindViewHolder(PreferenceViewHolder holder) {
     super.onBindViewHolder(holder);
     if (shouldPersist()) mValue = getPersistedInt(mDefault);
+    clampToBoundsAndPersistIfNeeded();
 
     mCurrentValue = (TextView) holder.findViewById(R.id.pref_current_value);
     mMaxValue = (TextView) holder.findViewById(R.id.pref_max_value);
     mMinValue = (TextView) holder.findViewById(R.id.pref_min_value);
-    mCurrentValue.setText(String.format(Locale.ROOT, mValueTemplate, mValue));
+    mCurrentValue.setText(formatValue(mValue));
     ((TextView) holder.findViewById(R.id.pref_title)).setText(mTitle);
 
     writeBoundaries();
 
     SeekBar seekBar = (SeekBar) holder.findViewById(R.id.pref_seekbar);
+    // Preference view-holders are recycled. Clear any previous listener before setting max/progress
+    // to avoid triggering a stale listener from another SlidePreference instance.
+    seekBar.setOnSeekBarChangeListener(null);
     seekBar.setMax(mMax - mMin);
     seekBar.setProgress(mValue - mMin);
     seekBar.setOnSeekBarChangeListener(this);
@@ -99,11 +139,9 @@ public class SlidePreference extends Preference implements SeekBar.OnSeekBarChan
       mValue = (Integer) defaultValue;
     }
 
-    if (mValue > mMax) mValue = mMax;
-    if (mValue < mMin) mValue = mMin;
+    clampToBoundsAndPersistIfNeeded();
 
-    if (mCurrentValue != null)
-      mCurrentValue.setText(String.format(Locale.ROOT, mValueTemplate, mValue));
+    if (mCurrentValue != null) mCurrentValue.setText(formatValue(mValue));
   }
 
   @Override
@@ -115,8 +153,7 @@ public class SlidePreference extends Preference implements SeekBar.OnSeekBarChan
     if (shouldPersist()) persistInt(mValue);
     callChangeListener(mValue);
 
-    if (mCurrentValue != null)
-      mCurrentValue.setText(String.format(Locale.ROOT, mValueTemplate, mValue));
+    if (mCurrentValue != null) mCurrentValue.setText(formatValue(mValue));
   }
 
   @Override
@@ -126,12 +163,18 @@ public class SlidePreference extends Preference implements SeekBar.OnSeekBarChan
   public void onStopTrackingTouch(SeekBar seek) {}
 
   private void writeBoundaries() {
-    mMaxValue.setText(Integer.toString(mMax));
-    mMinValue.setText(Integer.toString(mMin));
-    if (mValue > mMax) mValue = mMax;
-    if (mValue < mMin) mValue = mMin;
-    if (mCurrentValue != null)
-      mCurrentValue.setText(String.format(Locale.ROOT, mValueTemplate, mValue));
+    mMaxValue.setText(formatBoundary(mMax));
+    mMinValue.setText(formatBoundary(mMin));
+    clampToBoundsAndPersistIfNeeded();
+    if (mCurrentValue != null) mCurrentValue.setText(formatValue(mValue));
+  }
+
+  private void clampToBoundsAndPersistIfNeeded() {
+    final int clampedValue = Math.max(mMin, Math.min(mMax, mValue));
+    if (clampedValue == mValue) return;
+
+    mValue = clampedValue;
+    if (shouldPersist()) persistInt(mValue);
   }
 
   @VisibleForTesting
