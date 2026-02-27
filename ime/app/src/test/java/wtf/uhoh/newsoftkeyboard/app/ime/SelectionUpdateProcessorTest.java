@@ -13,12 +13,12 @@ import wtf.uhoh.newsoftkeyboard.testing.NskRobolectricTestRunner;
 public class SelectionUpdateProcessorTest {
 
   @Test
-  public void testExpectedSelectionUpdateDoesNotRestartWordSuggestion() {
+  public void testExpectedSelectionUpdatesAreDiscardedUntilBudgetConsumed() {
     final SelectionUpdateProcessor processor = new SelectionUpdateProcessor();
     final FakeHost host = new FakeHost();
     host.predictionOn = true;
     host.currentlyPredicting = false;
-    host.selectionUpdateDelayed = true;
+    host.remainingExpectedSelectionUpdates = 2;
     host.expectingSelectionUpdateBy = SystemClock.uptimeMillis() + 5000;
 
     processor.onUpdateSelection(0, 0, 1, 1, 0, 0, host);
@@ -28,10 +28,16 @@ public class SelectionUpdateProcessorTest {
     Assert.assertEquals(0, host.abortCorrectionCalls);
     Assert.assertEquals(0, host.unexpectedCursorMoveWhileNotPredictingCalls);
 
-    // Once we've received the expected selection update, further cursor updates should not be
-    // discarded. This allows us to react to genuine cursor moves or external edits quickly.
     processor.onUpdateSelection(1, 1, 2, 2, 0, 0, host);
-    Assert.assertEquals(1, host.markSelectionUpdateReceivedCalls);
+    Assert.assertEquals(2, host.markSelectionUpdateReceivedCalls);
+    Assert.assertEquals(0, host.clearExpectingCalls);
+    Assert.assertEquals(0, host.postRestartWordSuggestionCalls);
+    Assert.assertEquals(0, host.unexpectedCursorMoveWhileNotPredictingCalls);
+
+    // Once we've consumed the expected selection updates, further cursor updates should not be
+    // discarded. This allows us to react to genuine cursor moves or external edits quickly.
+    processor.onUpdateSelection(2, 2, 3, 3, 0, 0, host);
+    Assert.assertEquals(2, host.markSelectionUpdateReceivedCalls);
     Assert.assertEquals(1, host.clearExpectingCalls);
     Assert.assertEquals(1, host.postRestartWordSuggestionCalls);
     Assert.assertEquals(1, host.unexpectedCursorMoveWhileNotPredictingCalls);
@@ -54,7 +60,7 @@ public class SelectionUpdateProcessorTest {
   private static final class FakeHost implements SelectionUpdateProcessor.Host {
     boolean predictionOn;
     boolean currentlyPredicting;
-    boolean selectionUpdateDelayed;
+    int remainingExpectedSelectionUpdates;
     long expectingSelectionUpdateBy;
 
     int abortCorrectionCalls;
@@ -85,7 +91,7 @@ public class SelectionUpdateProcessorTest {
 
     @Override
     public boolean isSelectionUpdateDelayed() {
-      return selectionUpdateDelayed;
+      return remainingExpectedSelectionUpdates > 0;
     }
 
     @Override
@@ -128,19 +134,21 @@ public class SelectionUpdateProcessorTest {
     public void clearExpectingSelectionUpdate() {
       clearExpectingCalls++;
       expectingSelectionUpdateBy = -1;
-      selectionUpdateDelayed = false;
+      remainingExpectedSelectionUpdates = 0;
     }
 
     @Override
     public void markSelectionUpdateReceived() {
       markSelectionUpdateReceivedCalls++;
-      selectionUpdateDelayed = false;
+      if (remainingExpectedSelectionUpdates > 0) {
+        remainingExpectedSelectionUpdates--;
+      }
     }
 
     @Override
     public void setExpectingSelectionUpdateBy(long value) {
       expectingSelectionUpdateBy = value;
-      selectionUpdateDelayed = true;
+      remainingExpectedSelectionUpdates = 3;
     }
 
     @Override

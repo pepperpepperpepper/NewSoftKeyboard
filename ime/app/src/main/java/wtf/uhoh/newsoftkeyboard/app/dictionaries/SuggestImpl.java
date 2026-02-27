@@ -381,6 +381,32 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
     mSuggestions.clear();
   }
 
+  private boolean shouldFilterAllCapsAcronymSuggestion(@NonNull CharSequence candidate) {
+    // When the user is typing in lowercase, avoid surfacing unrelated ALL-CAPS acronyms as
+    // correction/completion candidates. They are often low-signal (contacts/learned tokens) and
+    // can look like the engine is "hallucinating".
+    if (mTypedOriginalWord.length() < 2) return false;
+    if (!TextUtils.equals(mTypedOriginalWord, mLowerOriginalWord)) return false;
+    if (candidate.length() < 3) return false;
+    if (candidate.toString().equalsIgnoreCase(mTypedOriginalWord)) return false;
+    return looksLikeAllCapsAcronym(candidate);
+  }
+
+  private static boolean looksLikeAllCapsAcronym(@NonNull CharSequence candidate) {
+    boolean hasLetter = false;
+    for (int i = 0; i < candidate.length(); i++) {
+      final char c = candidate.charAt(i);
+      if (!Character.isLetter(c)) {
+        return false;
+      }
+      hasLetter = true;
+      if (!Character.isUpperCase(c)) {
+        return false;
+      }
+    }
+    return hasLetter;
+  }
+
   @NonNull
   private CharSequence applyTypedCasingToSuggestion(@NonNull String suggestion) {
     if (mIsAllUpperCase) {
@@ -682,6 +708,10 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
       final int prefMaxSuggestions = mPrefMaxSuggestions;
 
       StringBuilder sb = getStringBuilderFromPool(word, wordOffset, wordLength);
+      if (shouldFilterAllCapsAcronymSuggestion(sb)) {
+        mStringPool.add(sb);
+        return true;
+      }
 
       if (TextUtils.equals(mTypedOriginalWord, sb)) {
         frequency = VALID_TYPED_WORD_FREQUENCY;

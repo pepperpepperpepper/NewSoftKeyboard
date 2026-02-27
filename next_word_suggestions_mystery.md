@@ -109,6 +109,10 @@ Important implications:
 
 3. The “keep me i → i/in/is/it…” set is very likely **current-word completions** (not next-word predictions). If next-word predictions contained “informed”, it _would_ be eligible to surface when typing `i`, but it likely never exists in the next-word candidate list because neural is not producing full-word candidates.
 
+4. **Some editors emit multiple `onUpdateSelection` callbacks** for a single manual pick (for example: word commit + space insert + internal selection stabilization). If the IME only treats the _first_ selection update as “expected”, later ones can be mistaken for an unexpected cursor move while idle, which triggers the restart-word-suggestion flow and clears the next-word strip.
+
+   Fix (implemented): `SelectionExpectationTracker` now expects a small _budget_ of selection updates per edit (default: 3) instead of only one, so the next-word strip is not cleared after manual picks in editors that send multiple updates.
+
 ## Debug checklist (to confirm on-device)
 
 1. Confirm whether auto-space is enabled:

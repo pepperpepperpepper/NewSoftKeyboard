@@ -4,24 +4,26 @@ import android.os.SystemClock;
 
 /** Tracks whether we're waiting for a selection update after composing changes. */
 final class SelectionExpectationTracker {
+  private static final int DEFAULT_EXPECTED_SELECTION_UPDATES = 3;
+
   private final long neverTimeStamp;
   private long expectingSelectionUpdateBy;
-  private boolean selectionUpdateReceived;
+  private int remainingExpectedSelectionUpdates;
 
   SelectionExpectationTracker(long neverTimeStamp) {
     this.neverTimeStamp = neverTimeStamp;
     this.expectingSelectionUpdateBy = neverTimeStamp;
-    this.selectionUpdateReceived = false;
+    this.remainingExpectedSelectionUpdates = 0;
   }
 
   void markExpectingUntil(long timeStamp) {
     expectingSelectionUpdateBy = timeStamp;
-    selectionUpdateReceived = false;
+    remainingExpectedSelectionUpdates = DEFAULT_EXPECTED_SELECTION_UPDATES;
   }
 
   void clear() {
     expectingSelectionUpdateBy = neverTimeStamp;
-    selectionUpdateReceived = false;
+    remainingExpectedSelectionUpdates = 0;
   }
 
   boolean isExpecting() {
@@ -35,14 +37,16 @@ final class SelectionExpectationTracker {
 
   void setExpectingSelectionUpdateBy(long value) {
     expectingSelectionUpdateBy = value;
-    selectionUpdateReceived = false;
+    remainingExpectedSelectionUpdates = DEFAULT_EXPECTED_SELECTION_UPDATES;
   }
 
   void markSelectionUpdateReceived() {
-    selectionUpdateReceived = true;
+    if (remainingExpectedSelectionUpdates > 0) {
+      remainingExpectedSelectionUpdates--;
+    }
   }
 
   boolean isSelectionUpdatePending() {
-    return isExpecting() && !selectionUpdateReceived;
+    return isExpecting() && remainingExpectedSelectionUpdates > 0;
   }
 }

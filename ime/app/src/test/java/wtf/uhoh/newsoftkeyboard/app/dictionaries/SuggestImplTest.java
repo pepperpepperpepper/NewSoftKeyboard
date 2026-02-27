@@ -247,6 +247,33 @@ public class SuggestImplTest {
   }
 
   @Test
+  public void getSuggestions_filtersAllCapsAcronymsWhenTypedIsLowercase() {
+    final SuggestionsProvider provider = mock(SuggestionsProvider.class);
+    when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
+
+    doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              addWord(callback, "that", 100);
+              addWord(callback, "than", 90);
+              addWord(callback, "Thai", 80);
+              addWord(callback, "TNA", 70);
+              return null;
+            })
+        .when(provider)
+        .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
+
+    final SuggestImpl suggest = new SuggestImpl(provider);
+    suggest.setCorrectionMode(true, 1, 1, false);
+
+    final WordComposer composer = new WordComposer();
+    composer.simulateTypedWord("tha");
+
+    assertEquals(
+        List.of("tha", "that", "than", "Thai"), asStrings(suggest.getSuggestions(composer)));
+  }
+
+  @Test
   public void getSuggestions_injectsPrefixMatchesFromCandidatePoolBeyondDisplayedNextWords() {
     final SuggestionsProvider provider = mock(SuggestionsProvider.class);
     when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);

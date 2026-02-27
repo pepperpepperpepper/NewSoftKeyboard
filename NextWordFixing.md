@@ -1038,6 +1038,29 @@ Audit (Genymotion 2026-02-26, `outputs/genymotion/nextword-tapchain-report/20260
 - 114 runs: 0 `unknown` sources, 0 duplicates (case-insensitive), 0 `com/http/https/www`, 0 “weird” tokens (empty/whitespace)
 - `mode=hybrid` (44 runs): 0 runs where the settled top‑3 had _fewer_ neural items than the initial top‑3
 
+### 2026-02-27: Fix “manual pick shows no next-word until SPACE” (selection-update budget)
+
+User-facing symptom:
+
+- After manually picking a completion (e.g., `than` → `thank`), the strip sometimes shows **no next-word suggestions**
+  until pressing `SPACE`.
+
+Root cause:
+
+- Some editors emit **multiple** `onUpdateSelection(...)` callbacks for a single “pick + optional space insert”.
+- The IME previously treated only the **first** selection update as “expected”; later callbacks were treated as
+  unexpected cursor movement while idle, triggering the restart-word-suggestion flow and clearing the next‑word strip.
+
+Fix:
+
+- `SelectionExpectationTracker` now expects a small _budget_ of selection updates per edit (default: 3), so we don’t
+  clear next-word suggestions in editors that send multiple selection updates for a single pick.
+
+Related UX cleanup:
+
+- Filter unrelated **ALL‑CAPS acronyms** (>=3 chars) from typed-word suggestions when the user is typing lowercase
+  (e.g., `tha` no longer surfaces `TNA` as a correction/completion candidate).
+
 ## Remaining TODOs
 
 - (none right now)
