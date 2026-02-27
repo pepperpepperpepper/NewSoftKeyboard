@@ -78,6 +78,7 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
   private int mCommonalityMaxDistance = 1;
   private boolean mEnabledSuggestions;
   private boolean mSplitWords;
+  private boolean mIsInternetInputField;
 
   @VisibleForTesting
   public SuggestImpl(@NonNull SuggestionsProvider provider) {
@@ -105,6 +106,16 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
     mCommonalityMaxLengthDiff = maxLengthDiff;
     mCommonalityMaxDistance = maxDistance;
     mSplitWords = splitWords;
+  }
+
+  /**
+   * Provides a hint about the current input field type.
+   *
+   * <p>Used to decide whether domain/web tokens should be allowed in typed/current-word
+   * suggestions.
+   */
+  public void setInternetInputField(boolean isInternetInputField) {
+    mIsInternetInputField = isInternetInputField;
   }
 
   @Override
@@ -382,14 +393,88 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
   }
 
   private boolean shouldFilterAllCapsAcronymSuggestion(@NonNull CharSequence candidate) {
-    // When the user is typing in lowercase, avoid surfacing unrelated ALL-CAPS acronyms as
+    // When the user is not typing in ALL-CAPS, avoid surfacing unrelated ALL-CAPS acronyms as
     // correction/completion candidates. They are often low-signal (contacts/learned tokens) and
-    // can look like the engine is "hallucinating".
+    // can look like the engine is "hallucinating", especially at sentence start where the typed
+    // prefix may be auto-capitalized (e.g., "Tha" suggesting "TNA").
     if (mTypedOriginalWord.length() < 2) return false;
-    if (!TextUtils.equals(mTypedOriginalWord, mLowerOriginalWord)) return false;
+    if (mIsAllUpperCase) return false;
     if (candidate.length() < 3) return false;
     if (candidate.toString().equalsIgnoreCase(mTypedOriginalWord)) return false;
     return looksLikeAllCapsAcronym(candidate);
+  }
+
+  private boolean shouldFilterPunctuationOnlySuggestion(@NonNull CharSequence candidate) {
+    // While composing a word (letters/digits), punctuation-only candidates are always noise in the
+    // suggestion strip. They can still be surfaced when the user is actively typing punctuation.
+    if (candidate.length() == 0) return true;
+    if (!typedHasLetterOrDigit(mTypedOriginalWord)) return false;
+    return isPunctuationOnly(candidate);
+  }
+
+  private static boolean typedHasLetterOrDigit(@NonNull String typed) {
+    for (int i = 0; i < typed.length(); i++) {
+      if (Character.isLetterOrDigit(typed.charAt(i))) return true;
+    }
+    return false;
+  }
+
+  private boolean shouldFilterDomainLikeSuggestion(@NonNull CharSequence candidate) {
+    // Domain/web tokens are useful for URL/email fields, but are very low-signal in normal prose.
+    // Filter them aggressively unless the field is explicitly internet-oriented or the user is
+    // already typing something URL-like ('.', '@', 'http', 'www').
+    if (mIsInternetInputField) return false;
+
+    final String typedLower = mLowerOriginalWord;
+    if (!typedLower.isEmpty()) {
+      if (typedLower.indexOf('.') >= 0) return false;
+      if (typedLower.indexOf('@') >= 0) return false;
+      if (typedLower.startsWith("http")) return false;
+      if (typedLower.startsWith("www")) return false;
+    }
+
+    final String text = candidate.toString();
+    if (text.length() < 3) return false;
+    final String lower = text.toLowerCase(java.util.Locale.ROOT);
+    if (lower.equals("com") || lower.equals("http") || lower.equals("https") || lower.equals("www"))
+      return true;
+    return looksLikeDomainName(lower);
+  }
+
+  private static boolean looksLikeDomainName(@NonNull String tokenLower) {
+    // Best-effort, conservative heuristic:
+    // - no whitespace
+    // - contains a '.' not at the edges
+    // - last segment is a 2+ letter TLD
+    // - all chars are in a small "domain-ish" allow-list
+    if (tokenLower.length() < 4) return false;
+    if (tokenLower.indexOf('.') < 0) return false;
+    if (tokenLower.startsWith(".") || tokenLower.endsWith(".")) return false;
+
+    boolean hasLetter = false;
+    for (int i = 0; i < tokenLower.length(); i++) {
+      final char c = tokenLower.charAt(i);
+      if (Character.isWhitespace(c)) return false;
+      if (Character.isLetter(c)) {
+        hasLetter = true;
+        continue;
+      }
+      if (Character.isDigit(c) || c == '.' || c == '-' || c == '_') {
+        continue;
+      }
+      return false;
+    }
+    if (!hasLetter) return false;
+
+    final int lastDot = tokenLower.lastIndexOf('.');
+    if (lastDot <= 0 || lastDot >= tokenLower.length() - 2) return false;
+    final String tld = tokenLower.substring(lastDot + 1);
+    if (tld.length() < 2 || tld.length() > 24) return false;
+    for (int i = 0; i < tld.length(); i++) {
+      if (!Character.isLetter(tld.charAt(i))) return false;
+    }
+
+    return true;
   }
 
   private static boolean looksLikeAllCapsAcronym(@NonNull CharSequence candidate) {
@@ -405,6 +490,13 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
       }
     }
     return hasLetter;
+  }
+
+  private static boolean isPunctuationOnly(@NonNull CharSequence s) {
+    for (int i = 0; i < s.length(); i++) {
+      if (Character.isLetterOrDigit(s.charAt(i))) return false;
+    }
+    return true;
   }
 
   @NonNull
@@ -674,6 +766,15 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
       if (SuggestionWordMatcher.compareCaseInsensitive(
           mLowerOriginalWord, word, wordOffset, wordLength)) {
         frequency = FIXED_TYPED_WORD_FREQUENCY;
+      } else if (isCaseInsensitivePrefixCompletion(word, wordOffset, wordLength)) {
+        // For pure prefix-completions, treat the "distance" as the number of extra characters.
+        // This avoids a jarring tier split where short completions become "fix candidates"
+        // (boosted) but slightly longer ones (e.g., apostrophes/plurals) do not, even when
+        // they are much more frequent in the dictionary.
+        final int completionDistance = wordLength - mLowerOriginalWord.length();
+        if (completionDistance <= mCommonalityMaxDistance) {
+          frequency += POSSIBLE_FIX_THRESHOLD_FREQUENCY;
+        }
       } else if (SuggestionWordMatcher.haveSufficientCommonality(
           mCommonalityMaxLengthDiff,
           mCommonalityMaxDistance,
@@ -693,6 +794,18 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
       if (resetSuggestionsFix) mCorrectSuggestionIndex = -1;
       return addWord;
     }
+
+    private boolean isCaseInsensitivePrefixCompletion(char[] word, int wordOffset, int wordLength) {
+      final int typedLength = mLowerOriginalWord.length();
+      if (typedLength == 0) return false;
+      if (wordLength <= typedLength) return false;
+      for (int i = 0; i < typedLength; i++) {
+        if (mLowerOriginalWord.charAt(i) != Character.toLowerCase(word[wordOffset + i])) {
+          return false;
+        }
+      }
+      return true;
+    }
   }
 
   private class SuggestionCallback implements Dictionary.WordCallback {
@@ -709,6 +822,10 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
 
       StringBuilder sb = getStringBuilderFromPool(word, wordOffset, wordLength);
       if (shouldFilterAllCapsAcronymSuggestion(sb)) {
+        mStringPool.add(sb);
+        return true;
+      }
+      if (shouldFilterPunctuationOnlySuggestion(sb) || shouldFilterDomainLikeSuggestion(sb)) {
         mStringPool.add(sb);
         return true;
       }

@@ -18,7 +18,7 @@ public class CandidateNormalizerTest {
 
     final List<String> out =
         CandidateNormalizer.normalizeForNextWordUx(
-            context, List.of("com", "informed", "www", "http", "https"));
+            context, List.of("com", "informed", "www", "http", "https", "google.com"));
 
     Assert.assertEquals(List.of("informed"), out);
   }
@@ -40,8 +40,9 @@ public class CandidateNormalizerTest {
     context.add("example.com");
 
     final List<String> out =
-        CandidateNormalizer.normalizeForNextWordUx(context, List.of("com", "www", "cat"));
+        CandidateNormalizer.normalizeForNextWordUx(
+            context, List.of("com", "www", "cat", "gmail.com"));
 
-    Assert.assertEquals(List.of("com", "www", "cat"), out);
+    Assert.assertEquals(List.of("com", "www", "cat", "gmail.com"), out);
   }
 }

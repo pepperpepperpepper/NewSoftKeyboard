@@ -53,7 +53,7 @@ public class SuggestImplTest {
         .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
 
     final SuggestImpl suggest = new SuggestImpl(provider);
-    suggest.setCorrectionMode(true, 1, 1, false);
+    suggest.setCorrectionMode(true, 2, 10, false);
 
     suggest.getNextSuggestions("keep", false);
 
@@ -271,6 +271,138 @@ public class SuggestImplTest {
 
     assertEquals(
         List.of("tha", "that", "than", "Thai"), asStrings(suggest.getSuggestions(composer)));
+  }
+
+  @Test
+  public void getSuggestions_filtersAllCapsAcronymsWhenTypedIsTitleCase() {
+    final SuggestionsProvider provider = mock(SuggestionsProvider.class);
+    when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
+
+    doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              addWord(callback, "That", 100);
+              addWord(callback, "Than", 90);
+              addWord(callback, "TNA", 70);
+              return null;
+            })
+        .when(provider)
+        .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
+
+    final SuggestImpl suggest = new SuggestImpl(provider);
+    suggest.setCorrectionMode(true, 1, 1, false);
+
+    final WordComposer composer = new WordComposer();
+    composer.simulateTypedWord("Tha");
+    composer.setFirstCharCapitalized(true);
+
+    assertEquals(List.of("Tha", "That", "Than"), asStrings(suggest.getSuggestions(composer)));
+  }
+
+  @Test
+  public void getSuggestions_doesNotDemoteLongerPrefixCompletionsBelowLowerFrequencyShortOnes() {
+    final SuggestionsProvider provider = mock(SuggestionsProvider.class);
+    when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
+
+    doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              addWord(callback, "thaw", 83);
+              addWord(callback, "that's", 160);
+              return null;
+            })
+        .when(provider)
+        .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
+
+    final SuggestImpl suggest = new SuggestImpl(provider);
+    // medium aggressiveness defaults: maxLengthDiff=2, maxDistance=3
+    suggest.setCorrectionMode(true, 2, 3, false);
+
+    final WordComposer composer = new WordComposer();
+    composer.simulateTypedWord("tha");
+
+    assertEquals(List.of("tha", "that's", "thaw"), asStrings(suggest.getSuggestions(composer)));
+  }
+
+  @Test
+  public void getSuggestions_filtersPunctuationOnlyCandidatesWhileComposingWord() {
+    final SuggestionsProvider provider = mock(SuggestionsProvider.class);
+    when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
+
+    doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              addWord(callback, "|", 200);
+              addWord(callback, "that", 100);
+              addWord(callback, "than", 90);
+              return null;
+            })
+        .when(provider)
+        .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
+
+    final SuggestImpl suggest = new SuggestImpl(provider);
+    suggest.setCorrectionMode(true, 1, 1, false);
+
+    final WordComposer composer = new WordComposer();
+    composer.simulateTypedWord("tha");
+
+    assertEquals(List.of("tha", "that", "than"), asStrings(suggest.getSuggestions(composer)));
+  }
+
+  @Test
+  public void getSuggestions_filtersDomainSuggestionsInNormalTextFields() {
+    final SuggestionsProvider provider = mock(SuggestionsProvider.class);
+    when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
+
+    doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              addWord(callback, "google.com", 100);
+              addWord(callback, "google", 90);
+              addWord(callback, "good", 80);
+              return null;
+            })
+        .when(provider)
+        .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
+
+    final SuggestImpl suggest = new SuggestImpl(provider);
+    suggest.setCorrectionMode(true, 1, 1, false);
+
+    final WordComposer composer = new WordComposer();
+    composer.simulateTypedWord("goo");
+
+    final List<String> suggestions = asStrings(suggest.getSuggestions(composer));
+    assertEquals("goo", suggestions.get(0));
+    org.junit.Assert.assertEquals(3, suggestions.size());
+    org.junit.Assert.assertFalse(suggestions.contains("google.com"));
+    org.junit.Assert.assertTrue(suggestions.contains("google"));
+    org.junit.Assert.assertTrue(suggestions.contains("good"));
+  }
+
+  @Test
+  public void getSuggestions_allowsDomainSuggestionsInInternetTextFields() {
+    final SuggestionsProvider provider = mock(SuggestionsProvider.class);
+    when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
+
+    doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              addWord(callback, "google.com", 100);
+              addWord(callback, "google", 90);
+              return null;
+            })
+        .when(provider)
+        .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
+
+    final SuggestImpl suggest = new SuggestImpl(provider);
+    suggest.setCorrectionMode(true, 1, 1, false);
+    suggest.setInternetInputField(true);
+
+    final WordComposer composer = new WordComposer();
+    composer.simulateTypedWord("goo");
+
+    assertEquals(
+        List.of("goo", "google.com", "google"), asStrings(suggest.getSuggestions(composer)));
   }
 
   @Test

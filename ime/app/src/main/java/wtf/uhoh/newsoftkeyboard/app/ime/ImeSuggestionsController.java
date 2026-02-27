@@ -239,6 +239,17 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
             respectNoSuggestionsFlag,
             TAG);
 
+    if (mSuggest instanceof SuggestImpl) {
+      final int inputClass = attribute.inputType & EditorInfo.TYPE_MASK_CLASS;
+      final int variation = attribute.inputType & EditorInfo.TYPE_MASK_VARIATION;
+      final boolean isInternetInputField =
+          inputClass == EditorInfo.TYPE_CLASS_TEXT
+              && (variation == EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                  || variation == EditorInfo.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS
+                  || variation == EditorInfo.TYPE_TEXT_VARIATION_URI);
+      ((SuggestImpl) mSuggest).setInternetInputField(isInternetInputField);
+    }
+
     predictionStateUpdater.applyInputFieldConfig(
         suggestionsSessionState.predictionState, inputConfig, predictionGate);
 

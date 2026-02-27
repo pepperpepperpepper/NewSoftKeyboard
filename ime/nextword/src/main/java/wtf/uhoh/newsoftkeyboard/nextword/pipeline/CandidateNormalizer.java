@@ -101,12 +101,49 @@ public final class CandidateNormalizer {
       final String lower = trimmed.toLowerCase(Locale.ROOT);
       if (disallowLower.contains(lower)) continue;
       if (!allowDomainLike && DOMAIN_LIKE_TOKENS.contains(lower)) continue;
+      if (!allowDomainLike && looksLikeDomainName(lower)) continue;
       if (seenLower.add(lower)) {
         // preserve original casing for now
         out.add(trimmed);
       }
     }
     return out;
+  }
+
+  private static boolean looksLikeDomainName(@NonNull String tokenLower) {
+    // Best-effort, conservative heuristic:
+    // - no whitespace
+    // - contains a '.' not at the edges
+    // - last segment is a 2+ letter TLD
+    // - all chars are in a small "domain-ish" allow-list
+    if (tokenLower.length() < 4) return false;
+    if (tokenLower.indexOf('.') < 0) return false;
+    if (tokenLower.startsWith(".") || tokenLower.endsWith(".")) return false;
+
+    boolean hasLetter = false;
+    for (int i = 0; i < tokenLower.length(); i++) {
+      final char c = tokenLower.charAt(i);
+      if (Character.isWhitespace(c)) return false;
+      if (Character.isLetter(c)) {
+        hasLetter = true;
+        continue;
+      }
+      if (Character.isDigit(c) || c == '.' || c == '-' || c == '_') {
+        continue;
+      }
+      return false;
+    }
+    if (!hasLetter) return false;
+
+    final int lastDot = tokenLower.lastIndexOf('.');
+    if (lastDot <= 0 || lastDot >= tokenLower.length() - 2) return false;
+    final String tld = tokenLower.substring(lastDot + 1);
+    if (tld.length() < 2 || tld.length() > 24) return false;
+    for (int i = 0; i < tld.length(); i++) {
+      if (!Character.isLetter(tld.charAt(i))) return false;
+    }
+
+    return true;
   }
 
   private static boolean looksLikeDomainContext(@NonNull Deque<String> contextTokens) {

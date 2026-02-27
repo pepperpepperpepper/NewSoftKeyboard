@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPInputStream;
@@ -26,7 +27,8 @@ import org.gradle.api.tasks.TaskAction;
 @CacheableTask
 public class GenerateWordsListFromAOSPTask extends DefaultTask {
   private static final Pattern mWordLineRegex =
-      Pattern.compile("^\\s*word=([\\w\\p{L}'\"-]+),f=(\\d+).*$");
+      Pattern.compile("^\\s*word=([\\w\\p{L}'\"-]+),f=(\\d+)(?:,flags=([^,]*))?.*$");
+  private static final int ABBREVIATION_ACRONYM_DOWNWEIGHT_FREQUENCY = 1;
 
   private File inputFile;
   private File outputWordsListFile;
@@ -64,8 +66,15 @@ public class GenerateWordsListFromAOSPTask extends DefaultTask {
         // word=heh,f=0,flags=,originalFreq=53,possibly_offensive=true
         Matcher matcher = mWordLineRegex.matcher(wordDataLine);
         if (matcher.matches()) {
-          String word = matcher.group(1);
+          final String word = matcher.group(1);
           int frequency = Integer.parseInt(matcher.group(2));
+          final String flagsRaw = matcher.groupCount() >= 3 ? matcher.group(3) : null;
+          if (flagsRaw != null && !flagsRaw.isEmpty()) {
+            final String flags = flagsRaw.toLowerCase(Locale.ROOT);
+            if (flags.contains("abbreviation") && looksLikeAllCapsAcronym(word)) {
+              frequency = Math.min(frequency, ABBREVIATION_ACRONYM_DOWNWEIGHT_FREQUENCY);
+            }
+          }
           wordListWriter.addEntry(word, frequency);
           if ((wordsWritten % 50000) == 0) {
             System.out.print("." + ((100 * read) / inputSize) + "%.");
@@ -110,5 +119,22 @@ public class GenerateWordsListFromAOSPTask extends DefaultTask {
 
   public void setMaxWordsInList(int maxWordsInList) {
     this.maxWordsInList = maxWordsInList;
+  }
+
+  private static boolean looksLikeAllCapsAcronym(String token) {
+    String core = token;
+    if (core.endsWith("'s") && core.length() > 2) {
+      core = core.substring(0, core.length() - 2);
+    }
+    if (core.length() < 3) return false;
+
+    boolean hasLetter = false;
+    for (int i = 0; i < core.length(); i++) {
+      final char c = core.charAt(i);
+      if (!Character.isLetter(c)) return false;
+      hasLetter = true;
+      if (!Character.isUpperCase(c)) return false;
+    }
+    return hasLetter;
   }
 }
