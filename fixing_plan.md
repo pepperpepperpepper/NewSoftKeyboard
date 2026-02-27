@@ -1,6 +1,6 @@
 # Fixing Plan (Living) — Wallpaper Picker + Spacebar + Voice STT Feedback + Text Suggestions
 
-_Last updated: 2026-02-19_
+_Last updated: 2026-02-27_
 
 This document is the **single living plan** for the current user-visible regressions around:
 
@@ -223,6 +223,78 @@ Impact: “weak suggestions” reports can be app-specific: the pipeline is inte
   - incognito behavior (no learning),
   - fields with `NO_PERSONALIZED_LEARNING`,
   - fields where prediction is intentionally off.
+
+### 5.7) Current-word suggestions (completions/corrections) — fixing plan (2026-02-27)
+
+This section is specifically about **`SuggestImpl.getSuggestions(...)`** (current composing word), not next-word.
+
+#### 5.7.0) Observed “bad” symptoms (recent user repros)
+
+- Lowercase prefix (e.g., `tha`) surfaces unrelated **ALL‑CAPS acronyms** (e.g., `TNA`).
+- Punctuation-only / symbol tokens can appear in the suggestions strip (e.g., a raw `|`).
+- After manually picking a completion/correction, next-word suggestions can disappear in some editors until `SPACE`
+  (fixed in `SelectionExpectationTracker` by expecting multiple selection updates per edit; see `NextWordFixing.md`).
+
+#### 5.7.1) Goal
+
+- For common prefixes (`tha`, `th`, `wh`, `you`, …), the top row should be:
+  - dominated by plausible dictionary completions/corrections, and
+  - free of “nonsense” tokens (symbols, unrelated acronyms, web fragments) in normal text fields.
+
+#### 5.7.2) P0 — Add observability (so we can stop guessing)
+
+1. Add **source attribution** for each surfaced typed-suggestion candidate:
+   - typed word / abbreviation / auto-text / main dictionary / user dictionary / contacts / context profile /
+     next-word injection.
+2. Add debug-only per-candidate metadata in logs (or a debug report):
+   - `candidate`, `source`, `frequency`, `isFixCandidate`, `typedPrefix`.
+3. Create a “typed suggestions” **UIAutomator report harness**:
+   - given a corpus of prefixes, type them into a plain text field and snapshot the top N suggestions per keystroke,
+   - export `report.json` and a very simple HTML view (like the next-word suite),
+   - run in Genymotion + Device Farm to compare behaviors across devices/editors.
+
+✅ Implemented (Genymotion runner + HTML viewer):
+
+- Instrumentation test: `ime/app/src/androidTest/java/wtf/uhoh/newsoftkeyboard/app/dictionaries/typed/TypedSuggestionsReportUiAutomatorTest.java`
+- Viewer template: `docs/typed-suggestions-test-suite/index.html`
+- Genymotion runner (renders + uploads via `wtf-upload`): `scripts/genymotion_typed_suggestions_report.sh`
+- To filter to a single case: `ONLY_CASE_ID=plain-tha scripts/genymotion_typed_suggestions_report.sh`
+
+#### 5.7.3) P1 — Candidate sanitation (must not show in normal text fields)
+
+Implement/extend conservative filters in `SuggestImpl.getSuggestions(...)`:
+
+- Drop **punctuation-only** candidates (unless the user is typing punctuation).
+- Drop unrelated **ALL‑CAPS acronyms** when the user is typing lowercase (implemented; extend if needed).
+- Drop domain/web fragments (`com/http/www`) unless the context or field is URL-like (align with next-word filters).
+- Drop “token noise” candidates that include control/sentinel patterns (e.g., model artifacts like `<|...|>`) or
+  mixed symbol/letter tails (e.g., `Thai|`).
+
+#### 5.7.4) P2 — Source-aware ranking rules (make the strip feel “normal”)
+
+Without adding new dependencies:
+
+- Contacts suggestions:
+  - De-prioritize unless prefix length >= 3 and the user typed an initial capital (name-ish), or the candidate exists
+    in the main dictionary.
+- Abbreviation / auto-text:
+  - Ensure they only outrank dictionary completions when they are strong prefix matches (avoid “random” expansions).
+- Correction aggression:
+  - Reduce cases where a “near-key” correction beats clean completions for 3+ letter prefixes (e.g., `tha` → `tna`)
+    by tightening distance thresholds or adding a post-filter using edit-distance/keyboard adjacency heuristics.
+- Next-word injection containment:
+  - Prefer **promoting** candidates already present in typed suggestions, rather than inserting novel candidates into the
+    completion strip for short prefixes.
+
+#### 5.7.5) P3 — Acceptance checks (editor + UX)
+
+- Golden-prefix checks (English):
+  - `tha` should surface `that/than/thank/thanks`-like completions and never show symbols/acronyms.
+  - 2+ letter prefixes should not feel “random” due to context injection.
+- App/field checks:
+  - plain text, URL bar, email, password-like field, `NO_SUGGESTIONS`, `NO_PERSONALIZED_LEARNING`.
+- Manual-pick chaining:
+  - picking `thank` should (when auto-space is enabled) insert a space and show next-word suggestions immediately.
 
 ## 0) Current shipped context
 

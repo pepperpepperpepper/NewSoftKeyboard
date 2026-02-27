@@ -13,6 +13,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import wtf.uhoh.newsoftkeyboard.app.dictionaries.Suggest;
 import wtf.uhoh.newsoftkeyboard.app.dictionaries.SuggestImpl;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.nextword.prediction.NextWordContextTokenizer;
 
 /** Tiny API to help instrumentation seed IME context (enabled for release tests). */
@@ -168,6 +169,47 @@ public final class ImeTestApi {
     if (suggest == null) return;
     suggest.clearLearningData();
     svc.performUpdateSuggestions();
+  }
+
+  /** Immediately performs a typed-suggestions refresh (bypasses the normal debounce delay). */
+  public static void performUpdateSuggestionsNowForTest() {
+    final ImeSuggestionsController svc = sService.get();
+    if (svc == null) return;
+    svc.performUpdateSuggestions();
+  }
+
+  /** Resets the composing state and clears the suggestion strip (best-effort). */
+  public static void abortCorrectionAndResetPredictionStateForTest() {
+    final ImeSuggestionsController svc = sService.get();
+    if (svc == null) return;
+    svc.abortCorrectionAndResetPredictionState(false);
+  }
+
+  /** Simulates typing a single codepoint through the IME's normal character pipeline. */
+  public static boolean typeCodePointForTest(int codePoint) {
+    final ImeSuggestionsController svc = sService.get();
+    if (svc == null) return false;
+    final int[] nearByKeyCodes = new int[] {codePoint};
+    // For report harnesses we only simulate the "primary" character (no nearby key codes).
+    svc.handleCharacter(
+        /* primaryCode= */ codePoint,
+        /* key= */ (Keyboard.Key) null,
+        /* multiTapIndex= */ 0,
+        /* nearByKeyCodes= */ nearByKeyCodes);
+    return true;
+  }
+
+  /** Simulates typing text through the IME's normal character pipeline. */
+  public static boolean typeTextForTest(@NonNull String text) {
+    if (TextUtils.isEmpty(text)) return false;
+    boolean ok = true;
+    int index = 0;
+    while (index < text.length()) {
+      final int codePoint = Character.codePointAt(text, index);
+      ok &= typeCodePointForTest(codePoint);
+      index += Character.charCount(codePoint);
+    }
+    return ok;
   }
 
   /** Closes dictionaries to flush on-disk state (for persistence tests). */

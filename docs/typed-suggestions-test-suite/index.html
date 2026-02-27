@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NSK Typed Suggestions — Report</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --text: #111827;
+        --muted: #4b5563;
+        --border: #e5e7eb;
+        --panel: #f9fafb;
+        --panel-2: #ffffff;
+        --code: #f3f4f6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.5 system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial;
+      }
+
+      main {
+        max-width: 980px;
+        margin: 24px auto 64px;
+        padding: 0 16px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 10px 0;
+        color: var(--muted);
+      }
+
+      code,
+      pre {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--panel);
+        padding: 12px;
+        margin-top: 12px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+
+      td.k {
+        width: 220px;
+        color: var(--muted);
+      }
+
+      .case {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        background: var(--panel-2);
+        margin-top: 12px;
+      }
+
+      .caseHead {
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+
+      .caseTitle {
+        font-weight: 800;
+      }
+
+      .caseId {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .pill {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .typed {
+        font-weight: 750;
+      }
+
+      .suggestions {
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: var(--code);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 8px;
+      }
+
+      details {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>NSK Typed Suggestions — Report</h1>
+      <p>This page is intentionally simple: it renders the captured suggestions data.</p>
+
+      <section class="card">
+        <div style="font-weight: 800">Meta</div>
+        <table>
+          <tbody id="meta"></tbody>
+        </table>
+      </section>
+
+      <section class="card" id="casesCard" hidden>
+        <div style="font-weight: 800">Cases</div>
+        <div id="cases"></div>
+      </section>
+
+      <section class="card" id="rawCard" hidden>
+        <div style="font-weight: 800">Raw JSON</div>
+        <details>
+          <summary>Show</summary>
+          <pre id="raw"></pre>
+        </details>
+      </section>
+    </main>
+
+    <script id="autoResultsJson" type="application/json">
+      __AUTO_RESULTS_JSON__
+    </script>
+
+    <script>
+      function readEmbeddedJson() {
+        const el = document.getElementById('autoResultsJson');
+        if (!el) return null;
+        const raw = (el.textContent || '').trim();
+        if (!raw || raw === '__AUTO_RESULTS_JSON__') return null;
+        try {
+          return JSON.parse(raw);
+        } catch (e) {
+          console.warn('Failed parsing embedded JSON:', e);
+          return null;
+        }
+      }
+
+      function el(tag, attrs = {}, children = []) {
+        const node = document.createElement(tag);
+        for (const [k, v] of Object.entries(attrs)) {
+          if (k === 'class') node.className = v;
+          else if (k === 'text') node.textContent = v;
+          else if (k === 'html') node.innerHTML = v;
+          else node.setAttribute(k, v);
+        }
+        for (const c of children) node.appendChild(c);
+        return node;
+      }
+
+      function renderMeta(data) {
+        const meta = data?.meta || {};
+        const out = document.getElementById('meta');
+        out.textContent = '';
+
+        const pairs = [
+          ['Schema', data.schemaVersion != null ? String(data.schemaVersion) : '—'],
+          ['Exported (UTC)', data.exportedAtUtc || ''],
+          ['Device', meta.device || `${meta.device_manufacturer || ''} ${meta.device_model || ''}`.trim()],
+          [
+            'Android',
+            meta.android || (meta.android_release ? `${meta.android_release} (SDK ${meta.android_sdk})` : ''),
+          ],
+          ['NSK build', meta.app_version_name || ''],
+          ['Language', meta.lang || ''],
+        ];
+
+        for (const [k, v] of pairs) {
+          const row = el('tr', {}, [el('td', { class: 'k', text: k }), el('td', { text: v || '—' })]);
+          out.appendChild(row);
+        }
+      }
+
+      function joinSuggestions(arr) {
+        if (!Array.isArray(arr) || arr.length === 0) return '';
+        return arr
+          .map((s) => String(s ?? ''))
+          .filter(Boolean)
+          .join(' | ');
+      }
+
+      function renderCases(data) {
+        const cases = Array.isArray(data?.cases) ? data.cases : [];
+        const root = document.getElementById('cases');
+        root.textContent = '';
+
+        if (cases.length === 0) {
+          root.appendChild(el('p', { text: 'No cases found in report.' }));
+          return;
+        }
+
+        for (const c of cases) {
+          const head = el('div', { class: 'caseHead' }, [
+            el('div', {}, [
+              el('div', { class: 'caseTitle', text: c.title || c.id || 'Case' }),
+              el('div', { class: 'caseId', text: c.id || '' }),
+            ]),
+            el(
+              'div',
+              {},
+              [
+                c.noPersonalizedLearning ? el('span', { class: 'pill', text: 'NO_PERSONALIZED_LEARNING' }) : null,
+                c.noSuggestionsFlag ? el('span', { class: 'pill', text: 'NO_SUGGESTIONS' }) : null,
+              ].filter(Boolean),
+            ),
+          ]);
+
+          const infoRows = [];
+          if (c.preseedCommittedText) {
+            infoRows.push(el('div', { class: 'pill', text: `preseed: ${JSON.stringify(c.preseedCommittedText)}` }));
+          }
+          if (c.editorInputTypeOverride != null) {
+            infoRows.push(el('div', { class: 'pill', text: `inputType: ${c.editorInputTypeOverride}` }));
+          }
+          if (c.typeText) {
+            infoRows.push(el('div', { class: 'pill', text: `typeText: ${JSON.stringify(c.typeText)}` }));
+          }
+
+          const table = el('table', {}, [
+            el('thead', {}, [
+              el('tr', {}, [
+                el('th', { text: 'Typed' }),
+                el('th', { text: 'Suggestions (top)' }),
+                el('th', { text: 'Editor' }),
+              ]),
+            ]),
+            el('tbody', {}, []),
+          ]);
+
+          const tbody = table.querySelector('tbody');
+          const steps = Array.isArray(c.steps) ? c.steps : [];
+          for (const s of steps) {
+            const row = el('tr', {}, [
+              el('td', { class: 'typed', text: s.typed || '' }),
+              el('td', {}, [el('div', { class: 'suggestions', text: joinSuggestions(s.suggestions) })]),
+              el('td', { text: s.editorText || '' }),
+            ]);
+            tbody.appendChild(row);
+          }
+
+          const caseNode = el(
+            'div',
+            { class: 'case' },
+            [
+              head,
+              el('div', { style: 'margin-top: 8px; display:flex; flex-wrap:wrap; gap:8px;' }, infoRows),
+              table,
+              c.error ? el('p', { html: `<strong>Error:</strong> ${String(c.error)}` }) : null,
+            ].filter(Boolean),
+          );
+
+          root.appendChild(caseNode);
+        }
+      }
+
+      function boot() {
+        const data = readEmbeddedJson();
+        if (!data) {
+          document.getElementById('meta').textContent = '';
+          document.getElementById('meta').appendChild(
+            el('tr', {}, [
+              el('td', { class: 'k', text: 'Error' }),
+              el('td', {
+                text: 'Missing embedded JSON. This template expects __AUTO_RESULTS_JSON__ to be replaced.',
+              }),
+            ]),
+          );
+          return;
+        }
+
+        renderMeta(data);
+        renderCases(data);
+
+        document.getElementById('casesCard').hidden = false;
+        document.getElementById('rawCard').hidden = false;
+        document.getElementById('raw').textContent = JSON.stringify(data, null, 2);
+      }
+
+      boot();
+    </script>
+  </body>
+</html>
