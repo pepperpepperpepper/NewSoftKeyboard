@@ -630,25 +630,26 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar
 
     final InputConnectionRouter inputConnectionRouter =
         getImeSessionState().getInputConnectionRouter();
-    inputConnectionRouter.beginBatchEdit();
-    boolean handledByOverlay = emojiSearchController.handleOverlayKey(primaryCode, key);
-    if (!handledByOverlay) {
-      super.onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
-      if (primaryCode > 0) {
-        nonFunctionKeyHandler.handle(
-            this,
-            primaryCode,
-            key,
-            multiTapIndex,
-            nearByKeyCodes,
-            this::sendDownUpKeyEvents,
-            () -> sendKeyChar((char) 27));
-      } else {
-        if (BuildConfig.DEBUG) Logger.d(TAG, "onFunctionKey %d", primaryCode);
-        functionKeyHandler.handle(primaryCode, key, fromUI);
+    try (final InputConnectionRouter.BatchEditScope batchEdit = inputConnectionRouter.batchEdit()) {
+      batchEdit.noop();
+      boolean handledByOverlay = emojiSearchController.handleOverlayKey(primaryCode, key);
+      if (!handledByOverlay) {
+        super.onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
+        if (primaryCode > 0) {
+          nonFunctionKeyHandler.handle(
+              this,
+              primaryCode,
+              key,
+              multiTapIndex,
+              nearByKeyCodes,
+              this::sendDownUpKeyEvents,
+              () -> sendKeyChar((char) 27));
+        } else {
+          if (BuildConfig.DEBUG) Logger.d(TAG, "onFunctionKey %d", primaryCode);
+          functionKeyHandler.handle(primaryCode, key, fromUI);
+        }
       }
     }
-    inputConnectionRouter.endBatchEdit();
   }
 
   @Override

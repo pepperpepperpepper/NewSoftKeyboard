@@ -34,7 +34,9 @@ public final class InputConnectionRouter {
     if (ic == null) {
       return BatchEditScope.NO_OP;
     }
-    ic.beginBatchEdit();
+    if (!ic.beginBatchEdit()) {
+      return BatchEditScope.NO_OP;
+    }
     return new BatchEditScope(ic);
   }
 
@@ -54,6 +56,12 @@ public final class InputConnectionRouter {
   public void resetComposingTextSupport() {
     composingTextSupported = true;
     composingTextValidated = false;
+  }
+
+  public void requestComposingTextRevalidation() {
+    if (composingTextSupported) {
+      composingTextValidated = false;
+    }
   }
 
   public boolean sendKeyEvent(@NonNull KeyEvent event) {

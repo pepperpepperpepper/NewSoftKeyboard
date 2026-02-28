@@ -758,6 +758,7 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
         suggestionsSessionState.predictionState.showSuggestions,
         suggestionsSessionState.autoCorrectState.justAutoAddedWord,
         typedWord.isAtTagsSearchState());
+    getImeSessionState().getInputConnectionRouter().requestComposingTextRevalidation();
   }
 
   /**

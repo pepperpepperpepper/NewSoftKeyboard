@@ -67,9 +67,8 @@ public final class SuggestionPicker {
       boolean isTagsSearchState) {
 
     final InputConnectionRouter inputConnectionRouter = host.inputConnectionRouter();
-    inputConnectionRouter.beginBatchEdit();
-
-    try {
+    try (final InputConnectionRouter.BatchEditScope batchEdit = inputConnectionRouter.batchEdit()) {
+      batchEdit.noop();
       if (tryCommitCompletion(index, inputConnectionRouter, host.getCandidateView())) {
         return;
       }
@@ -117,8 +116,6 @@ public final class SuggestionPicker {
                 suggestion,
                 typedWord);
       }
-    } finally {
-      inputConnectionRouter.endBatchEdit();
     }
   }
 

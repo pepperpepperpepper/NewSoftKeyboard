@@ -14,6 +14,7 @@ import android.view.KeyEvent;
 import android.view.inputmethod.InputConnection;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
@@ -163,6 +164,32 @@ public class SuggestionPickerTest {
 
     verify(inputConnection).commitText(eq(" "), eq(1));
     verify(inputConnection, times(0)).sendKeyEvent(any());
+  }
+
+  @Test
+  public void batchEditEndsOnSameInputConnectionEvenIfCurrentConnectionChanges() {
+    final InputConnection inputConnection = mock(InputConnection.class);
+    when(inputConnection.beginBatchEdit()).thenReturn(true);
+    when(inputConnection.endBatchEdit()).thenReturn(true);
+
+    final AtomicInteger calls = new AtomicInteger();
+    final InputConnectionRouter router =
+        new InputConnectionRouter(() -> (calls.getAndIncrement() == 0) ? inputConnection : null);
+
+    final FakeHost host = new FakeHost(router);
+    final SuggestionPicker picker = new SuggestionPicker(host);
+
+    picker.pickSuggestionManually(
+        new WordComposer() /* typedWord */,
+        false /* autoSpaceEnabled */,
+        0 /* index */,
+        "me" /* suggestion */,
+        true /* showSuggestions */,
+        false /* justAutoAddedWord */,
+        false /* isTagsSearchState */);
+
+    verify(inputConnection).beginBatchEdit();
+    verify(inputConnection).endBatchEdit();
   }
 
   private static final class FakeHost implements SuggestionPicker.Host {
