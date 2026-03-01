@@ -475,8 +475,12 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
   // Make sure to call this BEFORE actually making changes, and not after.
   // the event might arrive immediately as changes occur.
   public void markExpectingSelectionUpdate() {
+    markExpectingSelectionUpdate(1);
+  }
+
+  public void markExpectingSelectionUpdate(int expectedSelectionUpdates) {
     suggestionsSessionState.selectionExpectationTracker.markExpectingUntil(
-        SystemClock.uptimeMillis() + MAX_TIME_TO_EXPECT_SELECTION_UPDATE);
+        SystemClock.uptimeMillis() + MAX_TIME_TO_EXPECT_SELECTION_UPDATE, expectedSelectionUpdates);
   }
 
   public void handleSeparator(int primaryCode) {
@@ -742,7 +746,7 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
     // If we don't mark it as expected, some editors can trigger the "restart word suggestion"
     // flow, which clears the next-word strip (making it look like next-word suggestions only
     // appear after typing the next letter).
-    markExpectingSelectionUpdate();
+    markExpectingSelectionUpdate(3);
     // Cancel any pending "update suggestions" / "restart word" messages that were scheduled while
     // composing. Otherwise, a delayed MSG_UPDATE_SUGGESTIONS can run after the pick, and since the
     // word-composer is now empty it may clobber the next-word strip (observed in some apps).

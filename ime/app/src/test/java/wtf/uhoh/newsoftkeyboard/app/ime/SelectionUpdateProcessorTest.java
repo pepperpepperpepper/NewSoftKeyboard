@@ -57,6 +57,57 @@ public class SelectionUpdateProcessorTest {
     Assert.assertEquals(1, host.unexpectedCursorMoveWhileNotPredictingCalls);
   }
 
+  @Test
+  public void testCursorMoveInsideComposingWordWhileExpectedUpdatesWordCursorAndIsDiscarded() {
+    final SelectionUpdateProcessor processor = new SelectionUpdateProcessor();
+    final FakeHost host = new FakeHost();
+    host.predictionOn = true;
+    host.currentlyPredicting = true;
+    host.wordComposer.simulateTypedWord("test");
+    host.remainingExpectedSelectionUpdates = 1;
+    host.expectingSelectionUpdateBy = SystemClock.uptimeMillis() + 5000;
+
+    processor.onUpdateSelection(
+        /* oldSelStart= */ 14,
+        /* oldSelEnd= */ 14,
+        /* newSelStart= */ 12,
+        /* newSelEnd= */ 12,
+        /* candidatesStart= */ 10,
+        /* candidatesEnd= */ 14,
+        host);
+
+    Assert.assertEquals(2, host.wordComposer.cursorPosition());
+    Assert.assertEquals(1, host.markSelectionUpdateReceivedCalls);
+    Assert.assertEquals(0, host.clearExpectingCalls);
+    Assert.assertEquals(0, host.abortCorrectionCalls);
+    Assert.assertEquals(0, host.postRestartWordSuggestionCalls);
+  }
+
+  @Test
+  public void testCursorMoveOutsideComposingWordWhileExpectedIsHandledAsUnexpected() {
+    final SelectionUpdateProcessor processor = new SelectionUpdateProcessor();
+    final FakeHost host = new FakeHost();
+    host.predictionOn = true;
+    host.currentlyPredicting = true;
+    host.wordComposer.simulateTypedWord("test");
+    host.remainingExpectedSelectionUpdates = 1;
+    host.expectingSelectionUpdateBy = SystemClock.uptimeMillis() + 5000;
+
+    processor.onUpdateSelection(
+        /* oldSelStart= */ 14,
+        /* oldSelEnd= */ 14,
+        /* newSelStart= */ 5,
+        /* newSelEnd= */ 5,
+        /* candidatesStart= */ 10,
+        /* candidatesEnd= */ 14,
+        host);
+
+    Assert.assertEquals(1, host.clearExpectingCalls);
+    Assert.assertEquals(1, host.abortCorrectionCalls);
+    Assert.assertEquals(1, host.postRestartWordSuggestionCalls);
+    Assert.assertEquals(0, host.markSelectionUpdateReceivedCalls);
+  }
+
   private static final class FakeHost implements SelectionUpdateProcessor.Host {
     boolean predictionOn;
     boolean currentlyPredicting;

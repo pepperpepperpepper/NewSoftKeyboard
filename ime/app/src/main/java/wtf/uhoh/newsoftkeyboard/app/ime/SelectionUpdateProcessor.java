@@ -77,19 +77,53 @@ final class SelectionUpdateProcessor {
             && oldCandidateStart == candidatesStart
             && oldCandidateEnd == candidatesEnd;
     final boolean isExpectedEvent = host.isSelectionUpdateDelayed();
+    final boolean cursorMovedUnexpectedly = (oldSelStart != newSelStart || oldSelEnd != newSelEnd);
     if (noChange) {
       Logger.v(host.logTag(), "onUpdateSelection: no-change. Discarding.");
       return;
     }
 
     if (isExpectedEvent) {
-      host.markSelectionUpdateReceived();
-      Logger.v(host.logTag(), "onUpdateSelection: Expected event. Discarding.");
-      return;
-    }
-    host.clearExpectingSelectionUpdate();
+      boolean discardExpectedEvent = true;
+      if (cursorMovedUnexpectedly
+          && host.isPredictionOn()
+          && host.inputConnectionRouter().hasConnection()) {
+        if (newSelStart != newSelEnd) {
+          discardExpectedEvent = false;
+        } else if (host.isCurrentlyPredicting()) {
+          final WordComposer currentWord = host.getCurrentWord();
+          final boolean composingSupported =
+              host.inputConnectionRouter().isComposingTextSupported();
 
-    final boolean cursorMovedUnexpectedly = (oldSelStart != newSelStart || oldSelEnd != newSelEnd);
+          if (composingSupported && oldCandidateStart >= 0 && candidatesStart < 0) {
+            discardExpectedEvent = false;
+          } else if (candidatesStart >= 0 && candidatesEnd >= candidatesStart) {
+            final int newPosition = newSelEnd - candidatesStart;
+            final boolean insideCurrentWord =
+                newSelStart >= candidatesStart
+                    && newSelStart <= candidatesEnd
+                    && newPosition >= 0
+                    && newPosition <= currentWord.charCount();
+            if (insideCurrentWord) {
+              currentWord.setCursorPosition(newPosition);
+            } else {
+              discardExpectedEvent = false;
+            }
+          }
+        }
+      }
+
+      if (discardExpectedEvent) {
+        host.markSelectionUpdateReceived();
+        Logger.v(host.logTag(), "onUpdateSelection: Expected event. Discarding.");
+        return;
+      }
+
+      host.clearExpectingSelectionUpdate();
+    } else {
+      host.clearExpectingSelectionUpdate();
+    }
+
     if (cursorMovedUnexpectedly) {
       host.resetLastSpaceTimeStamp();
       if (host.shouldRevertOnDelete()) {

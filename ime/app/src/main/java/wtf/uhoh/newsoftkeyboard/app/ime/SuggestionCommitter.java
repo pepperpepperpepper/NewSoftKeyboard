@@ -61,7 +61,11 @@ public final class SuggestionCommitter {
       return;
     }
 
-    host.markExpectingSelectionUpdate();
+    // Manual picks may be preceded by a "multi-edit" expectation (word + optional leading/trailing
+    // spaces). Avoid shrinking that expectation budget mid-flow.
+    if (!host.isSelectionUpdateDelayed()) {
+      host.markExpectingSelectionUpdate();
+    }
     if (typedWordInEditor.length() == 0) {
       maybeInsertLeadingSpaceForNextWordPick(inputConnectionRouter);
     }
