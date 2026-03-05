@@ -19,6 +19,11 @@ final class WordRevertHost implements WordRevertHandler.Host {
   }
 
   @Override
+  public void markExpectingSelectionUpdate() {
+    host.markExpectingSelectionUpdate();
+  }
+
+  @Override
   public void sendDownUpKeyEvents(int keyCode) {
     host.sendDownUpKeyEvents(keyCode);
   }
@@ -26,6 +31,11 @@ final class WordRevertHost implements WordRevertHandler.Host {
   @Override
   public void performUpdateSuggestions() {
     host.performUpdateSuggestions();
+  }
+
+  @Override
+  public void clearSpaceTimeTracker() {
+    host.clearSpaceTimeTracker();
   }
 
   @Override

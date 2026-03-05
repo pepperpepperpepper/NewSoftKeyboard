@@ -12,9 +12,13 @@ final class WordRevertHandler {
 
     int getCursorPosition();
 
+    void markExpectingSelectionUpdate();
+
     void sendDownUpKeyEvents(int keyCode);
 
     void performUpdateSuggestions();
+
+    void clearSpaceTimeTracker();
 
     void removeFromUserDictionary(String word);
   }
@@ -41,14 +45,30 @@ final class WordRevertHandler {
     }
 
     final int globalCursorPosition = host.getCursorPosition();
-    inputConnectionRouter.setComposingRegion(globalCursorPosition - length, globalCursorPosition);
+    final int startPosition = Math.max(0, globalCursorPosition - length);
+    final int lengthToDelete = globalCursorPosition - startPosition;
+    host.markExpectingSelectionUpdate();
+
     WordComposer newCurrentWord = previousWord;
     WordComposer newPreviousWord = currentWord;
     autoCorrectState.wordRevertLength = 0;
     final CharSequence typedWord = newCurrentWord.getTypedWord();
-    if (!inputConnectionRouter.setComposingText(typedWord, 1)) {
+    newCurrentWord.setCursorPosition(newCurrentWord.charCount());
+    boolean reverted = false;
+    if (inputConnectionRouter.isComposingTextSupported()) {
+      if (inputConnectionRouter.setComposingRegion(startPosition, globalCursorPosition)) {
+        reverted = inputConnectionRouter.setComposingText(typedWord, 1);
+      }
+    }
+    if (!reverted) {
+      if (lengthToDelete > 0) {
+        inputConnectionRouter.deleteSurroundingText(lengthToDelete, 0);
+      }
       inputConnectionRouter.commitText(typedWord, 1);
     }
+    inputConnectionRouter.setSelection(
+        startPosition + typedWord.length(), startPosition + typedWord.length());
+    host.clearSpaceTimeTracker();
     host.performUpdateSuggestions();
     if (autoCorrectState.justAutoAddedWord) {
       host.removeFromUserDictionary(typedWord.toString());
