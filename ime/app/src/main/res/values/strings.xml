@@ -1033,6 +1033,7 @@
     <string name="settings_clipboard_action_always_visible_summary_off">Show the clipboard icon only for a short time after you copy something.</string>
     <string name="clipboard_privacy_notice_title">Privacy notice</string>
     <string name="clipboard_privacy_notice_summary">Clipboard contents may contain sensitive information. When enabled, New Soft Keyboard listens for clipboard changes to provide paste and clipboard history. Clipboard contents are not sent anywhere.</string>
+    <string name="clipboard_preview_hidden">Clipboard hidden</string>
     <string name="clipboard_history_tip_title">Clipboard history</string>
     <string name="clipboard_history_tip_summary">Long-press the clipboard icon above the keyboard to view and paste recent clipboard entries.</string>
 

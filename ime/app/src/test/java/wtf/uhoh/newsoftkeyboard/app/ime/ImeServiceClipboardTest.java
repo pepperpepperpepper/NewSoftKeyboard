@@ -818,7 +818,10 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
       final TextView clipboardView =
           mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text);
       Assert.assertNotNull("for " + variation, clipboardView);
-      Assert.assertEquals("for " + variation, "**********", clipboardView.getText().toString());
+      Assert.assertEquals(
+          "for " + variation,
+          mImeServiceUnderTest.getString(R.string.clipboard_preview_hidden),
+          clipboardView.getText().toString());
 
       simulateFinishInputFlow();
     }
@@ -842,7 +845,9 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
     final TextView clipboardView =
         mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text);
     Assert.assertNotNull(clipboardView);
-    Assert.assertEquals("**********", clipboardView.getText().toString());
+    Assert.assertEquals(
+        mImeServiceUnderTest.getString(R.string.clipboard_preview_hidden),
+        clipboardView.getText().toString());
 
     simulateFinishInputFlow();
   }

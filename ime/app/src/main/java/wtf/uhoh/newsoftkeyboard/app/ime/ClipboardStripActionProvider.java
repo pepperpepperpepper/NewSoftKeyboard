@@ -100,8 +100,11 @@ class ClipboardStripActionProvider implements KeyboardViewContainerView.StripAct
     clipboardText.setScaleY(1f);
     clipboardText.setAlpha(1f);
     clipboardText.setSelected(true);
-    if (isSecured) clipboardText.setText("**********");
-    else clipboardText.setText(text);
+    if (isSecured) {
+      clipboardText.setText(R.string.clipboard_preview_hidden);
+    } else {
+      clipboardText.setText(text);
+    }
     parentView.requestLayout();
   }
 }
