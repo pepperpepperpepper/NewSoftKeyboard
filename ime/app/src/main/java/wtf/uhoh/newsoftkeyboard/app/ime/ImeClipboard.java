@@ -157,7 +157,11 @@ public abstract class ImeClipboard extends ImeSwipeListener {
     } else {
       mLastSyncedClipboardLabel = clipboardEntry;
       EditorInfo editorInfo = currentInputEditorInfo();
-      mLastSyncedClipboardEntryInSecureInput = isTextPassword(editorInfo);
+      // The IME can receive clipboard-change events even while not actively shown/attached to an
+      // editor. In those cases, currentInputEditorInfo() may be stale (for example, from a prior
+      // password field), so only tag the clipboard entry as "secure-origin" when we have a
+      // reliably visible editor context.
+      mLastSyncedClipboardEntryInSecureInput = isInputViewShown() && isTextPassword(editorInfo);
       mLastSyncedClipboardEntryTime = SystemClock.uptimeMillis();
       // if we already showing the view, we want to update it contents
       if (isInputViewShown()) {
