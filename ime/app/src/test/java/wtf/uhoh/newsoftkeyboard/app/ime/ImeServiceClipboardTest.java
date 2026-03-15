@@ -828,7 +828,7 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
   }
 
   @Test
-  public void testShowStripActionAsPasswordIfClipboardWasOriginatedInPassword() {
+  public void testShowStripActionAsPasswordOnlyWhileInPasswordField() {
     simulateFinishInputFlow();
 
     simulateOnStartInputFlow(
@@ -839,15 +839,20 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
     mClipboardManager.setPrimaryClip(
         new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
 
+    final TextView clipboardViewInPassword =
+        mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text);
+    Assert.assertNotNull(clipboardViewInPassword);
+    Assert.assertEquals(
+        mImeServiceUnderTest.getString(R.string.clipboard_preview_hidden),
+        clipboardViewInPassword.getText().toString());
+
     simulateFinishInputFlow();
     simulateOnStartInputFlow();
 
     final TextView clipboardView =
         mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text);
     Assert.assertNotNull(clipboardView);
-    Assert.assertEquals(
-        mImeServiceUnderTest.getString(R.string.clipboard_preview_hidden),
-        clipboardView.getText().toString());
+    Assert.assertEquals("text 1", clipboardView.getText().toString());
 
     simulateFinishInputFlow();
   }

@@ -54,7 +54,6 @@ public abstract class ImeClipboard extends ImeSwipeListener {
       };
 
   @Nullable private CharSequence mLastSyncedClipboardLabel;
-  private boolean mLastSyncedClipboardEntryInSecureInput;
 
   @VisibleForTesting
   protected interface ClipboardActionOwner
@@ -110,7 +109,6 @@ public abstract class ImeClipboard extends ImeSwipeListener {
                   mOsClipboardSyncEnabled = syncClipboard;
                   mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
                   mLastSyncedClipboardLabel = null;
-                  mLastSyncedClipboardEntryInSecureInput = false;
                   cancelClipboardActionAutoHide();
                   cancelClipboardTextAutoHide();
                   mClipboard.setClipboardUpdatedListener(
@@ -156,16 +154,10 @@ public abstract class ImeClipboard extends ImeSwipeListener {
       updateClipboardActionIconVisibility(currentInputEditorInfo());
     } else {
       mLastSyncedClipboardLabel = clipboardEntry;
-      EditorInfo editorInfo = currentInputEditorInfo();
-      // The IME can receive clipboard-change events even while not actively shown/attached to an
-      // editor. In those cases, currentInputEditorInfo() may be stale (for example, from a prior
-      // password field), so only tag the clipboard entry as "secure-origin" when we have a
-      // reliably visible editor context.
-      mLastSyncedClipboardEntryInSecureInput = isInputViewShown() && isTextPassword(editorInfo);
       mLastSyncedClipboardEntryTime = SystemClock.uptimeMillis();
       // if we already showing the view, we want to update it contents
       if (isInputViewShown()) {
-        updateClipboardActionIconVisibility(editorInfo);
+        updateClipboardActionIconVisibility(currentInputEditorInfo());
       }
       scheduleClipboardTextAutoHide();
       if (!mClipboardActionAlwaysVisible) {
@@ -198,9 +190,7 @@ public abstract class ImeClipboard extends ImeSwipeListener {
     inputViewContainer.setActionsStripVisibility(true);
 
     if (!TextUtils.isEmpty(mLastSyncedClipboardLabel)) {
-      mSuggestionClipboardEntry.setClipboardText(
-          mLastSyncedClipboardLabel,
-          mLastSyncedClipboardEntryInSecureInput || isTextPassword(info));
+      mSuggestionClipboardEntry.setClipboardText(mLastSyncedClipboardLabel, isTextPassword(info));
       if (mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_ENTRY
           <= SystemClock.uptimeMillis()) {
         mSuggestionClipboardEntry.setAsHint(true);
@@ -241,7 +231,6 @@ public abstract class ImeClipboard extends ImeSwipeListener {
         // Default behavior: hide the clipboard action once the user starts typing to avoid clutter.
         mLastSyncedClipboardLabel = null;
         mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
-        mLastSyncedClipboardEntryInSecureInput = false;
         cancelClipboardActionAutoHide();
         cancelClipboardTextAutoHide();
         updateClipboardActionIconVisibility(currentInputEditorInfo());
