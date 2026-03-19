@@ -190,7 +190,8 @@ public abstract class ImeClipboard extends ImeSwipeListener {
     inputViewContainer.setActionsStripVisibility(true);
 
     if (!TextUtils.isEmpty(mLastSyncedClipboardLabel)) {
-      mSuggestionClipboardEntry.setClipboardText(mLastSyncedClipboardLabel, isTextPassword(info));
+      mSuggestionClipboardEntry.setClipboardText(
+          mLastSyncedClipboardLabel, isTextPassword(info) || isNumberPassword(info));
       if (mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_ENTRY
           <= SystemClock.uptimeMillis()) {
         mSuggestionClipboardEntry.setAsHint(true);
@@ -210,14 +211,22 @@ public abstract class ImeClipboard extends ImeSwipeListener {
 
   protected static boolean isTextPassword(@Nullable EditorInfo info) {
     if (info == null) return false;
-    if ((info.inputType & EditorInfo.TYPE_CLASS_TEXT) == 0) return false;
-    return switch (info.inputType & EditorInfo.TYPE_MASK_VARIATION) {
-      case EditorInfo.TYPE_TEXT_VARIATION_PASSWORD,
-          EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD,
-          EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ->
-          true;
-      default -> false;
-    };
+
+    final int inputClass = info.inputType & EditorInfo.TYPE_MASK_CLASS;
+    if (inputClass != 0 && inputClass != EditorInfo.TYPE_CLASS_TEXT) return false;
+
+    final int variation = info.inputType & EditorInfo.TYPE_MASK_VARIATION;
+    return variation == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
+        || variation == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD
+        || variation == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD;
+  }
+
+  protected static boolean isNumberPassword(@Nullable EditorInfo info) {
+    if (info == null) return false;
+    final int inputClass = info.inputType & EditorInfo.TYPE_MASK_CLASS;
+    if (inputClass != EditorInfo.TYPE_CLASS_NUMBER) return false;
+    final int variation = info.inputType & EditorInfo.TYPE_MASK_VARIATION;
+    return variation == EditorInfo.TYPE_NUMBER_VARIATION_PASSWORD;
   }
 
   @Override

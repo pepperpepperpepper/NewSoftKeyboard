@@ -1,7 +1,5 @@
 package wtf.uhoh.newsoftkeyboard.app.ime;
 
-import static wtf.uhoh.newsoftkeyboard.app.ime.ImeIncognito.isNumberPassword;
-
 import android.content.Context;
 import android.media.AudioManager;
 import android.os.Build;

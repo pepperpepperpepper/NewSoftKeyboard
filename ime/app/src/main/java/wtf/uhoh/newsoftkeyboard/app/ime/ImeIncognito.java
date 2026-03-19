@@ -7,9 +7,6 @@ public abstract class ImeIncognito extends ImeWithGestureTyping {
 
   private boolean mUserEnabledIncognito = false;
 
-  private static final int NUMBER_INCOGNITO_TYPE =
-      EditorInfo.TYPE_CLASS_NUMBER | EditorInfo.TYPE_NUMBER_VARIATION_PASSWORD;
-
   @Override
   public void onStartInputView(EditorInfo info, boolean restarting) {
     super.onStartInputView(info, restarting);
@@ -20,10 +17,6 @@ public abstract class ImeIncognito extends ImeWithGestureTyping {
     } else {
       setIncognito(mUserEnabledIncognito, false);
     }
-  }
-
-  protected static boolean isNumberPassword(EditorInfo info) {
-    return (info.inputType & NUMBER_INCOGNITO_TYPE) == NUMBER_INCOGNITO_TYPE;
   }
 
   private static boolean isNoPersonalizedLearning(EditorInfo info) {

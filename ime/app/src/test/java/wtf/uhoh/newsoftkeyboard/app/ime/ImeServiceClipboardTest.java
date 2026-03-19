@@ -828,6 +828,28 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
   }
 
   @Test
+  public void testShowStripActionAsPasswordIfClipboardIsNotEmptyInNumberPasswordField() {
+    simulateFinishInputFlow();
+    mClipboardManager.setPrimaryClip(
+        new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
+
+    simulateOnStartInputFlow(
+        false,
+        createEditorInfo(
+            EditorInfo.IME_ACTION_NONE,
+            InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD));
+
+    final TextView clipboardView =
+        mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text);
+    Assert.assertNotNull(clipboardView);
+    Assert.assertEquals(
+        mImeServiceUnderTest.getString(R.string.clipboard_preview_hidden),
+        clipboardView.getText().toString());
+
+    simulateFinishInputFlow();
+  }
+
+  @Test
   public void testShowStripActionAsPasswordOnlyWhileInPasswordField() {
     simulateFinishInputFlow();
 
