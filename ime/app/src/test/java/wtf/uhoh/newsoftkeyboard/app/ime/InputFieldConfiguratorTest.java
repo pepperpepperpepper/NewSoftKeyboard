@@ -30,6 +30,25 @@ public class InputFieldConfiguratorTest {
   }
 
   @Test
+  public void inputTypeNull_connectBotDisablesPredictionsToAvoidComposingOnlyOutput() {
+    final EditorInfo editorInfo = new EditorInfo();
+    editorInfo.packageName = "org.connectbot";
+    editorInfo.inputType = 0;
+
+    final KeyboardSwitcher keyboardSwitcher = Mockito.mock(KeyboardSwitcher.class);
+
+    final InputFieldConfigurator.Result result =
+        new InputFieldConfigurator()
+            .configure(editorInfo, false, keyboardSwitcher, true, true, "test");
+
+    Assert.assertFalse(result.predictionOn);
+    Assert.assertFalse(result.autoSpace);
+    Assert.assertFalse(result.inputFieldSupportsAutoPick);
+    Mockito.verify(keyboardSwitcher)
+        .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_TEXT, editorInfo, false);
+  }
+
+  @Test
   public void typeNullMaskWithNoSuggestionsFlag_respected_disablesPredictionsAndAutoSpace() {
     final EditorInfo editorInfo = new EditorInfo();
     editorInfo.inputType = EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS;

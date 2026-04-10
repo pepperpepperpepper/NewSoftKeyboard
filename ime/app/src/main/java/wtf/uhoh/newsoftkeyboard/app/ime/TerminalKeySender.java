@@ -10,6 +10,7 @@ public final class TerminalKeySender {
 
   public static boolean isTerminalEmulation(@Nullable EditorInfo editorInfo) {
     if (editorInfo == null) return false;
+    if (editorInfo.packageName == null) return false;
 
     switch (editorInfo.packageName) {
       case "org.connectbot":

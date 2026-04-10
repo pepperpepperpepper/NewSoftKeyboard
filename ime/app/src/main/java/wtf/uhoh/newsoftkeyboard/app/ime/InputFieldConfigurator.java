@@ -42,6 +42,11 @@ final class InputFieldConfigurator {
       r.inputFieldSupportsAutoPick = false;
       r.autoSpace = false;
 
+      if (TerminalKeySender.isTerminalEmulation(attribute)) {
+        Logger.d(logTag, "Terminal emulation detected; disabling predictions.");
+        r.predictionOn = false;
+      }
+
       // Some apps may omit TYPE_CLASS_TEXT but still set a password variation. In this case, be
       // conservative and disable predictions.
       final int textVariation = attribute.inputType & EditorInfo.TYPE_MASK_VARIATION;
