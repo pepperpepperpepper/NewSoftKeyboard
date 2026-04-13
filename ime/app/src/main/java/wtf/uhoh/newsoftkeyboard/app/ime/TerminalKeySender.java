@@ -12,12 +12,13 @@ public final class TerminalKeySender {
     if (editorInfo == null) return false;
     if (editorInfo.packageName == null) return false;
 
+    final int inputClass = editorInfo.inputType & EditorInfo.TYPE_MASK_CLASS;
     switch (editorInfo.packageName) {
       case "org.connectbot":
       case "org.woltage.irssiconnectbot":
       case "com.pslib.connectbot":
       case "com.sonelli.juicessh":
-        return editorInfo.inputType == 0;
+        return inputClass == 0;
       default:
         return false;
     }
