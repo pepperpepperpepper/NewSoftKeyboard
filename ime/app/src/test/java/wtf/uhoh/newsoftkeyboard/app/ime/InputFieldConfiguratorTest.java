@@ -22,7 +22,7 @@ public class InputFieldConfiguratorTest {
         new InputFieldConfigurator()
             .configure(editorInfo, false, keyboardSwitcher, true, true, "test");
 
-    Assert.assertTrue(result.predictionOn);
+    Assert.assertFalse(result.predictionOn);
     Assert.assertFalse(result.autoSpace);
     Assert.assertFalse(result.inputFieldSupportsAutoPick);
     Mockito.verify(keyboardSwitcher)
@@ -86,7 +86,7 @@ public class InputFieldConfiguratorTest {
   }
 
   @Test
-  public void typeNullMaskWithNoSuggestionsFlag_ignored_keepsPredictionsButDisablesAutoSpace() {
+  public void typeNullMaskWithNoSuggestionsFlag_ignored_disablesPredictionsAnyway() {
     final EditorInfo editorInfo = new EditorInfo();
     editorInfo.inputType = EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
 
@@ -96,7 +96,7 @@ public class InputFieldConfiguratorTest {
         new InputFieldConfigurator()
             .configure(editorInfo, false, keyboardSwitcher, true, false, "test");
 
-    Assert.assertTrue(result.predictionOn);
+    Assert.assertFalse(result.predictionOn);
     Assert.assertFalse(result.autoSpace);
     Assert.assertFalse(result.inputFieldSupportsAutoPick);
     Mockito.verify(keyboardSwitcher)

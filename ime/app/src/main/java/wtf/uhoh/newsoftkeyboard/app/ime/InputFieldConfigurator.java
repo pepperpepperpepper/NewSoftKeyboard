@@ -37,14 +37,15 @@ final class InputFieldConfigurator {
       Logger.d(logTag, "Input requested TYPE_NULL (inputType=0x%08X).", attribute.inputType);
       Logger.d(
           logTag,
-          "Treating TYPE_NULL as text, but disabling auto-space and auto-pick for compatibility.");
+          "Treating TYPE_NULL as text, but disabling predictions, auto-space and auto-pick for"
+              + " compatibility.");
       keyboardSwitcher.setKeyboardMode(KeyboardSwitcher.INPUT_MODE_TEXT, attribute, restarting);
+      r.predictionOn = false;
       r.inputFieldSupportsAutoPick = false;
       r.autoSpace = false;
 
       if (TerminalKeySender.isTerminalEmulation(attribute)) {
-        Logger.d(logTag, "Terminal emulation detected; disabling predictions.");
-        r.predictionOn = false;
+        Logger.d(logTag, "Terminal emulation detected.");
       }
 
       // Some apps may omit TYPE_CLASS_TEXT but still set a password variation. In this case, be
@@ -53,8 +54,7 @@ final class InputFieldConfigurator {
       if (textVariation == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD
           || textVariation == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
           || textVariation == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD) {
-        Logger.d(logTag, "TYPE_NULL input requested password variation; disabling predictions.");
-        r.predictionOn = false;
+        Logger.d(logTag, "TYPE_NULL input requested password variation.");
       }
     } else {
       switch (inputClass) {
