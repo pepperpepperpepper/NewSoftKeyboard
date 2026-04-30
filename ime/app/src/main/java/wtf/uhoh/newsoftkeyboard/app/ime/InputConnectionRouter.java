@@ -64,6 +64,19 @@ public final class InputConnectionRouter {
     }
   }
 
+  /**
+   * Pin composing-text as unsupported for the current session.
+   *
+   * <p>Used for editors (e.g. terminal emulators like ConnectBot) that accept {@code
+   * setComposingText(...)} and even echo it back via {@code getTextBeforeCursor(...)} but do not
+   * actually render the composing region — so the readback validator cannot detect them. Callers
+   * who know up-front the editor cannot render composing should call this on session start.
+   */
+  public void forceComposingUnsupported() {
+    composingTextSupported = false;
+    composingTextValidated = true;
+  }
+
   public boolean sendKeyEvent(@NonNull KeyEvent event) {
     InputConnection ic = current();
     return ic != null && ic.sendKeyEvent(event);
@@ -88,6 +101,11 @@ public final class InputConnectionRouter {
   }
 
   public boolean finishComposingText() {
+    // Skip when composing is unsupported — some terminal editors commit the composing region as
+    // text on finishComposingText, which would duplicate already-committed characters.
+    if (!composingTextSupported) {
+      return false;
+    }
     InputConnection ic = current();
     return ic != null && ic.finishComposingText();
   }
@@ -153,6 +171,12 @@ public final class InputConnectionRouter {
   }
 
   public boolean setComposingRegion(int start, int end) {
+    // Skip when composing is unsupported (e.g. terminal-mode pin via forceComposingUnsupported).
+    // Some terminal editors (ConnectBot) re-emit the region's text as keystrokes when an IPC marks
+    // a composing region, which would duplicate already-committed characters.
+    if (!composingTextSupported) {
+      return false;
+    }
     InputConnection ic = current();
     return ic != null && ic.setComposingRegion(start, end);
   }

@@ -49,6 +49,7 @@ build upstream AnySoftKeyboard as a dependency.
 - Unit tests (app JVM): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :ime:app:testNskDebugUnitTest -x lint`
 - Unit tests (tokenizer/neural): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :engine-neural:test`
 - Release (unsigned if keystore envs missing): `GRADLE_USER_HOME=/mnt/finished/.gradle ./gradlew :ime:app:assembleNskRelease -x lint`
+- Signed release (no publish): `scripts/build_signed_release.sh` — sources `fdroid/.env`, fails fast if signing creds are missing, prints APK path. Add `--install` to push to default adb device.
 
 Signing (when available):
 

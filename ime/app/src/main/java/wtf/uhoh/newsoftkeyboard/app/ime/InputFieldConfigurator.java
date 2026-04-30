@@ -42,10 +42,8 @@ final class InputFieldConfigurator {
       r.inputFieldSupportsAutoPick = false;
       r.autoSpace = false;
 
-      if (TerminalKeySender.isTerminalEmulation(attribute)) {
-        Logger.d(logTag, "Terminal emulation detected; disabling predictions.");
-        r.predictionOn = false;
-      }
+      // Terminal-emulator overrides (autoSpace/autoPick off) are applied at the bottom of this
+      // method so they cover both inputClass==0 and inputClass==TYPE_CLASS_TEXT cases.
 
       // Some apps may omit TYPE_CLASS_TEXT but still set a password variation. In this case, be
       // conservative and disable predictions.
@@ -191,6 +189,18 @@ final class InputFieldConfigurator {
         Logger.d(logTag, "Ignoring NO_SUGGESTIONS: keeping predictions, disabling auto-pick.");
         r.inputFieldSupportsAutoPick = false;
       }
+    }
+
+    if (TerminalKeySender.isTerminalEmulation(attribute)) {
+      // Final pass: terminal apps must never auto-correct or auto-space commands, regardless of
+      // what inputClass the editor advertises. Composing-text output is forced off separately by
+      // the caller via InputConnectionRouter#forceComposingUnsupported.
+      Logger.d(
+          logTag,
+          "Terminal emulation (%s): forcing autoSpace=false, supportsAutoPick=false.",
+          attribute.packageName);
+      r.autoSpace = false;
+      r.inputFieldSupportsAutoPick = false;
     }
 
     Logger.d(

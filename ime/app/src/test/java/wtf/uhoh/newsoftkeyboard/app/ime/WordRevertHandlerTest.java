@@ -84,6 +84,39 @@ public class WordRevertHandlerTest {
   }
 
   @Test
+  public void revertLastWord_terminalMode_clearsRevertAndSendsKeyDelOnly() {
+    final InputConnection inputConnection = Mockito.mock(InputConnection.class);
+    final InputConnectionRouter router = new InputConnectionRouter(() -> inputConnection);
+    router.forceComposingUnsupported();
+
+    final AutoCorrectState autoCorrectState = new AutoCorrectState();
+    autoCorrectState.wordRevertLength = 3; // "ab" + space
+    final PredictionState predictionState = new PredictionState();
+    predictionState.autoCorrectOn = false;
+
+    final WordComposer currentWord = new WordComposer();
+    final WordComposer previousWord = new WordComposer();
+    previousWord.simulateTypedWord("ab");
+
+    final FakeHost host = new FakeHost(router, /* cursorPosition= */ 3);
+    final WordRevertHandler handler = new WordRevertHandler();
+
+    final WordRevertHandler.Result result =
+        handler.revertLastWord(autoCorrectState, predictionState, currentWord, previousWord, host);
+
+    Assert.assertEquals(0, autoCorrectState.wordRevertLength);
+    Assert.assertEquals(1, host.deleteKeyEventsSent);
+    Assert.assertSame(currentWord, result.currentWord());
+    Assert.assertSame(previousWord, result.previousWord());
+    Mockito.verify(inputConnection, Mockito.never())
+        .deleteSurroundingText(Mockito.anyInt(), Mockito.anyInt());
+    Mockito.verify(inputConnection, Mockito.never())
+        .commitText(Mockito.any(), Mockito.anyInt());
+    Mockito.verify(inputConnection, Mockito.never())
+        .setComposingRegion(Mockito.anyInt(), Mockito.anyInt());
+  }
+
+  @Test
   public void revertLastWord_withoutComposing_deletesAndCommitsTypedWord() {
     final InputConnection inputConnection = Mockito.mock(InputConnection.class);
     Mockito.when(inputConnection.setComposingRegion(Mockito.anyInt(), Mockito.anyInt()))

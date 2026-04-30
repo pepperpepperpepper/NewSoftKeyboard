@@ -104,6 +104,50 @@ public class CharacterInputHandlerTest {
     Assert.assertFalse(router.isComposingTextSupported());
   }
 
+  @Test
+  public void terminalMode_predictionOn_neverCallsSetComposingText() {
+    final InputConnection inputConnection = Mockito.mock(InputConnection.class);
+    final InputConnectionRouter router = new InputConnectionRouter(() -> inputConnection);
+    router.forceComposingUnsupported();
+
+    final FakeHost host = new FakeHost(router);
+    host.predictionOn = true;
+
+    new CharacterInputHandler()
+        .handleCharacter(
+            (int) 'o', Mockito.mock(Keyboard.Key.class), 0, new int[] {'o'}, "test", host);
+
+    Assert.assertEquals("o", host.committedText.toString());
+    Assert.assertEquals("o", host.word().getTypedWord().toString());
+    Mockito.verify(inputConnection, Mockito.never())
+        .setComposingText(Mockito.any(), Mockito.anyInt());
+  }
+
+  @Test
+  public void terminalMode_predictionOn_keepsTrackingTypedWordForSuggestions() {
+    final InputConnection inputConnection = Mockito.mock(InputConnection.class);
+    final InputConnectionRouter router = new InputConnectionRouter(() -> inputConnection);
+    router.forceComposingUnsupported();
+
+    final FakeHost host = new FakeHost(router);
+    host.predictionOn = true;
+
+    final CharacterInputHandler handler = new CharacterInputHandler();
+    handler.handleCharacter(
+        (int) 't', Mockito.mock(Keyboard.Key.class), 0, new int[] {'t'}, "test", host);
+    handler.handleCharacter(
+        (int) 'e', Mockito.mock(Keyboard.Key.class), 0, new int[] {'e'}, "test", host);
+    handler.handleCharacter(
+        (int) 's', Mockito.mock(Keyboard.Key.class), 0, new int[] {'s'}, "test", host);
+    handler.handleCharacter(
+        (int) 't', Mockito.mock(Keyboard.Key.class), 0, new int[] {'t'}, "test", host);
+
+    Assert.assertEquals("test", host.committedText.toString());
+    Assert.assertEquals("test", host.word().getTypedWord().toString());
+    Mockito.verify(inputConnection, Mockito.never())
+        .setComposingText(Mockito.any(), Mockito.anyInt());
+  }
+
   private static final class FakeHost implements CharacterInputHandler.Host {
     private final WordComposer wordComposer = new WordComposer();
     private final AutoCorrectState autoCorrectState = new AutoCorrectState();

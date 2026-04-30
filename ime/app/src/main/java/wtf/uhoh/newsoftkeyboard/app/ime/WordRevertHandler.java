@@ -44,6 +44,16 @@ final class WordRevertHandler {
       return new Result(currentWord, previousWord);
     }
 
+    if (!inputConnectionRouter.isComposingTextSupported()) {
+      // Terminal mode (or any editor without composing): the revert round-trip
+      // (deleteSurroundingText + commitText) duplicates already-committed characters in editors
+      // that don't honour deleteSurroundingText (e.g. ConnectBot). Treat backspace as a plain
+      // KEYCODE_DEL and clear the revert state so it doesn't fire again.
+      autoCorrectState.wordRevertLength = 0;
+      host.sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
+      return new Result(currentWord, previousWord);
+    }
+
     final int globalCursorPosition = host.getCursorPosition();
     final int startPosition = Math.max(0, globalCursorPosition - length);
     final int lengthToDelete = globalCursorPosition - startPosition;

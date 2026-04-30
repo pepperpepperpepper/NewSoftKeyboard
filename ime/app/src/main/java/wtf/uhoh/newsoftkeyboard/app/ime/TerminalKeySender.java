@@ -12,13 +12,15 @@ public final class TerminalKeySender {
     if (editorInfo == null) return false;
     if (editorInfo.packageName == null) return false;
 
-    final int inputClass = editorInfo.inputType & EditorInfo.TYPE_MASK_CLASS;
+    // Match by package alone — these apps are unambiguously terminal emulators regardless of the
+    // inputClass they advertise. Some versions report TYPE_CLASS_TEXT | TYPE_TEXT_FLAG_NO_SUGGESTIONS
+    // (or other masks) for visibility hints, which the older inputClass==0 check missed.
     switch (editorInfo.packageName) {
       case "org.connectbot":
       case "org.woltage.irssiconnectbot":
       case "com.pslib.connectbot":
       case "com.sonelli.juicessh":
-        return inputClass == 0;
+        return true;
       default:
         return false;
     }

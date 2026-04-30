@@ -30,7 +30,7 @@ public class InputFieldConfiguratorTest {
   }
 
   @Test
-  public void inputTypeNull_connectBotDisablesPredictionsToAvoidComposingOnlyOutput() {
+  public void inputTypeNull_connectBot_keepsPredictionsButDisablesAutoSpaceAndAutoPick() {
     final EditorInfo editorInfo = new EditorInfo();
     editorInfo.packageName = "org.connectbot";
     editorInfo.inputType = 0;
@@ -41,7 +41,7 @@ public class InputFieldConfiguratorTest {
         new InputFieldConfigurator()
             .configure(editorInfo, false, keyboardSwitcher, true, true, "test");
 
-    Assert.assertFalse(result.predictionOn);
+    Assert.assertTrue(result.predictionOn);
     Assert.assertFalse(result.autoSpace);
     Assert.assertFalse(result.inputFieldSupportsAutoPick);
     Mockito.verify(keyboardSwitcher)
@@ -49,7 +49,7 @@ public class InputFieldConfiguratorTest {
   }
 
   @Test
-  public void typeNullMask_connectBotDisablesPredictionsEvenIfNoSuggestionsFlagIsIgnored() {
+  public void typeNullMask_connectBot_keepsPredictionsEvenWhenNoSuggestionsFlagIgnored() {
     final EditorInfo editorInfo = new EditorInfo();
     editorInfo.packageName = "org.connectbot";
     editorInfo.inputType = EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
@@ -60,11 +60,45 @@ public class InputFieldConfiguratorTest {
         new InputFieldConfigurator()
             .configure(editorInfo, false, keyboardSwitcher, true, false, "test");
 
-    Assert.assertFalse(result.predictionOn);
+    Assert.assertTrue(result.predictionOn);
     Assert.assertFalse(result.autoSpace);
     Assert.assertFalse(result.inputFieldSupportsAutoPick);
     Mockito.verify(keyboardSwitcher)
         .setKeyboardMode(KeyboardSwitcher.INPUT_MODE_TEXT, editorInfo, false);
+  }
+
+  @Test
+  public void typeClassText_connectBot_disablesAutoPickAndAutoSpace() {
+    final EditorInfo editorInfo = new EditorInfo();
+    editorInfo.packageName = "org.connectbot";
+    editorInfo.inputType = EditorInfo.TYPE_CLASS_TEXT | EditorInfo.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
+
+    final KeyboardSwitcher keyboardSwitcher = Mockito.mock(KeyboardSwitcher.class);
+
+    final InputFieldConfigurator.Result result =
+        new InputFieldConfigurator()
+            .configure(editorInfo, false, keyboardSwitcher, true, false, "test");
+
+    Assert.assertTrue(result.predictionOn);
+    Assert.assertFalse(result.autoSpace);
+    Assert.assertFalse(result.inputFieldSupportsAutoPick);
+  }
+
+  @Test
+  public void typeClassText_connectBot_disablesAutoPickEvenWithoutNoSuggestionsFlag() {
+    final EditorInfo editorInfo = new EditorInfo();
+    editorInfo.packageName = "org.connectbot";
+    editorInfo.inputType = EditorInfo.TYPE_CLASS_TEXT;
+
+    final KeyboardSwitcher keyboardSwitcher = Mockito.mock(KeyboardSwitcher.class);
+
+    final InputFieldConfigurator.Result result =
+        new InputFieldConfigurator()
+            .configure(editorInfo, false, keyboardSwitcher, true, false, "test");
+
+    Assert.assertTrue(result.predictionOn);
+    Assert.assertFalse(result.autoSpace);
+    Assert.assertFalse(result.inputFieldSupportsAutoPick);
   }
 
   @Test

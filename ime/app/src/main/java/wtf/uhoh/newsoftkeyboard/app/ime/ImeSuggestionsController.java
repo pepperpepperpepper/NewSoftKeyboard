@@ -239,6 +239,18 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
             respectNoSuggestionsFlag,
             TAG);
 
+    if (TerminalKeySender.isTerminalEmulation(attribute)) {
+      // Force no-composing for terminal emulators: they accept setComposingText (and even echo it
+      // via getTextBeforeCursor) but don't render it, so the router's readback validator misses
+      // them. Pinning here ensures every keystroke is committed and reaches the terminal live.
+      Logger.d(
+          TAG,
+          "TerminalMode applied: package=%s inputType=0x%08X — forcing no-composing on router.",
+          attribute.packageName,
+          attribute.inputType);
+      getImeSessionState().getInputConnectionRouter().forceComposingUnsupported();
+    }
+
     if (mSuggest instanceof SuggestImpl) {
       final int inputClass = attribute.inputType & EditorInfo.TYPE_MASK_CLASS;
       final int variation = attribute.inputType & EditorInfo.TYPE_MASK_VARIATION;
