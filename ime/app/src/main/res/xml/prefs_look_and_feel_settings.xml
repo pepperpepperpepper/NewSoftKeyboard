@@ -323,6 +323,12 @@
             app:slideMaximum="@integer/settings_custom_volume_level_slide_max"
             app:slideMinimum="@integer/settings_custom_volume_level_slide_min" />
 
+        <androidx.preference.Preference
+            android:key="@string/settings_key_custom_keypress_sound_uri"
+            android:persistent="true"
+            android:summary="@string/custom_keypress_sound_summary_default"
+            android:title="@string/custom_keypress_sound_title" />
+
         <androidx.preference.ListPreference
             android:defaultValue="@string/settings_default_tweak_animations_level"
             android:dialogTitle="@string/tweak_animations_level_title"

@@ -323,6 +323,48 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
   }
 
   @Test
+  public void testCustomKeypressSoundOverridesSystemEffect() {
+    final ShadowNskAudioManager shadowAudioManager =
+        (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
+    final AtomicInteger fallbackCalls = new AtomicInteger(0);
+    ImePressEffects.sFallbackKeyClickPerformer =
+        v -> {
+          fallbackCalls.incrementAndGet();
+          return true;
+        };
+    try {
+      // System sound effects are ENABLED — playSoundEffect would normally fire — but the user has
+      // chosen a custom sound, so we should bypass the system path entirely.
+      Settings.System.putInt(
+          ApplicationProvider.getApplicationContext().getContentResolver(),
+          Settings.System.SOUND_EFFECTS_ENABLED,
+          1);
+      Shadows.shadowOf(ApplicationProvider.getApplicationContext().getContentResolver())
+          .getContentObservers(Settings.System.getUriFor(Settings.System.SOUND_EFFECTS_ENABLED))
+          .forEach(o -> o.onChange(false));
+      SharedPrefsHelper.setPrefsValue(R.string.settings_key_sound_on, true);
+      // Robolectric's SoundPool can't open content:// URIs, so we push the "loaded" custom-sound
+      // state directly via a test seam. The fallback-perform override above fires for any non-zero
+      // soundId regardless of whether the underlying SoundPool ever loaded the file.
+      mImeServiceUnderTest.setCustomKeypressSoundForTest(/* soundId= */ 7, /* loaded= */ true);
+      TestRxSchedulers.drainAllTasksUntilEnd();
+      shadowAudioManager.getLastPlaySoundEffectType(); // consume any demo
+      fallbackCalls.set(0);
+
+      mImeServiceUnderTest.onPress(KeyCodes.SPACE);
+      Assert.assertEquals(
+          "playSoundEffect should be skipped when a custom sound is set.",
+          Integer.MIN_VALUE,
+          shadowAudioManager.getLastPlaySoundEffectType());
+      Assert.assertEquals(
+          "Custom sound should fire via SoundPool fallback path.", 1, fallbackCalls.get());
+    } finally {
+      ImePressEffects.sFallbackKeyClickPerformer = null;
+      mImeServiceUnderTest.setCustomKeypressSoundForTest(0, false);
+    }
+  }
+
+  @Test
   public void testFallsBackToSoundPoolWhenSystemTouchSoundsDisabled() {
     final ShadowNskAudioManager shadowAudioManager =
         (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());

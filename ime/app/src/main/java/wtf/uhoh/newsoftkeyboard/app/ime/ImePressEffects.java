@@ -1,9 +1,11 @@
 package wtf.uhoh.newsoftkeyboard.app.ime;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.SoundPool;
+import android.net.Uri;
 import android.os.Build;
 import android.os.SystemClock;
 import android.os.Vibrator;
@@ -57,6 +59,9 @@ public abstract class ImePressEffects extends ImeClipboard {
   @Nullable private SoundPool mSoundPool;
   private int mClickSoundId = 0;
   private boolean mClickSoundLoaded = false;
+  private int mCustomKeypressSoundId = 0;
+  private boolean mCustomKeypressSoundLoaded = false;
+  @NonNull private String mLoadedCustomKeypressSoundUri = "";
   private boolean mSystemSoundEffectsEnabled = true;
   private float mCustomSoundVolume = SILENT;
   // Demo-storm guards: rx subscriptions emit their initial value on subscribe, which would
@@ -221,6 +226,19 @@ public abstract class ImePressEffects extends ImeClipboard {
                   mSoundStateError = t.getClass().getSimpleName() + ": " + t.getMessage();
                   Logger.w(TAG, t, "Failed to read custom volume prefs");
                 }));
+
+    // Observe the user's custom key-press sound URI. When set, route every key-press through
+    // SoundPool with the chosen file (regardless of the system Touch sounds toggle).
+    addDisposable(
+        prefs()
+            .getString(
+                R.string.settings_key_custom_keypress_sound_uri,
+                R.string.settings_default_empty)
+            .asObservable()
+            .observeOn(RxSchedulers.mainThread())
+            .subscribe(
+                uri -> onCustomKeypressSoundUriChanged(uri == null ? "" : uri),
+                t -> Logger.w(TAG, t, "Failed to read custom key-press sound URI pref")));
 
     // Observe the system "Touch sounds" toggle. AudioManager.playSoundEffect() silently no-ops
     // when this is off, so we track it and fall back to our own SoundPool-based click in that
@@ -644,10 +662,16 @@ public abstract class ImePressEffects extends ImeClipboard {
     if (mCustomSoundVolume == SILENT) {
       return;
     }
+    // User-picked sound takes priority on every key press. It uses our SoundPool, so it works
+    // regardless of the system Touch sounds toggle.
+    if (mCustomKeypressSoundId != 0
+        && playFallbackKeyClick(mCustomKeypressSoundId, mCustomKeypressSoundLoaded)) {
+      return;
+    }
     // AudioManager.playSoundEffect is gated by Settings.System.SOUND_EFFECTS_ENABLED.
-    // When the user has system "Touch sounds" off, route through our SoundPool fallback so
+    // When the user has system "Touch sounds" off, route through our default-click SoundPool so
     // enabling "Sound on key-press" in our settings still produces audible clicks.
-    if (!mSystemSoundEffectsEnabled && playFallbackKeyClick()) {
+    if (!mSystemSoundEffectsEnabled && playFallbackKeyClick(mClickSoundId, mClickSoundLoaded)) {
       return;
     }
     final int keyFX;
@@ -694,8 +718,11 @@ public abstract class ImePressEffects extends ImeClipboard {
           new SoundPool.Builder().setMaxStreams(4).setAudioAttributes(attrs).build();
       mSoundPool.setOnLoadCompleteListener(
           (pool, sampleId, status) -> {
-            if (sampleId == mClickSoundId && status == 0) {
-              mClickSoundLoaded = true;
+            if (sampleId == mClickSoundId) {
+              mClickSoundLoaded = status == 0;
+            }
+            if (sampleId == mCustomKeypressSoundId && mCustomKeypressSoundId != 0) {
+              mCustomKeypressSoundLoaded = status == 0;
             }
           });
       mClickSoundId = mSoundPool.load(this, R.raw.key_click, 1);
@@ -707,7 +734,41 @@ public abstract class ImePressEffects extends ImeClipboard {
     }
   }
 
-  private boolean playFallbackKeyClick() {
+  private void onCustomKeypressSoundUriChanged(@NonNull String uriString) {
+    if (uriString.equals(mLoadedCustomKeypressSoundUri)) return;
+    final SoundPool pool = mSoundPool;
+    if (pool != null && mCustomKeypressSoundId != 0) {
+      try {
+        pool.unload(mCustomKeypressSoundId);
+      } catch (Throwable ignored) {
+        // SoundPool may have been released; nothing to do.
+      }
+    }
+    mCustomKeypressSoundId = 0;
+    mCustomKeypressSoundLoaded = false;
+    mLoadedCustomKeypressSoundUri = uriString;
+    if (uriString.isEmpty() || pool == null) return;
+    AssetFileDescriptor afd = null;
+    try {
+      afd = getContentResolver().openAssetFileDescriptor(Uri.parse(uriString), "r");
+      if (afd == null) return;
+      mCustomKeypressSoundId = pool.load(afd, 1);
+    } catch (Throwable t) {
+      Logger.w(TAG, t, "Failed to load custom key-press sound from URI: %s", uriString);
+      mCustomKeypressSoundId = 0;
+      mCustomKeypressSoundLoaded = false;
+    } finally {
+      if (afd != null) {
+        try {
+          afd.close();
+        } catch (Throwable ignored) {
+          // best effort
+        }
+      }
+    }
+  }
+
+  private boolean playFallbackKeyClick(int soundId, boolean isLoaded) {
     final float vol;
     if (mCustomSoundVolume == SYSTEM_VOLUME) {
       // Match what playSoundEffect would have used: stream-system relative volume.
@@ -722,10 +783,10 @@ public abstract class ImePressEffects extends ImeClipboard {
       return override.perform(vol);
     }
     final SoundPool pool = mSoundPool;
-    if (pool == null || mClickSoundId == 0 || !mClickSoundLoaded) {
+    if (pool == null || soundId == 0 || !isLoaded) {
       return false;
     }
-    return pool.play(mClickSoundId, vol, vol, 1, 0, 1f) != 0;
+    return pool.play(soundId, vol, vol, 1, 0, 1f) != 0;
   }
 
   private void performKeyVibration(int primaryCode, boolean longPress) {
@@ -986,6 +1047,12 @@ public abstract class ImePressEffects extends ImeClipboard {
     return mUseSystemHapticFeedback;
   }
 
+  @VisibleForTesting
+  public void setCustomKeypressSoundForTest(int soundId, boolean loaded) {
+    mCustomKeypressSoundId = soundId;
+    mCustomKeypressSoundLoaded = loaded;
+  }
+
   @Override
   public void onPress(int primaryCode) {
     super.onPress(primaryCode);
@@ -1013,6 +1080,9 @@ public abstract class ImePressEffects extends ImeClipboard {
       mSoundPool = null;
       mClickSoundId = 0;
       mClickSoundLoaded = false;
+      mCustomKeypressSoundId = 0;
+      mCustomKeypressSoundLoaded = false;
+      mLoadedCustomKeypressSoundUri = "";
     }
   }
 
@@ -1043,6 +1113,8 @@ public abstract class ImePressEffects extends ImeClipboard {
     writer.println("  customSoundVolumeLevelPref=" + mLastCustomSoundVolumeLevelPref);
     writer.println("  systemSoundEffectsEnabled=" + mSystemSoundEffectsEnabled);
     writer.println("  fallbackKeyClickLoaded=" + mClickSoundLoaded);
+    writer.println("  customKeypressSoundUri=" + mLoadedCustomKeypressSoundUri);
+    writer.println("  customKeypressSoundLoaded=" + mCustomKeypressSoundLoaded);
     writer.println("  vibrationPowerSavingState=" + mLastVibrationPowerSavingState);
     writer.println("  vibrationDurationPref=" + mLastVibrationDurationPref);
     writer.println("  longPressPowerSavingState=" + mLastLongPressPowerSavingState);
