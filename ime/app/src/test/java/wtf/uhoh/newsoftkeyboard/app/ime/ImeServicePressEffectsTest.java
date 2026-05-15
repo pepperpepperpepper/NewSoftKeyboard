@@ -307,6 +307,76 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
   }
 
   @Test
+  public void testFallsBackToSoundPoolWhenSystemTouchSoundsDisabled() {
+    final ShadowNskAudioManager shadowAudioManager =
+        (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
+    final java.util.concurrent.atomic.AtomicReference<Float> fallbackVol =
+        new java.util.concurrent.atomic.AtomicReference<>(null);
+    final AtomicInteger fallbackCalls = new AtomicInteger(0);
+    ImePressEffects.sFallbackKeyClickPerformer =
+        v -> {
+          fallbackCalls.incrementAndGet();
+          fallbackVol.set(v);
+          return true;
+        };
+    try {
+      Settings.System.putInt(
+          ApplicationProvider.getApplicationContext().getContentResolver(),
+          Settings.System.SOUND_EFFECTS_ENABLED,
+          0);
+      Shadows.shadowOf(ApplicationProvider.getApplicationContext().getContentResolver())
+          .getContentObservers(Settings.System.getUriFor(Settings.System.SOUND_EFFECTS_ENABLED))
+          .forEach(o -> o.onChange(false));
+      TestRxSchedulers.drainAllTasksUntilEnd();
+      SharedPrefsHelper.setPrefsValue(R.string.settings_key_sound_on, true);
+      shadowAudioManager.getLastPlaySoundEffectType(); // consume the demo
+      fallbackCalls.set(0);
+
+      mImeServiceUnderTest.onPress('a');
+      Assert.assertEquals(
+          "playSoundEffect should be skipped when system Touch sounds are off.",
+          Integer.MIN_VALUE,
+          shadowAudioManager.getLastPlaySoundEffectType());
+      Assert.assertEquals(
+          "Fallback SoundPool path should fire instead.", 1, fallbackCalls.get());
+    } finally {
+      ImePressEffects.sFallbackKeyClickPerformer = null;
+    }
+  }
+
+  @Test
+  public void testUsesPlaySoundEffectWhenSystemTouchSoundsEnabled() {
+    final ShadowNskAudioManager shadowAudioManager =
+        (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
+    final AtomicInteger fallbackCalls = new AtomicInteger(0);
+    ImePressEffects.sFallbackKeyClickPerformer =
+        v -> {
+          fallbackCalls.incrementAndGet();
+          return true;
+        };
+    try {
+      Settings.System.putInt(
+          ApplicationProvider.getApplicationContext().getContentResolver(),
+          Settings.System.SOUND_EFFECTS_ENABLED,
+          1);
+      Shadows.shadowOf(ApplicationProvider.getApplicationContext().getContentResolver())
+          .getContentObservers(Settings.System.getUriFor(Settings.System.SOUND_EFFECTS_ENABLED))
+          .forEach(o -> o.onChange(false));
+      TestRxSchedulers.drainAllTasksUntilEnd();
+      SharedPrefsHelper.setPrefsValue(R.string.settings_key_sound_on, true);
+      shadowAudioManager.getLastPlaySoundEffectType(); // consume the demo
+      fallbackCalls.set(0);
+
+      mImeServiceUnderTest.onPress(KeyCodes.SPACE);
+      Assert.assertEquals(
+          AudioManager.FX_KEYPRESS_SPACEBAR, shadowAudioManager.getLastPlaySoundEffectType());
+      Assert.assertEquals("Fallback should not fire when system path works.", 0, fallbackCalls.get());
+    } finally {
+      ImePressEffects.sFallbackKeyClickPerformer = null;
+    }
+  }
+
+  @Test
   public void testDoNotPlaysSoundWhenNightTime() {
     SharedPrefsHelper.setPrefsValue(R.string.settings_key_night_mode, "follow_system");
     SharedPrefsHelper.setPrefsValue(R.string.settings_key_night_mode_sound_control, true);

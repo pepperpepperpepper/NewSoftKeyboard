@@ -1,7 +1,9 @@
 package wtf.uhoh.newsoftkeyboard.app.ime;
 
 import android.content.Context;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
+import android.media.SoundPool;
 import android.os.Build;
 import android.os.SystemClock;
 import android.os.Vibrator;
@@ -52,6 +54,10 @@ public abstract class ImePressEffects extends ImeClipboard {
   private final PublishSubject<Boolean> mKeyPreviewForPasswordSubject = PublishSubject.create();
 
   private AudioManager mAudioManager;
+  @Nullable private SoundPool mSoundPool;
+  private int mClickSoundId = 0;
+  private boolean mClickSoundLoaded = false;
+  private boolean mSystemSoundEffectsEnabled = true;
   private float mCustomSoundVolume = SILENT;
   private PressVibrator mVibrator;
   private boolean mUseSystemHapticFeedback = false;
@@ -88,6 +94,13 @@ public abstract class ImePressEffects extends ImeClipboard {
   }
 
   @VisibleForTesting static volatile HapticFeedbackPerformer sHapticFeedbackPerformer;
+
+  @VisibleForTesting
+  interface FallbackKeyClickPerformer {
+    boolean perform(float volume);
+  }
+
+  @VisibleForTesting static volatile FallbackKeyClickPerformer sFallbackKeyClickPerformer;
 
   private static final class SystemVibrationSettings {
     final boolean mUseSystemVibration;
@@ -128,6 +141,7 @@ public abstract class ImePressEffects extends ImeClipboard {
     super.onCreate();
 
     mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+    initFallbackKeyClickPlayer();
     final Vibrator systemVibrator;
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
       final VibratorManager vibratorManager =
@@ -197,6 +211,31 @@ public abstract class ImePressEffects extends ImeClipboard {
                   mSoundStateError = t.getClass().getSimpleName() + ": " + t.getMessage();
                   Logger.w(TAG, t, "Failed to read custom volume prefs");
                 }));
+
+    // Observe the system "Touch sounds" toggle. AudioManager.playSoundEffect() silently no-ops
+    // when this is off, so we track it and fall back to our own SoundPool-based click in that
+    // case (otherwise the user enables "Sound on key-press" in our settings and hears nothing).
+    addDisposable(
+        RxContentResolver.observeQuery(
+                getContentResolver(),
+                Settings.System.getUriFor(Settings.System.SOUND_EFFECTS_ENABLED),
+                null,
+                null,
+                null,
+                null,
+                true,
+                RxSchedulers.mainThread())
+            .subscribeOn(RxSchedulers.background())
+            .observeOn(RxSchedulers.mainThread())
+            .map(
+                query ->
+                    Settings.System.getInt(
+                            getContentResolver(), Settings.System.SOUND_EFFECTS_ENABLED, 1)
+                        == 1)
+            .onErrorReturnItem(true)
+            .subscribe(
+                enabled -> mSystemSoundEffectsEnabled = enabled,
+                t -> Logger.w(TAG, t, "Failed to read system sound-effects toggle.")));
 
     addDisposable(
         Observable.combineLatest(
@@ -584,39 +623,91 @@ public abstract class ImePressEffects extends ImeClipboard {
   }
 
   private void performKeySound(int primaryCode) {
-    if (mCustomSoundVolume != SILENT) {
-      final int keyFX;
-      switch (primaryCode) {
-        case 13:
-        case KeyCodes.ENTER:
-          keyFX = AudioManager.FX_KEYPRESS_RETURN;
-          break;
-        case KeyCodes.DELETE:
-          keyFX = AudioManager.FX_KEYPRESS_DELETE;
-          break;
-        case KeyCodes.SPACE:
-          keyFX = AudioManager.FX_KEYPRESS_SPACEBAR;
-          break;
-        case KeyCodes.SHIFT:
-        case KeyCodes.SHIFT_LOCK:
-        case KeyCodes.CTRL:
-        case KeyCodes.CTRL_LOCK:
-        case KeyCodes.MODE_ALPHABET:
-        case KeyCodes.MODE_SYMBOLS:
-        case KeyCodes.KEYBOARD_MODE_CHANGE:
-        case KeyCodes.KEYBOARD_CYCLE_INSIDE_MODE:
-        case KeyCodes.ALT:
-          keyFX = AudioManager.FX_KEY_CLICK;
-          break;
-        default:
-          keyFX = AudioManager.FX_KEYPRESS_STANDARD;
-      }
-      if (mCustomSoundVolume == SYSTEM_VOLUME) {
-        mAudioManager.playSoundEffect(keyFX);
-      } else {
-        mAudioManager.playSoundEffect(keyFX, mCustomSoundVolume);
-      }
+    if (mCustomSoundVolume == SILENT) {
+      return;
     }
+    // AudioManager.playSoundEffect is gated by Settings.System.SOUND_EFFECTS_ENABLED.
+    // When the user has system "Touch sounds" off, route through our SoundPool fallback so
+    // enabling "Sound on key-press" in our settings still produces audible clicks.
+    if (!mSystemSoundEffectsEnabled && playFallbackKeyClick()) {
+      return;
+    }
+    final int keyFX;
+    switch (primaryCode) {
+      case 13:
+      case KeyCodes.ENTER:
+        keyFX = AudioManager.FX_KEYPRESS_RETURN;
+        break;
+      case KeyCodes.DELETE:
+        keyFX = AudioManager.FX_KEYPRESS_DELETE;
+        break;
+      case KeyCodes.SPACE:
+        keyFX = AudioManager.FX_KEYPRESS_SPACEBAR;
+        break;
+      case KeyCodes.SHIFT:
+      case KeyCodes.SHIFT_LOCK:
+      case KeyCodes.CTRL:
+      case KeyCodes.CTRL_LOCK:
+      case KeyCodes.MODE_ALPHABET:
+      case KeyCodes.MODE_SYMBOLS:
+      case KeyCodes.KEYBOARD_MODE_CHANGE:
+      case KeyCodes.KEYBOARD_CYCLE_INSIDE_MODE:
+      case KeyCodes.ALT:
+        keyFX = AudioManager.FX_KEY_CLICK;
+        break;
+      default:
+        keyFX = AudioManager.FX_KEYPRESS_STANDARD;
+    }
+    if (mCustomSoundVolume == SYSTEM_VOLUME) {
+      mAudioManager.playSoundEffect(keyFX);
+    } else {
+      mAudioManager.playSoundEffect(keyFX, mCustomSoundVolume);
+    }
+  }
+
+  private void initFallbackKeyClickPlayer() {
+    try {
+      final AudioAttributes attrs =
+          new AudioAttributes.Builder()
+              .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+              .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+              .build();
+      mSoundPool =
+          new SoundPool.Builder().setMaxStreams(4).setAudioAttributes(attrs).build();
+      mSoundPool.setOnLoadCompleteListener(
+          (pool, sampleId, status) -> {
+            if (sampleId == mClickSoundId && status == 0) {
+              mClickSoundLoaded = true;
+            }
+          });
+      mClickSoundId = mSoundPool.load(this, R.raw.key_click, 1);
+    } catch (Throwable t) {
+      Logger.w(TAG, t, "Failed to initialize fallback key-click SoundPool.");
+      mSoundPool = null;
+      mClickSoundId = 0;
+      mClickSoundLoaded = false;
+    }
+  }
+
+  private boolean playFallbackKeyClick() {
+    final float vol;
+    if (mCustomSoundVolume == SYSTEM_VOLUME) {
+      // Match what playSoundEffect would have used: stream-system relative volume.
+      final int max = mAudioManager.getStreamMaxVolume(AudioManager.STREAM_SYSTEM);
+      final int cur = mAudioManager.getStreamVolume(AudioManager.STREAM_SYSTEM);
+      vol = max <= 0 ? 0.5f : Math.max(0f, Math.min(1f, ((float) cur) / max));
+    } else {
+      vol = mCustomSoundVolume;
+    }
+    final FallbackKeyClickPerformer override = sFallbackKeyClickPerformer;
+    if (override != null) {
+      return override.perform(vol);
+    }
+    final SoundPool pool = mSoundPool;
+    if (pool == null || mClickSoundId == 0 || !mClickSoundLoaded) {
+      return false;
+    }
+    return pool.play(mClickSoundId, vol, vol, 1, 0, 1f) != 0;
   }
 
   private void performKeyVibration(int primaryCode, boolean longPress) {
@@ -899,6 +990,12 @@ public abstract class ImePressEffects extends ImeClipboard {
     mKeyPreviewSubject.onComplete();
     mKeyPreviewController.destroy();
     mAudioManager.unloadSoundEffects();
+    if (mSoundPool != null) {
+      mSoundPool.release();
+      mSoundPool = null;
+      mClickSoundId = 0;
+      mClickSoundLoaded = false;
+    }
   }
 
   @Override
@@ -926,6 +1023,8 @@ public abstract class ImePressEffects extends ImeClipboard {
     writer.println("  soundOnPref=" + mLastSoundOnPref);
     writer.println("  useCustomSoundVolumePref=" + mLastUseCustomSoundVolumePref);
     writer.println("  customSoundVolumeLevelPref=" + mLastCustomSoundVolumeLevelPref);
+    writer.println("  systemSoundEffectsEnabled=" + mSystemSoundEffectsEnabled);
+    writer.println("  fallbackKeyClickLoaded=" + mClickSoundLoaded);
     writer.println("  vibrationPowerSavingState=" + mLastVibrationPowerSavingState);
     writer.println("  vibrationDurationPref=" + mLastVibrationDurationPref);
     writer.println("  longPressPowerSavingState=" + mLastLongPressPowerSavingState);
