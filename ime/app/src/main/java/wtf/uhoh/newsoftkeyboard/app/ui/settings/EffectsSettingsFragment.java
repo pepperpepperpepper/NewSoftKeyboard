@@ -24,11 +24,14 @@ import androidx.annotation.Nullable;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.TwoStatePreference;
+import io.reactivex.disposables.CompositeDisposable;
 import net.evendanan.pixel.UiUtils;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 
 public class EffectsSettingsFragment extends PreferenceFragmentCompat {
+
+  private final CompositeDisposable mViewDisposables = new CompositeDisposable();
 
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -96,6 +99,14 @@ public class EffectsSettingsFragment extends PreferenceFragmentCompat {
           }
           return true;
         });
+
+    mViewDisposables.add(VibrationPowerSavingHint.bind(requireContext(), vibrationDuration));
+  }
+
+  @Override
+  public void onDestroyView() {
+    mViewDisposables.clear();
+    super.onDestroyView();
   }
 
   private void applyVibrationDependentState(

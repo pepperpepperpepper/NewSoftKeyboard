@@ -20,6 +20,7 @@ import androidx.navigation.Navigation;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.TwoStatePreference;
+import io.reactivex.disposables.CompositeDisposable;
 import net.evendanan.pixel.UiUtils;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
@@ -40,6 +41,7 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
   @Nullable private Preference applyRemoteAppColorsPref;
   @Nullable private Preference customKeypressSoundPref;
   @Nullable private ActivityResultLauncher<String[]> customSoundPickerLauncher;
+  private final CompositeDisposable mViewDisposables = new CompositeDisposable();
 
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -184,6 +186,14 @@ public class LookAndFeelSettingsFragment extends PreferenceFragmentCompat {
           }
           return true;
         });
+
+    mViewDisposables.add(VibrationPowerSavingHint.bind(requireContext(), vibrationDuration));
+  }
+
+  @Override
+  public void onDestroyView() {
+    mViewDisposables.clear();
+    super.onDestroyView();
   }
 
   private void applyVibrationDependentState(

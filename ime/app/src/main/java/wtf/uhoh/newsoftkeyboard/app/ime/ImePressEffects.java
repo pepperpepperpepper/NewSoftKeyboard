@@ -1112,8 +1112,11 @@ public abstract class ImePressEffects extends ImeClipboard {
     writer.println("  useCustomSoundVolumePref=" + mLastUseCustomSoundVolumePref);
     writer.println("  customSoundVolumeLevelPref=" + mLastCustomSoundVolumeLevelPref);
     writer.println("  systemSoundEffectsEnabled=" + mSystemSoundEffectsEnabled);
+    writer.println("  soundPoolPresent=" + (mSoundPool != null));
+    writer.println("  fallbackKeyClickSoundId=" + mClickSoundId);
     writer.println("  fallbackKeyClickLoaded=" + mClickSoundLoaded);
     writer.println("  customKeypressSoundUri=" + mLoadedCustomKeypressSoundUri);
+    writer.println("  customKeypressSoundId=" + mCustomKeypressSoundId);
     writer.println("  customKeypressSoundLoaded=" + mCustomKeypressSoundLoaded);
     writer.println("  vibrationPowerSavingState=" + mLastVibrationPowerSavingState);
     writer.println("  vibrationDurationPref=" + mLastVibrationDurationPref);
