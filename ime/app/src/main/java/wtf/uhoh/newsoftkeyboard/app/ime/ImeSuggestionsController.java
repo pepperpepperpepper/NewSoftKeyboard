@@ -191,6 +191,16 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
   }
 
   @Override
+  public void onAddOnsCriticalChange() {
+    // Addon swaps (dictionary, layout, theme) invalidate cached next-word predictions.
+    // The subsequent hideWindow→onWindowHidden path intentionally preserves next-word
+    // context for transient lifecycle events (app switch), so we must reset it explicitly
+    // here for the addon-change case.
+    if (mSuggest != null) mSuggest.resetNextWordSentence();
+    super.onAddOnsCriticalChange();
+  }
+
+  @Override
   public void onStartInput(EditorInfo attribute, boolean restarting) {
     super.onStartInput(attribute, restarting);
     // removing close request (if it was asked for a previous onFinishInput).

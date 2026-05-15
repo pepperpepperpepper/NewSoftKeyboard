@@ -35,6 +35,7 @@ import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
 import wtf.uhoh.newsoftkeyboard.app.debug.ImeStateTracker;
 import wtf.uhoh.newsoftkeyboard.app.dictionaries.ExternalDictionaryFactory;
+import wtf.uhoh.newsoftkeyboard.app.dictionaries.Suggest;
 import wtf.uhoh.newsoftkeyboard.app.ime.context.ContextProfilesController;
 import wtf.uhoh.newsoftkeyboard.app.ime.hosts.ImeFunctionKeyHost;
 import wtf.uhoh.newsoftkeyboard.app.ime.hosts.ImeModifierKeyStateHost;
@@ -907,6 +908,9 @@ public abstract class ImeServiceBase extends ImeColorizeNavBar
     if (ExternalDictionaryFactory.isOverrideDictionaryPrefKey(key)) {
       invalidateDictionariesForCurrentKeyboard();
       setDictionariesForCurrentKeyboard();
+      // Cached next-word predictions came from the previous dictionary; clear them.
+      Suggest s = getSuggest();
+      if (s != null) s.resetNextWordSentence();
     } else {
       super.onSharedPreferenceChange(key);
     }

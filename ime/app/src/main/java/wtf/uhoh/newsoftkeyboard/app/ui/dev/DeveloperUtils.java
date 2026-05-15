@@ -36,7 +36,7 @@ public class DeveloperUtils {
   private static final String KEY_SDCARD_TRACING_ENABLED = "KEY_SDCARD_TRACING_ENABLED";
   private static final String NSK_TRACE_FILENAME = "NewSoftKeyboard_tracing.trace";
   private static final String NSK_MEM_DUMP_FILENAME = "newsoftkeyboard_mem_dump.hprof";
-  private static boolean msTracingStarted = false;
+  private static volatile boolean msTracingStarted = false;
 
   public static File createMemoryDump() throws IOException, UnsupportedOperationException {
     File extFolder = Environment.getExternalStorageDirectory();

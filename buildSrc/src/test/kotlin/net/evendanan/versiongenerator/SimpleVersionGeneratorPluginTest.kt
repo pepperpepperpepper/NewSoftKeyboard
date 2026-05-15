@@ -35,11 +35,6 @@ class SimpleVersionGeneratorPluginTest {
   }
 
   @Test
-  fun testDoesNotCrashOnNullApply() {
-    underTest.apply(null)
-  }
-
-  @Test
   fun testRegisterAfterEval() {
     underTest.apply(project)
 

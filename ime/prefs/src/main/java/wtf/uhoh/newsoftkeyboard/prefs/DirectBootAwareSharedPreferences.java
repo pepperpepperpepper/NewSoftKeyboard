@@ -26,7 +26,9 @@ public class DirectBootAwareSharedPreferences implements SharedPreferences {
   @NonNull private final SharedPreferencesFactory mSharedPreferencesFactory;
   @NonNull private final Consumer<SharedPreferences> mOnReadyListener;
 
-  @NonNull private SharedPreferences mActual = new NoOpSharedPreferences();
+  // Volatile: swapped from main thread by obtainSharedPreferences() (re-fired from the
+  // ACTION_USER_UNLOCKED receiver); read from any thread that reaches a getter.
+  @NonNull private volatile SharedPreferences mActual = new NoOpSharedPreferences();
 
   @VisibleForTesting
   DirectBootAwareSharedPreferences(

@@ -18,13 +18,18 @@ package wtf.uhoh.newsoftkeyboard.app.devicespecific;
 
 import android.os.Vibrator;
 import androidx.annotation.VisibleForTesting;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public abstract class PressVibrator {
-  private static boolean mSkip = false;
+  // Active instance, registered in the constructor so static suppress-callers can find it.
+  private static volatile PressVibrator sActive;
+
+  private final AtomicBoolean mSkip = new AtomicBoolean(false);
   protected Vibrator mVibe;
 
   public PressVibrator(Vibrator vibe) {
     this.mVibe = vibe;
+    sActive = this;
   }
 
   public abstract void setDuration(int duration);
@@ -58,13 +63,12 @@ public abstract class PressVibrator {
   }
 
   public static void suppressNextVibration() {
-    mSkip = true;
+    PressVibrator active = sActive;
+    if (active != null) active.mSkip.set(true);
   }
 
-  protected static boolean checkSuppressed() {
-    boolean result = mSkip;
-    mSkip = false;
-    return result;
+  protected boolean checkSuppressed() {
+    return mSkip.getAndSet(false);
   }
 
   @VisibleForTesting
