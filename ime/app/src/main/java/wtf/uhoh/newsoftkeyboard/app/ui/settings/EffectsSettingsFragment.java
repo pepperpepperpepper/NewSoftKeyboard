@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.TwoStatePreference;
 import net.evendanan.pixel.UiUtils;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
@@ -67,33 +68,57 @@ public class EffectsSettingsFragment extends PreferenceFragmentCompat {
         findPreference(getString(R.string.settings_key_vibrate_on_key_press_duration_int));
     final Preference fallbackDuration =
         findPreference(getString(R.string.settings_key_system_vibration_fallback_duration_int));
-    if (fallbackDuration == null) return;
+    final Preference longPress =
+        findPreference(getString(R.string.settings_key_vibrate_on_long_press));
 
-    if (Build.VERSION.SDK_INT < 29 || vibrationDuration == null) {
+    final boolean fallbackBindable =
+        fallbackDuration != null && Build.VERSION.SDK_INT >= 29 && vibrationDuration != null;
+    if (fallbackDuration != null && !fallbackBindable) {
       fallbackDuration.setVisible(false);
       fallbackDuration.setEnabled(false);
       fallbackDuration.setSelectable(false);
-      return;
     }
+    if (vibrationDuration == null) return;
 
+    final Preference fallbackTarget = fallbackBindable ? fallbackDuration : null;
     final int initialDuration =
         NskApplicationBase.prefs(requireContext())
             .getInteger(
                 R.string.settings_key_vibrate_on_key_press_duration_int,
                 R.integer.settings_default_vibrate_on_key_press_duration_int)
             .get();
-    final boolean initialEnabled = initialDuration < 0;
-    fallbackDuration.setVisible(initialEnabled);
-    fallbackDuration.setEnabled(initialEnabled);
-    fallbackDuration.setSelectable(initialEnabled);
+    applyVibrationDependentState(initialDuration, fallbackTarget, longPress);
 
     vibrationDuration.setOnPreferenceChangeListener(
         (preference, newValue) -> {
-          final boolean enabled = (newValue instanceof Integer) && ((Integer) newValue) < 0;
-          fallbackDuration.setVisible(enabled);
-          fallbackDuration.setEnabled(enabled);
-          fallbackDuration.setSelectable(enabled);
+          if (newValue instanceof Integer i) {
+            applyVibrationDependentState(i, fallbackTarget, longPress);
+          }
           return true;
         });
+  }
+
+  private void applyVibrationDependentState(
+      int sliderValue, @Nullable Preference fallbackDuration, @Nullable Preference longPress) {
+    if (fallbackDuration != null) {
+      final boolean systemMode = sliderValue < 0;
+      fallbackDuration.setVisible(systemMode);
+      fallbackDuration.setEnabled(systemMode);
+      fallbackDuration.setSelectable(systemMode);
+    }
+    if (longPress instanceof TwoStatePreference twoState) {
+      // Slider at "Off" makes long-press a no-op (the long-press subscriber follows the slider).
+      // Disable the checkbox so that's discoverable instead of silently ignored.
+      final boolean active = sliderValue != 0;
+      twoState.setEnabled(active);
+      if (active) {
+        twoState.setSummaryOn(getString(R.string.vibrate_on_long_press_summary_on));
+        twoState.setSummaryOff("");
+      } else {
+        final String reason = getString(R.string.vibrate_on_long_press_summary_disabled);
+        twoState.setSummaryOn(reason);
+        twoState.setSummaryOff(reason);
+      }
+    }
   }
 }

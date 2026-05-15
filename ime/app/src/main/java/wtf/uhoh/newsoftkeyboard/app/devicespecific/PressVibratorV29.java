@@ -45,9 +45,15 @@ public class PressVibratorV29 extends PressVibratorV26 {
     mDurationVibration =
         this.mDuration > 0 ? VibrationEffect.createOneShot(this.mDuration, AMPLITUDE) : null;
     if (mSystemVibe) {
-      mVibration =
-          createSystemVibration(
-              PRESS_PREDEFINED_CANDIDATES, mDurationVibration, SYSTEM_PRESS_FALLBACK_DURATION_MS);
+      // 0 is the only "off" signal; negative is the system-mode marker (predefined effect with
+      // the duration one-shot as a fallback when available, otherwise SYSTEM_PRESS_FALLBACK_DURATION_MS).
+      if (this.mDuration == 0) {
+        mVibration = null;
+      } else {
+        mVibration =
+            createSystemVibration(
+                PRESS_PREDEFINED_CANDIDATES, mDurationVibration, SYSTEM_PRESS_FALLBACK_DURATION_MS);
+      }
     } else {
       mVibration = mDurationVibration;
     }
@@ -61,7 +67,10 @@ public class PressVibratorV29 extends PressVibratorV26 {
             ? VibrationEffect.createOneShot(mLongPressDuration, AMPLITUDE)
             : null;
     if (mSystemVibe) {
-      if (mLongPressDuration <= 0) {
+      // Mirror setDuration: 0 is the only "off" signal; negative is the system-mode marker
+      // (the predefined effect is selected, with the duration one-shot as a fallback when
+      // available, otherwise SYSTEM_LONG_PRESS_FALLBACK_DURATION_MS).
+      if (mLongPressDuration == 0) {
         mLongPressVibration = null;
       } else {
         mLongPressVibration =

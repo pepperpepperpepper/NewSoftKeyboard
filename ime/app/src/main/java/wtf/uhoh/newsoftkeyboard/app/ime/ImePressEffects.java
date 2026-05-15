@@ -240,10 +240,16 @@ public abstract class ImePressEffects extends ImeClipboard {
                         R.string.settings_key_vibrate_on_long_press,
                         R.bool.settings_default_vibrate_on_long_press)
                     .asObservable(),
-                (powerState, vibrateOnLongPress) -> {
+                prefs()
+                    .getInteger(
+                        R.string.settings_key_vibrate_on_key_press_duration_int,
+                        R.integer.settings_default_vibrate_on_key_press_duration_int)
+                    .asObservable(),
+                (powerState, vibrateOnLongPress, keyPressDuration) -> {
                   mLastLongPressPowerSavingState = powerState;
                   mLastVibrateOnLongPressPref = vibrateOnLongPress;
-                  return powerState ? 0 : (vibrateOnLongPress ? 7 : 0);
+                  if (powerState || !vibrateOnLongPress) return 0;
+                  return keyPressDuration;
                 })
             .subscribe(
                 value -> {
@@ -704,7 +710,9 @@ public abstract class ImePressEffects extends ImeClipboard {
       return;
     }
 
-    if (systemHapticsMode || mVibratorError) {
+    // After a vibrator exception we fall through to view-haptic; skip that substitution when the
+    // user has set this press type to silent (otherwise "off" leaks back into a view-haptic buzz).
+    if (systemHapticsMode || (mVibratorError && hasConfiguredVibration(longPress))) {
       final boolean didHaptic = performSystemHapticFeedback(longPress, !systemHapticsMode);
       if (didHaptic && !shouldSystemFallbackVibrate) {
         mLastVibrationPath = "legacy_system_haptic_feedback";
@@ -734,6 +742,12 @@ public abstract class ImePressEffects extends ImeClipboard {
       mLastVibrationPath = "legacy_exception_system_haptic_fallback";
       performSystemHapticFeedback(longPress, !systemHapticsMode);
     }
+  }
+
+  private boolean hasConfiguredVibration(boolean longPress) {
+    return longPress
+        ? mConfiguredLongPressVibrationDuration != 0
+        : mConfiguredKeyPressVibrationDuration != 0;
   }
 
   private boolean performSystemHapticFeedback(boolean longPress) {

@@ -68,4 +68,42 @@ public class LookAndFeelSettingsFragmentTest
     assertNotNull(fallbackDurationPref);
     assertFalse(fallbackDurationPref.isVisible());
   }
+
+  @Test
+  public void testLongPressCheckboxDisabledWhenSliderIsOff() {
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, false);
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_key_press_duration_int, 0);
+    final LookAndFeelSettingsFragment fragment = startFragment();
+
+    final Preference longPressPref =
+        fragment.findPreference(
+            getApplicationContext().getString(R.string.settings_key_vibrate_on_long_press));
+    assertNotNull(longPressPref);
+    assertFalse(longPressPref.isEnabled());
+  }
+
+  @Test
+  public void testLongPressCheckboxEnabledWhenSliderHasDuration() {
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, false);
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_key_press_duration_int, 20);
+    final LookAndFeelSettingsFragment fragment = startFragment();
+
+    final Preference longPressPref =
+        fragment.findPreference(
+            getApplicationContext().getString(R.string.settings_key_vibrate_on_long_press));
+    assertNotNull(longPressPref);
+    assertTrue(longPressPref.isEnabled());
+  }
+
+  @Test
+  public void testLongPressCheckboxEnabledInSystemMode() {
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, true);
+    final LookAndFeelSettingsFragment fragment = startFragment();
+
+    final Preference longPressPref =
+        fragment.findPreference(
+            getApplicationContext().getString(R.string.settings_key_vibrate_on_long_press));
+    assertNotNull(longPressPref);
+    assertTrue(longPressPref.isEnabled());
+  }
 }
