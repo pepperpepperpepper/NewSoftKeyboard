@@ -59,6 +59,12 @@ public abstract class ImePressEffects extends ImeClipboard {
   private boolean mClickSoundLoaded = false;
   private boolean mSystemSoundEffectsEnabled = true;
   private float mCustomSoundVolume = SILENT;
+  // Demo-storm guards: rx subscriptions emit their initial value on subscribe, which would
+  // otherwise fire a click + buzz + long-press buzz on every keyboard show. Skip the demo for the
+  // first emission of each subscription; play it for actual user-initiated preference changes.
+  private boolean mSoundInitialEmission = true;
+  private boolean mVibrationInitialEmission = true;
+  private boolean mLongPressInitialEmission = true;
   private PressVibrator mVibrator;
   private boolean mUseSystemHapticFeedback = false;
   private boolean mSystemWideHapticEnabled = true;
@@ -204,8 +210,12 @@ public abstract class ImePressEffects extends ImeClipboard {
                     }
                   }
                   mCustomSoundVolume = customVolume;
-                  // demo
-                  performKeySound(KeyCodes.SPACE);
+                  if (mSoundInitialEmission) {
+                    mSoundInitialEmission = false;
+                  } else {
+                    // demo for user-initiated preference change only.
+                    performKeySound(KeyCodes.SPACE);
+                  }
                 },
                 t -> {
                   mSoundStateError = t.getClass().getSimpleName() + ": " + t.getMessage();
@@ -259,8 +269,12 @@ public abstract class ImePressEffects extends ImeClipboard {
                   mVibratorError = false;
                   mConfiguredKeyPressVibrationDuration = value;
                   mVibrator.setDuration(value);
-                  // demo
-                  performKeyVibration(KeyCodes.SPACE, false);
+                  if (mVibrationInitialEmission) {
+                    mVibrationInitialEmission = false;
+                  } else {
+                    // demo for user-initiated preference change only.
+                    performKeyVibration(KeyCodes.SPACE, false);
+                  }
                 },
                 t -> {
                   mKeyPressVibrationStateError =
@@ -296,8 +310,12 @@ public abstract class ImePressEffects extends ImeClipboard {
                   mVibratorError = false;
                   mConfiguredLongPressVibrationDuration = value;
                   mVibrator.setLongPressDuration(value);
-                  // demo
-                  performKeyVibration(KeyCodes.SPACE, true);
+                  if (mLongPressInitialEmission) {
+                    mLongPressInitialEmission = false;
+                  } else {
+                    // demo for user-initiated preference change only.
+                    performKeyVibration(KeyCodes.SPACE, true);
+                  }
                 },
                 t -> {
                   mLongPressVibrationStateError =

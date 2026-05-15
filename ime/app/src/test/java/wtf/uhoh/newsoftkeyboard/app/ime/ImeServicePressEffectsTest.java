@@ -199,6 +199,22 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
   }
 
   @Test
+  public void testNoDemoStormOnStartup() {
+    // The IME is created by setUp() — the rx subscriptions for sound + vibration + long-press
+    // vibration each emit their initial value, but those should NOT trigger demo feedback
+    // (otherwise every keyboard show fires SPACE click + buzz). Demos must only run on
+    // user-initiated preference changes after onCreate.
+    final ShadowNskAudioManager shadowAudioManager =
+        (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
+    final ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
+    Assert.assertEquals(
+        "No sound demo should fire on startup.",
+        Integer.MIN_VALUE,
+        shadowAudioManager.getLastPlaySoundEffectType());
+    assertNoVibrationInvoked(shadowVibrator);
+  }
+
+  @Test
   public void testPlaysSoundIfEnabled() {
     ShadowNskAudioManager shadowAudioManager =
         (ShadowNskAudioManager) Shadows.shadowOf(mImeServiceUnderTest.getAudioManager());
