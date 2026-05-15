@@ -453,6 +453,30 @@ public class ImeServicePressEffectsTest extends ImeServiceBaseTest {
   }
 
   @Test
+  @Config(sdk = {29})
+  public void testSliderOffSilencesViewHapticsEvenInSystemVibrationMode() {
+    final AtomicInteger hapticCalls = new AtomicInteger(0);
+    ImePressEffects.sHapticFeedbackPerformer =
+        (view, effect, flags) -> {
+          hapticCalls.incrementAndGet();
+          return true;
+        };
+
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_use_system_vibration, true);
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_vibrate_on_key_press_duration_int, 0);
+    TestRxSchedulers.drainAllTasksUntilEnd();
+
+    final ShadowVibrator shadowVibrator = Shadows.shadowOf(mImeServiceUnderTest.getVibrator());
+    resetVibratorState(shadowVibrator);
+    hapticCalls.set(0);
+
+    mImeServiceUnderTest.onPress(KeyCodes.SPACE);
+    Assert.assertEquals(
+        "View haptics should be silent when slider is off.", 0, hapticCalls.get());
+    assertNoVibrationInvoked(shadowVibrator);
+  }
+
+  @Test
   @Config(sdk = {25, 26, 29})
   public void testVibrateWhenEnabled() {
     TestRxSchedulers.foregroundFlushAllJobs();

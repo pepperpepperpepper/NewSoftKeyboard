@@ -625,6 +625,14 @@ public abstract class ImePressEffects extends ImeClipboard {
     mLastVibrationAttemptUptimeMs = SystemClock.uptimeMillis();
     mLastVibrationPath = "start";
 
+    // Slider at "Off" is the master gate. Skip every haptic path — including
+    // View.performHapticFeedback in system-haptics mode — otherwise the user still
+    // feels a buzz when they have explicitly silenced this press type.
+    if (!hasConfiguredVibration(longPress)) {
+      mLastVibrationPath = "off";
+      return;
+    }
+
     final boolean systemHapticsMode = mUseSystemHapticFeedback;
     final boolean systemWideHapticEnabled = mSystemWideHapticEnabled;
     final boolean systemKeyboardVibrationEnabled = mSystemKeyboardVibrationEnabled;
