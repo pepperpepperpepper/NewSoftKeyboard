@@ -1,17 +1,30 @@
 #!/usr/bin/env bash
-# One-stop F-Droid publish script for NewSoftKeyboard.
+# Build + publish a signed APK to the F-Droid repo on S3.
+# Normally invoked by the pre-push git hook (scripts/git-hooks/pre-push) when an
+# "fdroid publish" commit is being pushed to main. Bump and commit happen
+# separately (in the dev's commit before push), so SKIP_BUMP and SKIP_COMMIT
+# both default to 1. Pass SKIP_BUMP=0 / SKIP_COMMIT=0 to opt back in to the
+# legacy "do everything" flow.
+#
 # Flow:
 #  1) source env, guard required vars
 #  2) sync from S3 -> staging (repo/archive)
-#  3) bump version (unless SKIP_BUMP=1)
+#  3) bump version (only if SKIP_BUMP=0)
 #  4) build signed release APK
 #  5) stage APK into repo/, regenerate metadata from inventory
 #  6) fdroid update --create-metadata
 #  7) validate counts/current version
 #  8) backup, sync to S3, invalidate CDN
-#  9) optional git commit (unless SKIP_COMMIT=1)
+#  9) git commit (only if SKIP_COMMIT=0)
 
 set -euo pipefail
+
+# fdroid is installed via pipx at /mnt/extra/pipx/bin, which isn't on the
+# default interactive PATH on this machine. Inject it so the require_cmd check
+# passes when the script runs from a git hook or a stripped-down shell.
+if ! command -v fdroid >/dev/null && [[ -x /mnt/extra/pipx/bin/fdroid ]]; then
+  PATH="/mnt/extra/pipx/bin:$PATH"
+fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 FDROID_DATA="${FDROID_DATA:-/home/arch/fdroid}"
@@ -86,7 +99,7 @@ else:
 open(path,"w").write(text)
 PY
 
-if [[ "${SKIP_BUMP:-0}" != "1" ]]; then
+if [[ "${SKIP_BUMP:-1}" != "1" ]]; then
   log "Bumping versionCode/versionName in ime/app/build.gradle"
   python - <<'PY'
 from pathlib import Path
@@ -190,7 +203,7 @@ aws s3 cp "${FDROID_DATA}/config.yml" "s3://${FDROID_AWS_BUCKET}/config.yml"
 log "Invalidating CloudFront ($AWS_CF_ID)"
 aws cloudfront create-invalidation --distribution-id "$AWS_CF_ID" --paths "/repo/*" "/archive/*" "/metadata/*" "/index.*" "/status/*" "/diff/*" || true
 
-if [[ "${SKIP_COMMIT:-0}" != "1" ]]; then
+if [[ "${SKIP_COMMIT:-1}" != "1" ]]; then
   log "Creating git commit"
   git add fdroid/scripts fdroid/.env.example || true
   git add ime/app/build.gradle

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# pre-push: when an "fdroid publish" commit is being pushed to main, run the
+# real F-Droid publish (build signed APK + upload to S3 + invalidate CDN)
+# before letting the push complete. If the publish fails, the push is aborted
+# so git and S3 stay in sync.
+#
+# Activate by running: scripts/install-git-hooks.sh
+# (sets git config core.hooksPath = scripts/git-hooks)
+
+set -euo pipefail
+
+remote_name="$1"
+remote_url="$2"
+
+repo_root="$(git rev-parse --show-toplevel)"
+publish_script="${repo_root}/fdroid/scripts/publish.sh"
+
+z40="0000000000000000000000000000000000000000"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Skip deletions.
+  if [[ "$local_sha" == "$z40" ]]; then
+    continue
+  fi
+
+  # Only act on pushes to main.
+  if [[ "$remote_ref" != "refs/heads/main" ]]; then
+    continue
+  fi
+
+  if [[ "$remote_sha" == "$z40" ]]; then
+    # New branch on the remote — inspect every commit reachable from local_sha
+    # that isn't already on any other ref, capped to a sane limit.
+    range="$local_sha --not --remotes"
+  else
+    range="${remote_sha}..${local_sha}"
+  fi
+
+  # shellcheck disable=SC2086
+  if ! git log --format="%s" $range 2>/dev/null | grep -qx "fdroid publish"; then
+    continue
+  fi
+
+  echo "== pre-push: detected 'fdroid publish' commit; running F-Droid publish before push."
+
+  if [[ ! -x "$publish_script" ]]; then
+    echo "ERROR: $publish_script not executable" >&2
+    exit 1
+  fi
+
+  if ! "$publish_script"; then
+    echo "ERROR: F-Droid publish failed; aborting push." >&2
+    exit 1
+  fi
+
+  echo "== pre-push: publish succeeded; allowing push."
+done
+
+exit 0
