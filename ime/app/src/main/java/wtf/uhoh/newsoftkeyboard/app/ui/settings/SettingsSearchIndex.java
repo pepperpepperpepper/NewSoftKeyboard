@@ -57,6 +57,11 @@ final class SettingsSearchIndex {
     screens.add(
         new ScreenSpec(
             R.id.lookAndFeelSettingsFragment, R.xml.prefs_look_and_feel_settings, lookCategory));
+    final String effectsPrefix =
+        lookCategory + " → " + context.getString(R.string.effects_group);
+    screens.add(
+        new ScreenSpec(
+            R.id.effectsSettingsFragment, R.xml.prefs_effects_prefs, effectsPrefix));
     screens.add(
         new ScreenSpec(
             R.id.gesturesAndQuickKeysSettingsFragment,

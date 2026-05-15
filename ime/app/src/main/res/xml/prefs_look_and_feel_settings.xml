@@ -270,64 +270,11 @@
             android:summary="@string/pop_text_type_summary"
             android:title="@string/pop_text_type_dialog_title" />
 
-        <net.evendanan.pixel.SlidePreference
-            android:defaultValue="@integer/settings_default_system_vibration_fallback_duration_int"
-            android:key="@string/settings_key_system_vibration_fallback_duration_int"
-            android:persistent="true"
-            android:title="@string/system_vibration_fallback_duration_title"
-            app:slideMaximum="@integer/settings_default_vibrate_on_key_press_duration_max_value"
-            app:slideMinimum="@integer/settings_default_vibrate_on_key_press_duration_min_value"
-            app:valueStringTemplate="@string/vibrate_on_key_press_value_template" />
-
-        <net.evendanan.pixel.SlidePreference
-            android:defaultValue="@integer/settings_default_vibrate_on_key_press_duration_int"
-            android:key="@string/settings_key_vibrate_on_key_press_duration_int"
-            app:slideMaximum="@integer/settings_default_vibrate_on_key_press_duration_max_value"
-            android:persistent="true"
-            android:title="@string/vibrate_on_key_press_title"
-            app:specialValues="@array/vibration_duration_special_values"
-            app:specialValueLabels="@array/vibration_duration_special_value_labels"
-            app:valueStringTemplate="@string/vibrate_on_key_press_value_template"
-            app:slideMinimum="@integer/settings_default_vibrate_on_key_press_duration_min_value_including_system" />
-
-        <androidx.preference.CheckBoxPreference
-            android:defaultValue="@bool/settings_default_vibrate_on_long_press"
-            android:key="@string/settings_key_vibrate_on_long_press"
-            android:persistent="true"
-            android:summaryOff=""
-            android:summaryOn="@string/vibrate_on_long_press_summary_on"
-            android:title="@string/vibrate_on_long_press_title" />
-
-        <androidx.preference.CheckBoxPreference
-            android:defaultValue="@bool/settings_default_sound_on"
-            android:key="@string/settings_key_sound_on"
-            android:persistent="true"
-            android:summaryOff=""
-            android:summaryOn="@string/sound_on_summary"
-            android:title="@string/sound_on" />
-
-        <androidx.preference.CheckBoxPreference
-            android:defaultValue="false"
-            android:key="@string/settings_key_use_custom_sound_volume"
-            android:persistent="true"
-            android:summaryOff="@string/use_custom_sound_volume_off_summary"
-            android:summaryOn="@string/use_custom_sound_volume_on_summary"
-            android:title="@string/use_custom_sound_volume" />
-
-        <net.evendanan.pixel.SlidePreference
-            android:defaultValue="@integer/settings_default_custom_volume_level"
-            android:dependency="use_custom_sound_volume"
-            android:key="custom_sound_volume"
-            android:persistent="true"
-            android:title="@string/custom_sound_volume"
-            app:slideMaximum="@integer/settings_custom_volume_level_slide_max"
-            app:slideMinimum="@integer/settings_custom_volume_level_slide_min" />
-
-        <androidx.preference.Preference
-            android:key="@string/settings_key_custom_keypress_sound_uri"
-            android:persistent="true"
-            android:summary="@string/custom_keypress_sound_summary_default"
-            android:title="@string/custom_keypress_sound_title" />
+        <Preference
+            android:key="nav:effects_settings"
+            android:title="@string/effects_group"
+            android:summary="@string/effects_group_summary_link"
+            app:iconSpaceReserved="false" />
 
         <androidx.preference.ListPreference
             android:defaultValue="@string/settings_default_tweak_animations_level"

@@ -639,6 +639,7 @@
     <!-- settings - effects-->
     <string name="gesture_settings">Gestures</string>
     <string name="effects_group">Effects</string>
+    <string name="effects_group_summary_link">Sound, vibration, and haptics</string>
     <string name="ime_settings">Keyboard settings</string>
     <string name="switch_incognito">Incognito Mode</string>
 
