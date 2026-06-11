@@ -26,6 +26,11 @@ final class WordRestartHost implements WordRestartCoordinator.Host {
   }
 
   @Override
+  public int[] nearbyKeyCodesFor(int codePoint) {
+    return host.nearbyKeyCodesFor(codePoint);
+  }
+
+  @Override
   public int getCursorPosition() {
     return host.getCursorPosition();
   }

@@ -320,6 +320,29 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
   }
 
   @Test
+  public void testSuggestionsRestartIntoTypoOffersCorrections() {
+    simulateFinishInputFlow();
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_allow_suggestions_restart, true);
+    simulateOnStartInputFlow();
+
+    // Insert the typo'd text directly (as if typed with another keyboard or pasted), so live
+    // auto-correct can't fix it on the way in.
+    getCurrentTestInputConnection().commitText("helk yes", 1);
+    TestRxSchedulers.drainAllTasksUntilEnd();
+    Assert.assertEquals(
+        "helk yes", getCurrentTestInputConnection().getCurrentTextInInputConnection());
+
+    mImeServiceUnderTest.resetMockCandidateView();
+    mImeServiceUnderTest.moveCursorToPosition(2, true);
+    TestRxSchedulers.drainAllTasksUntilEnd();
+    Assert.assertEquals(
+        "helk", mImeServiceUnderTest.getCurrentComposedWord().getTypedWord().toString());
+    // The restarted word gets real nearby-key rows (k is adjacent to l), so the same
+    // substitution corrections as live typing — with singleton rows this offered nothing.
+    verifySuggestions(true, "helk", "hell", "he'll", "hello");
+  }
+
+  @Test
   public void testSuggestionsRestartWhenMovingCursorEvenWhenRestarting() {
     simulateFinishInputFlow();
     SharedPrefsHelper.setPrefsValue(R.string.settings_key_allow_suggestions_restart, true);

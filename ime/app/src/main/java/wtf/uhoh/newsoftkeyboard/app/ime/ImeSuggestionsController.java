@@ -118,6 +118,7 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
       new TextInputHost(
           this, suggestionsSessionState.autoCorrectState, suggestionsSessionState.predictionState);
   private final WordRestartCoordinator.Host wordRestartHost = new WordRestartHost(this);
+  private final KeyProximityRows restartProximityRows = new KeyProximityRows();
   private final SuggestionRefresher.Host suggestionRefresherHost =
       new SuggestionRefresherHost(this);
   private final WordRevertHandler.Host wordRevertHost = new WordRevertHost(this);
@@ -503,6 +504,11 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
   public void markExpectingSelectionUpdate(int expectedSelectionUpdates) {
     suggestionsSessionState.selectionExpectationTracker.markExpectingUntil(
         SystemClock.uptimeMillis() + MAX_TIME_TO_EXPECT_SELECTION_UPDATE, expectedSelectionUpdates);
+  }
+
+  /** Nearby-key code row for a restarted word's code point, built from the active layout. */
+  int[] nearbyKeyCodesFor(int codePoint) {
+    return restartProximityRows.rowFor(getCurrentAlphabetKeyboard(), codePoint);
   }
 
   public void handleSeparator(int primaryCode) {

@@ -34,6 +34,11 @@ final class WordRestartCoordinator {
             }
 
             @Override
+            public int[] nearbyKeyCodesFor(int codePoint) {
+              return host.nearbyKeyCodesFor(codePoint);
+            }
+
+            @Override
             public int getCursorPosition() {
               return host.getCursorPosition();
             }
@@ -64,6 +69,9 @@ final class WordRestartCoordinator {
     void abortCorrectionAndResetPredictionState(boolean disabledUntilNextInputStart);
 
     boolean isWordSeparator(int codePoint);
+
+    /** Live-typing-equivalent nearby-key code row for the code point (code point at slot 0). */
+    int[] nearbyKeyCodesFor(int codePoint);
 
     int getCursorPosition();
 

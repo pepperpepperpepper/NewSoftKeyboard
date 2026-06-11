@@ -16,6 +16,9 @@ final class WordRestartHelper {
   interface Host {
     boolean isWordSeparator(int codePoint);
 
+    /** Live-typing-equivalent nearby-key code row for the code point (code point at slot 0). */
+    int[] nearbyKeyCodesFor(int codePoint);
+
     int getCursorPosition();
 
     void markExpectingSelectionUpdate();
@@ -55,8 +58,6 @@ final class WordRestartHelper {
     Logger.d(host.logTag(), "Starting new prediction on cursor word len=%d.", word.length());
     currentWord.reset();
 
-    final int[] tempNearByKeys = new int[1];
-
     int index = 0;
     while (index < word.length()) {
       final int c =
@@ -65,8 +66,9 @@ final class WordRestartHelper {
         currentWord.setFirstCharCapitalized(Character.isUpperCase(c));
       }
 
-      tempNearByKeys[0] = c;
-      currentWord.add(c, tempNearByKeys);
+      // Real proximity rows so the resumed word gets the same substitution-based correction
+      // as a live-typed one (a singleton row would disable fuzzy matching entirely).
+      currentWord.add(c, host.nearbyKeyCodesFor(c));
 
       index += Character.charCount(c);
     }

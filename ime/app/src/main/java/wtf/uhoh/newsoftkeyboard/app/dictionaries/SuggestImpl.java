@@ -282,6 +282,8 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
     // contacts, user and main dictionaries
     mSuggestionsProvider.getSuggestions(wordComposer, mTypingDictionaryWordCallback);
 
+    maybeSelectContextAwareCorrectionTarget();
+
     // now, we'll look at the next-words-suggestions list, and add all the ones that begins
     // with the typed word. These suggestions are top priority, so they will be added
     // at the top of the list
@@ -516,6 +518,88 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
       return upper + suggestion.substring(1);
     }
     return suggestion;
+  }
+
+  /**
+   * Lets sentence context (neural first-token score, falling back to the next-word predictions
+   * from the committed text) choose the auto-correct target among the boosted
+   * completion/correction candidates, instead of raw unigram frequency alone — so "I'm hav" +
+   * space commits "having", not "have".
+   *
+   * <p>Only candidates inside the boosted-fix tier are arbitrated: the typed word, case-variant
+   * typed matches, abbreviations and auto-text outrank the tier and are never overridden. Must
+   * run before next-word injection so the injection fence and the tail rerank see the final
+   * index while mPriorities is still position-aligned with mSuggestions.
+   */
+  private void maybeSelectContextAwareCorrectionTarget() {
+    if (mCorrectSuggestionIndex < 1) return;
+    if (mLowerOriginalWord.length() < 2) return;
+    if (mPriorities[mCorrectSuggestionIndex] >= FIXED_TYPED_WORD_FREQUENCY) return;
+
+    final List<Integer> tierIndices = new ArrayList<>();
+    final List<String> normalizedCandidates = new ArrayList<>();
+    final int scanEnd = Math.min(mSuggestions.size(), mPrefMaxSuggestions);
+    for (int i = 1; i < scanEnd; i++) {
+      final int priority = mPriorities[i];
+      if (priority >= FIXED_TYPED_WORD_FREQUENCY) continue; // typed/autotext/abbreviation tiers
+      if (priority < POSSIBLE_FIX_THRESHOLD_FREQUENCY) break; // sorted descending — tier is over
+      tierIndices.add(i);
+      normalizedCandidates.add(mSuggestions.get(i).toString().toLowerCase(mLocale));
+    }
+    if (tierIndices.size() <= 1) return;
+    if (!tierIndices.contains(mCorrectSuggestionIndex)) return;
+
+    final int winnerTierPosition = findContextPreferredCandidate(normalizedCandidates);
+    if (winnerTierPosition < 0) return;
+    final int winnerIndex = tierIndices.get(winnerTierPosition);
+    if (winnerIndex == mCorrectSuggestionIndex) return;
+
+    // Swap words together with their priorities so the fix index names the context-preferred
+    // candidate and word<->priority pairing stays intact.
+    final CharSequence winnerWord = mSuggestions.get(winnerIndex);
+    final int winnerPriority = mPriorities[winnerIndex];
+    mSuggestions.set(winnerIndex, mSuggestions.get(mCorrectSuggestionIndex));
+    mPriorities[winnerIndex] = mPriorities[mCorrectSuggestionIndex];
+    mSuggestions.set(mCorrectSuggestionIndex, winnerWord);
+    mPriorities[mCorrectSuggestionIndex] = winnerPriority;
+  }
+
+  /**
+   * Position within the candidate list of the context-preferred word, or -1 when context has no
+   * actual signal (no neural reorder and no candidate present in the next-word predictions) — in
+   * which case the frequency-based choice stands.
+   */
+  private int findContextPreferredCandidate(@NonNull List<String> normalizedCandidates) {
+    final List<String> neuralSorted =
+        mSuggestionsProvider.sortCandidatesByNeuralFirstTokenLogProbIfAvailable(
+            new ArrayList<>(normalizedCandidates));
+    if (neuralSorted != null
+        && neuralSorted.size() == normalizedCandidates.size()
+        && !isSameStringOrder(neuralSorted, normalizedCandidates)) {
+      return normalizedCandidates.indexOf(neuralSorted.get(0));
+    }
+
+    final List<CharSequence> contextCandidates =
+        mNextSuggestionCandidates.isEmpty() ? mNextSuggestions : mNextSuggestionCandidates;
+    // Same short-prefix noise gate as sortCandidatesByNextWordContextOrderIfAvailable.
+    final int maxContextRankToConsider =
+        mLowerOriginalWord.length() == 2 ? 12 : Integer.MAX_VALUE;
+    int bestRank = Integer.MAX_VALUE;
+    int bestIndex = -1;
+    final int rankLimit = Math.min(contextCandidates.size(), maxContextRankToConsider);
+    for (int i = 0; i < normalizedCandidates.size(); i++) {
+      final String candidate = normalizedCandidates.get(i);
+      for (int rank = 0; rank < rankLimit && rank < bestRank; rank++) {
+        final CharSequence contextWord = contextCandidates.get(rank);
+        if (contextWord != null
+            && candidate.equals(contextWord.toString().trim().toLowerCase(mLocale))) {
+          bestRank = rank;
+          bestIndex = i;
+          break;
+        }
+      }
+    }
+    return bestIndex;
   }
 
   private void maybeRerankPrefixMatchingTypedSuggestionsByContext(int typedWordLength) {

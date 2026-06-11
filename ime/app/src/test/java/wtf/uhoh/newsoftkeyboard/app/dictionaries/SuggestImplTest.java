@@ -104,6 +104,75 @@ public class SuggestImplTest {
   }
 
   @Test
+  public void getSuggestions_contextSelectsAutoCorrectTargetAmongBoostedCompletions() {
+    final SuggestionsProvider provider = mock(SuggestionsProvider.class);
+    when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
+
+    doAnswer(
+            invocation -> {
+              @SuppressWarnings("unchecked")
+              final Collection<CharSequence> holder = invocation.getArgument(1);
+              holder.addAll(List.of("having", "had", "trouble"));
+              return null;
+            })
+        .when(provider)
+        .getNextWords(eq("I'm"), any(), anyInt());
+
+    doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              // raw unigram frequency prefers "have"; sentence context prefers "having"
+              addWord(callback, "have", 200);
+              addWord(callback, "having", 150);
+              return null;
+            })
+        .when(provider)
+        .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
+
+    final SuggestImpl suggest = new SuggestImpl(provider);
+    suggest.setCorrectionMode(true, 3, 3, false);
+
+    suggest.getNextSuggestions("I'm", false);
+
+    final WordComposer composer = new WordComposer();
+    composer.simulateTypedWord("hav");
+
+    final List<String> suggestions = asStrings(suggest.getSuggestions(composer));
+    final int fixIndex = suggest.getLastValidSuggestionIndex();
+    // context ("I'm" -> "having") overrides the frequency-based pick ("have")
+    assertEquals("having", suggestions.get(fixIndex));
+    assertEquals(List.of("hav", "having", "have"), suggestions);
+  }
+
+  @Test
+  public void getSuggestions_keepsFrequencyAutoCorrectTargetWithoutContextSignal() {
+    final SuggestionsProvider provider = mock(SuggestionsProvider.class);
+    when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
+
+    doAnswer(
+            invocation -> {
+              final Dictionary.WordCallback callback = invocation.getArgument(1);
+              addWord(callback, "have", 200);
+              addWord(callback, "having", 150);
+              return null;
+            })
+        .when(provider)
+        .getSuggestions(any(KeyCodesProvider.class), any(Dictionary.WordCallback.class));
+
+    final SuggestImpl suggest = new SuggestImpl(provider);
+    suggest.setCorrectionMode(true, 3, 3, false);
+
+    final WordComposer composer = new WordComposer();
+    composer.simulateTypedWord("hav");
+
+    final List<String> suggestions = asStrings(suggest.getSuggestions(composer));
+    final int fixIndex = suggest.getLastValidSuggestionIndex();
+    // no committed context — the frequency-based choice stands
+    assertEquals("have", suggestions.get(fixIndex));
+    assertEquals(List.of("hav", "have", "having"), suggestions);
+  }
+
+  @Test
   public void getSuggestions_promotesAlreadyPresentNextWordCandidatesAboveOtherCompletions() {
     final SuggestionsProvider provider = mock(SuggestionsProvider.class);
     when(provider.isValidWord(any(CharSequence.class))).thenReturn(true);
