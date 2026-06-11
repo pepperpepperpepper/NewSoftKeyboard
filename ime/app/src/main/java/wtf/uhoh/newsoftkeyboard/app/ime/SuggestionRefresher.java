@@ -17,6 +17,7 @@ final class SuggestionRefresher {
 
   void performUpdateSuggestions(
       @NonNull PredictionState predictionState,
+      @NonNull AutoCorrectState autoCorrectState,
       @NonNull WordComposer wordComposer,
       @NonNull Suggest suggest,
       @NonNull Host host) {
@@ -31,6 +32,15 @@ final class SuggestionRefresher {
 
     // Don't auto-correct words with multiple capital letters
     if (highlightedSuggestionIndex == 1 && wordComposer.isMostlyCaps()) {
+      highlightedSuggestionIndex = -1;
+    }
+
+    // A correction the user explicitly reverted must not be auto-picked again: it stays
+    // visible and tappable in the strip, but a separator commits the typed word.
+    if (highlightedSuggestionIndex >= 0
+        && highlightedSuggestionIndex < suggestionsList.size()
+        && autoCorrectState.isRejectedCorrection(
+            wordComposer.getTypedWord(), suggestionsList.get(highlightedSuggestionIndex))) {
       highlightedSuggestionIndex = -1;
     }
 

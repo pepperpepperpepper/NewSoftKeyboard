@@ -92,25 +92,34 @@ public class ImeServiceDictionarySaveWordsTest extends ImeServiceBaseTest {
         (TestInputConnection) mImeServiceUnderTest.getCurrentInputConnection();
 
     StringBuilder expectedOutput = new StringBuilder();
-    // it takes 5 tries to lean from typing
-    for (int pickIndex = 0; pickIndex < 5; pickIndex++) {
+    // First commit gets auto-corrected; the user reverts it — and that rejection is remembered
+    // for the rest of the session, so the fight happens only once.
+    mImeServiceUnderTest.simulateTextTyping("hel");
+    mImeServiceUnderTest.simulateKeyPress(' ');
+    Mockito.verify(mImeServiceUnderTest.getSuggest(), Mockito.never())
+        .addWordToUserDictionary(Mockito.anyString());
+    Mockito.verify(getMockCandidateView(), Mockito.never())
+        .notifyAboutWordAdded(Mockito.anyString());
+    expectedOutput.append("he'll ");
+    Assert.assertEquals(
+        expectedOutput.toString(), inputConnection.getCurrentTextInInputConnection());
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.DELETE);
+    expectedOutput.setLength(expectedOutput.length() - 6); // undo commit
+    expectedOutput.append("hel"); // undo commit
+    Assert.assertEquals(
+        expectedOutput.toString(), inputConnection.getCurrentTextInInputConnection());
+    mImeServiceUnderTest.simulateKeyPress(' ');
+    TestRxSchedulers.drainAllTasks();
+    expectedOutput.append(" ");
+    Assert.assertEquals(
+        expectedOutput.toString(), inputConnection.getCurrentTextInInputConnection());
+
+    // it still takes 5 typed commits in total to learn the word
+    for (int pickIndex = 1; pickIndex < 5; pickIndex++) {
       mImeServiceUnderTest.simulateTextTyping("hel");
       mImeServiceUnderTest.simulateKeyPress(' ');
-      Mockito.verify(mImeServiceUnderTest.getSuggest(), Mockito.never())
-          .addWordToUserDictionary(Mockito.anyString());
-      Mockito.verify(getMockCandidateView(), Mockito.never())
-          .notifyAboutWordAdded(Mockito.anyString());
-      expectedOutput.append("he'll ");
-      Assert.assertEquals(
-          expectedOutput.toString(), inputConnection.getCurrentTextInInputConnection());
-      mImeServiceUnderTest.simulateKeyPress(KeyCodes.DELETE);
-      expectedOutput.setLength(expectedOutput.length() - 6); // undo commit
-      expectedOutput.append("hel"); // undo commit
-      Assert.assertEquals(
-          expectedOutput.toString(), inputConnection.getCurrentTextInInputConnection());
-      mImeServiceUnderTest.simulateKeyPress(' ');
       TestRxSchedulers.drainAllTasks();
-      expectedOutput.append(" ");
+      expectedOutput.append("hel ");
       Assert.assertEquals(
           expectedOutput.toString(), inputConnection.getCurrentTextInInputConnection());
 

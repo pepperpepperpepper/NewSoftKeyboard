@@ -63,6 +63,13 @@ final class WordRevertHandler {
     WordComposer newPreviousWord = currentWord;
     autoCorrectState.wordRevertLength = 0;
     final CharSequence typedWord = newCurrentWord.getTypedWord();
+    // Remember the rejected correction before performUpdateSuggestions nulls the preferred word
+    // (getPreferredWord falls back to the typed word, so equality means "no real correction").
+    final CharSequence revertedCorrection = newCurrentWord.getPreferredWord();
+    if (revertedCorrection != null
+        && !revertedCorrection.toString().equalsIgnoreCase(typedWord.toString())) {
+      autoCorrectState.recordRejectedCorrection(typedWord, revertedCorrection);
+    }
     newCurrentWord.setCursorPosition(newCurrentWord.charCount());
     boolean reverted = false;
     if (inputConnectionRouter.isComposingTextSupported()) {

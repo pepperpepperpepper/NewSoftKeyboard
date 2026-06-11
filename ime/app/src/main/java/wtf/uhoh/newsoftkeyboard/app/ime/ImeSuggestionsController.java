@@ -213,6 +213,9 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
     // to reset/preserve the next-word sentence.
     abortCorrectionAndResetPredictionState(false, /* resetNextWordSentence= */ false);
     keyboardDictionariesLoader.reset();
+    // Rejection memory is per input session — cleared here rather than in
+    // AutoCorrectState.reset(), which also fires on cursor moves and paste.
+    suggestionsSessionState.autoCorrectState.clearRejectedCorrections();
   }
 
   /** Hook for subclasses to preserve next-word context across input restarts when safe. */
@@ -748,6 +751,7 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
 
     suggestionRefresher.performUpdateSuggestions(
         suggestionsSessionState.predictionState,
+        suggestionsSessionState.autoCorrectState,
         suggestionsSessionState.wordComposerTracker.currentWord(),
         mSuggest,
         suggestionRefresherHost);

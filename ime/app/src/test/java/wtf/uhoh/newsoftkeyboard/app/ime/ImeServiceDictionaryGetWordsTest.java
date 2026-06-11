@@ -109,6 +109,50 @@ public class ImeServiceDictionaryGetWordsTest extends ImeServiceBaseTest {
   }
 
   @Test
+  public void testRevertedAutoCorrectionIsNotRePicked() {
+    TestInputConnection inputConnection =
+        (TestInputConnection) mImeServiceUnderTest.getCurrentInputConnection();
+
+    mImeServiceUnderTest.simulateTextTyping("helk");
+    mImeServiceUnderTest.simulateKeyPress(' ');
+    Assert.assertEquals("hell ", inputConnection.getCurrentTextInInputConnection());
+
+    // the user rejects the correction
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.DELETE);
+    Assert.assertEquals("helk", inputConnection.getCurrentTextInInputConnection());
+    mImeServiceUnderTest.simulateKeyPress(' ');
+    Assert.assertEquals("helk ", inputConnection.getCurrentTextInInputConnection());
+
+    // typing the same word again must not be auto-corrected to the rejected fix...
+    mImeServiceUnderTest.simulateTextTyping("helk");
+    mImeServiceUnderTest.simulateKeyPress(' ');
+    Assert.assertEquals("helk helk ", inputConnection.getCurrentTextInInputConnection());
+  }
+
+  @Test
+  public void testRejectedCorrectionMemoryIsClearedOnNewInputSession() {
+    TestInputConnection inputConnection =
+        (TestInputConnection) mImeServiceUnderTest.getCurrentInputConnection();
+
+    mImeServiceUnderTest.simulateTextTyping("helk");
+    mImeServiceUnderTest.simulateKeyPress(' ');
+    mImeServiceUnderTest.simulateKeyPress(KeyCodes.DELETE);
+    mImeServiceUnderTest.simulateKeyPress(' ');
+    Assert.assertEquals("helk ", inputConnection.getCurrentTextInInputConnection());
+
+    // a fresh editor session starts with a clean slate — the correction applies again
+    simulateFinishInputFlow();
+    simulateOnStartInputFlow();
+    inputConnection =
+        (TestInputConnection) mImeServiceUnderTest.getCurrentInputConnection();
+
+    mImeServiceUnderTest.simulateTextTyping("helk");
+    mImeServiceUnderTest.simulateKeyPress(' ');
+    // the editor keeps its old text across the session restart; the new "helk" got corrected
+    Assert.assertEquals("helk hell ", inputConnection.getCurrentTextInInputConnection());
+  }
+
+  @Test
   public void testManualPickWordAndShouldNotRevert() {
     TestInputConnection inputConnection =
         (TestInputConnection) mImeServiceUnderTest.getCurrentInputConnection();
