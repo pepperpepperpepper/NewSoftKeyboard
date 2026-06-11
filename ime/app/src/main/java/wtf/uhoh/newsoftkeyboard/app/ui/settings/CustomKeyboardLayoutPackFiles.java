@@ -5,16 +5,15 @@ import androidx.annotation.Nullable;
 import com.anysoftkeyboard.api.KeyCodes;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.AtomicPackFileWriter;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.InstalledKeyboardPack;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.KeySpec;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.KeyboardModel;
@@ -88,9 +87,7 @@ final class CustomKeyboardLayoutPackFiles {
   static void writePackManifest(@NonNull File packDir, @NonNull PackManifest manifest)
       throws IOException {
     File manifestFile = new File(packDir, "manifest.json");
-    try (OutputStream out = new FileOutputStream(manifestFile, false)) {
-      PackManifestJson.write(manifest, out);
-    }
+    AtomicPackFileWriter.write(manifestFile, out -> PackManifestJson.write(manifest, out));
   }
 
   static void writeSymbolsKeyboardFile(
@@ -164,9 +161,7 @@ final class CustomKeyboardLayoutPackFiles {
 
   static void writeKeyboardModel(@NonNull File xmlFile, @NonNull KeyboardModel model)
       throws IOException {
-    try (OutputStream out = new FileOutputStream(xmlFile, false)) {
-      AskXmlKeyboardWriter.write(model, out);
-    }
+    AtomicPackFileWriter.write(xmlFile, out -> AskXmlKeyboardWriter.write(model, out));
   }
 
   @Nullable

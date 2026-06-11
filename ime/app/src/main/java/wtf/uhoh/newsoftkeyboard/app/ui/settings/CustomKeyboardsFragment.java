@@ -24,7 +24,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.disposables.Disposables;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,6 +32,7 @@ import java.util.Collections;
 import java.util.List;
 import net.evendanan.pixel.RxProgressDialog;
 import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.AtomicPackFileWriter;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardPackCreator;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardPrefs;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.InstalledKeyboardPack;
@@ -411,9 +411,7 @@ public class CustomKeyboardsFragment extends Fragment {
   private static void writeManifest(@NonNull File packDir, @NonNull PackManifest manifest)
       throws IOException {
     File manifestFile = new File(packDir, "manifest.json");
-    try (OutputStream out = new FileOutputStream(manifestFile, false)) {
-      PackManifestJson.write(manifest, out);
-    }
+    AtomicPackFileWriter.write(manifestFile, out -> PackManifestJson.write(manifest, out));
   }
 
   private static void deleteRecursively(@NonNull File file) throws IOException {

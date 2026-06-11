@@ -12,16 +12,15 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import wtf.uhoh.newsoftkeyboard.R;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.AtomicPackFileWriter;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardPrefs;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.InstalledKeyboardPack;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardView;
@@ -322,9 +321,7 @@ final class CustomKeyboardThemeEditorController {
     if (parent != null && !parent.exists() && !parent.mkdirs()) {
       throw new IOException("Failed creating directory at " + parent);
     }
-    try (OutputStream out = new FileOutputStream(xmlFile, false)) {
-      ThemeXmlWriter.write(model, out);
-    }
+    AtomicPackFileWriter.write(xmlFile, out -> ThemeXmlWriter.write(model, out));
   }
 
   @NonNull

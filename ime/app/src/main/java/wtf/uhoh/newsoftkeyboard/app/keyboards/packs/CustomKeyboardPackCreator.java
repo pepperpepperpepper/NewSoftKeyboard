@@ -104,10 +104,8 @@ public final class CustomKeyboardPackCreator {
   private static void writeManifest(@NonNull File manifestFile, @NonNull PackManifest manifest)
       throws IOException {
     String json = toManifestJson(manifest);
-    try (OutputStream out =
-        new BufferedOutputStream(new FileOutputStream(manifestFile), IO_BUFFER_BYTES)) {
-      out.write(json.getBytes(StandardCharsets.UTF_8));
-    }
+    AtomicPackFileWriter.write(
+        manifestFile, out -> out.write(json.getBytes(StandardCharsets.UTF_8)));
   }
 
   @NonNull
