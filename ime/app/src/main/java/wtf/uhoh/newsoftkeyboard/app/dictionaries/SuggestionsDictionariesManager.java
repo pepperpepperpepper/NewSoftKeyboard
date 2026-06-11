@@ -58,6 +58,7 @@ final class SuggestionsDictionariesManager {
   private boolean mUserDictionaryEnabled;
   private boolean mContextAllowsContactsDictionary = true;
   private boolean mContextAllowsUserDictionary = true;
+  private boolean mContextAllowsMainDictionary = true;
   @Nullable private String mContextProfileWordListPresetId;
   private long mContextProfileWordListGeneration;
   @NonNull private final List<String> mCurrentLocales = new ArrayList<>();
@@ -125,6 +126,7 @@ final class SuggestionsDictionariesManager {
   void setContextProfileSafeToggles(@NonNull ContextProfilesStore.SafeToggles safeToggles) {
     mContextAllowsContactsDictionary = !safeToggles.disableContactsDictionary;
     mContextAllowsUserDictionary = !safeToggles.disableUserDictionary;
+    mContextAllowsMainDictionary = !safeToggles.disableMainDictionary;
   }
 
   void setContextProfileWordList(@Nullable String presetId, long generation) {
@@ -333,7 +335,11 @@ final class SuggestionsDictionariesManager {
       allDictionariesGetWords(mUserDictionary, wordComposer, callback);
     }
     allDictionariesGetWords(mContextProfileWordList, wordComposer, callback);
-    allDictionariesGetWords(mMainDictionary, wordComposer, callback);
+    // isValidWord intentionally keeps consulting the main dictionary even when muted, so typing
+    // a regular language word in a muted profile never triggers auto-correct.
+    if (mContextAllowsMainDictionary) {
+      allDictionariesGetWords(mMainDictionary, wordComposer, callback);
+    }
   }
 
   void getAbbreviations(

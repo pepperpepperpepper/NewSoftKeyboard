@@ -58,6 +58,7 @@ public class ContextProfilesStore {
   private static final String JSON_DISABLE_USER_DICTIONARY = "disable_user_dictionary";
   private static final String JSON_DISABLE_QUICK_FIXES = "disable_quick_fixes";
   private static final String JSON_DISABLE_NEXT_WORD_SUGGESTIONS = "disable_next_word_suggestions";
+  private static final String JSON_DISABLE_MAIN_DICTIONARY = "disable_main_dictionary";
 
   private final SharedPreferences prefs;
 
@@ -516,7 +517,8 @@ public class ContextProfilesStore {
         json.optBoolean(JSON_DISABLE_CONTACTS_DICTIONARY, false),
         json.optBoolean(JSON_DISABLE_USER_DICTIONARY, false),
         json.optBoolean(JSON_DISABLE_QUICK_FIXES, false),
-        json.optBoolean(JSON_DISABLE_NEXT_WORD_SUGGESTIONS, false));
+        json.optBoolean(JSON_DISABLE_NEXT_WORD_SUGGESTIONS, false),
+        json.optBoolean(JSON_DISABLE_MAIN_DICTIONARY, false));
   }
 
   @NonNull
@@ -527,6 +529,7 @@ public class ContextProfilesStore {
       json.put(JSON_DISABLE_USER_DICTIONARY, toggles.disableUserDictionary);
       json.put(JSON_DISABLE_QUICK_FIXES, toggles.disableQuickFixes);
       json.put(JSON_DISABLE_NEXT_WORD_SUGGESTIONS, toggles.disableNextWordSuggestions);
+      json.put(JSON_DISABLE_MAIN_DICTIONARY, toggles.disableMainDictionary);
     } catch (JSONException e) {
       throw new IllegalStateException("Failed to encode safe toggles JSON.", e);
     }
@@ -579,22 +582,31 @@ public class ContextProfilesStore {
   }
 
   public static final class SafeToggles {
-    public static final SafeToggles DEFAULT = new SafeToggles(false, false, false, false);
+    public static final SafeToggles DEFAULT = new SafeToggles(false, false, false, false, false);
 
     public final boolean disableContactsDictionary;
     public final boolean disableUserDictionary;
     public final boolean disableQuickFixes;
     public final boolean disableNextWordSuggestions;
 
+    /**
+     * Mutes language-dictionary suggestions while the profile is active, so the strip favors the
+     * profile word list (e.g. shell tokens in a terminal profile). Words from the language
+     * dictionary are still recognized as valid, so typing them never triggers auto-correct.
+     */
+    public final boolean disableMainDictionary;
+
     public SafeToggles(
         boolean disableContactsDictionary,
         boolean disableUserDictionary,
         boolean disableQuickFixes,
-        boolean disableNextWordSuggestions) {
+        boolean disableNextWordSuggestions,
+        boolean disableMainDictionary) {
       this.disableContactsDictionary = disableContactsDictionary;
       this.disableUserDictionary = disableUserDictionary;
       this.disableQuickFixes = disableQuickFixes;
       this.disableNextWordSuggestions = disableNextWordSuggestions;
+      this.disableMainDictionary = disableMainDictionary;
     }
 
     @Override
@@ -605,7 +617,8 @@ public class ContextProfilesStore {
       return disableContactsDictionary == that.disableContactsDictionary
           && disableUserDictionary == that.disableUserDictionary
           && disableQuickFixes == that.disableQuickFixes
-          && disableNextWordSuggestions == that.disableNextWordSuggestions;
+          && disableNextWordSuggestions == that.disableNextWordSuggestions
+          && disableMainDictionary == that.disableMainDictionary;
     }
 
     @Override
@@ -614,6 +627,7 @@ public class ContextProfilesStore {
       result = 31 * result + Boolean.hashCode(disableUserDictionary);
       result = 31 * result + Boolean.hashCode(disableQuickFixes);
       result = 31 * result + Boolean.hashCode(disableNextWordSuggestions);
+      result = 31 * result + Boolean.hashCode(disableMainDictionary);
       return result;
     }
   }

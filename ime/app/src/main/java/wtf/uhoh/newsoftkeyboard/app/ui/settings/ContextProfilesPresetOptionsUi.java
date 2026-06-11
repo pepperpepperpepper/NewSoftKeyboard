@@ -132,6 +132,11 @@ final class ContextProfilesPresetOptionsUi {
     disableNextWordSuggestions.setChecked(preset.safeToggles.disableNextWordSuggestions);
     root.addView(disableNextWordSuggestions);
 
+    final SwitchCompat disableMainDictionary = new SwitchCompat(context);
+    disableMainDictionary.setText(R.string.context_profiles_safe_toggles_disable_main_dictionary);
+    disableMainDictionary.setChecked(preset.safeToggles.disableMainDictionary);
+    root.addView(disableMainDictionary);
+
     new AlertDialog.Builder(context, R.style.Theme_NskAlertDialog)
         .setTitle(R.string.context_profiles_safe_toggles_title)
         .setView(root)
@@ -146,7 +151,8 @@ final class ContextProfilesPresetOptionsUi {
                       disableContactsDictionary.isChecked(),
                       disableUserDictionary.isChecked(),
                       disableQuickFixes.isChecked(),
-                      disableNextWordSuggestions.isChecked()));
+                      disableNextWordSuggestions.isChecked(),
+                      disableMainDictionary.isChecked()));
             })
         .show();
   }

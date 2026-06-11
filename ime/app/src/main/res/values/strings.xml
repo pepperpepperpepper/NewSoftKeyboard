@@ -1890,6 +1890,7 @@
     <string name="context_profiles_safe_toggles_disable_user_dictionary">Disable user dictionary</string>
     <string name="context_profiles_safe_toggles_disable_contacts_dictionary">Disable contacts dictionary</string>
     <string name="context_profiles_safe_toggles_disable_next_word_suggestions">Disable next-word prediction</string>
+    <string name="context_profiles_safe_toggles_disable_main_dictionary">Mute language dictionary (suggest profile words only)</string>
 
     <string name="context_profiles_security_options_title">Security options</string>
     <string name="context_profiles_security_options_help">Extra protections for this preset.</string>

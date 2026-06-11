@@ -726,12 +726,29 @@ public class TestableImeService extends NewSoftKeyboardService {
   }
 
   // I need this class, so the Mockito.spy will not mess with internal state of SuggestImpl
-  private static class TestableSuggest implements Suggest {
+  // Implements ContextProfileAwareSuggest too — ImeContextProfilesEffectsController gates on
+  // that interface, so the wrapper must not hide it from the service.
+  private static class TestableSuggest
+      implements Suggest, wtf.uhoh.newsoftkeyboard.app.dictionaries.ContextProfileAwareSuggest {
 
     private final Suggest mDelegate;
 
     private TestableSuggest(Suggest delegate) {
       mDelegate = delegate;
+    }
+
+    @Override
+    public void setContextProfileSafeToggles(
+        @Nullable wtf.uhoh.newsoftkeyboard.prefs.context.ContextProfilesStore.SafeToggles
+            safeToggles) {
+      ((wtf.uhoh.newsoftkeyboard.app.dictionaries.ContextProfileAwareSuggest) mDelegate)
+          .setContextProfileSafeToggles(safeToggles);
+    }
+
+    @Override
+    public void setContextProfileWordList(@Nullable String presetId, long generation) {
+      ((wtf.uhoh.newsoftkeyboard.app.dictionaries.ContextProfileAwareSuggest) mDelegate)
+          .setContextProfileWordList(presetId, generation);
     }
 
     @Override

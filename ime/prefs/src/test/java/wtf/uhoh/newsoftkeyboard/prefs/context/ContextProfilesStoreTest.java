@@ -85,7 +85,8 @@ public class ContextProfilesStoreTest {
   public void testSafeTogglesCanBePersisted() {
     final ContextProfilesStore store = createStore();
     final ContextProfilesStore.Preset created = store.createPreset("Preset");
-    store.setSafeToggles(created.id, new ContextProfilesStore.SafeToggles(true, true, true, true));
+    store.setSafeToggles(
+        created.id, new ContextProfilesStore.SafeToggles(true, true, true, true, true));
 
     final ContextProfilesStore.Preset updated = store.getPreset(created.id);
     Assert.assertNotNull(updated);
@@ -93,6 +94,7 @@ public class ContextProfilesStoreTest {
     Assert.assertTrue(updated.safeToggles.disableUserDictionary);
     Assert.assertTrue(updated.safeToggles.disableQuickFixes);
     Assert.assertTrue(updated.safeToggles.disableNextWordSuggestions);
+    Assert.assertTrue(updated.safeToggles.disableMainDictionary);
   }
 
   @Test
