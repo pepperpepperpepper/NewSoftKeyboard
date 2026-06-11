@@ -77,9 +77,9 @@ public class ImeServiceDictionaryGetWordsTest extends ImeServiceBaseTest {
   public void testAskForSuggestionsWhenCursorInsideWord() {
     verifyNoSuggestionsInteractions();
     mImeServiceUnderTest.simulateTextTyping("h");
-    verifySuggestions(true, "h", "he");
+    verifySuggestions(true, "h", "he", "hell", "hello", "he'll");
     mImeServiceUnderTest.simulateTextTyping("l");
-    verifySuggestions(true, "hl");
+    verifySuggestions(true, "hl", "hell", "hello", "he'll");
     // moving one character back, and fixing the word to 'hel'
     mImeServiceUnderTest.setSelectedText(1, 1, true);
     mImeServiceUnderTest.simulateTextTyping("e");
@@ -228,9 +228,9 @@ public class ImeServiceDictionaryGetWordsTest extends ImeServiceBaseTest {
         (TestInputConnection) mImeServiceUnderTest.getCurrentInputConnection();
     verifyNoSuggestionsInteractions();
     mImeServiceUnderTest.simulateTextTyping("h");
-    verifySuggestions(true, "h", "he");
+    verifySuggestions(true, "h", "he", "hell", "hello", "he'll");
     mImeServiceUnderTest.simulateTextTyping("l");
-    verifySuggestions(true, "hl");
+    verifySuggestions(true, "hl", "hell", "hello", "he'll");
     Assert.assertEquals("hl", inputConnection.getCurrentTextInInputConnection());
     // moving one character back, and fixing the word to 'hel'
     mImeServiceUnderTest.setSelectedText(1, 1, true);

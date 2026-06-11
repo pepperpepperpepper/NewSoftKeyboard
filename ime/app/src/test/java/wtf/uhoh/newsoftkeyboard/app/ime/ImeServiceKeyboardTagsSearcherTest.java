@@ -74,7 +74,7 @@ public class ImeServiceKeyboardTagsSearcherTest extends ImeServiceBaseTest {
         QuickKeyHistoryRecords.DEFAULT_EMOJI);
     mImeServiceUnderTest.simulateTextTyping("fa");
     List suggestions = verifyAndCaptureSuggestion(true);
-    Assert.assertEquals(134, suggestions.size());
+    Assert.assertEquals(160, suggestions.size());
     Assert.assertEquals(
         ImeKeyboardTagsSearcher.MAGNIFYING_GLASS_CHARACTER + "fa", suggestions.get(0));
 
@@ -98,7 +98,7 @@ public class ImeServiceKeyboardTagsSearcherTest extends ImeServiceBaseTest {
         QuickKeyHistoryRecords.DEFAULT_EMOJI);
     mImeServiceUnderTest.simulateTextTyping("fa");
     List suggestions = verifyAndCaptureSuggestion(true);
-    Assert.assertEquals(134, suggestions.size());
+    Assert.assertEquals(160, suggestions.size());
     Assert.assertEquals(
         ImeKeyboardTagsSearcher.MAGNIFYING_GLASS_CHARACTER + "fa", suggestions.get(0));
     Assert.assertEquals("⏩", suggestions.get(1));
@@ -113,7 +113,7 @@ public class ImeServiceKeyboardTagsSearcherTest extends ImeServiceBaseTest {
     mImeServiceUnderTest.simulateKeyPress(KeyCodes.DELETE);
 
     suggestions = verifyAndCaptureSuggestion(true);
-    Assert.assertEquals(134, suggestions.size());
+    Assert.assertEquals(160, suggestions.size());
     Assert.assertEquals(
         ImeKeyboardTagsSearcher.MAGNIFYING_GLASS_CHARACTER + "fa", suggestions.get(0));
     Assert.assertEquals("⏩", suggestions.get(1));

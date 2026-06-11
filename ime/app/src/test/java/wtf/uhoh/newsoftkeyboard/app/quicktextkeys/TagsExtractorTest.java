@@ -127,9 +127,11 @@ public class TagsExtractorTest {
   @Test
   public void testShowSuggestionWhenIncompleteTyped() throws Exception {
     final List<String> outputForTag = setOutputForTag("pa");
-    Assert.assertEquals(2, outputForTag.size());
+    Assert.assertEquals(outputForTag.toString(), 3, outputForTag.size());
     Assert.assertEquals(MAGNIFYING_GLASS_CHARACTER + "pa", outputForTag.get(0));
     Assert.assertEquals("PALM", outputForTag.get(1));
+    // "plane" is recovered by the lost-letter retry pass (p-[l]-a).
+    Assert.assertEquals("PLANE", outputForTag.get(2));
   }
 
   @Test

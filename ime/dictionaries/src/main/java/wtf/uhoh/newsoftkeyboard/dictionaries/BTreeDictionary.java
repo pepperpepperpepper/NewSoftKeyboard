@@ -18,6 +18,7 @@ package wtf.uhoh.newsoftkeyboard.dictionaries;
 
 import android.content.Context;
 import android.text.TextUtils;
+import java.util.HashSet;
 import androidx.annotation.CallSuper;
 import androidx.annotation.NonNull;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
@@ -41,9 +42,12 @@ public abstract class BTreeDictionary extends EditableDictionary {
   protected final Context mContext;
   private final int mMaxWordsToRead;
 
+  private static final int MIN_WORDS_BEFORE_SKIP_RETRY = 5;
+
   private NodeArray mRoots;
-  private int mMaxDepth;
   private int mInputLength;
+  // >=0 while a lost-letter retry pass is skipping that trie depth; -1 on the plain pass.
+  private int mSkipPos = -1;
   private final char[] mWordBuilder = new char[MAX_WORD_LENGTH];
   private final boolean mIncludeTypedWord;
 
@@ -207,8 +211,31 @@ public abstract class BTreeDictionary extends EditableDictionary {
   public void getSuggestions(final KeyCodesProvider codes, final Dictionary.WordCallback callback) {
     if (isLoading() || isClosed()) return;
     mInputLength = codes.codePointCount();
-    mMaxDepth = mInputLength * 2;
-    getWordsRec(mRoots, codes, mWordBuilder, 0, false, 1.0f, 0, callback);
+    if (mInputLength == 0) return;
+
+    // Retry passes re-walk paths the plain pass already reported (the native wrappers
+    // hide this by rewriting their output arrays per pass) — dedupe before streaming.
+    final HashSet<String> seenWords = new HashSet<>();
+    final Dictionary.WordCallback dedupingCallback =
+        (word, wordOffset, wordLength, frequency, from) -> {
+          if (!seenWords.add(new String(word, wordOffset, wordLength))) return true;
+          return callback.addWord(word, wordOffset, wordLength, frequency, from);
+        };
+
+    mSkipPos = -1;
+    getWordsRec(mRoots, codes, mWordBuilder, 0, false, 1.0f, 0, dedupingCallback);
+    // Lost-letter recovery: when plain matching finds (almost) nothing, retry while
+    // skipping a single trie position ("lptop" matches "laptop"). Mirrors the retry
+    // driver in the native BinaryDictionary wrappers.
+    if (seenWords.size() < MIN_WORDS_BEFORE_SKIP_RETRY) {
+      for (int skipPos = 0; skipPos < mInputLength; skipPos++) {
+        final int reportedBeforePass = seenWords.size();
+        mSkipPos = skipPos;
+        getWordsRec(mRoots, codes, mWordBuilder, 0, false, 1.0f, 0, dedupingCallback);
+        if (seenWords.size() > reportedBeforePass) break;
+      }
+      mSkipPos = -1;
+    }
   }
 
   @Override
@@ -280,9 +307,9 @@ public abstract class BTreeDictionary extends EditableDictionary {
       WordCallback callback) {
     final int count = roots.length;
     final int codeSize = mInputLength;
-    // Optimization: Prune out words that are too long compared to how much
-    // was typed.
-    if (depth > mMaxDepth) {
+    // Bounded by the word buffer alone: a completion may be far longer than the typed
+    // prefix ("chr" must still surface "christmas"); ranking decides relevance.
+    if (depth >= MAX_WORD_LENGTH) {
       return;
     }
     int[] currentChars = null;
@@ -321,14 +348,11 @@ public abstract class BTreeDictionary extends EditableDictionary {
             // the user typed. We want to keep capitalized letters, quotes etc.
             word[depth] = nodeC;
 
-            if (codeSize == depth + 1) {
+            if (codeSize == inputIndex + 1) {
               if (terminal && (mIncludeTypedWord || !same(word, depth + 1, codes.getTypedWord()))) {
-                callback.addWord(
-                    word,
-                    0,
-                    depth + 1,
-                    (int) (freq * snr * addedAttenuation * FULL_WORD_FREQ_MULTIPLIER),
-                    this);
+                float finalFreq = freq * snr * addedAttenuation;
+                if (mSkipPos < 0) finalFreq *= FULL_WORD_FREQ_MULTIPLIER;
+                callback.addWord(word, 0, depth + 1, (int) finalFreq, this);
               }
               if (children != null) {
                 getWordsRec(
@@ -352,6 +376,22 @@ public abstract class BTreeDictionary extends EditableDictionary {
                   inputIndex + 1,
                   callback);
             }
+          }
+          if (mSkipPos >= 0) break;
+        }
+
+        // Lost-letter recovery: consume this trie char without consuming input.
+        // Apostrophes are skipped on every pass ("dont" matches "don't"); any other
+        // letter only when this pass was asked to skip this exact depth, which the
+        // retry loop in getSuggestions requests when plain matching comes up empty.
+        final boolean primaryTypedIsQuote =
+            currentChars.length > 0
+                && currentChars[0] > 0
+                && toLowerCase((char) currentChars[0]) == QUOTE;
+        if ((nodeLowerC == QUOTE && !primaryTypedIsQuote) || mSkipPos == depth) {
+          word[depth] = nodeC;
+          if (children != null) {
+            getWordsRec(children, codes, word, depth + 1, false, snr, inputIndex, callback);
           }
         }
       }

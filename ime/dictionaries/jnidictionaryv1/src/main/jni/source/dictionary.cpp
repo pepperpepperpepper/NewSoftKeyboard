@@ -32,6 +32,8 @@
 
 #define DEBUG_DICT 0
 
+static const unsigned short QUOTE = '\'';
+
 namespace nativeime {
 
 Dictionary::Dictionary(unsigned char *dict, int typedLetterMultiplier, int fullWordMultiplier)
@@ -250,6 +252,18 @@ Dictionary::getWordsRec(int pos, int depth, int maxDepth, bool completion, int s
                 }
                 j++;
                 if (mSkipPos >= 0) break;
+            }
+
+            // Lost-letter recovery: consume this trie char without consuming input.
+            // Apostrophes are skipped on every pass ("dont" matches "don't"); any other
+            // letter only when this pass was asked to skip this exact depth (mSkipPos),
+            // which the Java retry loop requests when plain matching comes up empty.
+            if ((c == QUOTE && currentChars[0] != QUOTE) || mSkipPos == depth) {
+                mWord[depth] = c;
+                if (childrenAddress != 0) {
+                    getWordsRec(childrenAddress, depth + 1, maxDepth, false, snr,
+                                inputIndex, diffs);
+                }
             }
         }
     }

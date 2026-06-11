@@ -23,6 +23,8 @@
 #include "dictionary.h"
 #include "char_utils.h"
 
+static const unsigned short QUOTE = '\'';
+
 #define NOT_VALID_WORD -99
 
 namespace nativeime {
@@ -256,6 +258,21 @@ namespace nativeime {
                     }
                     j++;
                     if (mSkipPos >= 0) break;
+                }
+
+                // Lost-letter recovery: consume this trie char without consuming input.
+                // Apostrophes are skipped on every pass ("dont" matches "don't"); any other
+                // letter only when this pass was asked to skip this exact depth (mSkipPos),
+                // which the Java retry loop requests when plain matching comes up empty.
+                // toBaseLowerCase folds the curly apostrophe to the straight one.
+                if ((lowerC == QUOTE
+                     && CharUtils::toBaseLowerCase((unsigned short) currentChars[0]) != QUOTE)
+                    || mSkipPos == depth) {
+                    mWord[depth] = c;
+                    if (childrenAddress != 0) {
+                        getWordsRec(childrenAddress, depth + 1, maxDepth, false, snr,
+                                    inputIndex, diffs);
+                    }
                 }
             }
         }

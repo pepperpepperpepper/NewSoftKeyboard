@@ -91,6 +91,46 @@ public class BTreeDictionaryTest {
     assertArrayEquals(new String[] {"don't"}, getWordsFor(mDictionaryUnderTest, "don’t"));
   }
 
+  @Test
+  public void testSuggestsCompletionsLongerThanTwiceTypedLength() throws Exception {
+    mDictionaryUnderTest.loadDictionary();
+
+    // 15-char completion from a 3-char prefix: the old traversal pruned at twice the
+    // typed length, so this returned nothing.
+    assertArrayEquals(
+        new String[] {"AnySoftKeyboard"}, getWordsFor(mDictionaryUnderTest, "any"));
+    // 9-char completion from a 3-char prefix, across a '.'.
+    assertArrayEquals(new String[] {"gmail.com"}, getWordsFor(mDictionaryUnderTest, "gma"));
+    // 5-char completion from a single-char prefix.
+    assertArrayEquals(new String[] {"phone"}, getWordsFor(mDictionaryUnderTest, "p"));
+  }
+
+  @Test
+  public void testQuoteElisionRecovery() throws Exception {
+    mDictionaryUnderTest.loadDictionary();
+
+    // Typed without the apostrophe: the quote trie node is skipped on the plain pass.
+    assertArrayEquals(new String[] {"don't"}, getWordsFor(mDictionaryUnderTest, "dont"));
+  }
+
+  @Test
+  public void testOmittedLetterRecovery() throws Exception {
+    mDictionaryUnderTest.loadDictionary();
+
+    // One missing letter: the skip-retry pass recovers it.
+    assertArrayEquals(new String[] {"laptop"}, getWordsFor(mDictionaryUnderTest, "lptop"));
+    assertArrayEquals(new String[] {"hello"}, getWordsFor(mDictionaryUnderTest, "hllo"));
+    // Garbage stays unmatched.
+    assertArrayEquals(new String[] {}, getWordsFor(mDictionaryUnderTest, "xyzq"));
+  }
+
+  @Test
+  public void testNoSuggestionsForEmptyInput() throws Exception {
+    mDictionaryUnderTest.loadDictionary();
+
+    assertArrayEquals(new String[] {}, getWordsFor(mDictionaryUnderTest, ""));
+  }
+
   private CharSequence[] getWordsFor(TestableBTreeDictionary underTest, final String typedWord) {
     final ArrayList<CharSequence> words = new ArrayList<>();
     underTest.getSuggestions(

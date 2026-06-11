@@ -407,7 +407,7 @@ public class ImeServiceGimmicksTest extends ImeServiceBaseTest {
     TestInputConnection inputConnection = getCurrentTestInputConnection();
 
     mImeServiceUnderTest.simulateTextTyping("hell");
-    verifySuggestions(true, "hell", "hello");
+    verifySuggestions(true, "hell", "he'll", "hello");
 
     mImeServiceUnderTest.simulateKeyPress(KeyCodes.SPACE);
     Assert.assertEquals("hell ", inputConnection.getCurrentTextInInputConnection());

@@ -161,7 +161,7 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
   @Test
   public void testNextWordPicksTypedIfValidButHasLongerNext() {
     mImeServiceUnderTest.simulateTextTyping("hell");
-    verifySuggestions(true, "hell", "hello");
+    verifySuggestions(true, "hell", "he'll", "hello");
     mImeServiceUnderTest.simulateTextTyping("o ");
     mImeServiceUnderTest.simulateTextTyping("face hello face hello face hello face ");
     mImeServiceUnderTest.simulateTextTyping("face ");
@@ -169,8 +169,9 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
     verifySuggestions(true, "hello");
     // typing "hell", which is a valid word
     mImeServiceUnderTest.simulateTextTyping("hell");
-    // seeing both suggesting
-    verifySuggestions(true, "hell", "hello");
+    // seeing both suggesting — context ("face" precedes "hello" repeatedly) promotes
+    // "hello" above the quote-elision candidate "he'll"
+    verifySuggestions(true, "hell", "hello", "he'll");
     Assert.assertEquals(
         "hello face hello face hello face hello face face hell",
         getCurrentTestInputConnection().getCurrentTextInInputConnection());
@@ -293,7 +294,7 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
     Assert.assertEquals(2, mImeServiceUnderTest.getCurrentComposedWord().cursorPosition());
     Assert.assertEquals(
         "hell yes", getCurrentTestInputConnection().getCurrentTextInInputConnection());
-    verifySuggestions(true, "hell", "hello");
+    verifySuggestions(true, "hell", "he'll", "hello");
     Assert.assertEquals(
         "hell", mImeServiceUnderTest.getCurrentComposedWord().getTypedWord().toString());
     Assert.assertEquals(2, getCurrentTestInputConnection().getCurrentStartPosition());
@@ -335,7 +336,7 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
     Assert.assertEquals(2, mImeServiceUnderTest.getCurrentComposedWord().cursorPosition());
     Assert.assertEquals(
         "hell yes", getCurrentTestInputConnection().getCurrentTextInInputConnection());
-    verifySuggestions(true, "hell", "hello");
+    verifySuggestions(true, "hell", "he'll", "hello");
     Assert.assertEquals(
         "hell", mImeServiceUnderTest.getCurrentComposedWord().getTypedWord().toString());
     Assert.assertEquals(2, getCurrentTestInputConnection().getCurrentStartPosition());
@@ -412,7 +413,7 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
     }
     TestRxSchedulers.drainAllTasksUntilEnd(); // lots of events in the queue...
     TestRxSchedulers.foregroundAdvanceBy(100);
-    verifySuggestions(true, "hell", "hello");
+    verifySuggestions(true, "hell", "he'll", "hello");
     Assert.assertEquals("hell", getCurrentTestInputConnection().getCurrentTextInInputConnection());
     Assert.assertEquals(4, getCurrentTestInputConnection().getCurrentStartPosition());
     Assert.assertEquals(4, mImeServiceUnderTest.getCurrentComposedWord().cursorPosition());
@@ -428,7 +429,7 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
 
     mImeServiceUnderTest.simulateKeyPress('l');
     Assert.assertEquals("hell", getCurrentTestInputConnection().getCurrentTextInInputConnection());
-    verifySuggestions(true, "hell", "hello");
+    verifySuggestions(true, "hell", "he'll", "hello");
     Assert.assertEquals(4, getCurrentTestInputConnection().getCurrentStartPosition());
     Assert.assertEquals(
         "hell", mImeServiceUnderTest.getCurrentComposedWord().getTypedWord().toString());
@@ -553,7 +554,7 @@ public class ImeServiceSuggestionsTest extends ImeServiceBaseTest {
     mImeServiceUnderTest.simulateKeyPress('r');
     Assert.assertEquals(
         "herll yes", getCurrentTestInputConnection().getCurrentTextInInputConnection());
-    verifySuggestions(true, "r");
+    verifySuggestions(true, "r", "face");
     Assert.assertEquals(3, getCurrentTestInputConnection().getCurrentStartPosition());
     Assert.assertEquals(
         "r", mImeServiceUnderTest.getCurrentComposedWord().getTypedWord().toString());
