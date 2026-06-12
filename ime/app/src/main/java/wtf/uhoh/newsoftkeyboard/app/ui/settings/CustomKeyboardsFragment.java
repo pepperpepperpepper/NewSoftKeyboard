@@ -3,12 +3,15 @@ package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
@@ -142,27 +145,55 @@ public class CustomKeyboardsFragment extends Fragment {
   }
 
   private void showCreateKeyboardDialog() {
-    final EditText input = new EditText(requireContext());
-    input.setHint(R.string.custom_keyboards_create_dialog_name_hint);
+    final View dialogView =
+        LayoutInflater.from(requireContext())
+            .inflate(R.layout.custom_keyboard_create_dialog, null, false);
+    final EditText input = dialogView.findViewById(R.id.custom_keyboard_create_name);
+    final RadioGroup templateGroup =
+        dialogView.findViewById(R.id.custom_keyboard_create_template_group);
 
-    new AlertDialog.Builder(requireContext())
-        .setTitle(R.string.custom_keyboards_create_dialog_title)
-        .setView(input)
-        .setPositiveButton(
-            R.string.custom_keyboards_create_dialog_create_button,
-            (dialog, which) -> {
-              String name = input.getText() != null ? input.getText().toString() : "";
-              if (TextUtils.isEmpty(name.trim())) return;
-              createKeyboardFromTemplate(name.trim());
-            })
-        .setNegativeButton(android.R.string.cancel, null)
-        .show();
+    AlertDialog dialog =
+        new AlertDialog.Builder(requireContext())
+            .setTitle(R.string.custom_keyboards_create_dialog_title)
+            .setView(dialogView)
+            .setPositiveButton(
+                R.string.custom_keyboards_create_dialog_create_button,
+                (ignored, which) -> {
+                  String name = input.getText() != null ? input.getText().toString() : "";
+                  if (TextUtils.isEmpty(name.trim())) return;
+                  String templateId =
+                      templateGroup.getCheckedRadioButtonId()
+                              == R.id.custom_keyboard_create_template_basic
+                          ? CustomKeyboardPackCreator.TEMPLATE_BASIC_QWERTY
+                          : CustomKeyboardPackCreator.TEMPLATE_FULL_QWERTY;
+                  createKeyboardFromTemplate(name.trim(), templateId);
+                })
+            .setNegativeButton(android.R.string.cancel, null)
+            .create();
+    dialog.show();
+
+    // A blank name silently dismissed the dialog doing nothing; disable Create instead.
+    final Button createButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+    createButton.setEnabled(false);
+    input.addTextChangedListener(
+        new TextWatcher() {
+          @Override
+          public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+          @Override
+          public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+          @Override
+          public void afterTextChanged(Editable s) {
+            createButton.setEnabled(s != null && !TextUtils.isEmpty(s.toString().trim()));
+          }
+        });
   }
 
-  private void createKeyboardFromTemplate(@NonNull String name) {
+  private void createKeyboardFromTemplate(@NonNull String name, @NonNull String templateId) {
     try {
       InstalledKeyboardPack pack =
-          CustomKeyboardPackCreator.createBasicQwertyKeyboardPack(requireContext(), name);
+          CustomKeyboardPackCreator.createKeyboardPack(requireContext(), name, templateId);
       PackEntry primary = selectPrimaryEntry(pack.manifest());
       String addOnId = PackKeyboardAddOnAndBuilder.buildKeyboardId(pack.manifest(), primary);
       CustomKeyboardPrefs.setKeyboardEnabled(requireContext(), addOnId, true);

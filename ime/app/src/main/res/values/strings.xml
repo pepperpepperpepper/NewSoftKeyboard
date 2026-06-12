@@ -2056,6 +2056,10 @@
     <string name="custom_keyboards_selection_summary_no_codes">%1$s · no output</string>
     <string name="custom_keyboards_selection_unlabeled_key">Key</string>
     <string name="custom_keyboards_selection_row_width">Row %1$d width: %2$s%%</string>
+    <string name="custom_keyboards_template_full_qwerty">Full QWERTY (recommended)</string>
+    <string name="custom_keyboards_template_full_qwerty_description">Complete keyboard: letters with accent popups, shift, delete, space, enter, and a linked symbols layer.</string>
+    <string name="custom_keyboards_template_basic_qwerty">Letters only</string>
+    <string name="custom_keyboards_template_basic_qwerty_description">Three letter rows; relies on your standard bottom row for space and enter.</string>
     <string name="custom_keyboards_theme_actions_dialog_title">Theme</string>
     <string name="custom_keyboards_theme_action_apply">Apply theme…</string>
     <string name="custom_keyboards_theme_action_create">Create theme…</string>

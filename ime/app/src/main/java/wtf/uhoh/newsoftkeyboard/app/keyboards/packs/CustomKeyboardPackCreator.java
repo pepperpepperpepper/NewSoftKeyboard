@@ -5,13 +5,17 @@ import android.content.res.AssetManager;
 import androidx.annotation.NonNull;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.io.DirectoryPackSource;
@@ -25,19 +29,36 @@ public final class CustomKeyboardPackCreator {
   private static final int IO_BUFFER_BYTES = 8 * 1024;
 
   private static final String TEMPLATES_ROOT = "keyboard_designer_templates";
-  private static final String BASIC_QWERTY_TEMPLATE_ID = "basic_qwerty";
-  private static final String BASIC_QWERTY_MAIN_KEYBOARD_PATH =
-      TEMPLATES_ROOT + "/" + BASIC_QWERTY_TEMPLATE_ID + "/keyboards/main.xml";
+  public static final String TEMPLATE_BASIC_QWERTY = "basic_qwerty";
+  public static final String TEMPLATE_FULL_QWERTY = "full_qwerty";
 
-  private static final String DEFAULT_KEYBOARD_ENTRY_ID = "main";
-  private static final String DEFAULT_KEYBOARD_FILE_PATH = "keyboards/main.xml";
+  private static final String MAIN_KEYBOARD_ENTRY_ID = "main";
+
+  // Templates cannot know the generated pack id, so layer-switch keys reference it via this
+  // token (e.g. ask:extra_key_data="pack::__PACK_ID__::symbols"), substituted at create time.
+  private static final String PACK_ID_TOKEN = "__PACK_ID__";
 
   private CustomKeyboardPackCreator() {}
 
   @NonNull
   public static InstalledKeyboardPack createBasicQwertyKeyboardPack(
       @NonNull Context context, @NonNull String keyboardName) throws IOException {
+    return createKeyboardPack(context, keyboardName, TEMPLATE_BASIC_QWERTY);
+  }
+
+  @NonNull
+  public static InstalledKeyboardPack createKeyboardPack(
+      @NonNull Context context, @NonNull String keyboardName, @NonNull String templateId)
+      throws IOException {
     final Context appContext = Objects.requireNonNull(context).getApplicationContext();
+    final AssetManager assets = appContext.getAssets();
+
+    final String templateKeyboardsDir = TEMPLATES_ROOT + "/" + templateId + "/keyboards";
+    String[] keyboardFiles = assets.list(templateKeyboardsDir);
+    if (keyboardFiles == null || keyboardFiles.length == 0) {
+      throw new IOException("Template has no keyboards: " + templateId);
+    }
+    Arrays.sort(keyboardFiles);
 
     KeyboardPacksRepository repository = new KeyboardPacksRepository(appContext);
     File packsRoot = repository.packsRootDir();
@@ -45,59 +66,88 @@ public final class CustomKeyboardPackCreator {
     final String packId = generateUniquePackId(packsRoot, keyboardName);
     final File packDir = new File(packsRoot, packId);
     final File keyboardDir = new File(packDir, "keyboards");
-    final File keyboardXml = new File(keyboardDir, "main.xml");
     final File manifestFile = new File(packDir, "manifest.json");
 
     if (!keyboardDir.mkdirs()) {
       throw new IOException("Failed creating keyboard dir at " + keyboardDir);
     }
 
-    copyAsset(appContext.getAssets(), BASIC_QWERTY_MAIN_KEYBOARD_PATH, keyboardXml);
-
-    PackEntry entry =
-        new PackEntry(DEFAULT_KEYBOARD_ENTRY_ID, PackPath.parse(DEFAULT_KEYBOARD_FILE_PATH));
-    PackManifest manifest =
-        new PackManifest(
-            PackManifest.SUPPORTED_SCHEMA_VERSION,
-            packId,
-            Objects.requireNonNull(keyboardName).trim(),
-            1,
-            null,
-            Collections.singletonList(entry),
-            Collections.emptyList());
-    writeManifest(manifestFile, manifest);
-
-    KeyboardPackValidator.ValidationResult validation =
-        KeyboardPackValidator.validate(
-            new KeyboardPack(manifest, new DirectoryPackSource(packDir)));
-    if (!validation.isValid()) {
-      deleteRecursively(packDir);
-      StringBuilder builder = new StringBuilder("Pack validation failed:");
-      for (String error : validation.errors()) {
-        builder.append("\n- ").append(error);
+    List<PackEntry> entries = new ArrayList<>(keyboardFiles.length);
+    try {
+      for (String fileName : keyboardFiles) {
+        if (!fileName.endsWith(".xml")) continue;
+        copyAssetWithPackId(
+            assets, templateKeyboardsDir + "/" + fileName, new File(keyboardDir, fileName), packId);
+        String entryId = fileName.substring(0, fileName.length() - ".xml".length());
+        entries.add(new PackEntry(entryId, PackPath.parse("keyboards/" + fileName)));
       }
-      throw new IOException(builder.toString());
-    }
+      if (entries.isEmpty()) {
+        throw new IOException("Template has no keyboard XML files: " + templateId);
+      }
+      // The main layout is the pack's primary entry and must come first.
+      entries.sort(
+          (a, b) -> {
+            boolean aMain = MAIN_KEYBOARD_ENTRY_ID.equals(a.id());
+            boolean bMain = MAIN_KEYBOARD_ENTRY_ID.equals(b.id());
+            if (aMain != bMain) return aMain ? -1 : 1;
+            return a.id().compareTo(b.id());
+          });
 
-    return new InstalledKeyboardPack(packDir, manifest);
+      PackManifest manifest =
+          new PackManifest(
+              PackManifest.SUPPORTED_SCHEMA_VERSION,
+              packId,
+              Objects.requireNonNull(keyboardName).trim(),
+              1,
+              null,
+              Collections.unmodifiableList(entries),
+              Collections.emptyList());
+      writeManifest(manifestFile, manifest);
+
+      KeyboardPackValidator.ValidationResult validation =
+          KeyboardPackValidator.validate(
+              new KeyboardPack(manifest, new DirectoryPackSource(packDir)));
+      if (!validation.isValid()) {
+        StringBuilder builder = new StringBuilder("Pack validation failed:");
+        for (String error : validation.errors()) {
+          builder.append("\n- ").append(error);
+        }
+        throw new IOException(builder.toString());
+      }
+
+      return new InstalledKeyboardPack(packDir, manifest);
+    } catch (IOException e) {
+      deleteRecursively(packDir);
+      throw e;
+    }
   }
 
-  private static void copyAsset(
-      @NonNull AssetManager assets, @NonNull String assetPath, @NonNull File outFile)
+  private static void copyAssetWithPackId(
+      @NonNull AssetManager assets,
+      @NonNull String assetPath,
+      @NonNull File outFile,
+      @NonNull String packId)
       throws IOException {
     File parent = outFile.getParentFile();
     if (parent != null && !parent.exists() && !parent.mkdirs()) {
       throw new IOException("Failed creating directory " + parent);
     }
 
-    try (InputStream in = new BufferedInputStream(assets.open(assetPath), IO_BUFFER_BYTES);
-        OutputStream out =
-            new BufferedOutputStream(new FileOutputStream(outFile), IO_BUFFER_BYTES)) {
-      byte[] buffer = new byte[IO_BUFFER_BYTES];
+    String content;
+    try (InputStream in = new BufferedInputStream(assets.open(assetPath), IO_BUFFER_BYTES)) {
+      ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+      byte[] chunk = new byte[IO_BUFFER_BYTES];
       int read;
-      while ((read = in.read(buffer)) != -1) {
-        out.write(buffer, 0, read);
+      while ((read = in.read(chunk)) != -1) {
+        buffer.write(chunk, 0, read);
       }
+      content = new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+    }
+    content = content.replace(PACK_ID_TOKEN, packId);
+
+    try (OutputStream out =
+        new BufferedOutputStream(new FileOutputStream(outFile), IO_BUFFER_BYTES)) {
+      out.write(content.getBytes(StandardCharsets.UTF_8));
     }
   }
 
