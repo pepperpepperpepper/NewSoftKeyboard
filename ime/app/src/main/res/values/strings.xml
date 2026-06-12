@@ -2042,10 +2042,11 @@
     <string name="custom_keyboards_edit_row_edge_flags">Row edge flags</string>
     <string name="custom_keyboards_edit_row_keyboard_mode">Keyboard mode</string>
     <string name="custom_keyboards_confirm_delete_key_title">Delete key?</string>
-    <string name="custom_keyboards_confirm_delete_key_message">This cannot be undone.</string>
+    <string name="custom_keyboards_confirm_delete_key_message">You can revert this with Undo.</string>
     <string name="custom_keyboards_confirm_delete_row_title">Delete row?</string>
-    <string name="custom_keyboards_confirm_delete_row_message">This cannot be undone.</string>
+    <string name="custom_keyboards_confirm_delete_row_message">You can revert this with Undo.</string>
     <string name="custom_keyboards_theme_button">Theme…</string>
+    <string name="custom_keyboards_undo_button">Undo</string>
     <string name="custom_keyboards_theme_actions_dialog_title">Theme</string>
     <string name="custom_keyboards_theme_action_apply">Apply theme…</string>
     <string name="custom_keyboards_theme_action_create">Create theme…</string>

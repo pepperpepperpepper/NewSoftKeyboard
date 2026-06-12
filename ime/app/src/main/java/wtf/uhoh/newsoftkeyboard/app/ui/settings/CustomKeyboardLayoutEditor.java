@@ -78,6 +78,11 @@ final class CustomKeyboardLayoutEditor {
     void setKeyboardDefinition(@Nullable PackKeyboardDefinition definition);
 
     void updateValidationWarnings();
+
+    @NonNull
+    KeyboardModelUndoStack undoStack();
+
+    void onUndoStackChanged();
   }
 
   @NonNull private final Host host;
@@ -186,8 +191,32 @@ final class CustomKeyboardLayoutEditor {
 
   private void applyModelUpdate(@NonNull File xmlFile, @NonNull KeyboardModel updated)
       throws IOException {
-    CustomKeyboardLayoutPackFiles.writeKeyboardModel(xmlFile, updated);
-    host.setKeyboardModel(updated);
+    final KeyboardModel previous = host.keyboardModel();
+    persistModel(xmlFile, updated);
+    if (previous != null) {
+      host.undoStack().push(previous);
+      host.onUndoStackChanged();
+    }
+  }
+
+  void undoLastEdit() {
+    File xmlFile = host.keyboardXmlFile();
+    KeyboardModel previous = host.undoStack().pop();
+    if (xmlFile == null || previous == null) return;
+    try {
+      persistModel(xmlFile, previous);
+    } catch (IOException e) {
+      // The file still holds the newer content; keep the snapshot so undo can be retried.
+      host.undoStack().push(previous);
+      host.statusView().setText(e.getMessage());
+    }
+    host.onUndoStackChanged();
+  }
+
+  private void persistModel(@NonNull File xmlFile, @NonNull KeyboardModel model)
+      throws IOException {
+    CustomKeyboardLayoutPackFiles.writeKeyboardModel(xmlFile, model);
+    host.setKeyboardModel(model);
     CustomKeyboardPrefs.bumpGeneration(host.fragment().requireContext());
     reloadKeyboardView();
     host.updateValidationWarnings();
@@ -399,6 +428,8 @@ final class CustomKeyboardLayoutEditor {
     host.setKeyboardModel(
         CustomKeyboardLayoutPackFiles.readKeyboardModelOrNull(host.keyboardXmlFile()));
     host.setKeyboardDefinition(loaded);
+    host.undoStack().clear();
+    host.onUndoStackChanged();
 
     loaded.loadKeyboard(host.keyboardView().getThemedKeyboardDimens());
     host.keyboardView().setKeyboard(loaded, null, null);

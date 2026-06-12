@@ -58,14 +58,28 @@
             android:text="@string/custom_keyboards_test_typing_clear" />
     </LinearLayout>
 
-    <Button
-        android:id="@+id/custom_keyboard_editor_theme_button"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
         android:layout_marginStart="16dp"
-        android:text="@string/custom_keyboards_theme_button" />
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/custom_keyboard_editor_theme_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/custom_keyboards_theme_button" />
+
+        <Button
+            android:id="@+id/custom_keyboard_editor_undo_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:enabled="false"
+            android:text="@string/custom_keyboards_undo_button" />
+    </LinearLayout>
 
     <wtf.uhoh.newsoftkeyboard.app.keyboards.views.DesignerKeyboardView
         android:id="@+id/custom_keyboard_editor_view"

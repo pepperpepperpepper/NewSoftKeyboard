@@ -18,6 +18,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Objects;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.KeyboardDefinition;
@@ -65,6 +66,9 @@ final class CustomKeyboardEditorSessionController {
     @NonNull
     TextView statusView();
 
+    @NonNull
+    Button undoButton();
+
     void applyPersistedThemeIfAny();
   }
 
@@ -82,6 +86,7 @@ final class CustomKeyboardEditorSessionController {
   @Nullable private File keyboardXmlFile;
   @Nullable private KeyboardModel keyboardModel;
   @Nullable private PackKeyboardDefinition keyboardDefinition;
+  @NonNull private final KeyboardModelUndoStack undoStack = new KeyboardModelUndoStack();
 
   @NonNull private final StringBuilder testTypingBuffer = new StringBuilder();
   private boolean testTypingEnabled;
@@ -174,6 +179,17 @@ final class CustomKeyboardEditorSessionController {
               public void updateValidationWarnings() {
                 CustomKeyboardEditorSessionController.this.updateValidationWarnings();
               }
+
+              @NonNull
+              @Override
+              public KeyboardModelUndoStack undoStack() {
+                return undoStack;
+              }
+
+              @Override
+              public void onUndoStackChanged() {
+                updateUndoButton();
+              }
             },
             runtimeLoader);
 
@@ -190,6 +206,14 @@ final class CustomKeyboardEditorSessionController {
               testTypingBuffer.setLength(0);
               updateTestTypingBufferView();
             });
+
+    host.undoButton()
+        .setOnClickListener(
+            v -> {
+              CustomKeyboardLayoutEditor editor = layoutEditor;
+              if (editor != null) editor.undoLastEdit();
+            });
+    updateUndoButton();
 
     host.testTypingSwitch().setOnCheckedChangeListener(null);
     host.testTypingSwitch().setChecked(testTypingEnabled);
@@ -306,8 +330,13 @@ final class CustomKeyboardEditorSessionController {
     }
   }
 
+  private void updateUndoButton() {
+    host.undoButton().setEnabled(!undoStack.isEmpty());
+  }
+
   private void loadKeyboardOrShowError() {
     clearValidationWarnings();
+    final File previousXmlFile = keyboardXmlFile;
     final Bundle args = host.fragment().getArguments();
     final String packId =
         args != null ? args.getString(CustomKeyboardEditorFragment.ARG_PACK_ID) : null;
@@ -389,6 +418,13 @@ final class CustomKeyboardEditorSessionController {
     host.statusView().setText("");
     host.applyPersistedThemeIfAny();
     updateValidationWarnings();
+
+    // Undo snapshots belong to a single file; onStart re-runs this for the same file (e.g. after
+    // backgrounding), in which case history stays valid and must survive.
+    if (!Objects.equals(previousXmlFile, keyboardXmlFile)) {
+      undoStack.clear();
+    }
+    updateUndoButton();
   }
 
   private static void clearValidationWarnings(@NonNull TextView validationWarningsView) {
