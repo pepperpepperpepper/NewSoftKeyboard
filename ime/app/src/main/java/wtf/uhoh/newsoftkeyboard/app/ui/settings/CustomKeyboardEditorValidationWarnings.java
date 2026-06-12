@@ -135,6 +135,27 @@ final class CustomKeyboardEditorValidationWarnings {
     return warnings;
   }
 
+  /**
+   * Total width of a row in %p, resolving key/row/keyboard keyWidth defaults; null when any
+   * width is not expressed in %p (dp/px/fractions are not comparable without a display).
+   */
+  @Nullable
+  static Float rowWidthPercentOrNull(@NonNull KeyboardModel model, int rowIndex) {
+    if (rowIndex < 0 || rowIndex >= model.rows().size()) return null;
+    Float keyboardDefault = parsePercentOrNull(model.rawKeyboardAttributes().get(ATTR_KEY_WIDTH));
+    KeyboardRow row = model.rows().get(rowIndex);
+    Float rowDefault = parsePercentOrNull(row.rawRowAttributes().get(ATTR_KEY_WIDTH));
+    if (rowDefault == null) rowDefault = keyboardDefault;
+    float sum = 0f;
+    for (KeySpec keySpec : row.keys()) {
+      Float keyWidth = parsePercentOrNull(keySpec.rawAttributes().get(ATTR_KEY_WIDTH));
+      if (keyWidth == null) keyWidth = rowDefault;
+      if (keyWidth == null) return null;
+      sum += keyWidth;
+    }
+    return sum;
+  }
+
   @NonNull
   private static List<String> validateRowWidthPercents(@NonNull KeyboardModel model) {
     Float keyboardDefaultWidthPercent =

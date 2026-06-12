@@ -31,6 +31,7 @@ import wtf.uhoh.newsoftkeyboard.keyboard.core.KeyboardModel;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.KeyboardRow;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.packs.PackEntry;
 import wtf.uhoh.newsoftkeyboard.keyboard.core.packs.PackManifest;
+import wtf.uhoh.newsoftkeyboard.keyboard.core.parser.AskXmlKeyboardWriter;
 
 final class CustomKeyboardLayoutEditor {
   static final String ATTR_CODES = "android:codes";
@@ -43,6 +44,8 @@ final class CustomKeyboardLayoutEditor {
   static final String ATTR_EXTRA_KEY_DATA = "ask:extra_key_data";
   static final String ATTR_ROW_EDGE_FLAGS = "android:rowEdgeFlags";
   static final String ATTR_KEYBOARD_MODE = "android:keyboardMode";
+  static final String ATTR_KEY_EDGE_FLAGS = "android:keyEdgeFlags";
+  static final String ATTR_HORIZONTAL_GAP = "android:horizontalGap";
 
   interface Host {
     @NonNull
@@ -91,19 +94,6 @@ final class CustomKeyboardLayoutEditor {
   CustomKeyboardLayoutEditor(@NonNull Host host, @NonNull PackKeyboardRuntimeLoader runtimeLoader) {
     this.host = host;
     this.runtimeLoader = runtimeLoader;
-  }
-
-  void showKeyEditDialog(@NonNull Keyboard.Key key) {
-    PackKeyboardDefinition currentKeyboard = host.keyboardDefinition();
-    if (currentKeyboard == null) return;
-
-    PackKeyboardDefinition.PackKeyLocation location = currentKeyboard.getPackKeyLocation(key);
-    if (location == null) {
-      host.statusView().setText(R.string.custom_keyboards_error_key_not_editable);
-      return;
-    }
-
-    showKeyEditDialogAtLocation(location.rowIndex(), location.keyIndex());
   }
 
   private void showKeyEditDialogAtLocation(int rowIndex, int keyIndex) {
@@ -182,6 +172,56 @@ final class CustomKeyboardLayoutEditor {
     dialog.show();
   }
 
+  void editKeyAt(int rowIndex, int keyIndex) {
+    showKeyEditDialogAtLocation(rowIndex, keyIndex);
+  }
+
+  void moveKeyAt(int rowIndex, int keyIndex, int offset) {
+    KeyboardModel model = host.keyboardModel();
+    File xmlFile = host.keyboardXmlFile();
+    if (model == null || xmlFile == null) return;
+    try {
+      applyModelUpdate(
+          xmlFile, CustomKeyboardLayoutModelEditor.moveKey(model, rowIndex, keyIndex, offset));
+    } catch (IOException e) {
+      host.statusView().setText(e.getMessage());
+    }
+  }
+
+  void insertKeyAfterAt(int rowIndex, int keyIndex) {
+    KeyboardModel model = host.keyboardModel();
+    File xmlFile = host.keyboardXmlFile();
+    if (model == null || xmlFile == null) return;
+    try {
+      applyModelUpdate(
+          xmlFile, CustomKeyboardLayoutModelEditor.insertKeyAfter(model, rowIndex, keyIndex));
+      showKeyEditDialogAtLocation(rowIndex, keyIndex + 1);
+    } catch (IOException e) {
+      host.statusView().setText(e.getMessage());
+    }
+  }
+
+  void moveKeyToLocationAt(int fromRow, int fromKey, int toRow, int toInsertIndex) {
+    KeyboardModel model = host.keyboardModel();
+    File xmlFile = host.keyboardXmlFile();
+    if (model == null || xmlFile == null) return;
+    try {
+      applyModelUpdate(
+          xmlFile,
+          CustomKeyboardLayoutModelEditor.moveKeyToLocation(
+              model, fromRow, fromKey, toRow, toInsertIndex));
+    } catch (IOException e) {
+      host.statusView().setText(e.getMessage());
+    }
+  }
+
+  void deleteKeyAt(int rowIndex, int keyIndex) {
+    KeyboardModel model = host.keyboardModel();
+    File xmlFile = host.keyboardXmlFile();
+    if (model == null || xmlFile == null) return;
+    confirmDeleteKey(model, xmlFile, rowIndex, keyIndex);
+  }
+
   private void reloadKeyboardView() {
     PackKeyboardDefinition currentKeyboard = host.keyboardDefinition();
     if (currentKeyboard == null) return;
@@ -192,6 +232,13 @@ final class CustomKeyboardLayoutEditor {
   private void applyModelUpdate(@NonNull File xmlFile, @NonNull KeyboardModel updated)
       throws IOException {
     final KeyboardModel previous = host.keyboardModel();
+    // The pure model editors return the input model on out-of-bounds/no-op requests; persisting
+    // those would burn undo entries and IME cache flushes on edits that changed nothing.
+    if (previous == updated) return;
+    if (previous != null
+        && AskXmlKeyboardWriter.toXml(previous).equals(AskXmlKeyboardWriter.toXml(updated))) {
+      return;
+    }
     persistModel(xmlFile, updated);
     if (previous != null) {
       host.undoStack().push(previous);
@@ -359,6 +406,18 @@ final class CustomKeyboardLayoutEditor {
                 }
               }));
     }
+    actions.add(
+        new ActionItem(
+            fragment.getString(R.string.custom_keyboards_layout_action_insert_row_above),
+            () -> {
+              try {
+                applyModelUpdate(
+                    xmlFile, CustomKeyboardLayoutModelEditor.insertRowAbove(model, rowIndex));
+                showKeyEditDialogAtLocation(rowIndex, 0);
+              } catch (IOException e) {
+                host.statusView().setText(e.getMessage());
+              }
+            }));
     actions.add(
         new ActionItem(
             fragment.getString(R.string.custom_keyboards_layout_action_insert_row_below),

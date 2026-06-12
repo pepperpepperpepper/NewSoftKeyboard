@@ -36,6 +36,7 @@ public class CustomKeyboardEditorFragment extends Fragment {
   private TextView statusView;
   private Button themeButton;
   private Button undoButton;
+  private View selectionActionBar;
 
   @Nullable private CustomKeyboardEditorSessionController sessionController;
   @Nullable private CustomKeyboardThemeEditorController themeController;
@@ -61,6 +62,7 @@ public class CustomKeyboardEditorFragment extends Fragment {
     statusView = view.findViewById(R.id.custom_keyboard_editor_status);
     themeButton = view.findViewById(R.id.custom_keyboard_editor_theme_button);
     undoButton = view.findViewById(R.id.custom_keyboard_editor_undo_button);
+    selectionActionBar = view.findViewById(R.id.custom_keyboard_editor_selection_bar);
 
     themeController =
         new CustomKeyboardThemeEditorController(
@@ -157,6 +159,12 @@ public class CustomKeyboardEditorFragment extends Fragment {
               @Override
               public Button undoButton() {
                 return CustomKeyboardEditorFragment.this.undoButton;
+              }
+
+              @NonNull
+              @Override
+              public View selectionActionBar() {
+                return CustomKeyboardEditorFragment.this.selectionActionBar;
               }
 
               @Override
