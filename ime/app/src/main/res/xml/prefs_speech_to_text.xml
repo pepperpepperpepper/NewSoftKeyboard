@@ -10,7 +10,7 @@
         android:summary="@string/speech_to_text_backend_summary"
         android:entries="@array/speech_to_text_backend_entries"
         android:entryValues="@array/speech_to_text_backend_values"
-        android:defaultValue="openai"
+        android:defaultValue="none"
         app:useSimpleSummaryProvider="true" />
 
     <Preference

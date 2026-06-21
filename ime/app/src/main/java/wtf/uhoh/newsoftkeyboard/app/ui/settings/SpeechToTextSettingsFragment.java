@@ -70,8 +70,14 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
       mBackendPreference.setOnPreferenceChangeListener(
           (preference, newValue) -> {
             String selection = String.valueOf(newValue);
-            propagateLegacyFlags(selection);
-            updateBackendSummaries(selection);
+            // Audio leaves the device only for third-party backends. Require explicit, per-provider
+            // consent before persisting such a selection (Play sensitive-data / prominent-disclosure
+            // policy). "none" needs no consent.
+            if (isThirdPartyBackend(selection) && !hasConsentFor(selection)) {
+              showConsentDialog(selection);
+              return false;
+            }
+            applyBackendSelection(selection);
             return true;
           });
     }
@@ -92,6 +98,58 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
             return true;
           });
     }
+  }
+
+  private static boolean isThirdPartyBackend(String selection) {
+    return "openai".equals(selection) || "elevenlabs".equals(selection);
+  }
+
+  private boolean hasConsentFor(String selection) {
+    if (mBackendPreference == null) {
+      return false;
+    }
+    String consented =
+        mBackendPreference
+            .getSharedPreferences()
+            .getString(getString(R.string.settings_key_speech_to_text_consented_backend), "");
+    return selection.equals(consented);
+  }
+
+  private String backendDisplayName(String selection) {
+    if ("openai".equals(selection)) {
+      return getString(R.string.speech_to_text_backend_entry_openai);
+    }
+    if ("elevenlabs".equals(selection)) {
+      return getString(R.string.speech_to_text_backend_entry_elevenlabs);
+    }
+    return selection;
+  }
+
+  private void showConsentDialog(String selection) {
+    final String provider = backendDisplayName(selection);
+    new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+        .setTitle(getString(R.string.speech_to_text_consent_title, provider))
+        .setMessage(getString(R.string.speech_to_text_consent_message, provider))
+        .setPositiveButton(
+            R.string.speech_to_text_consent_accept,
+            (dialog, which) -> {
+              mBackendPreference
+                  .getSharedPreferences()
+                  .edit()
+                  .putString(
+                      getString(R.string.settings_key_speech_to_text_consented_backend), selection)
+                  .apply();
+              // setValue() persists directly and does not re-fire the change listener.
+              mBackendPreference.setValue(selection);
+              applyBackendSelection(selection);
+            })
+        .setNegativeButton(R.string.speech_to_text_consent_decline, null)
+        .show();
+  }
+
+  private void applyBackendSelection(String selection) {
+    propagateLegacyFlags(selection);
+    updateBackendSummaries(selection);
   }
 
   private void propagateLegacyFlags(String selection) {

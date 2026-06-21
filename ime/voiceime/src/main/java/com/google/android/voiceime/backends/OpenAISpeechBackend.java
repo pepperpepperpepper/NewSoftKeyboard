@@ -49,9 +49,11 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
   @Override
   public boolean isSelected(@NonNull Context context, @NonNull SharedPreferences prefs) {
     String selectionKey = context.getString(R.string.settings_key_speech_to_text_backend);
-    String selectedBackend = prefs.getString(selectionKey, ID);
+    // Default OFF: when the backend has never been chosen, no audio is ever sent to a third party
+    // until the user explicitly opts in (Play sensitive-data policy). The legacy openai_enabled flag
+    // is still honored so existing users who enabled voice input keep working after upgrade.
+    String selectedBackend = prefs.getString(selectionKey, null);
     if (selectedBackend == null || selectedBackend.isEmpty()) {
-      // Legacy flag support: fall back to OpenAI enabled flag
       String enabledKey = context.getString(R.string.settings_key_openai_enabled);
       return prefs.getBoolean(enabledKey, false);
     }

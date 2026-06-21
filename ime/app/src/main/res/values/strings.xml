@@ -1631,6 +1631,10 @@
     <string name="speech_to_text_provider_status_not_selected">Not selected</string>
     <string name="speech_to_text_privacy_notice_title">Privacy notice</string>
     <string name="speech_to_text_privacy_notice_summary">When using voice dictation, your audio is uploaded to the selected provider for transcription. Your API key is stored encrypted on-device. Only use providers and endpoints you trust.</string>
+    <string name="speech_to_text_consent_title">Send audio to %1$s?</string>
+    <string name="speech_to_text_consent_message">Voice typing records your speech and uploads the audio to %1$s, a third-party service, over the internet for transcription. Audio is sent only while you use voice typing and is not stored by this app. You can disable this any time in this screen.\n\nDo you want to enable voice typing with %1$s?</string>
+    <string name="speech_to_text_consent_accept">Enable</string>
+    <string name="speech_to_text_consent_decline">Cancel</string>
     <string name="speech_to_text_api_key_dialog_message_key_saved">API key is saved (hidden). Enter a new key to replace it, or tap Clear to remove it.</string>
     <string name="speech_to_text_api_key_dialog_message_key_missing">Enter your API key. It will be stored encrypted on-device and won\'t be shown again.</string>
 

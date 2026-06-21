@@ -46,7 +46,8 @@ public final class ElevenLabsSpeechBackend implements SpeechToTextBackend {
   @Override
   public boolean isSelected(@NonNull Context context, @NonNull SharedPreferences prefs) {
     String selectionKey = context.getString(R.string.settings_key_speech_to_text_backend);
-    String selectedBackend = prefs.getString(selectionKey, OpenAISpeechBackend.ID);
+    // Default OFF: no backend is selected until the user explicitly opts in.
+    String selectedBackend = prefs.getString(selectionKey, null);
     return ID.equals(selectedBackend);
   }
 

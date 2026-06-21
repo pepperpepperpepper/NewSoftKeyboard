@@ -374,6 +374,7 @@
     <string name="settings_key_openai_add_trailing_space">settings_key_openai_add_trailing_space</string>
     <string name="settings_key_speech_to_text_settings">settings_key_speech_to_text_settings</string>
     <string name="settings_key_speech_to_text_backend">settings_key_speech_to_text_backend</string>
+    <string name="settings_key_speech_to_text_consented_backend">settings_key_speech_to_text_consented_backend</string>
     <string name="settings_key_elevenlabs_api_key">settings_key_elevenlabs_api_key</string>
     <string name="settings_key_elevenlabs_endpoint">settings_key_elevenlabs_endpoint</string>
     <string name="settings_key_elevenlabs_model">settings_key_elevenlabs_model</string>

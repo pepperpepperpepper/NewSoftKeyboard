@@ -47,6 +47,13 @@ public class OpenAISpeechBackendTest {
   }
 
   @Test
+  public void testIsNotSelectedByDefaultWhenUnset() {
+    // No backend chosen and no legacy flag: must default OFF so no audio is ever sent to a third
+    // party until the user explicitly opts in (Play sensitive-data policy).
+    Assert.assertFalse(mBackend.isSelected(mContext, mPrefs));
+  }
+
+  @Test
   public void testIsSelectedFallsBackToLegacyFlag() {
     mPrefs
         .edit()
