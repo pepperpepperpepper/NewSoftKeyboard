@@ -15,7 +15,7 @@
         <Key android:codes="52" android:keyIcon="@drawable/sym_keyboard_num4" android:keyEdgeFlags="left"/>
         <Key android:codes="53" android:keyIcon="@drawable/sym_keyboard_num5"/>
         <Key android:codes="54" android:keyIcon="@drawable/sym_keyboard_num6"/>
-        <Key android:codes="45" android:popupCharacters=".(),;/" android:keyEdgeFlags="right"/>
+        <Key android:codes="45" android:keyEdgeFlags="right"/>
     </Row>
 
     <Row>
@@ -26,9 +26,9 @@
     </Row>
 
     <Row android:rowEdgeFlags="bottom">
-        <Key android:codes="42" android:keyLabel="*" android:popupCharacters=",;N" android:keyEdgeFlags="left"/>
+        <Key android:codes="42" android:keyLabel="*" android:keyEdgeFlags="left"/>
         <Key android:codes="48" android:keyIcon="@drawable/sym_keyboard_num0" ask:longPressCode="43"/>
-        <Key android:codes="35" android:popupCharacters=",;N"/>
+        <Key android:codes="35"/>
         <Key android:codes="@integer/key_code_enter" android:keyEdgeFlags="right" ask:longPressCode="@integer/key_code_settings"/>
     </Row>
 </Keyboard>
