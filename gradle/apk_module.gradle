@@ -64,7 +64,10 @@ android.applicationVariants.configureEach { variant ->
     def bundleProvider = tasks.named("sign${variant.name.capitalize()}Bundle")
     def bundleCopy = tasks.register("copy${variant.name.capitalize()}Aab", Copy)
     bundleCopy.configure { copier ->
-        copier.from "${project.buildDir.absolutePath}/outputs/bundle/${variant.name}/${project.name}-${variant.name}.aab"
+        // AGP names the bundle "<module>-<flavor>-<buildType>.aab" (dash-separated), not
+        // "<module>-<variantName>.aab", so glob the single .aab in the variant dir rather than
+        // hardcoding a name that drifts with AGP's naming convention.
+        copier.from fileTree(dir: "${project.buildDir.absolutePath}/outputs/bundle/${variant.name}", include: ['*.aab'])
         copier.destinationDir file("${rootDir.absolutePath}/outputs/bundle/")
         copier.rename ".*", "${project.parent.name}_${variant.name}.aab"
         copier.dependsOn bundleProvider
