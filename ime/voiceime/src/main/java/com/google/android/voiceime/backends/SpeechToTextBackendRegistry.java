@@ -36,6 +36,7 @@ public final class SpeechToTextBackendRegistry {
   static {
     registerBackend(new OpenAISpeechBackend());
     registerBackend(new ElevenLabsSpeechBackend());
+    registerBackend(new GroqSpeechBackend());
   }
 
   private SpeechToTextBackendRegistry() {

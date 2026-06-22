@@ -20,11 +20,13 @@
         <item>@string/speech_to_text_backend_entry_none</item>
         <item>@string/speech_to_text_backend_entry_openai</item>
         <item>@string/speech_to_text_backend_entry_elevenlabs</item>
+        <item>@string/speech_to_text_backend_entry_groq</item>
     </string-array>
     <string-array name="speech_to_text_backend_values">
         <item>none</item>
         <item>openai</item>
         <item>elevenlabs</item>
+        <item>groq</item>
     </string-array>
 
     <!-- Values for custom hint positioning, which should be interpreted

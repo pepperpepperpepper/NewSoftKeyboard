@@ -1296,6 +1296,8 @@
     <string name="openai_ui_card_message_api"><![CDATA[Open the <a href="ask-settings://openai-speech">OpenAI Speech-to-Text settings</a> to enter your API key and choose how transcription behaves.]]></string>
     <string name="elevenlabs_ui_card_title">Get ElevenLabs voice input ready</string>
     <string name="elevenlabs_ui_card_message_api"><![CDATA[Open the <a href="ask-settings://speech-to-text">speech-to-text settings</a> to enter your ElevenLabs API key and adjust transcription options.]]></string>
+    <string name="groq_ui_card_title">Get Groq voice input ready</string>
+    <string name="groq_ui_card_message_api"><![CDATA[Open the <a href="ask-settings://speech-to-text">speech-to-text settings</a> to enter your Groq API key and adjust transcription options.]]></string>
     
     
 
@@ -1626,6 +1628,7 @@
     <string name="speech_to_text_backend_entry_none">Disable</string>
     <string name="speech_to_text_backend_entry_openai">OpenAI</string>
     <string name="speech_to_text_backend_entry_elevenlabs">ElevenLabs</string>
+    <string name="speech_to_text_backend_entry_groq">Groq</string>
     <string name="speech_to_text_provider_status_configured">Configured</string>
     <string name="speech_to_text_provider_status_missing_api_key">Missing API key</string>
     <string name="speech_to_text_provider_status_not_selected">Not selected</string>

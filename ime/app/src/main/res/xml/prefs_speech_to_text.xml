@@ -35,6 +35,12 @@
             android:title="@string/elevenlabs_speech_settings_title"
             android:summary="@string/elevenlabs_speech_settings_summary"
             app:iconSpaceReserved="false" />
+
+        <androidx.preference.Preference
+            android:key="speech_to_text_groq_settings"
+            android:title="@string/groq_speech_settings_title"
+            android:summary="@string/groq_speech_settings_summary"
+            app:iconSpaceReserved="false" />
     </androidx.preference.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

@@ -44,14 +44,18 @@ final class SpeechToTextSetupCardController {
       return;
     }
 
-    String title =
-        backendId.equals("elevenlabs")
-            ? context.getString(R.string.elevenlabs_ui_card_title)
-            : context.getString(R.string.openai_ui_card_title);
-    int apiMessageRes =
-        backendId.equals("elevenlabs")
-            ? R.string.elevenlabs_ui_card_message_api
-            : R.string.openai_ui_card_message_api;
+    String title;
+    int apiMessageRes;
+    if (backendId.equals("elevenlabs")) {
+      title = context.getString(R.string.elevenlabs_ui_card_title);
+      apiMessageRes = R.string.elevenlabs_ui_card_message_api;
+    } else if (backendId.equals("groq")) {
+      title = context.getString(R.string.groq_ui_card_title);
+      apiMessageRes = R.string.groq_ui_card_message_api;
+    } else {
+      title = context.getString(R.string.openai_ui_card_title);
+      apiMessageRes = R.string.openai_ui_card_message_api;
+    }
     String message = buildMessage(context, needsPermissions, needsApiConfiguration, apiMessageRes);
     AddOnUICard card = new AddOnUICard(context.getPackageName(), title, message, null);
     new AddOnUICardManager(context).registerUICard(card);
@@ -95,6 +99,20 @@ final class SpeechToTextSetupCardController {
       String legacyApiKey = prefs.getString(legacyKeyName, "");
       if (!TextUtils.isEmpty(legacyApiKey)) {
         SpeechToTextSecretsStore.setElevenLabsApiKey(context, legacyApiKey);
+        prefs.edit().remove(legacyKeyName).apply();
+        return false;
+      }
+      return true;
+    }
+    if ("groq".equals(backendId)) {
+      String apiKey = SpeechToTextSecretsStore.getGroqApiKey(context);
+      if (!TextUtils.isEmpty(apiKey)) {
+        return false;
+      }
+      String legacyKeyName = context.getString(R.string.settings_key_groq_api_key);
+      String legacyApiKey = prefs.getString(legacyKeyName, "");
+      if (!TextUtils.isEmpty(legacyApiKey)) {
+        SpeechToTextSecretsStore.setGroqApiKey(context, legacyApiKey);
         prefs.edit().remove(legacyKeyName).apply();
         return false;
       }

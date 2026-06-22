@@ -117,6 +117,11 @@ final class SettingsSearchIndex {
             R.xml.prefs_elevenlabs_speech,
             elevenLabsPrefix));
 
+    final String groqPrefix =
+        voiceCategory + " → " + context.getString(R.string.groq_speech_settings_title);
+    screens.add(
+        new ScreenSpec(R.id.groqSpeechSettingsFragment, R.xml.prefs_groq_speech, groqPrefix));
+
     final Map<String, ActionTarget> actionTargets = buildActionTargets(context);
     final Set<String> hardwareKeyboardKeys = buildHardwareKeyboardKeys(context);
     final boolean hasHardwareKeyboard =

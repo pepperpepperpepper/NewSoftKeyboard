@@ -57,6 +57,47 @@ public class OpenAITranscriber {
   }
 
   /**
+   * User-facing error strings, parameterized so OpenAI-compatible backends (e.g. Groq) can surface
+   * provider-named messages instead of "OpenAI ...". Defaults to {@link #OPENAI}.
+   */
+  public static final class ErrorMessages {
+    final int apiKeyUnset;
+    final int endpointUnset;
+    final int endpointInsecure;
+    final int network;
+    final int transcriptionFailed;
+    final int apiError;
+    final int recordingFailed;
+
+    public ErrorMessages(
+        int apiKeyUnset,
+        int endpointUnset,
+        int endpointInsecure,
+        int network,
+        int transcriptionFailed,
+        int apiError,
+        int recordingFailed) {
+      this.apiKeyUnset = apiKeyUnset;
+      this.endpointUnset = endpointUnset;
+      this.endpointInsecure = endpointInsecure;
+      this.network = network;
+      this.transcriptionFailed = transcriptionFailed;
+      this.apiError = apiError;
+      this.recordingFailed = recordingFailed;
+    }
+
+    public static final ErrorMessages OPENAI =
+        new ErrorMessages(
+            R.string.openai_error_api_key_unset,
+            R.string.openai_error_endpoint_unset,
+            R.string.openai_error_endpoint_insecure,
+            R.string.openai_error_network,
+            R.string.openai_error_transcription_failed,
+            R.string.openai_error_api_error,
+            R.string.openai_error_recording_failed);
+  }
+
+  /**
    * Starts an asynchronous transcription request to OpenAI's Whisper API.
    *
    * @param context Android context for accessing resources
@@ -91,20 +132,62 @@ public class OpenAITranscriber {
       @NonNull String defaultPromptType,
       boolean appendCustomPrompt,
       @NonNull TranscriptionCallback callback) {
+    startAsync(
+        context,
+        filename,
+        mediaType,
+        apiKey,
+        endpoint,
+        model,
+        language,
+        temperature,
+        responseFormat,
+        chunkingStrategy,
+        prompt,
+        addTrailingSpace,
+        useDefaultPrompt,
+        defaultPromptType,
+        appendCustomPrompt,
+        ErrorMessages.OPENAI,
+        callback);
+  }
+
+  /**
+   * Same as the other {@code startAsync}, but with a caller-supplied {@link ErrorMessages} so
+   * OpenAI-compatible providers can surface their own provider-named error text.
+   */
+  public void startAsync(
+      @NonNull Context context,
+      @NonNull String filename,
+      @NonNull String mediaType,
+      @NonNull String apiKey,
+      @NonNull String endpoint,
+      @NonNull String model,
+      @NonNull String language,
+      @NonNull String temperature,
+      @NonNull String responseFormat,
+      @NonNull String chunkingStrategy,
+      @NonNull String prompt,
+      boolean addTrailingSpace,
+      boolean useDefaultPrompt,
+      @NonNull String defaultPromptType,
+      boolean appendCustomPrompt,
+      @NonNull ErrorMessages errorMessages,
+      @NonNull TranscriptionCallback callback) {
 
     // Validate inputs
     if (apiKey.isEmpty()) {
-      callback.onError(context.getString(R.string.openai_error_api_key_unset));
+      callback.onError(context.getString(errorMessages.apiKeyUnset));
       return;
     }
 
     String sanitizedEndpoint = endpoint.trim();
     if (sanitizedEndpoint.isEmpty()) {
-      callback.onError(context.getString(R.string.openai_error_endpoint_unset));
+      callback.onError(context.getString(errorMessages.endpointUnset));
       return;
     }
     if (!isHttpsUrl(sanitizedEndpoint)) {
-      callback.onError(context.getString(R.string.openai_error_endpoint_insecure));
+      callback.onError(context.getString(errorMessages.endpointInsecure));
       return;
     }
 
@@ -138,7 +221,7 @@ public class OpenAITranscriber {
 
               } catch (Exception e) {
                 Log.e(TAG, "Transcription failed", e);
-                String errorMessage = mapExceptionToUserMessage(context, e);
+                String errorMessage = mapExceptionToUserMessage(context, e, errorMessages);
                 postErrorToMainThread(errorMessage, callback);
               }
             })
@@ -290,27 +373,28 @@ public class OpenAITranscriber {
   }
 
   @NonNull
-  private static String mapExceptionToUserMessage(@NonNull Context context, @NonNull Exception e) {
+  private static String mapExceptionToUserMessage(
+      @NonNull Context context, @NonNull Exception e, @NonNull ErrorMessages errorMessages) {
     if (e instanceof SocketTimeoutException
         || e instanceof UnknownHostException
         || e instanceof ConnectException
         || e instanceof SSLException
         || e instanceof java.io.InterruptedIOException) {
-      return context.getString(R.string.openai_error_network);
+      return context.getString(errorMessages.network);
     }
 
     final String errorMessage = e.getMessage();
     if (errorMessage == null || errorMessage.trim().isEmpty()) {
-      return context.getString(R.string.openai_error_transcription_failed);
+      return context.getString(errorMessages.transcriptionFailed);
     }
 
     final String trimmed = errorMessage.trim();
     if (trimmed.startsWith("HTTP ")) {
-      return context.getString(R.string.openai_error_api_error, compactForException(trimmed));
+      return context.getString(errorMessages.apiError, compactForException(trimmed));
     }
     if (trimmed.startsWith("Audio file does not exist:")
         || trimmed.startsWith("Audio file is empty:")) {
-      return context.getString(R.string.openai_error_recording_failed);
+      return context.getString(errorMessages.recordingFailed);
     }
     return trimmed;
   }

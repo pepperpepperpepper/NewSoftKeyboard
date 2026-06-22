@@ -330,6 +330,12 @@ final class KeyboardApiPreferenceAllowList {
             scopeRead,
             scopeWriteVoice));
     m.put(
+        context.getString(R.string.settings_key_groq_add_trailing_space),
+        PrefSpec.bool(
+            context.getString(R.string.settings_key_groq_add_trailing_space),
+            scopeRead,
+            scopeWriteVoice));
+    m.put(
         context.getString(R.string.settings_key_openai_auto_punctuation),
         PrefSpec.bool(
             context.getString(R.string.settings_key_openai_auto_punctuation),

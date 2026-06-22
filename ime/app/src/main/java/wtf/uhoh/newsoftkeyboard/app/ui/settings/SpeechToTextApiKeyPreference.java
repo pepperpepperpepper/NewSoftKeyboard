@@ -95,6 +95,8 @@ public class SpeechToTextApiKeyPreference extends EditTextPreference {
       SpeechToTextSecretsStore.setOpenAIApiKey(context, apiKey);
     } else if (TextUtils.equals(key, context.getString(R.string.settings_key_elevenlabs_api_key))) {
       SpeechToTextSecretsStore.setElevenLabsApiKey(context, apiKey);
+    } else if (TextUtils.equals(key, context.getString(R.string.settings_key_groq_api_key))) {
+      SpeechToTextSecretsStore.setGroqApiKey(context, apiKey);
     }
 
     // Remove any legacy plaintext value that may still exist in SharedPreferences.
@@ -117,6 +119,12 @@ public class SpeechToTextApiKeyPreference extends EditTextPreference {
     if (TextUtils.equals(trimmedPreferenceKey, elevenLabsKeyName)) {
       final String elevenLabsApiKey = SpeechToTextSecretsStore.getElevenLabsApiKey(context);
       if (elevenLabsApiKey != null && !elevenLabsApiKey.trim().isEmpty()) return true;
+    }
+
+    final String groqKeyName = context.getString(R.string.settings_key_groq_api_key);
+    if (TextUtils.equals(trimmedPreferenceKey, groqKeyName)) {
+      final String groqApiKey = SpeechToTextSecretsStore.getGroqApiKey(context);
+      if (groqApiKey != null && !groqApiKey.trim().isEmpty()) return true;
     }
 
     final String legacyValue =

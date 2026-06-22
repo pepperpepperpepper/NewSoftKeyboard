@@ -213,6 +213,13 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_speechToTextSettingsFragment_to_groqSpeechSettingsFragment"
+            app:destination="@id/groqSpeechSettingsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
     <fragment
         android:id="@+id/openAISpeechSettingsFragment"
@@ -222,6 +229,10 @@
         android:id="@+id/elevenLabsSpeechSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.ElevenLabsSpeechSettingsFragment"
         android:label="@string/elevenlabs_speech_settings_title" />
+    <fragment
+        android:id="@+id/groqSpeechSettingsFragment"
+        android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.GroqSpeechSettingsFragment"
+        android:label="@string/groq_speech_settings_title" />
     <fragment
         android:id="@+id/userInterfaceSettingsFragment"
         android:name="wtf.uhoh.newsoftkeyboard.app.ui.settings.UserInterfaceSettingsFragment"

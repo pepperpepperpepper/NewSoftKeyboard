@@ -20,6 +20,7 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
   private ListPreference mBackendPreference;
   private Preference mOpenAiPreference;
   private Preference mElevenLabsPreference;
+  private Preference mGroqPreference;
 
   @Override
   public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -28,6 +29,7 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
     mBackendPreference = findPreference(getString(R.string.settings_key_speech_to_text_backend));
     mOpenAiPreference = findPreference("speech_to_text_openai_settings");
     mElevenLabsPreference = findPreference("speech_to_text_elevenlabs_settings");
+    mGroqPreference = findPreference("speech_to_text_groq_settings");
 
     ensureBackendSelectionInitialized();
     bindPreferenceHandlers();
@@ -98,10 +100,20 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
             return true;
           });
     }
+
+    if (mGroqPreference != null) {
+      mGroqPreference.setOnPreferenceClickListener(
+          preference -> {
+            Navigation.findNavController(requireView()).navigate(R.id.groqSpeechSettingsFragment);
+            return true;
+          });
+    }
   }
 
   private static boolean isThirdPartyBackend(String selection) {
-    return "openai".equals(selection) || "elevenlabs".equals(selection);
+    return "openai".equals(selection)
+        || "elevenlabs".equals(selection)
+        || "groq".equals(selection);
   }
 
   private boolean hasConsentFor(String selection) {
@@ -121,6 +133,9 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
     }
     if ("elevenlabs".equals(selection)) {
       return getString(R.string.speech_to_text_backend_entry_elevenlabs);
+    }
+    if ("groq".equals(selection)) {
+      return getString(R.string.speech_to_text_backend_entry_groq);
     }
     return selection;
   }
@@ -169,18 +184,25 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
   }
 
   private void updateBackendSummaries(String selectedBackendId) {
-    if (mOpenAiPreference == null || mElevenLabsPreference == null || mBackendPreference == null) {
+    if (mOpenAiPreference == null
+        || mElevenLabsPreference == null
+        || mGroqPreference == null
+        || mBackendPreference == null) {
       return;
     }
     List<SpeechToTextBackend> backends = SpeechToTextBackendRegistry.getBackends();
     boolean openAiConfigured = false;
     boolean elevenLabsConfigured = false;
+    boolean groqConfigured = false;
     for (SpeechToTextBackend backend : backends) {
       if ("openai".equals(backend.getId())) {
         openAiConfigured =
             backend.isConfigured(requireContext(), mBackendPreference.getSharedPreferences());
       } else if ("elevenlabs".equals(backend.getId())) {
         elevenLabsConfigured =
+            backend.isConfigured(requireContext(), mBackendPreference.getSharedPreferences());
+      } else if ("groq".equals(backend.getId())) {
+        groqConfigured =
             backend.isConfigured(requireContext(), mBackendPreference.getSharedPreferences());
       }
     }
@@ -198,6 +220,13 @@ public class SpeechToTextSettingsFragment extends PreferenceFragmentCompat {
             selectedBackendId,
             "elevenlabs",
             elevenLabsConfigured));
+
+    mGroqPreference.setSummary(
+        buildStatusSummary(
+            getString(R.string.groq_speech_settings_summary),
+            selectedBackendId,
+            "groq",
+            groqConfigured));
   }
 
   private CharSequence buildStatusSummary(

@@ -56,6 +56,7 @@ public final class SpeechToTextSecretsStore {
 
   private static final String KEY_OPENAI_API_KEY = "openai_api_key";
   private static final String KEY_ELEVENLABS_API_KEY = "elevenlabs_api_key";
+  private static final String KEY_GROQ_API_KEY = "groq_api_key";
 
   private SpeechToTextSecretsStore() {}
 
@@ -83,6 +84,19 @@ public final class SpeechToTextSecretsStore {
 
   public static void setElevenLabsApiKey(@NonNull Context context, @Nullable String apiKey) {
     setSecret(context, KEY_ELEVENLABS_API_KEY, apiKey);
+  }
+
+  @Nullable
+  public static String getGroqApiKey(@NonNull Context context) {
+    return getSecret(context, KEY_GROQ_API_KEY);
+  }
+
+  public static boolean hasGroqApiKey(@NonNull Context context) {
+    return hasSecret(context, KEY_GROQ_API_KEY);
+  }
+
+  public static void setGroqApiKey(@NonNull Context context, @Nullable String apiKey) {
+    setSecret(context, KEY_GROQ_API_KEY, apiKey);
   }
 
   private static boolean hasSecret(@NonNull Context context, @NonNull String key) {
