@@ -1,18 +1,26 @@
 package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.text.InputType;
+import android.text.TextUtils;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.util.Consumer;
 import androidx.fragment.app.Fragment;
 import io.reactivex.disposables.Disposable;
 import java.util.List;
 import net.evendanan.pixel.GeneralDialogController;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.prefs.GlobalPrefsBackup;
+import wtf.uhoh.newsoftkeyboard.app.prefs.SecretsBackupProvider;
 import wtf.uhoh.newsoftkeyboard.base.utils.Logger;
 
 /**
@@ -144,10 +152,116 @@ final class PrefsBackupRestoreController {
         providersTitles, initialChecked, (dialogInterface, i, b) -> checked[i] = b);
     builder.setNegativeButton(android.R.string.cancel, null);
     builder.setCancelable(true);
+    final boolean isBackup = optionId == R.id.backup_prefs;
     builder.setPositiveButton(
         actionTitle,
-        (dialog, which) ->
+        (dialog, which) -> {
+          final SecretsBackupProvider secrets = checkedSecretsProvider(supportedProviders, checked);
+          // On backup with no stored keys there is nothing to encrypt, so skip the passphrase
+          // prompt; on restore we always prompt because the file contents aren't known yet.
+          final boolean needsPassphrase =
+              secrets != null
+                  && (!isBackup || SecretsBackupProvider.hasAnySecret(fragment.requireContext()));
+          if (needsPassphrase) {
+            // The secrets provider needs a passphrase before the (file-picker -> launch) flow runs.
+            promptForPassphrase(
+                fragment,
+                isBackup,
+                passphrase -> {
+                  secrets.setPassphrase(passphrase);
+                  BackupRestoreLauncher.startChooser(
+                      fragment, optionId, providersTitles, initialChecked, checked);
+                });
+          } else {
             BackupRestoreLauncher.startChooser(
-                fragment, optionId, providersTitles, initialChecked, checked));
+                fragment, optionId, providersTitles, initialChecked, checked);
+          }
+        });
+  }
+
+  @Nullable
+  private static SecretsBackupProvider checkedSecretsProvider(
+      @NonNull List<GlobalPrefsBackup.ProviderDetails> providers, @NonNull Boolean[] checked) {
+    for (int i = 0; i < providers.size() && i < checked.length; i++) {
+      if (Boolean.TRUE.equals(checked[i])
+          && providers.get(i).provider instanceof SecretsBackupProvider secrets) {
+        return secrets;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Prompts for the backup/restore passphrase. On backup the user must confirm it; {@code onAccept}
+   * is invoked with the passphrase only when validation passes.
+   */
+  private static void promptForPassphrase(
+      @NonNull Fragment fragment, boolean isBackup, @NonNull Consumer<char[]> onAccept) {
+    final Context context = fragment.requireContext();
+    final int padding = (int) (16 * context.getResources().getDisplayMetrics().density);
+
+    final LinearLayout layout = new LinearLayout(context);
+    layout.setOrientation(LinearLayout.VERTICAL);
+    layout.setPadding(padding, padding / 2, padding, 0);
+
+    final EditText passphraseField = new EditText(context);
+    passphraseField.setInputType(
+        InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+    passphraseField.setHint(R.string.secrets_passphrase_hint);
+    layout.addView(passphraseField);
+
+    final EditText confirmField;
+    if (isBackup) {
+      confirmField = new EditText(context);
+      confirmField.setInputType(
+          InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+      confirmField.setHint(R.string.secrets_passphrase_confirm_hint);
+      layout.addView(confirmField);
+    } else {
+      confirmField = null;
+    }
+
+    new AlertDialog.Builder(context, R.style.Theme_NskAlertDialog)
+        .setTitle(R.string.secrets_backup_passphrase_title)
+        .setMessage(
+            isBackup
+                ? R.string.secrets_backup_passphrase_message
+                : R.string.secrets_restore_passphrase_message)
+        .setView(layout)
+        .setNegativeButton(android.R.string.cancel, null)
+        .setPositiveButton(
+            android.R.string.ok,
+            (d, w) -> {
+              final char[] passphrase = textToChars(passphraseField);
+              if (passphrase.length == 0) {
+                Toast.makeText(context, R.string.secrets_passphrase_empty, Toast.LENGTH_LONG)
+                    .show();
+                return;
+              }
+              if (confirmField != null) {
+                final char[] confirm = textToChars(confirmField);
+                final boolean matches = java.util.Arrays.equals(passphrase, confirm);
+                java.util.Arrays.fill(confirm, '\0');
+                if (!matches) {
+                  java.util.Arrays.fill(passphrase, '\0');
+                  Toast.makeText(context, R.string.secrets_passphrase_mismatch, Toast.LENGTH_LONG)
+                      .show();
+                  return;
+                }
+              }
+              onAccept.accept(passphrase);
+            })
+        .show();
+  }
+
+  @NonNull
+  private static char[] textToChars(@NonNull EditText editText) {
+    final CharSequence text = editText.getText();
+    if (TextUtils.isEmpty(text)) return new char[0];
+    final char[] out = new char[text.length()];
+    for (int i = 0; i < text.length(); i++) {
+      out[i] = text.charAt(i);
+    }
+    return out;
   }
 }

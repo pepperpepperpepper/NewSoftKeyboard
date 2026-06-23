@@ -51,7 +51,9 @@ public class GlobalPrefsBackup {
         new ProviderDetails(
             new WordsSQLiteConnectionPrefsProvider(
                 context, AbbreviationsDictionary.ABBREVIATIONS_DB),
-            R.string.abbreviation_dict_prefs_provider));
+            R.string.abbreviation_dict_prefs_provider),
+        new ProviderDetails(
+            new SecretsBackupProvider(context), R.string.secrets_prefs_provider));
   }
 
   private static Boolean backupProvider(PrefsProvider provider, PrefsRoot prefsRoot) {

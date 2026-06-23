@@ -1571,6 +1571,14 @@
     <string name="user_dict_prefs_provider">User words</string>
     <string name="next_word_dict_prefs_provider">Next words</string>
     <string name="abbreviation_dict_prefs_provider">Abbreviations</string>
+    <string name="secrets_prefs_provider">API keys (encrypted)</string>
+    <string name="secrets_backup_passphrase_title">Backup passphrase</string>
+    <string name="secrets_backup_passphrase_message">Your API keys will be encrypted with this passphrase (Argon2id + AES-GCM) so they are never stored in plain text. You will need this passphrase to restore them — if you forget it, the keys cannot be recovered.</string>
+    <string name="secrets_restore_passphrase_message">Enter the passphrase you used when backing up your API keys.</string>
+    <string name="secrets_passphrase_hint">Passphrase</string>
+    <string name="secrets_passphrase_confirm_hint">Confirm passphrase</string>
+    <string name="secrets_passphrase_empty">Passphrase can\'t be empty.</string>
+    <string name="secrets_passphrase_mismatch">Passphrases don\'t match.</string>
     <string name="pick_prefs_providers_to_backup">What would you like to backup?</string>
     <string name="pick_prefs_providers_to_restore">What would you like to restore?</string>
     <string name="prefs_providers_operation_success">Success</string>
