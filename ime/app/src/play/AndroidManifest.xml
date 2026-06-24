@@ -1,0 +1,26 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The instrumentation-harness permission is unused in Play builds (no test activity is
+         guarded by it here), so drop both its declaration and its uses-permission. -->
+    <permission
+        android:name="wtf.uhoh.newsoftkeyboard.permission.INTERNAL_TEST_HARNESS"
+        tools:node="remove" />
+    <uses-permission
+        android:name="wtf.uhoh.newsoftkeyboard.permission.INTERNAL_TEST_HARNESS"
+        tools:node="remove" />
+
+    <application>
+        <!--
+            TestInputActivity doubles as the in-app theme live-preview target (launched from the
+            keyboard customization screen). In Play builds it is internal-only: not exported and not
+            guarded by the instrumentation harness permission. The pure-instrumentation
+            TestInputTypesActivity is intentionally not declared here.
+        -->
+        <activity
+            android:name="wtf.uhoh.newsoftkeyboard.app.debug.TestInputActivity"
+            android:exported="false"
+            android:label="@string/ime_name"
+            android:windowSoftInputMode="adjustResize|stateVisible" />
+    </application>
+</manifest>

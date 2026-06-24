@@ -48,6 +48,15 @@ android {
             matchingFallbacks = ['release', 'debug']
         }
 
+        // Google Play release: same as 'release' (signed, R8) but a production build -
+        // TESTING_BUILD is flipped off below and the instrumentation harness is excluded
+        // via a dedicated src/play manifest. The F-Droid 'release' flow is untouched.
+        play {
+            initWith buildTypes.release
+
+            matchingFallbacks = ['release']
+        }
+
         allAddOns {
             initWith buildTypes.debug
 
@@ -99,6 +108,16 @@ android {
             }
         }
 
+        play {
+            // Production Play build: no test scaffolding.
+            buildConfigField("boolean", "TESTING_BUILD", "false")
+
+            packagingOptions {
+                //jni .so files are already stripped in their source module; avoid double-strip.
+                doNotStrip '**/newsoftkeyboard_jnidictionaryv*.so'
+            }
+        }
+
         allAddOns {
             buildConfigField("boolean", "TESTING_BUILD", "true")
         }
@@ -109,6 +128,13 @@ android {
     sourceSets.getByName('allAddOns') {
         it.java.srcDirs += 'src/debug/java'
         it.res.srcDirs += 'src/debug/res'
+    }
+    // 'play' reuses the release debug-activity stubs + layouts (TestInputActivity is also the
+    // theme live-preview target referenced from main), but provides its own manifest
+    // (src/play/AndroidManifest.xml) that declares it non-exported and omits the harness.
+    sourceSets.getByName('play') {
+        it.java.srcDirs += 'src/release/java'
+        it.res.srcDirs += 'src/release/res'
     }
     namespace 'wtf.uhoh.newsoftkeyboard'
     // Default to debug androidTest locally (keeps Genymotion smoke stable).
