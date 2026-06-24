@@ -5,6 +5,8 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.ViewParent;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.Keyboard;
@@ -51,6 +53,22 @@ public class DesignerKeyboardView extends KeyboardView {
     mDragGhostLabelPaint.setTextSize(18f * context.getResources().getDisplayMetrics().density);
     mDropIndicatorPaint.setStyle(Paint.Style.FILL);
     mDropIndicatorPaint.setColor(DROP_INDICATOR_COLOR);
+  }
+
+  @Override
+  public boolean onTouchEvent(MotionEvent me) {
+    // The editor canvas lives inside a ScrollView. Claim the gesture stream on touch-down so a
+    // vertical drag (key reorder) isn't stolen by the ScrollView; release on up/cancel.
+    final ViewParent parent = getParent();
+    if (parent != null) {
+      final int action = me.getActionMasked();
+      if (action == MotionEvent.ACTION_DOWN) {
+        parent.requestDisallowInterceptTouchEvent(true);
+      } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+        parent.requestDisallowInterceptTouchEvent(false);
+      }
+    }
+    return super.onTouchEvent(me);
   }
 
   @Override
