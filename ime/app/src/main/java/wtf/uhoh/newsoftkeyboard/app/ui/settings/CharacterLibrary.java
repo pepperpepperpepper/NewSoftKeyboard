@@ -183,48 +183,78 @@ public final class CharacterLibrary {
   private static List<Category> build() {
     final List<Category> categories = new ArrayList<>();
 
+    // Emoji first — the most-requested set. Covers every standard emoji block; non-renderable ones
+    // are filtered out at display time by the device-font check.
     categories.add(
         cat(
-            "Punctuation",
-            r(0x21, 0x2F), r(0x3A, 0x40), r(0x5B, 0x60), r(0x7B, 0x7E),
-            r(0x00A1, 0x00BF), r(0x2010, 0x205E)));
-
-    categories.add(
-        cat(
-            "Currency",
-            r(0x24, 0x24), r(0x00A2, 0x00A5), r(0x20A0, 0x20C0)));
-
-    categories.add(
-        cat(
-            "Math & technical",
-            r(0x00D7, 0x00D7), r(0x00F7, 0x00F7), r(0x2200, 0x22FF), r(0x2300, 0x23FF),
-            r(0x2A00, 0x2AFF)));
-
-    categories.add(
-        cat("Arrows", r(0x2190, 0x21FF), r(0x27F0, 0x27FF), r(0x2900, 0x297F)));
+            "Emoji",
+            r(0x1F600, 0x1F64F), // Emoticons
+            r(0x1F300, 0x1F5FF), // Misc Symbols & Pictographs
+            r(0x1F680, 0x1F6FF), // Transport & Map
+            r(0x1F900, 0x1F9FF), // Supplemental Symbols & Pictographs
+            r(0x1FA70, 0x1FAFF), // Symbols & Pictographs Extended-A
+            r(0x2600, 0x26FF), // Misc Symbols (☀ ☂ ★ ☎ …)
+            r(0x2700, 0x27BF), // Dingbats (✂ ✈ ✉ ✏ ✔ …)
+            r(0x2B00, 0x2BFF))); // Misc Symbols & Arrows (⭐ ⬆ …)
 
     categories.add(
         cat(
             "Letters & accents",
             r(0x41, 0x5A), r(0x61, 0x7A), r(0x00C0, 0x024F), r(0x1E00, 0x1EFF)));
 
+    categories.add(
+        cat(
+            "Punctuation",
+            r(0x21, 0x2F), r(0x3A, 0x40), r(0x5B, 0x60), r(0x7B, 0x7E), r(0x00A1, 0x00BF),
+            r(0x2000, 0x206F), // General Punctuation
+            r(0x2E00, 0x2E7F), // Supplemental Punctuation
+            r(0x3000, 0x303F))); // CJK Symbols & Punctuation
+
+    categories.add(cat("Currency", r(0x24, 0x24), r(0x00A2, 0x00A5), r(0x20A0, 0x20CF)));
+
+    categories.add(
+        cat(
+            "Math & technical",
+            r(0x00D7, 0x00D7), r(0x00F7, 0x00F7),
+            r(0x2100, 0x214F), // Letterlike Symbols (™ ℃ № …)
+            r(0x2150, 0x218F), // Number Forms (½ Ⅳ …)
+            r(0x2200, 0x22FF), // Mathematical Operators
+            r(0x2300, 0x23FF), // Misc Technical (⌘ ⌫ ⏏ …)
+            r(0x2A00, 0x2AFF))); // Supplemental Math Operators
+
+    categories.add(
+        cat(
+            "Arrows",
+            r(0x2190, 0x21FF), r(0x27F0, 0x27FF), r(0x2900, 0x297F)));
+
+    categories.add(
+        cat(
+            "Shapes & lines",
+            r(0x2500, 0x257F), // Box Drawing
+            r(0x2580, 0x259F), // Block Elements
+            r(0x25A0, 0x25FF), // Geometric Shapes
+            r(0x1F780, 0x1F7FF))); // Geometric Shapes Extended
+
+    categories.add(cat("Braille", r(0x2800, 0x28FF)));
+
     categories.add(cat("Greek", r(0x0370, 0x03FF), r(0x1F00, 0x1FFF)));
 
-    categories.add(cat("Cyrillic", r(0x0400, 0x04FF)));
+    categories.add(cat("Cyrillic", r(0x0400, 0x052F)));
+
+    categories.add(cat("Hebrew", r(0x0590, 0x05FF)));
+
+    categories.add(cat("Arabic", r(0x0600, 0x06FF), r(0x0750, 0x077F)));
+
+    categories.add(cat("Devanagari", r(0x0900, 0x097F)));
+
+    categories.add(cat("Japanese kana", r(0x3040, 0x309F), r(0x30A0, 0x30FF)));
+
+    categories.add(cat("Korean (Hangul)", r(0xAC00, 0xD7A3)));
+
+    categories.add(cat("CJK (Chinese/Japanese)", r(0x3400, 0x4DBF), r(0x4E00, 0x9FFF)));
 
     categories.add(
-        cat(
-            "Shapes & symbols",
-            r(0x2500, 0x257F), r(0x2580, 0x259F), r(0x25A0, 0x25FF), r(0x2600, 0x26FF),
-            r(0x2700, 0x27BF)));
-
-    categories.add(
-        cat(
-            "Emoji",
-            r(0x1F300, 0x1F5FF), r(0x1F600, 0x1F64F), r(0x1F680, 0x1F6FF), r(0x1F900, 0x1F9FF),
-            r(0x2764, 0x2764), r(0x2B50, 0x2B50)));
-
-    categories.add(cat("Digits", r(0x30, 0x39), r(0x2070, 0x209F)));
+        cat("Digits & numerals", r(0x30, 0x39), r(0x2070, 0x209F), r(0x00BC, 0x00BE)));
 
     return Collections.unmodifiableList(categories);
   }

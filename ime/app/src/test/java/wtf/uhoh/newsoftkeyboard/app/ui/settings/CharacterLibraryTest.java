@@ -56,4 +56,28 @@ public class CharacterLibraryTest {
   public void glyphHandlesSupplementaryPlane() {
     Assert.assertEquals("😀", CharacterLibrary.glyph(0x1F600));
   }
+
+  @Test
+  public void emojiCategoryCoversEmoticons() {
+    CharacterLibrary.Category emoji = categoryNamed("Emoji");
+    Assert.assertNotNull(emoji);
+    Assert.assertTrue(
+        "expected 😀 (U+1F600) in Emoji category",
+        CharacterLibrary.codepointsIn(emoji).contains(0x1F600));
+  }
+
+  @Test
+  public void cjkIsBrowseable() {
+    Assert.assertTrue(CharacterLibrary.isPickable(0x4E00)); // 一
+    CharacterLibrary.Category cjk = categoryNamed("CJK (Chinese/Japanese)");
+    Assert.assertNotNull(cjk);
+    Assert.assertTrue(CharacterLibrary.codepointsIn(cjk).contains(0x4E00));
+  }
+
+  private static CharacterLibrary.Category categoryNamed(String title) {
+    for (CharacterLibrary.Category category : CharacterLibrary.categories()) {
+      if (category.title.equals(title)) return category;
+    }
+    return null;
+  }
 }

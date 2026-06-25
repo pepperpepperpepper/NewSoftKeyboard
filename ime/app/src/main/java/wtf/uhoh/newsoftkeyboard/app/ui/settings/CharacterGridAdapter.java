@@ -38,8 +38,9 @@ final class CharacterGridAdapter extends BaseAdapter {
   }
 
   void setCodepoints(@NonNull List<Integer> next) {
+    // Drop glyphs this device's font can't render, so the grid never shows tofu boxes.
     codepoints.clear();
-    codepoints.addAll(next);
+    codepoints.addAll(GlyphSupport.filterRenderable(next));
     notifyDataSetChanged();
   }
 
