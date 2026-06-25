@@ -41,7 +41,8 @@ final class ProgrammableApiScopesUi {
           KeyboardApiContract.SCOPE_AUDIT_CLEAR,
           KeyboardApiContract.SCOPE_CONTEXT_SESSION_PRESET,
           KeyboardApiContract.SCOPE_CONTEXT_SESSION_THEME,
-          KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT);
+          KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT,
+          KeyboardApiContract.SCOPE_AUTOMATION_MACRO);
 
   private ProgrammableApiScopesUi() {}
 
@@ -172,6 +173,9 @@ final class ProgrammableApiScopesUi {
         break;
       case KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT:
         labelRes = R.string.keyboard_api_scope_context_session_layout;
+        break;
+      case KeyboardApiContract.SCOPE_AUTOMATION_MACRO:
+        labelRes = R.string.keyboard_api_scope_automation_macro;
         break;
       default:
         return scope;

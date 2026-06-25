@@ -60,6 +60,16 @@ final class KeyboardApiRateLimiter {
 
   @NonNull
   static Decision check(@NonNull String callerId) {
+    return check(callerId, 1);
+  }
+
+  /**
+   * Charges {@code cost} calls against the caller's window at once. Used by {@code runMacro} to bill
+   * the whole batch up front, so a macro can't bypass the per-window cap one step at a time.
+   */
+  @NonNull
+  static Decision check(@NonNull String callerId, int cost) {
+    final int charge = Math.max(1, cost);
     final long now = SystemClock.elapsedRealtime();
     synchronized (LOCK) {
       Window w = WINDOWS.get(callerId);
@@ -77,7 +87,7 @@ final class KeyboardApiRateLimiter {
         w.calls = 0;
       }
 
-      w.calls++;
+      w.calls += charge;
       if (w.calls <= MAX_CALLS_PER_WINDOW) return Decision.allowed();
 
       return Decision.limited(WINDOW_MS - (now - w.windowStartMs));

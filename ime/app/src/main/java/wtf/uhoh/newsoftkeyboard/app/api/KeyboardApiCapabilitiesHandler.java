@@ -53,6 +53,7 @@ final class KeyboardApiCapabilitiesHandler {
     methods.add(KeyboardApiContract.METHOD_SET_SESSION_THEME_PRESET);
     methods.add(KeyboardApiContract.METHOD_SET_SESSION_KEYBOARD_ID);
     methods.add(KeyboardApiContract.METHOD_CLEAR_SESSION_OVERRIDES);
+    methods.add(KeyboardApiContract.METHOD_RUN_MACRO);
     out.putStringArrayList(KeyboardApiContract.EXTRA_SUPPORTED_METHODS, methods);
 
     final ArrayList<String> scopes = new ArrayList<>();
@@ -84,6 +85,7 @@ final class KeyboardApiCapabilitiesHandler {
     scopes.add(KeyboardApiContract.SCOPE_CONTEXT_SESSION_PRESET);
     scopes.add(KeyboardApiContract.SCOPE_CONTEXT_SESSION_THEME);
     scopes.add(KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT);
+    scopes.add(KeyboardApiContract.SCOPE_AUTOMATION_MACRO);
     out.putStringArrayList(KeyboardApiContract.EXTRA_SUPPORTED_SCOPES, scopes);
 
     final Map<String, KeyboardApiPreferenceAllowList.PrefSpec> allowList =

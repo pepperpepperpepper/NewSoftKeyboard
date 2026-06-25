@@ -312,6 +312,9 @@ public class KeyboardApiProvider extends ContentProvider {
           return KeyboardApiSessionOverridesHandler.clearSessionOverrides(
               prefs, authorization.callingPackage);
         }
+      case KeyboardApiContract.METHOD_RUN_MACRO:
+        requireScope(authorization, KeyboardApiContract.SCOPE_AUTOMATION_MACRO);
+        return runMacro(context, authorization, extras);
       default:
         return error(KeyboardApiContract.ERR_UNSUPPORTED_METHOD, "Unsupported method");
     }
@@ -324,6 +327,118 @@ public class KeyboardApiProvider extends ContentProvider {
     final Bundle out = ok();
     out.putBoolean(KeyboardApiContract.EXTRA_IME_ACTIVE, ImeServiceBase.getInstance() != null);
     return out;
+  }
+
+  /**
+   * Runs a bounded sequence of eligible verbs, re-entering {@link #dispatch} for each step so every
+   * one re-checks its own scope and per-method guards (password field, high-risk toggle, incognito,
+   * IME-active). Adds no capability beyond issuing the same calls individually. See {@code
+   * keyboard_api_macro_plan.md}.
+   */
+  @NonNull
+  private Bundle runMacro(
+      @NonNull Context context, @NonNull Authorization authorization, @NonNull Bundle extras) {
+    final java.util.List<KeyboardApiMacroHandler.Step> steps;
+    try {
+      steps = KeyboardApiMacroHandler.parseSteps(extras);
+    } catch (KeyboardApiMacroHandler.MacroParseException e) {
+      return error(e.errorCode, String.valueOf(e.getMessage()));
+    }
+
+    // Bill the whole batch to the rate limiter up front; nothing runs if it can't be afforded.
+    final KeyboardApiRateLimiter.Decision rateDecision =
+        KeyboardApiRateLimiter.check(authorization.callingPackage, steps.size());
+    if (!rateDecision.allowed) {
+      final Bundle limited = error(KeyboardApiContract.ERR_RATE_LIMITED, "Rate limited");
+      limited.putLong(KeyboardApiContract.EXTRA_RETRY_AFTER_MS, rateDecision.retryAfterMs);
+      return limited;
+    }
+
+    final boolean stopOnError =
+        extras.getBoolean(KeyboardApiContract.EXTRA_MACRO_STOP_ON_ERROR, true);
+    final KeyboardApiAuditLogStore auditLogStore = mAuditLog;
+
+    final org.json.JSONArray results = new org.json.JSONArray();
+    int firstErrorCode = KeyboardApiContract.ERR_OK;
+    boolean halted = false;
+
+    for (int i = 0; i < steps.size(); i++) {
+      final KeyboardApiMacroHandler.Step step = steps.get(i);
+
+      if (halted) {
+        results.put(stepSkipped(i));
+        continue;
+      }
+
+      if (!KeyboardApiMacroHandler.isEligible(step.method)) {
+        if (auditLogStore != null) {
+          auditLogStore.record(
+              authorization.callingPackage,
+              "runMacro:" + step.method,
+              KeyboardApiContract.ERR_MACRO_STEP_NOT_ALLOWED);
+        }
+        results.put(stepResult(i, KeyboardApiContract.ERR_MACRO_STEP_NOT_ALLOWED));
+        if (firstErrorCode == KeyboardApiContract.ERR_OK) {
+          firstErrorCode = KeyboardApiContract.ERR_MACRO_STEP_NOT_ALLOWED;
+        }
+        if (stopOnError) halted = true;
+        continue;
+      }
+
+      int code;
+      try {
+        final Bundle stepResult = dispatch(context, authorization, step.method, null, step.extras);
+        code = errorCodeFromResult(stepResult);
+      } catch (SecurityException e) {
+        code = KeyboardApiContract.ERR_SCOPE_DENIED;
+      } catch (RuntimeException e) {
+        Logger.w(TAG, "Macro step '%s' threw", step.method);
+        Logger.w(TAG, "Macro step exception", e);
+        code = KeyboardApiContract.ERR_INTERNAL;
+      }
+
+      if (auditLogStore != null) {
+        auditLogStore.record(authorization.callingPackage, "runMacro:" + step.method, code);
+      }
+      results.put(stepResult(i, code));
+
+      if (code != KeyboardApiContract.ERR_OK) {
+        if (firstErrorCode == KeyboardApiContract.ERR_OK) firstErrorCode = code;
+        if (stopOnError) halted = true;
+      }
+    }
+
+    final Bundle out =
+        firstErrorCode == KeyboardApiContract.ERR_OK
+            ? ok()
+            : error(firstErrorCode, "Macro step failed");
+    out.putString(KeyboardApiContract.EXTRA_MACRO_RESULTS, results.toString());
+    return out;
+  }
+
+  @NonNull
+  private static org.json.JSONObject stepResult(int index, int code) {
+    final org.json.JSONObject entry = new org.json.JSONObject();
+    try {
+      entry.put("i", index);
+      entry.put("ok", code == KeyboardApiContract.ERR_OK);
+      if (code != KeyboardApiContract.ERR_OK) entry.put("error_code", code);
+    } catch (org.json.JSONException ignored) {
+      // Keys are constant and values primitive; this cannot actually throw.
+    }
+    return entry;
+  }
+
+  @NonNull
+  private static org.json.JSONObject stepSkipped(int index) {
+    final org.json.JSONObject entry = new org.json.JSONObject();
+    try {
+      entry.put("i", index);
+      entry.put("skipped", true);
+    } catch (org.json.JSONException ignored) {
+      // Constant keys / primitive values.
+    }
+    return entry;
   }
 
   private static void requireScope(@NonNull Authorization authorization, @NonNull String scope) {
@@ -473,7 +588,8 @@ public class KeyboardApiProvider extends ContentProvider {
                   KeyboardApiContract.SCOPE_AUDIT_CLEAR,
                   KeyboardApiContract.SCOPE_CONTEXT_SESSION_PRESET,
                   KeyboardApiContract.SCOPE_CONTEXT_SESSION_THEME,
-                  KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT));
+                  KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT,
+                  KeyboardApiContract.SCOPE_AUTOMATION_MACRO));
       return new Authorization(
           true, context.getPackageName(), internalScopes, KeyboardApiContract.ERR_OK, "");
     }
@@ -635,6 +751,8 @@ public class KeyboardApiProvider extends ContentProvider {
         return KeyboardApiContract.SCOPE_CONTEXT_SESSION_THEME;
       case KeyboardApiContract.METHOD_SET_SESSION_KEYBOARD_ID:
         return KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT;
+      case KeyboardApiContract.METHOD_RUN_MACRO:
+        return KeyboardApiContract.SCOPE_AUTOMATION_MACRO;
       default:
         return null;
     }

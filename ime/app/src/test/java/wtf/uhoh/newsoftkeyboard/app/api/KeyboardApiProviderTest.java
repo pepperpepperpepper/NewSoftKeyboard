@@ -854,6 +854,278 @@ public class KeyboardApiProviderTest {
         results.getInt("not_allowed"));
   }
 
+  @Test
+  public void runMacroRunsEligibleStepsAndReportsResults() throws Exception {
+    enableApi();
+    final Context context = getApplicationContext();
+
+    final org.json.JSONObject setCap = new org.json.JSONObject();
+    setCap.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_SET_PREFERENCE);
+    final org.json.JSONObject setCapArgs = new org.json.JSONObject();
+    setCapArgs.put(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_PREF_KEY,
+        context.getString(R.string.settings_key_auto_capitalization));
+    setCapArgs.put(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_PREF_BOOL, true);
+    setCap.put("args", setCapArgs);
+
+    final org.json.JSONObject reload = new org.json.JSONObject();
+    reload.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RELOAD_SETTINGS);
+
+    final org.json.JSONArray steps = new org.json.JSONArray();
+    steps.put(setCap);
+    steps.put(reload);
+
+    final Bundle extras = new Bundle();
+    extras.putString(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STEPS, steps.toString());
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO, null, extras);
+    Assert.assertNotNull(out);
+    Assert.assertTrue(out.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_OK));
+
+    final org.json.JSONArray results =
+        new org.json.JSONArray(
+            out.getString(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_RESULTS));
+    Assert.assertEquals(2, results.length());
+    Assert.assertTrue(results.getJSONObject(0).getBoolean("ok"));
+    Assert.assertTrue(results.getJSONObject(1).getBoolean("ok"));
+
+    // The first step's effect actually landed.
+    final Bundle getExtras = new Bundle();
+    getExtras.putString(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_PREF_KEY,
+        context.getString(R.string.settings_key_auto_capitalization));
+    final Bundle getOut =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_GET_PREFERENCE, null, getExtras);
+    Assert.assertNotNull(getOut);
+    Assert.assertTrue(getOut.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_PREF_BOOL));
+  }
+
+  @Test
+  public void runMacroRejectsOverLength() throws Exception {
+    enableApi();
+
+    final org.json.JSONArray steps = new org.json.JSONArray();
+    for (int i = 0; i < com.anysoftkeyboard.api.KeyboardApiContract.MAX_MACRO_STEPS + 1; i++) {
+      final org.json.JSONObject step = new org.json.JSONObject();
+      step.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RELOAD_SETTINGS);
+      steps.put(step);
+    }
+
+    final Bundle extras = new Bundle();
+    extras.putString(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STEPS, steps.toString());
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO, null, extras);
+    Assert.assertNotNull(out);
+    Assert.assertFalse(out.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_OK));
+    Assert.assertEquals(
+        com.anysoftkeyboard.api.KeyboardApiContract.ERR_MACRO_TOO_LONG,
+        out.getInt(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_ERROR_CODE));
+  }
+
+  @Test
+  public void runMacroRejectsNonEligibleStep() throws Exception {
+    enableApi();
+
+    final org.json.JSONObject setSecret = new org.json.JSONObject();
+    setSecret.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_SET_SECRET);
+    final org.json.JSONArray steps = new org.json.JSONArray();
+    steps.put(setSecret);
+
+    final Bundle extras = new Bundle();
+    extras.putString(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STEPS, steps.toString());
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO, null, extras);
+    Assert.assertNotNull(out);
+    Assert.assertFalse(out.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_OK));
+    Assert.assertEquals(
+        com.anysoftkeyboard.api.KeyboardApiContract.ERR_MACRO_STEP_NOT_ALLOWED,
+        out.getInt(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_ERROR_CODE));
+
+    final org.json.JSONArray results =
+        new org.json.JSONArray(
+            out.getString(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_RESULTS));
+    Assert.assertEquals(1, results.length());
+    Assert.assertFalse(results.getJSONObject(0).getBoolean("ok"));
+    Assert.assertEquals(
+        com.anysoftkeyboard.api.KeyboardApiContract.ERR_MACRO_STEP_NOT_ALLOWED,
+        results.getJSONObject(0).getInt("error_code"));
+  }
+
+  @Test
+  public void runMacroRejectsMalformedJson() {
+    enableApi();
+
+    final Bundle extras = new Bundle();
+    extras.putString(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STEPS, "{not valid json");
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO, null, extras);
+    Assert.assertNotNull(out);
+    Assert.assertFalse(out.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_OK));
+    Assert.assertEquals(
+        com.anysoftkeyboard.api.KeyboardApiContract.ERR_BAD_ARGUMENTS,
+        out.getInt(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_ERROR_CODE));
+  }
+
+  @Test
+  public void runMacroStopsOnErrorByDefaultAndSkipsRemainder() throws Exception {
+    enableApi();
+    final Context context = getApplicationContext();
+
+    // Step 0 fails (unknown pref key); step 1 would succeed but must be skipped.
+    final org.json.JSONObject badSet = new org.json.JSONObject();
+    badSet.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_SET_PREFERENCE);
+    final org.json.JSONObject badArgs = new org.json.JSONObject();
+    badArgs.put(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_PREF_KEY, "not_a_real_key");
+    badArgs.put(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_PREF_BOOL, true);
+    badSet.put("args", badArgs);
+
+    final org.json.JSONObject reload = new org.json.JSONObject();
+    reload.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RELOAD_SETTINGS);
+
+    final org.json.JSONArray steps = new org.json.JSONArray();
+    steps.put(badSet);
+    steps.put(reload);
+
+    final Bundle extras = new Bundle();
+    extras.putString(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STEPS, steps.toString());
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO, null, extras);
+    Assert.assertNotNull(out);
+    Assert.assertFalse(out.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_OK));
+
+    final org.json.JSONArray results =
+        new org.json.JSONArray(
+            out.getString(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_RESULTS));
+    Assert.assertEquals(2, results.length());
+    Assert.assertFalse(results.getJSONObject(0).getBoolean("ok"));
+    Assert.assertTrue(results.getJSONObject(1).optBoolean("skipped", false));
+  }
+
+  @Test
+  public void runMacroStopOnErrorFalseContinuesPastFailure() throws Exception {
+    enableApi();
+
+    final org.json.JSONObject badSet = new org.json.JSONObject();
+    badSet.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_SET_PREFERENCE);
+    final org.json.JSONObject badArgs = new org.json.JSONObject();
+    badArgs.put(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_PREF_KEY, "not_a_real_key");
+    badArgs.put(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_PREF_BOOL, true);
+    badSet.put("args", badArgs);
+
+    final org.json.JSONObject reload = new org.json.JSONObject();
+    reload.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RELOAD_SETTINGS);
+
+    final org.json.JSONArray steps = new org.json.JSONArray();
+    steps.put(badSet);
+    steps.put(reload);
+
+    final Bundle extras = new Bundle();
+    extras.putString(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STEPS, steps.toString());
+    extras.putBoolean(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STOP_ON_ERROR, false);
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO, null, extras);
+    Assert.assertNotNull(out);
+    Assert.assertFalse(out.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_OK));
+
+    final org.json.JSONArray results =
+        new org.json.JSONArray(
+            out.getString(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_RESULTS));
+    Assert.assertEquals(2, results.length());
+    Assert.assertFalse(results.getJSONObject(0).getBoolean("ok"));
+    Assert.assertFalse(results.getJSONObject(1).has("skipped"));
+    Assert.assertTrue(results.getJSONObject(1).getBoolean("ok"));
+  }
+
+  @Test
+  public void runMacroRejectsEmptySteps() {
+    enableApi();
+
+    final Bundle extras = new Bundle();
+    extras.putString(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STEPS, "[]");
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO, null, extras);
+    Assert.assertNotNull(out);
+    Assert.assertFalse(out.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_OK));
+    Assert.assertEquals(
+        com.anysoftkeyboard.api.KeyboardApiContract.ERR_BAD_ARGUMENTS,
+        out.getInt(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_ERROR_CODE));
+  }
+
+  @Test
+  public void runMacroBatchChargedToRateLimiter() throws Exception {
+    enableApi();
+    ShadowSystemClock.advanceBy(Duration.ofMillis(1));
+
+    // Consume most of the per-window budget with cheap reads.
+    for (int i = 0; i < 20; i++) {
+      mProvider.call(com.anysoftkeyboard.api.KeyboardApiContract.METHOD_PING, null, null);
+    }
+
+    final org.json.JSONArray steps = new org.json.JSONArray();
+    for (int i = 0; i < 8; i++) {
+      final org.json.JSONObject step = new org.json.JSONObject();
+      step.put("method", com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RELOAD_SETTINGS);
+      steps.put(step);
+    }
+
+    final Bundle extras = new Bundle();
+    extras.putString(
+        com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_MACRO_STEPS, steps.toString());
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO, null, extras);
+    Assert.assertNotNull(out);
+    Assert.assertFalse(out.getBoolean(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_OK));
+    Assert.assertEquals(
+        com.anysoftkeyboard.api.KeyboardApiContract.ERR_RATE_LIMITED,
+        out.getInt(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_ERROR_CODE));
+  }
+
+  @Test
+  public void getCapabilitiesIncludesRunMacro() {
+    enableApi();
+
+    final Bundle out =
+        mProvider.call(
+            com.anysoftkeyboard.api.KeyboardApiContract.METHOD_GET_CAPABILITIES,
+            null,
+            new Bundle());
+    Assert.assertNotNull(out);
+    final ArrayList<String> methods =
+        out.getStringArrayList(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_SUPPORTED_METHODS);
+    Assert.assertNotNull(methods);
+    Assert.assertTrue(
+        methods.contains(com.anysoftkeyboard.api.KeyboardApiContract.METHOD_RUN_MACRO));
+    final ArrayList<String> scopes =
+        out.getStringArrayList(com.anysoftkeyboard.api.KeyboardApiContract.EXTRA_SUPPORTED_SCOPES);
+    Assert.assertNotNull(scopes);
+    Assert.assertTrue(
+        scopes.contains(com.anysoftkeyboard.api.KeyboardApiContract.SCOPE_AUTOMATION_MACRO));
+  }
+
   private static void enableApi() {
     final Context context = getApplicationContext();
     wtf.uhoh.newsoftkeyboard.prefs.DirectBootAwareSharedPreferences.create(context)

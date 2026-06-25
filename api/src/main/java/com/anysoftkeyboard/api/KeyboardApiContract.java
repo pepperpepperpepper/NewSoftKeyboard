@@ -8,7 +8,7 @@ package com.anysoftkeyboard.api;
  */
 public class KeyboardApiContract {
 
-  public static final int API_VERSION = 2;
+  public static final int API_VERSION = 3;
 
   public static final String AUTHORITY_SUFFIX = ".keyboardapi";
 
@@ -49,6 +49,7 @@ public class KeyboardApiContract {
   public static final String METHOD_SET_SESSION_THEME_PRESET = "setSessionThemePreset";
   public static final String METHOD_SET_SESSION_KEYBOARD_ID = "setSessionKeyboardId";
   public static final String METHOD_CLEAR_SESSION_OVERRIDES = "clearSessionOverrides";
+  public static final String METHOD_RUN_MACRO = "runMacro";
 
   // Request extras
   public static final String EXTRA_CALLER_PACKAGE = "caller_package";
@@ -78,6 +79,16 @@ public class KeyboardApiContract {
   public static final String EXTRA_INCOGNITO_ENABLED = "incognito_enabled";
   public static final String EXTRA_SESSION_PRESET_ID = "session_preset_id";
   public static final String EXTRA_SESSION_THEME_PRESET_ID = "session_theme_preset_id";
+
+  // runMacro extras. macro_steps is a JSON array of {"method":..,"args":{..}} objects, where each
+  // args key is one of the existing EXTRA_* names for that method. macro_results (response) is a
+  // JSON array of per-step outcomes: {"i":n,"ok":bool[,"error_code":int]} or {"i":n,"skipped":true}.
+  public static final String EXTRA_MACRO_STEPS = "macro_steps";
+  public static final String EXTRA_MACRO_STOP_ON_ERROR = "macro_stop_on_error";
+  public static final String EXTRA_MACRO_RESULTS = "macro_results";
+
+  // The most steps a single runMacro call may contain.
+  public static final int MAX_MACRO_STEPS = 16;
 
   // Response extras
   public static final String EXTRA_API_VERSION = "api_version";
@@ -162,6 +173,8 @@ public class KeyboardApiContract {
   public static final int ERR_DISALLOWED_CONTEXT = 17;
   public static final int ERR_HIGH_RISK_DISABLED = 18;
   public static final int ERR_CLIPBOARD_COPY_CUT_DISABLED = 19;
+  public static final int ERR_MACRO_TOO_LONG = 20;
+  public static final int ERR_MACRO_STEP_NOT_ALLOWED = 21;
 
   // Scopes
   public static final String SCOPE_CAPABILITIES_READ = "capabilities.read";
@@ -192,4 +205,8 @@ public class KeyboardApiContract {
   public static final String SCOPE_CONTEXT_SESSION_PRESET = "context.session.preset";
   public static final String SCOPE_CONTEXT_SESSION_THEME = "context.session.theme";
   public static final String SCOPE_CONTEXT_SESSION_LAYOUT = "context.session.layout";
+
+  // Outer gate for runMacro. A macro can only batch verbs the caller already holds per-step scopes
+  // for; this scope merely permits using the batching primitive at all.
+  public static final String SCOPE_AUTOMATION_MACRO = "automation.macro";
 }

@@ -2221,6 +2221,7 @@
     <string name="keyboard_api_scope_context_session_preset">Set session context preset</string>
     <string name="keyboard_api_scope_context_session_theme">Set session theme preset (high risk)</string>
     <string name="keyboard_api_scope_context_session_layout">Set session keyboard layout (high risk)</string>
+    <string name="keyboard_api_scope_automation_macro">Run action macros (batches of the above)</string>
 
     <string name="no_suggestions_strip_action_message">No suggestions (app)</string>
 </resources>

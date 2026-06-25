@@ -42,7 +42,8 @@ final class KeyboardApiPairingHandler {
                   KeyboardApiContract.SCOPE_AUDIT_CLEAR,
                   KeyboardApiContract.SCOPE_CONTEXT_SESSION_PRESET,
                   KeyboardApiContract.SCOPE_CONTEXT_SESSION_THEME,
-                  KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT)));
+                  KeyboardApiContract.SCOPE_CONTEXT_SESSION_LAYOUT,
+                  KeyboardApiContract.SCOPE_AUTOMATION_MACRO)));
 
   private KeyboardApiPairingHandler() {}
 
