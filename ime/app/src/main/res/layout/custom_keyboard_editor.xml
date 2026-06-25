@@ -12,14 +12,42 @@
         android:paddingBottom="16dp"
         android:paddingTop="16dp">
 
+        <LinearLayout
+            android:id="@+id/custom_keyboard_editor_instructions_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_marginStart="16dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:minHeight="40dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/custom_keyboards_instructions_header" />
+
+            <ImageView
+                android:id="@+id/custom_keyboard_editor_instructions_chevron"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:contentDescription="@string/custom_keyboards_instructions_header"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_designer_chevron" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/custom_keyboard_editor_instructions"
-            style="@style/Nsk.Text.SubTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:layout_marginStart="16dp"
-            android:text="@string/custom_keyboards_edit_instructions" />
+            android:layout_marginTop="4dp"
+            android:text="@string/custom_keyboards_edit_instructions"
+            android:textAppearance="?android:attr/textAppearanceSmall" />
 
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/custom_keyboard_editor_test_typing_switch"

@@ -338,6 +338,7 @@
     <string name="settings_key_custom_keyboards_enabled_ids">settings_key_custom_keyboards_enabled_ids</string>
     <string name="settings_key_custom_keyboards_generation">settings_key_custom_keyboards_generation</string>
     <string name="settings_key_custom_keyboards_pack_theme_mapping">settings_key_custom_keyboards_pack_theme_mapping</string>
+    <string name="settings_key_custom_keyboards_instructions_collapsed">settings_key_custom_keyboards_instructions_collapsed</string>
 
     <string name="settings_key_pop_text_option">settings_key_pop_text_option</string>
 

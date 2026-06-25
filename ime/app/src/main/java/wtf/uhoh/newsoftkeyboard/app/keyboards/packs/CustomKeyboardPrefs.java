@@ -72,6 +72,23 @@ public final class CustomKeyboardPrefs {
     return getEnabledKeyboardIds(context).size();
   }
 
+  /** Whether the editor's "how to use" hint is collapsed. Defaults to expanded for first use. */
+  public static boolean isInstructionsCollapsed(@NonNull Context context) {
+    final SharedPreferences prefs =
+        DirectBootAwareSharedPreferences.create(Objects.requireNonNull(context));
+    final String key =
+        context.getString(R.string.settings_key_custom_keyboards_instructions_collapsed);
+    return prefs.getBoolean(key, false);
+  }
+
+  public static void setInstructionsCollapsed(@NonNull Context context, boolean collapsed) {
+    final SharedPreferences prefs =
+        DirectBootAwareSharedPreferences.create(Objects.requireNonNull(context));
+    final String key =
+        context.getString(R.string.settings_key_custom_keyboards_instructions_collapsed);
+    prefs.edit().putBoolean(key, collapsed).apply();
+  }
+
   public static void bumpGeneration(@NonNull Context context) {
     final SharedPreferences prefs =
         DirectBootAwareSharedPreferences.create(Objects.requireNonNull(context));

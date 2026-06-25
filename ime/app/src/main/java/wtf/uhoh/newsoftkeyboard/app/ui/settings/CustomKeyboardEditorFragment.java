@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -13,6 +14,7 @@ import androidx.appcompat.widget.SwitchCompat;
 import androidx.fragment.app.Fragment;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.NskApplicationBase;
+import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.CustomKeyboardPrefs;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.packs.InstalledKeyboardPack;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardView;
 
@@ -63,6 +65,8 @@ public class CustomKeyboardEditorFragment extends Fragment {
     themeButton = view.findViewById(R.id.custom_keyboard_editor_theme_button);
     undoButton = view.findViewById(R.id.custom_keyboard_editor_undo_button);
     selectionActionBar = view.findViewById(R.id.custom_keyboard_editor_selection_bar);
+
+    setupInstructionsToggle(view);
 
     themeController =
         new CustomKeyboardThemeEditorController(
@@ -198,6 +202,33 @@ public class CustomKeyboardEditorFragment extends Fragment {
     if (controller != null) {
       controller.onViewCreated(restoredTestTypingEnabled, restoredTestTypingBuffer);
     }
+  }
+
+  /**
+   * Wires the collapsible "how to use" hint: tapping the header toggles the instructions and the
+   * chevron, persisting the collapsed state so the hint stays out of the way once learned.
+   */
+  private void setupInstructionsToggle(@NonNull View view) {
+    final View header = view.findViewById(R.id.custom_keyboard_editor_instructions_header);
+    final ImageView chevron =
+        view.findViewById(R.id.custom_keyboard_editor_instructions_chevron);
+    if (header == null || chevron == null || instructionsView == null) return;
+
+    applyInstructionsCollapsed(
+        chevron, CustomKeyboardPrefs.isInstructionsCollapsed(requireContext()));
+
+    header.setOnClickListener(
+        v -> {
+          final boolean nowCollapsed = instructionsView.getVisibility() == View.VISIBLE;
+          CustomKeyboardPrefs.setInstructionsCollapsed(requireContext(), nowCollapsed);
+          applyInstructionsCollapsed(chevron, nowCollapsed);
+        });
+  }
+
+  private void applyInstructionsCollapsed(@NonNull ImageView chevron, boolean collapsed) {
+    instructionsView.setVisibility(collapsed ? View.GONE : View.VISIBLE);
+    // Chevron points down when collapsed (tap to expand), up when expanded.
+    chevron.setRotation(collapsed ? 0f : 180f);
   }
 
   @Override

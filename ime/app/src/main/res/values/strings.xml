@@ -2016,6 +2016,7 @@
     <string name="custom_keyboards_create_dialog_title">Create custom keyboard</string>
     <string name="custom_keyboards_create_dialog_name_hint">Name</string>
     <string name="custom_keyboards_create_dialog_create_button">Create</string>
+    <string name="custom_keyboards_instructions_header">How to use the designer</string>
     <string name="custom_keyboards_edit_instructions">Tap a key to select it, tap again to edit. Long-press and drag to move a key.</string>
     <string name="custom_keyboards_test_typing_switch">Test typing</string>
     <string name="custom_keyboards_test_typing_instructions">Test typing mode: tap keys to type. Turn off Test typing to edit keys.</string>
