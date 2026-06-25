@@ -1,12 +1,22 @@
 package wtf.uhoh.newsoftkeyboard.app.ui.settings;
 
+import android.content.Context;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.GridView;
+import android.widget.ImageView;
+import android.widget.RadioGroup;
+import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -134,6 +144,8 @@ final class CustomKeyboardLayoutEditor {
     popupKeyboardEdit.setText(attrs.get(ATTR_POPUP_KEYBOARD));
     extraDataEdit.setText(attrs.get(ATTR_EXTRA_KEY_DATA));
 
+    wireKeyTypeUi(dialogView, attrs, labelEdit, codesEdit, extraDataEdit);
+
     AlertDialog dialog =
         new AlertDialog.Builder(fragment.requireContext())
             .setTitle(R.string.custom_keyboards_edit_key_dialog_title)
@@ -174,6 +186,295 @@ final class CustomKeyboardLayoutEditor {
 
   void editKeyAt(int rowIndex, int keyIndex) {
     showKeyEditDialogAtLocation(rowIndex, keyIndex);
+  }
+
+  private static final int KEY_TYPE_CHARACTER = 0;
+  private static final int KEY_TYPE_FUNCTION = 1;
+  private static final int KEY_TYPE_SWITCH = 2;
+
+  private interface OnFunctionPicked {
+    void onPicked(@NonNull KeyFunctionCatalog.Entry entry);
+  }
+
+  private interface OnSwitchPicked {
+    void onPicked(@NonNull String targetId);
+  }
+
+  private interface OnCharacterPicked {
+    void onPicked(@NonNull String text);
+  }
+
+  /**
+   * Wires the friendly key-type controls (character field, function picker, layer-switch picker)
+   * and the Advanced expander on top of the raw attribute EditTexts, which remain the single source
+   * of truth read on OK.
+   */
+  private void wireKeyTypeUi(
+      @NonNull View dialogView,
+      @NonNull Map<String, String> attrs,
+      @NonNull EditText labelEdit,
+      @NonNull EditText codesEdit,
+      @NonNull EditText extraDataEdit) {
+    RadioGroup typeGroup = dialogView.findViewById(R.id.edit_key_type_group);
+    View charGroup = dialogView.findViewById(R.id.edit_key_group_character);
+    View functionGroup = dialogView.findViewById(R.id.edit_key_group_function);
+    View switchGroup = dialogView.findViewById(R.id.edit_key_group_switch);
+    EditText characterEdit = dialogView.findViewById(R.id.edit_key_character);
+    Button browseCharacters = dialogView.findViewById(R.id.edit_key_browse_characters);
+    TextView functionReadout = dialogView.findViewById(R.id.edit_key_function_readout);
+    Button chooseFunction = dialogView.findViewById(R.id.edit_key_choose_function);
+    TextView switchReadout = dialogView.findViewById(R.id.edit_key_switch_readout);
+    Button chooseSwitch = dialogView.findViewById(R.id.edit_key_choose_switch);
+    View advancedHeader = dialogView.findViewById(R.id.edit_key_advanced_header);
+    View advancedContainer = dialogView.findViewById(R.id.edit_key_advanced_container);
+    ImageView advancedChevron = dialogView.findViewById(R.id.edit_key_advanced_chevron);
+
+    characterEdit.setText(attrs.get(ATTR_KEY_LABEL));
+    updateFunctionReadout(functionReadout, codesEdit.getText().toString());
+    updateSwitchReadout(switchReadout, extraDataEdit.getText().toString());
+
+    // The character field mirrors into label + codes (codepoint of the first character).
+    characterEdit.addTextChangedListener(
+        new TextWatcher() {
+          @Override
+          public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+          @Override
+          public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+          @Override
+          public void afterTextChanged(Editable s) {
+            String text = s.toString();
+            labelEdit.setText(text);
+            codesEdit.setText(text.isEmpty() ? "" : Integer.toString(text.codePointAt(0)));
+          }
+        });
+
+    browseCharacters.setOnClickListener(v -> showCharacterPicker(characterEdit::setText));
+
+    typeGroup.setOnCheckedChangeListener(
+        (group, checkedId) -> {
+          charGroup.setVisibility(
+              checkedId == R.id.edit_key_type_character ? View.VISIBLE : View.GONE);
+          functionGroup.setVisibility(
+              checkedId == R.id.edit_key_type_function ? View.VISIBLE : View.GONE);
+          switchGroup.setVisibility(
+              checkedId == R.id.edit_key_type_switch ? View.VISIBLE : View.GONE);
+        });
+
+    final int initialType = detectKeyType(attrs);
+    typeGroup.check(
+        initialType == KEY_TYPE_FUNCTION
+            ? R.id.edit_key_type_function
+            : initialType == KEY_TYPE_SWITCH
+                ? R.id.edit_key_type_switch
+                : R.id.edit_key_type_character);
+
+    chooseFunction.setOnClickListener(
+        v ->
+            showFunctionPicker(
+                entry -> {
+                  codesEdit.setText(Integer.toString(entry.code));
+                  if (TextUtils.isEmpty(labelEdit.getText())) labelEdit.setText(entry.defaultLabel);
+                  updateFunctionReadout(functionReadout, codesEdit.getText().toString());
+                }));
+
+    chooseSwitch.setOnClickListener(
+        v ->
+            showSwitchPicker(
+                targetId -> {
+                  codesEdit.setText(Integer.toString(KeyCodes.CUSTOM_KEYBOARD_SWITCH));
+                  extraDataEdit.setText(targetId);
+                  if (TextUtils.isEmpty(labelEdit.getText())) labelEdit.setText("?123");
+                  updateSwitchReadout(switchReadout, targetId);
+                }));
+
+    advancedHeader.setOnClickListener(
+        v -> {
+          boolean show = advancedContainer.getVisibility() != View.VISIBLE;
+          advancedContainer.setVisibility(show ? View.VISIBLE : View.GONE);
+          advancedChevron.setRotation(show ? 180f : 0f);
+        });
+  }
+
+  private static int detectKeyType(@NonNull Map<String, String> attrs) {
+    String extra = attrs.get(ATTR_EXTRA_KEY_DATA);
+    Integer code = parseSingleNumericCode(attrs.get(ATTR_CODES));
+    if ((code != null && code == KeyCodes.CUSTOM_KEYBOARD_SWITCH)
+        || (extra != null && extra.startsWith("pack::"))) {
+      return KEY_TYPE_SWITCH;
+    }
+    if (code != null && KeyFunctionCatalog.findByCode(code) != null) {
+      return KEY_TYPE_FUNCTION;
+    }
+    return KEY_TYPE_CHARACTER;
+  }
+
+  @Nullable
+  private static Integer parseSingleNumericCode(@Nullable String raw) {
+    if (raw == null) return null;
+    String token = raw.trim();
+    if (token.isEmpty() || token.startsWith("@") || token.contains(",")) return null;
+    if (token.length() == 1 && !Character.isDigit(token.charAt(0))) return (int) token.charAt(0);
+    try {
+      return Integer.parseInt(token);
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
+
+  private static void updateFunctionReadout(@NonNull TextView readout, @Nullable String codes) {
+    Integer code = parseSingleNumericCode(codes);
+    KeyFunctionCatalog.Entry entry = code == null ? null : KeyFunctionCatalog.findByCode(code);
+    readout.setText(
+        entry != null
+            ? entry.name
+            : readout.getContext().getString(R.string.custom_keyboards_key_function_none));
+  }
+
+  private static void updateSwitchReadout(@NonNull TextView readout, @Nullable String extra) {
+    if (extra != null && extra.startsWith("pack::")) {
+      String[] parts = extra.split("::", 3);
+      readout.setText(parts.length == 3 ? parts[2] : extra);
+    } else {
+      readout.setText(R.string.custom_keyboards_key_switch_none);
+    }
+  }
+
+  private void showFunctionPicker(@NonNull OnFunctionPicked onPicked) {
+    final List<KeyFunctionCatalog.Entry> flat = new ArrayList<>();
+    final List<CharSequence> labels = new ArrayList<>();
+    for (KeyFunctionCatalog.Category category : KeyFunctionCatalog.categories()) {
+      for (KeyFunctionCatalog.Entry entry : category.entries) {
+        flat.add(entry);
+        labels.add(category.title + " · " + entry.name);
+      }
+    }
+    new AlertDialog.Builder(host.fragment().requireContext())
+        .setTitle(R.string.custom_keyboards_choose_function_title)
+        .setItems(
+            labels.toArray(new CharSequence[0]), (d, which) -> onPicked.onPicked(flat.get(which)))
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
+  }
+
+  private void showCharacterPicker(@NonNull OnCharacterPicked onPicked) {
+    final Context context = host.fragment().requireContext();
+    final View view =
+        LayoutInflater.from(context)
+            .inflate(R.layout.custom_keyboard_character_picker, null, false);
+    final EditText search = view.findViewById(R.id.char_picker_search);
+    final Spinner categorySpinner = view.findViewById(R.id.char_picker_category);
+    final GridView grid = view.findViewById(R.id.char_picker_grid);
+    final EditText codepointEdit = view.findViewById(R.id.char_picker_codepoint);
+    final Button useButton = view.findViewById(R.id.char_picker_use);
+
+    final List<CharacterLibrary.Category> categories = CharacterLibrary.categories();
+    final List<String> titles = new ArrayList<>();
+    for (CharacterLibrary.Category category : categories) titles.add(category.title);
+    categorySpinner.setAdapter(
+        new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, titles));
+
+    final CharacterGridAdapter gridAdapter = new CharacterGridAdapter(context);
+    grid.setAdapter(gridAdapter);
+
+    final Runnable showSelectedCategory =
+        () -> {
+          int pos = categorySpinner.getSelectedItemPosition();
+          if (pos < 0 || pos >= categories.size()) pos = 0;
+          gridAdapter.setCodepoints(CharacterLibrary.codepointsIn(categories.get(pos)));
+        };
+
+    categorySpinner.setOnItemSelectedListener(
+        new AdapterView.OnItemSelectedListener() {
+          @Override
+          public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
+            if (TextUtils.isEmpty(search.getText())) showSelectedCategory.run();
+          }
+
+          @Override
+          public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+    search.addTextChangedListener(
+        new TextWatcher() {
+          @Override
+          public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+          @Override
+          public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+          @Override
+          public void afterTextChanged(Editable s) {
+            final String query = s.toString().trim();
+            if (query.isEmpty()) showSelectedCategory.run();
+            else gridAdapter.setCodepoints(CharacterLibrary.search(query, 300));
+          }
+        });
+
+    showSelectedCategory.run();
+
+    final AlertDialog dialog =
+        new AlertDialog.Builder(context)
+            .setTitle(R.string.custom_keyboards_char_picker_title)
+            .setView(view)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create();
+
+    grid.setOnItemClickListener(
+        (parent, v, position, id) -> {
+          onPicked.onPicked(CharacterLibrary.glyph(gridAdapter.codePointAt(position)));
+          dialog.dismiss();
+        });
+
+    useButton.setOnClickListener(
+        v -> {
+          final Integer cp =
+              CharacterLibrary.parseCodepoint(codepointEdit.getText().toString());
+          if (cp == null || !CharacterLibrary.isPickable(cp)) {
+            Toast.makeText(
+                    context, R.string.custom_keyboards_char_picker_invalid, Toast.LENGTH_SHORT)
+                .show();
+            return;
+          }
+          onPicked.onPicked(CharacterLibrary.glyph(cp));
+          dialog.dismiss();
+        });
+
+    dialog.show();
+  }
+
+  private void showSwitchPicker(@NonNull OnSwitchPicked onPicked) {
+    InstalledKeyboardPack pack = host.pack();
+    if (pack == null) return;
+    PackManifest manifest = pack.manifest();
+    PackEntry current = host.keyboardEntry();
+    String currentId = current == null ? null : current.id();
+
+    final List<PackEntry> targets = new ArrayList<>();
+    final List<CharSequence> labels = new ArrayList<>();
+    for (PackEntry entry : manifest.keyboards()) {
+      if (currentId != null && currentId.equals(entry.id())) continue;
+      targets.add(entry);
+      labels.add(entry.id());
+    }
+    if (targets.isEmpty()) {
+      new AlertDialog.Builder(host.fragment().requireContext())
+          .setMessage(R.string.custom_keyboards_key_no_layers)
+          .setPositiveButton(android.R.string.ok, null)
+          .show();
+      return;
+    }
+    new AlertDialog.Builder(host.fragment().requireContext())
+        .setTitle(R.string.custom_keyboards_choose_switch_title)
+        .setItems(
+            labels.toArray(new CharSequence[0]),
+            (d, which) -> {
+              PackEntry entry = targets.get(which);
+              onPicked.onPicked("pack::" + manifest.id() + "::" + entry.id());
+            })
+        .setNegativeButton(android.R.string.cancel, null)
+        .show();
   }
 
   void moveKeyAt(int rowIndex, int keyIndex, int offset) {

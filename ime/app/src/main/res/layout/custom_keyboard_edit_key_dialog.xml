@@ -9,108 +9,267 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Key type selector -->
         <TextView
             style="@style/Nsk.Text.SubTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/custom_keyboards_edit_key_label" />
+            android:text="@string/custom_keyboards_key_type" />
 
-        <EditText
-            android:id="@+id/edit_key_label"
+        <RadioGroup
+            android:id="@+id/edit_key_type_group"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="text" />
+            android:orientation="horizontal">
 
-        <TextView
-            style="@style/Nsk.Text.SubTitle"
+            <RadioButton
+                android:id="@+id/edit_key_type_character"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/custom_keyboards_key_type_character" />
+
+            <RadioButton
+                android:id="@+id/edit_key_type_function"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/custom_keyboards_key_type_function" />
+
+            <RadioButton
+                android:id="@+id/edit_key_type_switch"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/custom_keyboards_key_type_switch" />
+        </RadioGroup>
+
+        <!-- Character type -->
+        <LinearLayout
+            android:id="@+id/edit_key_group_character"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/custom_keyboards_edit_key_codes" />
+            android:orientation="vertical">
 
-        <EditText
-            android:id="@+id/edit_key_codes"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="text" />
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_keyboards_key_character_label" />
 
-        <TextView
-            style="@style/Nsk.Text.SubTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/custom_keyboards_edit_key_long_press_code" />
+            <EditText
+                android:id="@+id/edit_key_character"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/custom_keyboards_key_character_hint"
+                android:inputType="text" />
 
-        <EditText
-            android:id="@+id/edit_key_long_press_code"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="text" />
+            <Button
+                android:id="@+id/edit_key_browse_characters"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/custom_keyboards_key_character_browse" />
+        </LinearLayout>
 
-        <TextView
-            style="@style/Nsk.Text.SubTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/custom_keyboards_edit_key_width" />
-
-        <EditText
-            android:id="@+id/edit_key_width"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="text" />
-
-        <TextView
-            style="@style/Nsk.Text.SubTitle"
+        <!-- Function type -->
+        <LinearLayout
+            android:id="@+id/edit_key_group_function"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/custom_keyboards_edit_key_hint_label" />
+            android:orientation="vertical"
+            android:visibility="gone">
 
-        <EditText
-            android:id="@+id/edit_key_hint_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="text" />
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_keyboards_key_function_label" />
 
-        <TextView
-            style="@style/Nsk.Text.SubTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/custom_keyboards_edit_key_popup_characters" />
+            <TextView
+                android:id="@+id/edit_key_function_readout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_keyboards_key_function_none"
+                android:textColor="?android:attr/textColorPrimary" />
 
-        <EditText
-            android:id="@+id/edit_key_popup_characters"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="text" />
+            <Button
+                android:id="@+id/edit_key_choose_function"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/custom_keyboards_key_choose_function" />
+        </LinearLayout>
 
-        <TextView
-            style="@style/Nsk.Text.SubTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/custom_keyboards_edit_key_popup_keyboard" />
-
-        <EditText
-            android:id="@+id/edit_key_popup_keyboard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="text" />
-
-        <TextView
-            style="@style/Nsk.Text.SubTitle"
+        <!-- Layer-switch type -->
+        <LinearLayout
+            android:id="@+id/edit_key_group_switch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="@string/custom_keyboards_edit_key_extra_data" />
+            android:orientation="vertical"
+            android:visibility="gone">
 
-        <EditText
-            android:id="@+id/edit_key_extra_data"
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_keyboards_key_switch_label" />
+
+            <TextView
+                android:id="@+id/edit_key_switch_readout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_keyboards_key_switch_none"
+                android:textColor="?android:attr/textColorPrimary" />
+
+            <Button
+                android:id="@+id/edit_key_choose_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/custom_keyboards_key_choose_switch" />
+        </LinearLayout>
+
+        <!-- Advanced (raw attributes) -->
+        <LinearLayout
+            android:id="@+id/edit_key_advanced_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="text" />
+            android:layout_marginTop="16dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:minHeight="40dp"
+            android:orientation="horizontal">
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/custom_keyboards_edit_key_advanced" />
+
+            <ImageView
+                android:id="@+id/edit_key_advanced_chevron"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:contentDescription="@string/custom_keyboards_edit_key_advanced"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_designer_chevron" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/edit_key_advanced_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/custom_keyboards_edit_key_label" />
+
+            <EditText
+                android:id="@+id/edit_key_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/custom_keyboards_edit_key_codes" />
+
+            <EditText
+                android:id="@+id/edit_key_codes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/custom_keyboards_edit_key_long_press_code" />
+
+            <EditText
+                android:id="@+id/edit_key_long_press_code"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/custom_keyboards_edit_key_width" />
+
+            <EditText
+                android:id="@+id/edit_key_width"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/custom_keyboards_edit_key_hint_label" />
+
+            <EditText
+                android:id="@+id/edit_key_hint_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/custom_keyboards_edit_key_popup_characters" />
+
+            <EditText
+                android:id="@+id/edit_key_popup_characters"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/custom_keyboards_edit_key_popup_keyboard" />
+
+            <EditText
+                android:id="@+id/edit_key_popup_keyboard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+
+            <TextView
+                style="@style/Nsk.Text.SubTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/custom_keyboards_edit_key_extra_data" />
+
+            <EditText
+                android:id="@+id/edit_key_extra_data"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </LinearLayout>
 
         <Button
             android:id="@+id/edit_key_layout_actions"
