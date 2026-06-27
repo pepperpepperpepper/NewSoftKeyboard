@@ -97,6 +97,8 @@ The icon is the stable door; the hint is a convenience that comes and goes.
   doorway. Rename the user-facing string accordingly (e.g. "Show copied-text preview"); the pref
   *key* stays the same to avoid migrating stored values. `settings_key_os_clipboard_sync` remains
   the master on/off for the whole feature (icon + hint).
+  - **Decision (2026-06-27):** keep `settings_key_clipboard_action_always_visible` for now; revisit
+    dropping it only after the preview hint has been in real-world use for a while.
 - **Layout/res** — the icon can reuse `clipboard_suggestion_action.xml`'s container with an
   `ImageView` variant, or a new minimal `clipboard_action_icon.xml`. Optional (D): add the
   clipboard key to the symbols layout XML + a label/popup string.
