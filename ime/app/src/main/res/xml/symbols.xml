@@ -32,7 +32,8 @@
         <Key android:codes="41" android:keyLabel=")" android:keyEdgeFlags="right"/>
     </Row>
 
-    <Row>
+    <!-- 11 keys: a clipboard-history key sits before delete, so the row is slightly narrower. -->
+    <Row android:keyWidth="9.0909%p">
         <Key android:codes="@integer/key_code_mode_symbols" android:keyEdgeFlags="left"/>
         <Key android:codes="34" android:keyLabel="&quot;" android:popupCharacters="\'\u201c\u201e\u201d\u2018\u2019‹›«»"/>
         <Key android:codes="46" android:keyLabel="." android:popupCharacters=",…⋯ "/>
@@ -42,6 +43,8 @@
         <Key android:codes="45" android:keyLabel="-" android:popupCharacters="–—&#1470;"/>
         <Key android:codes="61" android:keyLabel="=" android:popupCharacters="&#8800;&#8776;&#8801;&#8802;&#8803;&#8793;&#8792;&#8791;∞"/>
         <Key android:codes="43" android:keyLabel="+"/>
+        <Key android:codes="@integer/key_code_clipboard_paste_popup"
+            android:keyIcon="@drawable/ic_clipboard_paste"/>
         <Key android:codes="@integer/key_code_delete" android:keyEdgeFlags="right" android:isRepeatable="true"/>
     </Row>
 </Keyboard>
