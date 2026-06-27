@@ -13,6 +13,16 @@ import androidx.annotation.VisibleForTesting;
 import wtf.uhoh.newsoftkeyboard.R;
 import wtf.uhoh.newsoftkeyboard.app.keyboards.views.KeyboardViewContainerView;
 
+/**
+ * The transient "Copied: …" hint in the action strip.
+ *
+ * <p>After a copy this flashes a preview of the latest clipboard entry; a single tap pastes that
+ * entry ({@link ClipboardActionOwner#outputClipboardText()}). It is intentionally <em>not</em> the
+ * doorway to the history picker — that role belongs to the persistent {@link
+ * ClipboardDoorwayActionProvider} icon. The long-press here is kept only as a redundant shortcut to
+ * the picker and may be removed once the doorway icon is wired in. See {@code
+ * clipboard_access_plan.md}.
+ */
 @VisibleForTesting
 class ClipboardStripActionProvider implements KeyboardViewContainerView.StripActionProvider {
 
@@ -56,6 +66,7 @@ class ClipboardStripActionProvider implements KeyboardViewContainerView.StripAct
           }
         });
     rootView.setOnClickListener(view -> owner.outputClipboardText());
+    // Redundant shortcut to the picker; the primary doorway is ClipboardDoorwayActionProvider.
     rootView.setOnLongClickListener(
         v -> {
           owner.showAllClipboardOptions();

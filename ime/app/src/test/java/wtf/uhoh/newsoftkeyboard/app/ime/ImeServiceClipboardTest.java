@@ -783,18 +783,71 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
   }
 
   @Test
-  public void testAlwaysVisibleSettingKeepsStripActionOnKeyPress() {
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_clipboard_action_always_visible, true);
+  public void testDoorwayPersistsAfterKeyPressWhileHintIsDismissed() {
     mClipboardManager.setPrimaryClip(
         new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
 
     simulateOnStartInputFlow();
+    // Both the transient preview hint and the persistent doorway are present after a copy.
     Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
+    Assert.assertTrue(mImeServiceUnderTest.getClipboardDoorway().isVisible());
+    Assert.assertNotNull(
+        mImeServiceUnderTest
+            .getInputViewContainer()
+            .findViewById(R.id.clipboard_action_doorway_icon));
 
     mImeServiceUnderTest.simulateKeyPress('a');
 
-    Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
-    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
+    // Typing dismisses only the hint; the doorway stays as the stable entrance to the picker.
+    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
+    Assert.assertNull(
+        mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
+    Assert.assertTrue(mImeServiceUnderTest.getClipboardDoorway().isVisible());
+    Assert.assertNotNull(
+        mImeServiceUnderTest
+            .getInputViewContainer()
+            .findViewById(R.id.clipboard_action_doorway_icon));
+  }
+
+  @Test
+  public void testPreviewToggleOffSuppressesHintButKeepsDoorway() {
+    SharedPrefsHelper.setPrefsValue(R.string.settings_key_clipboard_action_always_visible, false);
+    mClipboardManager.setPrimaryClip(
+        new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
+
+    simulateOnStartInputFlow();
+
+    // No preview hint when the toggle is off ...
+    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
+    Assert.assertNull(
+        mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
+    // ... but the doorway is still available.
+    Assert.assertTrue(mImeServiceUnderTest.getClipboardDoorway().isVisible());
+    Assert.assertNotNull(
+        mImeServiceUnderTest
+            .getInputViewContainer()
+            .findViewById(R.id.clipboard_action_doorway_icon));
+  }
+
+  @Test
+  public void testDoorwayTapOpensPickerWithoutPasting() {
+    mClipboardManager.setPrimaryClip(
+        new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
+    simulateOnStartInputFlow();
+
+    final View doorway =
+        mImeServiceUnderTest
+            .getInputViewContainer()
+            .findViewById(R.id.clipboard_action_doorway_icon);
+    Assert.assertNotNull(doorway);
+    doorway.performClick();
+
+    // Opening the picker must not paste anything into the field.
+    Assert.assertEquals("", getCurrentTestInputConnection().getCurrentTextInInputConnection());
+    final AlertDialog latestAlertDialog = GeneralDialogTestUtil.getLatestShownDialog();
+    Assert.assertNotNull(latestAlertDialog);
+    Assert.assertEquals(
+        "Pick text to paste", GeneralDialogTestUtil.getTitleFromDialog(latestAlertDialog));
   }
 
   @Test
@@ -928,18 +981,23 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
   }
 
   @Test
-  public void testAlwaysVisibleSettingKeepsStripActionForOldEntries() {
-    SharedPrefsHelper.setPrefsValue(R.string.settings_key_clipboard_action_always_visible, true);
+  public void testDoorwayShownForOldEntriesEvenWhenHintHasExpired() {
     simulateFinishInputFlow();
     mClipboardManager.setPrimaryClip(
         new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
     ShadowSystemClock.advanceBy(Duration.of(121, ChronoUnit.SECONDS));
     simulateOnStartInputFlow();
 
-    Assert.assertNotNull(
+    // The transient hint window (120s) has elapsed, so no preview text ...
+    Assert.assertNull(
         mImeServiceUnderTest.getInputViewContainer().findViewById(R.id.clipboard_suggestion_text));
-    Assert.assertTrue(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
-    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isFullyVisible());
+    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
+    // ... but history still exists, so the doorway stays.
+    Assert.assertTrue(mImeServiceUnderTest.getClipboardDoorway().isVisible());
+    Assert.assertNotNull(
+        mImeServiceUnderTest
+            .getInputViewContainer()
+            .findViewById(R.id.clipboard_action_doorway_icon));
   }
 
   @Test

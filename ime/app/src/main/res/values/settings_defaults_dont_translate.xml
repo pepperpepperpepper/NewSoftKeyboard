@@ -82,7 +82,7 @@
     <string name="settings_default_default_split_state">merged_always</string>
 
     <bool name="settings_default_os_clipboard_sync">true</bool>
-    <bool name="settings_default_clipboard_action_always_visible">false</bool>
+    <bool name="settings_default_clipboard_action_always_visible">true</bool>
 
     <bool name="settings_default_bool_should_swap_punctuation_and_space">true</bool>
 

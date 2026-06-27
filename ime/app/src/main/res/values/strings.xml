@@ -1039,9 +1039,9 @@
     <string name="settings_os_clipboard_sync">Sync clipboard with OS</string>
     <string name="settings_os_clipboard_sync_summary_on">Detect clipboard changes and sync with New Soft Keyboard. Tap the clipboard icon to paste, or long-press for clipboard history.</string>
     <string name="settings_os_clipboard_sync_summary_off">Do not listen to clipboard operations outside of New Soft Keyboard.</string>
-    <string name="settings_clipboard_action_always_visible_title">Always show clipboard icon</string>
-    <string name="settings_clipboard_action_always_visible_summary_on">Keep the clipboard icon visible above the keyboard, even when the last copy was a while ago.</string>
-    <string name="settings_clipboard_action_always_visible_summary_off">Show the clipboard icon only for a short time after you copy something.</string>
+    <string name="settings_clipboard_action_always_visible_title">Show copied-text preview</string>
+    <string name="settings_clipboard_action_always_visible_summary_on">Briefly preview what you copied above the keyboard; tap it to paste. The clipboard icon stays available either way.</string>
+    <string name="settings_clipboard_action_always_visible_summary_off">Don\'t preview copied text. The clipboard icon is still shown whenever there\'s history.</string>
     <string name="clipboard_privacy_notice_title">Privacy notice</string>
     <string name="clipboard_privacy_notice_summary">Clipboard contents may contain sensitive information. When enabled, New Soft Keyboard listens for clipboard changes to provide paste and clipboard history. Clipboard contents are not sent anywhere.</string>
     <string name="clipboard_preview_hidden">**********</string>
@@ -1439,6 +1439,7 @@
     <string name="clipboard_copy_done_toast">Selected text copied to clipboard.</string>
     
     <string name="clipboard_paste_entries_title">Pick text to paste</string>
+    <string name="clipboard_open_history">Open clipboard history</string>
     <string name="next_word_prefs_clear_data">Clear next-word data</string>
     <string name="next_word_prefs_clear_data_summary">This is irreversible. All your typing history will be cleared.</string>
     <string name="prediction_engine_mode_title">Third-party suggestion engine</string>

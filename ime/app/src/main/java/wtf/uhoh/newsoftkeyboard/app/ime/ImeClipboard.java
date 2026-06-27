@@ -37,7 +37,9 @@ public abstract class ImeClipboard extends ImeSwipeListener {
   private static final long MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT = 120 * 1000;
   private long mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
   private boolean mOsClipboardSyncEnabled = false;
-  private boolean mClipboardActionAlwaysVisible = false;
+  // Repurposed: controls whether the transient "Copied: …" preview hint is shown after a copy. The
+  // persistent doorway icon is unaffected by this. (Pref key unchanged to avoid value migration.)
+  private boolean mShowCopyPreview = false;
   private final SerialDisposable mClipboardTextAutoHideDisposable = new SerialDisposable();
   private final SerialDisposable mClipboardActionAutoHideDisposable = new SerialDisposable();
   private final Clipboard.ClipboardUpdatedListener mClipboardUpdatedListener =
@@ -68,6 +70,14 @@ public abstract class ImeClipboard extends ImeSwipeListener {
   }
 
   @VisibleForTesting
+  protected static class ClipboardDoorwayActionProvider
+      extends wtf.uhoh.newsoftkeyboard.app.ime.ClipboardDoorwayActionProvider {
+    ClipboardDoorwayActionProvider(@NonNull ClipboardActionOwner owner) {
+      super(owner);
+    }
+  }
+
+  @VisibleForTesting
   protected final ClipboardActionOwner mClipboardActionOwnerImpl =
       new ClipboardActionOwner() {
         @NonNull
@@ -91,11 +101,14 @@ public abstract class ImeClipboard extends ImeSwipeListener {
 
   @VisibleForTesting protected ClipboardStripActionProvider mSuggestionClipboardEntry;
 
+  @VisibleForTesting protected ClipboardDoorwayActionProvider mClipboardDoorway;
+
   @Override
   public void onCreate() {
     super.onCreate();
     mClipboard = NskApplicationBase.getDeviceSpecific().createClipboard(getApplicationContext());
     mSuggestionClipboardEntry = new ClipboardStripActionProvider(mClipboardActionOwnerImpl);
+    mClipboardDoorway = new ClipboardDoorwayActionProvider(mClipboardActionOwnerImpl);
     addDisposable(mClipboardTextAutoHideDisposable);
     addDisposable(mClipboardActionAutoHideDisposable);
     addDisposable(
@@ -116,6 +129,7 @@ public abstract class ImeClipboard extends ImeSwipeListener {
                   final var inputViewContainer = getInputViewContainer();
                   if (!syncClipboard && inputViewContainer != null) {
                     inputViewContainer.removeStripAction(mSuggestionClipboardEntry);
+                    inputViewContainer.removeStripAction(mClipboardDoorway);
                   }
                 },
                 GenericOnError.onError("settings_key_os_clipboard_sync")));
@@ -127,13 +141,8 @@ public abstract class ImeClipboard extends ImeSwipeListener {
             .asObservable()
             .distinctUntilChanged()
             .subscribe(
-                alwaysVisible -> {
-                  mClipboardActionAlwaysVisible = alwaysVisible;
-                  if (alwaysVisible) {
-                    cancelClipboardActionAutoHide();
-                  } else {
-                    scheduleClipboardActionAutoHideIfNeeded();
-                  }
+                showCopyPreview -> {
+                  mShowCopyPreview = showCopyPreview;
                   updateClipboardActionIconVisibility(currentInputEditorInfo());
                 },
                 GenericOnError.onError("settings_key_clipboard_action_always_visible")));
@@ -160,20 +169,25 @@ public abstract class ImeClipboard extends ImeSwipeListener {
         updateClipboardActionIconVisibility(currentInputEditorInfo());
       }
       scheduleClipboardTextAutoHide();
-      if (!mClipboardActionAlwaysVisible) {
-        scheduleClipboardActionAutoHideIfNeeded();
-      }
+      scheduleClipboardActionAutoHideIfNeeded();
     }
   }
 
-  private boolean shouldShowClipboardActionIcon() {
+  /** The persistent doorway icon shows whenever there is any history to browse. */
+  private boolean shouldShowClipboardDoorway() {
     if (!mOsClipboardSyncEnabled || mClipboard == null) return false;
-    if (mClipboardActionAlwaysVisible) {
-      return !mClipboard.isOsClipboardEmpty() || mClipboard.getClipboardEntriesCount() > 0;
-    }
-    return mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT
-            > SystemClock.uptimeMillis()
-        && !TextUtils.isEmpty(mLastSyncedClipboardLabel);
+    return !mClipboard.isOsClipboardEmpty() || mClipboard.getClipboardEntriesCount() > 0;
+  }
+
+  /**
+   * The transient preview hint shows only right after a copy, while enabled and within the hint
+   * window. It is independent of the doorway and never persists past a keypress.
+   */
+  private boolean shouldShowClipboardHint() {
+    if (!mOsClipboardSyncEnabled || !mShowCopyPreview) return false;
+    return !TextUtils.isEmpty(mLastSyncedClipboardLabel)
+        && mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT
+            > SystemClock.uptimeMillis();
   }
 
   private void updateClipboardActionIconVisibility(@Nullable EditorInfo info) {
@@ -181,15 +195,18 @@ public abstract class ImeClipboard extends ImeSwipeListener {
     final var inputViewContainer = getInputViewContainer();
     if (inputViewContainer == null) return;
 
-    if (!shouldShowClipboardActionIcon()) {
-      inputViewContainer.removeStripAction(mSuggestionClipboardEntry);
-      return;
+    // Doorway: persistent entrance to the picker whenever history exists.
+    if (shouldShowClipboardDoorway()) {
+      inputViewContainer.addStripAction(mClipboardDoorway, true);
+      inputViewContainer.setActionsStripVisibility(true);
+    } else {
+      inputViewContainer.removeStripAction(mClipboardDoorway);
     }
 
-    inputViewContainer.addStripAction(mSuggestionClipboardEntry, true);
-    inputViewContainer.setActionsStripVisibility(true);
-
-    if (!TextUtils.isEmpty(mLastSyncedClipboardLabel)) {
+    // Hint: transient "Copied: …" preview, tap pastes the latest entry.
+    if (shouldShowClipboardHint()) {
+      inputViewContainer.addStripAction(mSuggestionClipboardEntry, true);
+      inputViewContainer.setActionsStripVisibility(true);
       mSuggestionClipboardEntry.setClipboardText(
           mLastSyncedClipboardLabel, isTextPassword(info) || isNumberPassword(info));
       if (mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_ENTRY
@@ -197,8 +214,7 @@ public abstract class ImeClipboard extends ImeSwipeListener {
         mSuggestionClipboardEntry.setAsHint(true);
       }
     } else {
-      // Keep the icon visible, but hide any previous text hint.
-      mSuggestionClipboardEntry.setAsHint(true);
+      inputViewContainer.removeStripAction(mSuggestionClipboardEntry);
     }
   }
 
@@ -233,17 +249,12 @@ public abstract class ImeClipboard extends ImeSwipeListener {
   public void onKey(
       int primaryCode, Keyboard.Key key, int multiTapIndex, int[] nearByKeyCodes, boolean fromUI) {
     if (mSuggestionClipboardEntry.isVisible()) {
-      if (mClipboardActionAlwaysVisible) {
-        // Keep the clipboard icon visible, but hide the preview text once the user starts typing.
-        mSuggestionClipboardEntry.setAsHint(false);
-      } else {
-        // Default behavior: hide the clipboard action once the user starts typing to avoid clutter.
-        mLastSyncedClipboardLabel = null;
-        mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
-        cancelClipboardActionAutoHide();
-        cancelClipboardTextAutoHide();
-        updateClipboardActionIconVisibility(currentInputEditorInfo());
-      }
+      // Typing dismisses the transient preview hint; the persistent doorway icon stays.
+      mLastSyncedClipboardLabel = null;
+      mLastSyncedClipboardEntryTime = Long.MIN_VALUE;
+      cancelClipboardActionAutoHide();
+      cancelClipboardTextAutoHide();
+      updateClipboardActionIconVisibility(currentInputEditorInfo());
     }
     super.onKey(primaryCode, key, multiTapIndex, nearByKeyCodes, fromUI);
   }
@@ -252,6 +263,7 @@ public abstract class ImeClipboard extends ImeSwipeListener {
   public void onFinishInputView(boolean finishingInput) {
     super.onFinishInputView(finishingInput);
     getInputViewContainer().removeStripAction(mSuggestionClipboardEntry);
+    getInputViewContainer().removeStripAction(mClipboardDoorway);
   }
 
   private void scheduleClipboardTextAutoHide() {
@@ -276,7 +288,6 @@ public abstract class ImeClipboard extends ImeSwipeListener {
 
   private void scheduleClipboardActionAutoHideIfNeeded() {
     cancelClipboardActionAutoHide();
-    if (mClipboardActionAlwaysVisible) return;
     if (mLastSyncedClipboardEntryTime == Long.MIN_VALUE) return;
     final long now = SystemClock.uptimeMillis();
     final long hideAt = mLastSyncedClipboardEntryTime + MAX_TIME_TO_SHOW_SYNCED_CLIPBOARD_HINT;

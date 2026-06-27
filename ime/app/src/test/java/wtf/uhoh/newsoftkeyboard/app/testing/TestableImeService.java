@@ -174,6 +174,10 @@ public class TestableImeService extends NewSoftKeyboardService {
     return mSuggestionClipboardEntry;
   }
 
+  public ImeClipboard.ClipboardDoorwayActionProvider getClipboardDoorway() {
+    return mClipboardDoorway;
+  }
+
   public OverlyDataCreator getMockOverlayDataCreator() {
     return mSpiedOverlayCreator;
   }
