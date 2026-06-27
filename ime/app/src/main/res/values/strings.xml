@@ -1037,7 +1037,7 @@
     <string name="lang_key_shows_popup_off_summary">Language key will cycle languages</string>
 
     <string name="settings_os_clipboard_sync">Sync clipboard with OS</string>
-    <string name="settings_os_clipboard_sync_summary_on">Detect clipboard changes and sync with New Soft Keyboard. Tap the clipboard icon to paste, or long-press for clipboard history.</string>
+    <string name="settings_os_clipboard_sync_summary_on">Detect clipboard changes and sync with New Soft Keyboard. Tap the clipboard icon above the keyboard to open your clipboard history.</string>
     <string name="settings_os_clipboard_sync_summary_off">Do not listen to clipboard operations outside of New Soft Keyboard.</string>
     <string name="settings_clipboard_action_always_visible_title">Show copied-text preview</string>
     <string name="settings_clipboard_action_always_visible_summary_on">Briefly preview what you copied above the keyboard; tap it to paste. The clipboard icon stays available either way.</string>
