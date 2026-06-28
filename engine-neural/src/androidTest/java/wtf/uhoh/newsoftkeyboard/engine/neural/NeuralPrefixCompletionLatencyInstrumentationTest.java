@@ -65,6 +65,11 @@ public class NeuralPrefixCompletionLatencyInstrumentationTest {
       "https://fdroid.uh-oh.wtf/models/distilgpt2_mixedcase_sanity_v1.zip";
   private static final int MAX_RESULTS = 8;
 
+  // Mirrors NextWordPredictionEngines.NEURAL_LATENCY_BUDGET_MS (kept literal to avoid a cross-module
+  // dependency). Only enforced when the run opts in via -e enforceLatencyBudget 1 — meant for a real
+  // arm64 device, since an emulator's translated timings would spuriously fail it.
+  private static final double LATENCY_BUDGET_MS = 25.0;
+
   // A few realistic (context, word-being-typed) cases. Context is the committed words; we type the
   // target word keystroke by keystroke (prefix lengths 2..len-1) against a stable context.
   private static final String[][] CONTEXTS = {
@@ -137,6 +142,24 @@ public class NeuralPrefixCompletionLatencyInstrumentationTest {
     assertTrue("Expected at least one warm keystroke sample", !warmMs.isEmpty());
     assertTrue(
         "Provider must be a known execution provider", "xnnpack".equals(provider) || "cpu".equals(provider));
+
+    // Real-hardware gate: only when explicitly requested (-e enforceLatencyBudget 1). The warm p50 is
+    // the per-keystroke path that must stay within the predictor's budget on shippable hardware.
+    if (enforceLatencyBudget()) {
+      assertTrue(
+          String.format(
+              Locale.US,
+              "warm keystroke p50 %.1fms exceeds %.0fms budget (provider=%s)",
+              warm[1], LATENCY_BUDGET_MS, provider),
+          warm[1] <= LATENCY_BUDGET_MS);
+    }
+  }
+
+  private boolean enforceLatencyBudget() {
+    final Bundle args = InstrumentationRegistry.getArguments();
+    if (args == null) return false;
+    final String v = args.getString("enforceLatencyBudget");
+    return "1".equals(v) || "true".equalsIgnoreCase(v);
   }
 
   @NonNull
