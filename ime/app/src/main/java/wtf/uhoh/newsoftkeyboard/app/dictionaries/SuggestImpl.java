@@ -358,6 +358,8 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
       injectedCount++;
     }
 
+    nextWordInsertionIndex = injectNeuralPrefixCompletions(nextWordInsertionIndex, typedWordLength);
+
     maybeRerankPrefixMatchingTypedSuggestionsByContext(typedWordLength);
 
     // removing possible duplicates to typed.
@@ -365,6 +367,52 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
     IMEUtil.tripSuggestions(mSuggestions, mPrefMaxSuggestions, mStringPool);
 
     return mSuggestions;
+  }
+
+  /**
+   * Injects neural prefix-completions for the in-progress word — words the model predicts the user
+   * is typing, which the dictionaries may not contain (rare words, proper nouns, domain terms).
+   * Reads only ready async results (never blocks on inference); when results land later, the neural
+   * async listener triggers a refresh that re-runs this. Deduped against existing suggestions and
+   * capped like the next-word injection so neural never floods the strip.
+   *
+   * @return the (possibly advanced) insertion index for any later injectors.
+   */
+  private int injectNeuralPrefixCompletions(int insertionIndex, int typedWordLength) {
+    if (typedWordLength < 2 || !mSuggestionsProvider.isNeuralEnabled()) {
+      return insertionIndex;
+    }
+    final List<String> completions =
+        mSuggestionsProvider.getOrScheduleWordCompletions(
+            mTypedOriginalWord, MAX_PREFIX_MATCHING_NEXT_WORDS_IN_TYPED_SUGGESTIONS);
+    if (completions.isEmpty()) {
+      return insertionIndex;
+    }
+
+    int injected = 0;
+    for (String completion : completions) {
+      if (injected >= MAX_PREFIX_MATCHING_NEXT_WORDS_IN_TYPED_SUGGESTIONS) break;
+      if (completion == null || completion.length() <= typedWordLength) continue;
+      if (!completion.regionMatches(
+          /* ignoreCase= */ true, 0, mTypedOriginalWord, 0, typedWordLength)) {
+        continue;
+      }
+      final CharSequence cased = applyTypedCasingToSuggestion(completion);
+      final String casedString = cased.toString();
+      boolean alreadyPresent = false;
+      for (CharSequence existing : mSuggestions) {
+        if (existing != null && existing.toString().equalsIgnoreCase(casedString)) {
+          alreadyPresent = true;
+          break;
+        }
+      }
+      if (alreadyPresent) continue;
+      final int at = Math.min(insertionIndex, mSuggestions.size());
+      mSuggestions.add(at, cased);
+      insertionIndex = at + 1;
+      injected++;
+    }
+    return insertionIndex;
   }
 
   @Override

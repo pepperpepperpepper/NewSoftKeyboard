@@ -44,6 +44,8 @@ public final class NextWordPredictionEngines {
   private static final int CONTEXT_WINDOW_WORDS_MAX = 40;
   private static final int NEURAL_MIN_CONTEXT_TOKENS = 1;
   private static final long NEURAL_LATENCY_BUDGET_MS = 25L;
+  // Below this typed length, dictionary completion is plenty; a neural call isn't worth it.
+  private static final int NEURAL_COMPLETION_MIN_PREFIX_LEN = 2;
   private static final int HYBRID_NEURAL_COOLDOWN_PASSES = 2;
   private static final int HYBRID_PRESAGE_MAX_CANDIDATES_WHEN_NEURAL_ACTIVE = 4;
   private static final char NEURAL_FAILURE_DELIMITER = '|';
@@ -158,6 +160,17 @@ public final class NextWordPredictionEngines {
   private int mHybridNeuralCachedLimit;
   @Nullable private NeuralCandidatesOutcome mHybridNeuralCachedOutcome;
   @Nullable private Runnable mAsyncHybridNeuralListener;
+
+  // Async state for prefix-constrained word completion (#1+#2). Mirrors the hybrid next-word async
+  // path and shares its executor + listener, but is keyed by (context, prefix, limit) since the
+  // prefix changes every keystroke. Inference never runs on the suggestion thread: getOrSchedule
+  // returns a ready cached result or empty, and readiness fires the shared listener to refresh.
+  private final Object mCompletionAsyncLock = new Object();
+  private final AtomicLong mCompletionRequestGeneration = new AtomicLong();
+  @Nullable private String mCompletionInFlightKey;
+  private long mCompletionInFlightGeneration;
+  @Nullable private String mCompletionCachedKey;
+  @Nullable private List<String> mCompletionCachedResult;
 
   // Best-effort telemetry for HYBRID async neural behavior (used by instrumentation reports).
   @Nullable private String mHybridNeuralLastRequestContextKey;
@@ -347,6 +360,8 @@ public final class NextWordPredictionEngines {
     if (mMode == Mode.NONE) {
       mPresageContext.clear();
     }
+    // The committed word becomes context; the prior per-word completion KV/cache is now stale.
+    invalidateNeuralContextCache();
   }
 
   /**
@@ -886,6 +901,122 @@ public final class NextWordPredictionEngines {
       mHybridNeuralCachedLimit = 0;
       mHybridNeuralCachedOutcome = null;
     }
+    clearWordCompletionAsyncState();
+  }
+
+  private void clearWordCompletionAsyncState() {
+    mCompletionRequestGeneration.incrementAndGet();
+    synchronized (mCompletionAsyncLock) {
+      mCompletionInFlightKey = null;
+      mCompletionInFlightGeneration = 0L;
+      mCompletionCachedKey = null;
+      mCompletionCachedResult = null;
+    }
+  }
+
+  /**
+   * Returns ready prefix-completions for the current context, or schedules an async computation and
+   * returns empty. Never runs inference on the calling (suggestion) thread. When a scheduled result
+   * becomes ready it fires the shared async listener, prompting a suggestions refresh that picks it
+   * up. Falls back to empty (dictionary handles it) when neural is off, context is cold, or the
+   * prefix is too short to be worth a model call.
+   */
+  @NonNull
+  public List<String> getOrScheduleWordCompletions(@NonNull String prefix, int maxResults) {
+    if (maxResults <= 0 || (mMode != Mode.NEURAL && mMode != Mode.HYBRID)) {
+      return java.util.Collections.emptyList();
+    }
+    final String trimmedPrefix = prefix.trim();
+    if (trimmedPrefix.length() < NEURAL_COMPLETION_MIN_PREFIX_LEN) {
+      return java.util.Collections.emptyList();
+    }
+    final String[] contextTokens = mPresageContext.toArray(new String[0]);
+    if (contextTokens.length < NEURAL_MIN_CONTEXT_TOKENS) {
+      return java.util.Collections.emptyList();
+    }
+    final String key =
+        contextKey(contextTokens)
+            + ' '
+            + trimmedPrefix.toLowerCase(java.util.Locale.ROOT)
+            + ' '
+            + maxResults;
+
+    synchronized (mCompletionAsyncLock) {
+      if (key.equals(mCompletionCachedKey) && mCompletionCachedResult != null) {
+        return new ArrayList<>(mCompletionCachedResult);
+      }
+    }
+    requestWordCompletionAsync(contextTokens, trimmedPrefix, key, maxResults);
+    return java.util.Collections.emptyList();
+  }
+
+  private void requestWordCompletionAsync(
+      @NonNull String[] contextTokens,
+      @NonNull String prefix,
+      @NonNull String key,
+      int maxResults) {
+    final long generation;
+    synchronized (mCompletionAsyncLock) {
+      if (key.equals(mCompletionInFlightKey) || key.equals(mCompletionCachedKey)) {
+        return;
+      }
+      generation = mCompletionRequestGeneration.incrementAndGet();
+      mCompletionInFlightKey = key;
+      mCompletionInFlightGeneration = generation;
+    }
+
+    mHybridNeuralExecutor.execute(
+        () -> {
+          synchronized (mCompletionAsyncLock) {
+            if (mCompletionInFlightGeneration != generation
+                || !key.equals(mCompletionInFlightKey)) {
+              return; // coalesced away by a newer request
+            }
+          }
+          if (mMode != Mode.NEURAL && mMode != Mode.HYBRID) {
+            return;
+          }
+          if (!mNeuralEngine.isReady() && !mNeuralEngine.activate()) {
+            handleNeuralActivationFailure();
+            return;
+          }
+          final List<String> completions =
+              mNeuralPredictionManager
+                  .completeWordWithScoringContext(contextTokens, prefix, maxResults)
+                  .candidates;
+          mMainHandler.post(
+              () -> {
+                final Runnable listener;
+                synchronized (mCompletionAsyncLock) {
+                  if (mCompletionInFlightGeneration != generation
+                      || !key.equals(mCompletionInFlightKey)) {
+                    return; // stale
+                  }
+                  mCompletionInFlightKey = null;
+                  mCompletionInFlightGeneration = 0L;
+                  mCompletionCachedKey = key;
+                  mCompletionCachedResult = completions;
+                  listener = mAsyncHybridNeuralListener;
+                }
+                if (completions.isEmpty() || listener == null) {
+                  return;
+                }
+                if (!key.startsWith(contextKey(mPresageContext.toArray(new String[0])) + ' ')) {
+                  return; // context changed underneath us
+                }
+                listener.run();
+              });
+        });
+  }
+
+  /**
+   * Invalidates the per-word neural context KV and any cached completions. Called on word / sentence
+   * / field boundaries; the manager cache is content-keyed so this is for promptness, not
+   * correctness.
+   */
+  public void invalidateNeuralContextCache() {
+    mNeuralPredictionManager.invalidateContextCache();
+    clearWordCompletionAsyncState();
   }
 
   private void scheduleNeuralDeactivate(boolean force) {

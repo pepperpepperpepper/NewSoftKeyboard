@@ -352,6 +352,16 @@ public class SuggestionsProvider {
     return mPredictionEngines.sortCandidatesByNeuralFirstTokenLogProbIfAvailable(candidates);
   }
 
+  /**
+   * Returns ready neural prefix-completions for the in-progress word, or schedules an async
+   * computation and returns empty (never blocks on inference). See {@link
+   * NextWordPredictionEngines#getOrScheduleWordCompletions}.
+   */
+  @NonNull
+  public List<String> getOrScheduleWordCompletions(@NonNull String prefix, int maxResults) {
+    return mPredictionEngines.getOrScheduleWordCompletions(prefix, maxResults);
+  }
+
   public boolean tryToLearnNewWord(CharSequence newWord, int frequencyDelta) {
     if (mIncognitoMode
         || !mNextWordConfig.enabled

@@ -36,6 +36,26 @@ public class NextWordPredictionEnginesTest {
   }
 
   @Test
+  public void getOrScheduleWordCompletions_guardsReturnEmptyAndNeverBlock() {
+    final RxSharedPrefs prefs = new RxSharedPrefs(getApplicationContext(), input -> {});
+    final NextWordPredictionEngines engines =
+        new NextWordPredictionEngines(getApplicationContext(), prefs, "test", false, false);
+
+    // Cold context: nothing to condition on, so no completion.
+    Assert.assertTrue(engines.getOrScheduleWordCompletions("rec", 3).isEmpty());
+
+    engines.notifyWordCommitted("hello");
+
+    // Prefix too short to be worth a model call.
+    Assert.assertTrue(engines.getOrScheduleWordCompletions("r", 3).isEmpty());
+    // Non-positive maxResults.
+    Assert.assertTrue(engines.getOrScheduleWordCompletions("rec", 0).isEmpty());
+    // Valid request with no model installed: returns empty synchronously (schedules async, which
+    // fails activation gracefully) rather than blocking the suggestion thread.
+    Assert.assertTrue(engines.getOrScheduleWordCompletions("rec", 3).isEmpty());
+  }
+
+  @Test
   public void appendNextWords_doesNotMutateContext() {
     final RxSharedPrefs prefs = new RxSharedPrefs(getApplicationContext(), input -> {});
     final NextWordPredictionEngines engines =
