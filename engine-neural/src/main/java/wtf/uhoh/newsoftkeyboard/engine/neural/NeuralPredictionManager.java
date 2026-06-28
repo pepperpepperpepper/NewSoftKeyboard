@@ -51,6 +51,9 @@ public final class NeuralPredictionManager {
   // candidate set is already constrained to the typed prefix.
   private static final int PREFIX_CANDIDATE_ID_CAP = 256;
   private static final int PREFIX_MAX_SEEDS_TO_EXPAND = 4;
+  // Beam width for expanding each prefix seed into a full word (#4). Small and bounded — affordable
+  // because the context KV is cached; 1 reproduces the greedy path.
+  private static final int PREFIX_EXPANSION_BEAM_WIDTH = 2;
   private static final int WORD_CANDIDATE_SEARCH_WINDOW_MIN = 256;
   private static final int WORD_CANDIDATE_SEARCH_WINDOW_MAX = 1024;
   private static final int WORD_CANDIDATE_SEARCH_WINDOW_MULTIPLIER = 40;
@@ -735,13 +738,14 @@ public final class NeuralPredictionManager {
       expanded++;
       final ExpansionResult expansion =
           ctx.canExpand
-              ? greedyExpandWordScored(
+              ? beamExpandWordScored(
                   candidate.firstTokenId,
                   candidate.word,
                   ctx.pastTensorsByInputName,
                   encoded.length,
                   WORD_EXPANSION_MAX_EXTRA_TOKENS,
-                  WORD_EXPANSION_SEARCH_WINDOW)
+                  WORD_EXPANSION_SEARCH_WINDOW,
+                  PREFIX_EXPANSION_BEAM_WIDTH)
               : greedyExpandWordFullSequenceScored(
                   encoded,
                   candidate.firstTokenId,
@@ -1524,6 +1528,148 @@ public final class NeuralPredictionManager {
     return new ExpansionResult(word.toString(), scoreDelta, extraTokens);
   }
 
+  /**
+   * Beam version of {@link #greedyExpandWordScored} (#4). Keeps up to {@code beamWidth} partial
+   * spellings alive over the KV-cached expansion instead of committing to the single best
+   * continuation at each step, so a strong multi-token word isn't lost to a greedy local choice.
+   * A hypothesis finalizes when the model prefers a word boundary (no competitive continuation) or
+   * hits the length / extra-token cap; among finalized spellings the most confidently-continued one
+   * wins (length-normalized so longer confident words stay competitive). At {@code beamWidth <= 1}
+   * this reduces to the greedy path. Returns the raw summed score delta for the chosen spelling so
+   * the caller's cross-seed ranking math is unchanged.
+   */
+  @NonNull
+  private ExpansionResult beamExpandWordScored(
+      int firstTokenId,
+      @NonNull String firstToken,
+      @NonNull Map<String, OnnxTensor> basePast,
+      int basePastLength,
+      int maxExtraTokens,
+      int searchWindow,
+      int beamWidth)
+      throws OrtException {
+    if (mTokenizer == null || maxExtraTokens <= 0) {
+      return new ExpansionResult(firstToken, 0f, 0);
+    }
+    if (beamWidth <= 1) {
+      return greedyExpandWordScored(
+          firstTokenId, firstToken, basePast, basePastLength, maxExtraTokens, searchWindow);
+    }
+
+    final class Hyp {
+      final String word;
+      final float scoreDelta;
+      final int extraTokens;
+      final int tokenId;
+      @NonNull final Map<String, OnnxTensor> past;
+      final int pastLength;
+
+      Hyp(
+          String word,
+          float scoreDelta,
+          int extraTokens,
+          int tokenId,
+          @NonNull Map<String, OnnxTensor> past,
+          int pastLength) {
+        this.word = word;
+        this.scoreDelta = scoreDelta;
+        this.extraTokens = extraTokens;
+        this.tokenId = tokenId;
+        this.past = past;
+        this.pastLength = pastLength;
+      }
+    }
+
+    final java.util.ArrayList<Hyp> finalized = new java.util.ArrayList<>();
+    java.util.List<Hyp> beam = new java.util.ArrayList<>();
+    beam.add(new Hyp(firstToken, 0f, 0, firstTokenId, basePast, basePastLength));
+
+    java.util.List<OrtSession.Result> currentGenResults = new java.util.ArrayList<>();
+    try {
+      for (int step = 0; step < maxExtraTokens && !beam.isEmpty(); step++) {
+        final java.util.ArrayList<Hyp> children = new java.util.ArrayList<>();
+        final java.util.ArrayList<OrtSession.Result> nextGenResults = new java.util.ArrayList<>();
+
+        for (Hyp hyp : beam) {
+          if (hyp.word.length() >= 24) {
+            finalized.add(hyp);
+            continue;
+          }
+          final OrtSession.Result result =
+              runSingleTokenStep(hyp.tokenId, hyp.past, hyp.pastLength);
+          nextGenResults.add(result);
+          final float[] logits = extractLogits(getLogitsValue(result));
+          if (logits == null) {
+            finalized.add(hyp);
+            continue;
+          }
+          final java.util.List<Integer> contIds =
+              topWordContinuationTokenIds(logits, searchWindow, mTokenizer, hyp.word, beamWidth);
+          if (contIds.isEmpty()) {
+            finalized.add(hyp); // model wants a boundary: this spelling is a complete word
+            continue;
+          }
+          final java.util.HashMap<String, OnnxTensor> newPast = new java.util.HashMap<>();
+          if (!tryPopulatePastTensors(result, newPast)) {
+            finalized.add(hyp);
+            continue;
+          }
+          for (int cid : contIds) {
+            final String next = normalizeDecodedToken(mTokenizer.decodeId(cid));
+            if (next.isEmpty()) continue;
+            children.add(
+                new Hyp(
+                    hyp.word + next,
+                    hyp.scoreDelta + logProbForTokenId(logits, cid),
+                    hyp.extraTokens + 1,
+                    cid,
+                    newPast,
+                    hyp.pastLength + 1));
+          }
+        }
+
+        // Parent-generation results have been consumed as inputs this step; free them.
+        closeResults(currentGenResults);
+        currentGenResults = nextGenResults;
+
+        children.sort((a, b) -> Float.compare(b.scoreDelta, a.scoreDelta));
+        if (children.size() > beamWidth) {
+          beam = new java.util.ArrayList<>(children.subList(0, beamWidth));
+        } else {
+          beam = children;
+        }
+      }
+      // Anything still alive hit the extra-token / length cap: it's a (truncated) completion too.
+      finalized.addAll(beam);
+    } finally {
+      closeResults(currentGenResults);
+    }
+
+    Hyp best = null;
+    float bestNorm = Float.NEGATIVE_INFINITY;
+    for (Hyp hyp : finalized) {
+      final float norm = hyp.extraTokens == 0 ? 0f : hyp.scoreDelta / hyp.extraTokens;
+      if (best == null
+          || norm > bestNorm
+          || (norm == bestNorm && hyp.extraTokens > best.extraTokens)) {
+        best = hyp;
+        bestNorm = norm;
+      }
+    }
+    if (best == null) {
+      return new ExpansionResult(firstToken, 0f, 0);
+    }
+    return new ExpansionResult(best.word, best.scoreDelta, best.extraTokens);
+  }
+
+  private static void closeResults(@NonNull java.util.List<OrtSession.Result> results) {
+    for (OrtSession.Result result : results) {
+      if (result != null) {
+        result.close();
+      }
+    }
+  }
+
   @NonNull
   private String greedyExpandWordFullSequence(
       @NonNull int[] baseEncoded,
@@ -1813,6 +1959,57 @@ public final class NeuralPredictionManager {
       return id;
     }
     return -1;
+  }
+
+  /**
+   * Beam generalization of {@link #chooseBestWordContinuationTokenId}: returns up to {@code width}
+   * word-continuation token ids in descending logit order, or an empty list when the model wants to
+   * end the word (the argmax is a boundary and soft-continuation doesn't apply). Preserves the
+   * single-best behavior at {@code width == 1}.
+   */
+  @VisibleForTesting
+  @NonNull
+  static java.util.List<Integer> topWordContinuationTokenIds(
+      float[] logits,
+      int searchWindow,
+      @NonNull Gpt2Tokenizer tokenizer,
+      @Nullable String wordSoFar,
+      int width) {
+    if (logits == null || logits.length == 0 || width <= 0) {
+      return java.util.Collections.emptyList();
+    }
+    final int target = Math.min(logits.length, Math.max(searchWindow, 8));
+    final java.util.List<Integer> tokenIds = selectTopTokenIds(logits, target);
+    if (tokenIds.isEmpty()) return java.util.Collections.emptyList();
+
+    final int bestId = tokenIds.get(0);
+    final boolean bestIsContinuation = isWordContinuationSegment(tokenizer.decodeId(bestId));
+    // The model prefers a word boundary and this isn't a short word we're willing to nudge onward:
+    // the word is complete, so there are no continuations to pursue.
+    if (!bestIsContinuation && !shouldTrySoftContinuation(wordSoFar)) {
+      return java.util.Collections.emptyList();
+    }
+
+    final int softLen = wordSoFar == null ? 0 : wordSoFar.trim().length();
+    final float continuationLogitDeltaMax =
+        softLen >= 4
+            ? WORD_CONTINUATION_LOGIT_DELTA_MAX + 0.75f
+            : WORD_CONTINUATION_LOGIT_DELTA_MAX;
+    final float bestLogit = logits[bestId];
+
+    final java.util.ArrayList<Integer> out = new java.util.ArrayList<>(width);
+    for (int id : tokenIds) {
+      final String raw = tokenizer.decodeId(id);
+      if (!isWordContinuationSegment(raw)) continue;
+      // Always admit the top continuation; gate the rest by the soft-continuation delta so the beam
+      // never spends width on far-less-likely spellings.
+      if (!out.isEmpty() && bestLogit - logits[id] > continuationLogitDeltaMax) {
+        break;
+      }
+      out.add(id);
+      if (out.size() >= width) break;
+    }
+    return out;
   }
 
   private static boolean isWordContinuationSegment(@NonNull String rawSegment) {
