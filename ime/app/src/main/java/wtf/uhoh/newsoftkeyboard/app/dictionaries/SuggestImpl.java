@@ -162,6 +162,11 @@ public class SuggestImpl implements Suggest, ContextProfileAwareSuggest {
   }
 
   @Override
+  public void resetNeuralCompletionContext() {
+    mSuggestionsProvider.resetNeuralCompletionContext();
+  }
+
+  @Override
   public List<CharSequence> getNextSuggestions(
       final CharSequence previousWord, final boolean inAllUpperCaseState) {
     final String currentWord = previousWord.toString().trim();

@@ -237,6 +237,9 @@ public abstract class ImeSuggestionsController extends ImeKeyboardSwitchedListen
     keyboardDictionariesLoader.reset();
     completionHandler.reset();
     suggestionsSessionState.predictionState.inputFieldSupportsAutoPick = false;
+    // Editor change: hard-clear the neural completion context so its larger, soft-reset history (#5)
+    // never carries text from the previous field. Re-seeded from this field's text afterward.
+    if (mSuggest != null) mSuggest.resetNeuralCompletionContext();
 
     final boolean respectNoSuggestionsFlag =
         prefs()

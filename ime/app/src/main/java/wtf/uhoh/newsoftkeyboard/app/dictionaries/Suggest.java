@@ -31,6 +31,14 @@ public interface Suggest {
   void resetNextWordSentence();
 
   /**
+   * Clears the neural completion context window on editor change so its larger, soft-reset history
+   * never carries text from one field into another. Optional; implemented by SuggestImpl.
+   */
+  default void resetNeuralCompletionContext() {
+    // optional: implemented by SuggestImpl
+  }
+
+  /**
    * Returns a list of suggested next words for the given typed word
    *
    * @return list of suggestions.

@@ -46,6 +46,11 @@ public final class NextWordPredictionEngines {
   private static final long NEURAL_LATENCY_BUDGET_MS = 25L;
   // Below this typed length, dictionary completion is plenty; a neural call isn't worth it.
   private static final int NEURAL_COMPLETION_MIN_PREFIX_LEN = 2;
+  // The transformer benefits from more context than the n-gram engine's window (#5). It keeps its
+  // own, larger window and — unlike Presage — carries it across sentence boundaries (soft reset),
+  // but still hard-clears on editor change, incognito, and seed so context never leaks across
+  // fields or sessions.
+  private static final int NEURAL_CONTEXT_WINDOW_WORDS = 48;
   private static final int HYBRID_NEURAL_COOLDOWN_PASSES = 2;
   private static final int HYBRID_PRESAGE_MAX_CANDIDATES_WHEN_NEURAL_ACTIVE = 4;
   private static final char NEURAL_FAILURE_DELIMITER = '|';
@@ -214,6 +219,12 @@ public final class NextWordPredictionEngines {
   @NonNull
   private final ArrayDeque<String> mPresageContext = new ArrayDeque<>(DEFAULT_CONTEXT_WINDOW_WORDS);
 
+  // Larger context window for the neural prefix-completion path (#5). Receives the same committed
+  // words as mPresageContext but retains more of them and survives sentence resets (see comments on
+  // NEURAL_CONTEXT_WINDOW_WORDS). Hard-cleared on incognito / hibernate / seed / editor change.
+  @NonNull
+  private final ArrayDeque<String> mNeuralContext = new ArrayDeque<>(NEURAL_CONTEXT_WINDOW_WORDS);
+
   private int mContextWindowWords = DEFAULT_CONTEXT_WINDOW_WORDS;
 
   private long mLastNeuralLatencyMs;
@@ -264,19 +275,35 @@ public final class NextWordPredictionEngines {
     mLastNeuralLatencyMs = 0L;
     mLastNeuralLatencyMode = Mode.NONE;
     mLastNeuralScoringContext = null;
+    mNeuralContext.clear();
     clearHybridNeuralAsyncState();
+  }
+
+  /**
+   * Hard-clears the neural completion context and cached completions. Called on editor change so the
+   * larger, soft-reset neural window never carries text from one field into another.
+   */
+  public void resetNeuralCompletionContext() {
+    mNeuralContext.clear();
+    invalidateNeuralContextCache();
   }
 
   public void resetSentence() {
     mPresageContext.clear();
     mHybridNeuralCooldownRemaining = 0;
     mLastNeuralScoringContext = null;
+    // Soft reset for the neural window: the transformer keeps prior-sentence context (#5). In
+    // incognito we don't extend retention beyond the n-gram behavior, so clear it there.
+    if (mIncognitoMode) {
+      mNeuralContext.clear();
+    }
     clearHybridNeuralAsyncState();
   }
 
   public void setIncognitoMode(boolean incognitoMode) {
     if (mIncognitoMode != incognitoMode) {
       mPresageContext.clear();
+      mNeuralContext.clear();
       mHybridNeuralCooldownRemaining = 0;
     }
     mIncognitoMode = incognitoMode;
@@ -372,6 +399,7 @@ public final class NextWordPredictionEngines {
    */
   public void seedContextTokens(@NonNull Collection<String> contextTokens) {
     mPresageContext.clear();
+    mNeuralContext.clear();
     mHybridNeuralCooldownRemaining = 0;
     mLastNeuralScoringContext = null;
     clearHybridNeuralAsyncState();
@@ -384,6 +412,7 @@ public final class NextWordPredictionEngines {
     }
     if (mMode == Mode.NONE) {
       mPresageContext.clear();
+      mNeuralContext.clear();
     }
   }
 
@@ -930,15 +959,15 @@ public final class NextWordPredictionEngines {
     if (trimmedPrefix.length() < NEURAL_COMPLETION_MIN_PREFIX_LEN) {
       return java.util.Collections.emptyList();
     }
-    final String[] contextTokens = mPresageContext.toArray(new String[0]);
+    final String[] contextTokens = mNeuralContext.toArray(new String[0]);
     if (contextTokens.length < NEURAL_MIN_CONTEXT_TOKENS) {
       return java.util.Collections.emptyList();
     }
     final String key =
         contextKey(contextTokens)
-            + ' '
+            + ' '
             + trimmedPrefix.toLowerCase(java.util.Locale.ROOT)
-            + ' '
+            + ' '
             + maxResults;
 
     synchronized (mCompletionAsyncLock) {
@@ -1001,7 +1030,7 @@ public final class NextWordPredictionEngines {
                 if (completions.isEmpty() || listener == null) {
                   return;
                 }
-                if (!key.startsWith(contextKey(mPresageContext.toArray(new String[0])) + ' ')) {
+                if (!key.startsWith(contextKey(mNeuralContext.toArray(new String[0])) + ' ')) {
                   return; // context changed underneath us
                 }
                 listener.run();
@@ -1080,6 +1109,15 @@ public final class NextWordPredictionEngines {
       mPresageContext.removeFirst();
     }
     mPresageContext.addLast(word);
+    recordNeuralContext(word);
+  }
+
+  private void recordNeuralContext(@NonNull String word) {
+    if (TextUtils.isEmpty(word)) return;
+    while (mNeuralContext.size() >= NEURAL_CONTEXT_WINDOW_WORDS) {
+      mNeuralContext.removeFirst();
+    }
+    mNeuralContext.addLast(word);
   }
 
   private void trimContextToWindow() {
@@ -1255,6 +1293,11 @@ public final class NextWordPredictionEngines {
   @VisibleForTesting
   String[] getContextTokensForTests() {
     return mPresageContext.toArray(new String[0]);
+  }
+
+  @VisibleForTesting
+  String[] getNeuralContextTokensForTests() {
+    return mNeuralContext.toArray(new String[0]);
   }
 
   @VisibleForTesting

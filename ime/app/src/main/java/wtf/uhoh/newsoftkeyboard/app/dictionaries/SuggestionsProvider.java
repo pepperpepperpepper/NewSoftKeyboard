@@ -253,6 +253,14 @@ public class SuggestionsProvider {
     mNextWordPipeline.resetSentence();
   }
 
+  /**
+   * Hard-clears the neural completion context window. Called on editor change so the larger,
+   * soft-reset neural context (#5) never carries text across fields.
+   */
+  public void resetNeuralCompletionContext() {
+    mPredictionEngines.resetNeuralCompletionContext();
+  }
+
   public void getSuggestions(KeyCodesProvider wordComposer, Dictionary.WordCallback wordCallback) {
     mDictionariesManager.getSuggestions(wordComposer, wordCallback);
   }

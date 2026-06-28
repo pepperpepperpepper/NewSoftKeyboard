@@ -36,6 +36,50 @@ public class NextWordPredictionEnginesTest {
   }
 
   @Test
+  public void neuralContextSurvivesSentenceResetButPresageClears() {
+    final RxSharedPrefs prefs = new RxSharedPrefs(getApplicationContext(), input -> {});
+    final NextWordPredictionEngines engines =
+        new NextWordPredictionEngines(getApplicationContext(), prefs, "test", false, false);
+
+    engines.notifyWordCommitted("hello");
+    engines.notifyWordCommitted("there");
+    Assert.assertArrayEquals(
+        new String[] {"hello", "there"}, engines.getNeuralContextTokensForTests());
+
+    // Sentence boundary: the n-gram window clears, but the neural window keeps prior-sentence
+    // context (soft reset, #5).
+    engines.resetSentence();
+    Assert.assertArrayEquals(new String[0], engines.getContextTokensForTests());
+    Assert.assertArrayEquals(
+        new String[] {"hello", "there"}, engines.getNeuralContextTokensForTests());
+
+    // Editor change hard-clears the neural window so context never crosses fields.
+    engines.resetNeuralCompletionContext();
+    Assert.assertArrayEquals(new String[0], engines.getNeuralContextTokensForTests());
+  }
+
+  @Test
+  public void neuralContextClearsOnIncognitoResetAndSeedOverwrites() {
+    final RxSharedPrefs prefs = new RxSharedPrefs(getApplicationContext(), input -> {});
+    final NextWordPredictionEngines engines =
+        new NextWordPredictionEngines(getApplicationContext(), prefs, "test", false, false);
+
+    engines.setIncognitoMode(true);
+    engines.notifyWordCommitted("secret");
+    Assert.assertArrayEquals(new String[] {"secret"}, engines.getNeuralContextTokensForTests());
+
+    // In incognito we don't extend retention across sentences: the neural window clears too.
+    engines.resetSentence();
+    Assert.assertArrayEquals(new String[0], engines.getNeuralContextTokensForTests());
+
+    // Seeding a new field overwrites (not appends to) the neural window.
+    engines.setIncognitoMode(false);
+    engines.notifyWordCommitted("stale");
+    engines.seedContextTokens(List.of("x", "y"));
+    Assert.assertArrayEquals(new String[] {"x", "y"}, engines.getNeuralContextTokensForTests());
+  }
+
+  @Test
   public void getOrScheduleWordCompletions_guardsReturnEmptyAndNeverBlock() {
     final RxSharedPrefs prefs = new RxSharedPrefs(getApplicationContext(), input -> {});
     final NextWordPredictionEngines engines =
