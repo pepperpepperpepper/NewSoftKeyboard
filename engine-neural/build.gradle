@@ -4,6 +4,14 @@ apply from: "${rootDir}/gradle/android_general.gradle"
 
 android {
     namespace 'wtf.uhoh.newsoftkeyboard.engine.neural'
+
+    // The shared config forces ANDROIDX_TEST_ORCHESTRATOR, which clears app data and uninstalls the
+    // test APK around each test — wiping the multi-MB model we stage in the app's external files
+    // dir. This module's single on-device benchmark stages the model out-of-band, so run it HOST
+    // (no per-test data clearing). No isolation is lost: there is one instrumentation test here.
+    testOptions {
+        execution 'HOST'
+    }
 }
 
 dependencies {
@@ -19,6 +27,14 @@ dependencies {
     if (project.hasProperty('neuralHostOrt')) {
         testImplementation 'com.microsoft.onnxruntime:onnxruntime:1.19.2'
     }
+
+    // On-device instrumentation: real onnxruntime-android .so + XNNPACK on the device. Used by the
+    // warm per-keystroke latency benchmark (connectedDebugAndroidTest). See PathB docs in the test.
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'androidx.test:rules:1.6.1'
+    androidTestUtil 'androidx.test:orchestrator:1.4.2'
 }
 
 def skipNeuralModel = project.hasProperty('skipNeuralModel') || System.getenv('SKIP_NEURAL_MODEL')
