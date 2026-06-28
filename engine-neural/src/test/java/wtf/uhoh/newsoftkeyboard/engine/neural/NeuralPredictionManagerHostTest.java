@@ -86,6 +86,68 @@ public class NeuralPredictionManagerHostTest {
     }
   }
 
+  @Test
+  public void configuredSessionActivatesAndStillProducesReadableTokens() {
+    assumeTrue("ONNX runtime not available on host", isOnnxRuntimeAvailable());
+
+    final File modelDir = resolveModelDirectory();
+    assumeTrue(
+        "Missing NEURAL_MODEL_DIR with model files", modelDir != null && modelDir.isDirectory());
+    assumeTrue(isModelDirectoryUsable(modelDir));
+
+    final NeuralPredictionManager manager =
+        new NeuralPredictionManager(
+            ApplicationProvider.getApplicationContext(), fakeStoreFor(modelDir));
+    assumeTrue("Activation failed", manager.activate());
+
+    // The session must have settled on a known execution provider (XNNPACK preferred, CPU fallback),
+    // and inference must still yield word-like tokens — the session knobs are speed-only, so output
+    // remains valid.
+    final String provider = manager.getLastSessionProviderForTest();
+    assertTrue(
+        "Unexpected provider: " + provider, "xnnpack".equals(provider) || "cpu".equals(provider));
+
+    final List<String> predictions = manager.predictNextWords(new String[] {"the"}, 5);
+    manager.deactivate();
+
+    assertNotNull(predictions);
+    assertFalse(predictions.isEmpty());
+    for (String token : predictions) {
+      assertTrue("Unexpected token: " + token, token.matches("[A-Za-z'.]{1,24}"));
+    }
+  }
+
+  @NonNull
+  private ModelStore fakeStoreFor(@NonNull File modelDir) {
+    final File onnx = new File(modelDir, "model_int8.onnx");
+    final File vocab = new File(modelDir, "vocab.json");
+    final File merges = new File(modelDir, "merges.txt");
+
+    final ModelDefinition definition =
+        ModelDefinition.builder(modelDir.getName())
+            .setLabel("host-test-model")
+            .setEngineType(EngineType.NEURAL)
+            .setOnnxFile(onnx.getName(), null, null)
+            .setTokenizerVocabFile(vocab.getName(), null, null)
+            .setTokenizerMergesFile(merges.getName(), null, null)
+            .build();
+
+    final LinkedHashMap<String, File> files = new LinkedHashMap<>();
+    files.put("onnx", onnx);
+    files.put("tokenizer.vocab", vocab);
+    files.put("tokenizer.merges", merges);
+
+    final ModelStore.ActiveModel activeModel =
+        new ModelStore.ActiveModel(definition, modelDir, files);
+
+    return new ModelStore(ApplicationProvider.getApplicationContext()) {
+      @Override
+      public ActiveModel ensureActiveModel(EngineType engineType) {
+        return engineType == EngineType.NEURAL ? activeModel : null;
+      }
+    };
+  }
+
   @Nullable
   private File resolveModelDirectory() {
     final String propertyPath = System.getProperty("NEURAL_MODEL_DIR");

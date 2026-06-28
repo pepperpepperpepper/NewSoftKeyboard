@@ -37,6 +37,9 @@ public final class NeuralPredictionManager {
   private static final String TAG = "NeuralPredictionManager";
   private static final boolean ENABLE_TEST_LOGS = resolveTestLogsEnabled();
   private static final int MAX_CONTEXT_TOKENS = 64;
+  // A keyboard shares the device with the host app; keep ORT's intra-op pool small to avoid
+  // oversubscribing cores during typing. XNNPACK, when enabled, owns its own pool of this size.
+  private static final int SESSION_INTRA_OP_THREADS = 2;
   private static final int WORD_EXPANSION_MAX_EXTRA_TOKENS = 3;
   private static final int WORD_EXPANSION_MAX_CANDIDATES = 1;
   private static final int WORD_EXPANSION_SEARCH_WINDOW = 64;
@@ -158,6 +161,9 @@ public final class NeuralPredictionManager {
   @Nullable private String mLastActivationError;
   private long mLastActivationLatencyMs = -1L;
   private long mLastActivationUptimeMs = 0L;
+  // Which execution provider the last activation actually used ("xnnpack" or "cpu"); for telemetry
+  // and tests. XNNPACK is preferred but falls back to plain CPU when unavailable on the device.
+  @NonNull private volatile String mLastSessionProvider = "cpu";
   @Nullable private java.util.Set<String> mSessionInputNames;
   @Nullable private java.util.Set<String> mSessionOutputNames;
 
@@ -223,6 +229,7 @@ public final class NeuralPredictionManager {
         mModelVocabSize = mTokenizer.getVocabSize();
         mEnvironment = OrtEnvironment.getEnvironment();
         mSessionOptions = new OrtSession.SessionOptions();
+        configureSessionOptions(mSessionOptions);
         mSession = mEnvironment.createSession(onnxFile.getAbsolutePath(), mSessionOptions);
         mSessionInputNames = mSession.getInputNames();
         mSessionOutputNames = mSession.getOutputNames();
@@ -253,6 +260,55 @@ public final class NeuralPredictionManager {
     } finally {
       mSessionLock.unlock();
     }
+  }
+
+  /**
+   * Configures the ONNX session for low-latency on-device inference: full graph optimization,
+   * sequential execution, and the XNNPACK execution provider when available. Each step degrades
+   * gracefully — a provider or option the device/runtime doesn't support is skipped (logged) rather
+   * than failing activation, so we always end up with at least a plain-CPU session. Output parity is
+   * preserved: these are speed/scheduling knobs, not numerical ones.
+   */
+  private void configureSessionOptions(@NonNull OrtSession.SessionOptions options) {
+    try {
+      options.setOptimizationLevel(OrtSession.SessionOptions.OptLevel.ALL_OPT);
+    } catch (Throwable t) {
+      Logger.w(TAG, "Could not set ONNX graph optimization level: " + t.getMessage());
+    }
+    try {
+      options.setExecutionMode(OrtSession.SessionOptions.ExecutionMode.SEQUENTIAL);
+    } catch (Throwable t) {
+      Logger.w(TAG, "Could not set ONNX execution mode: " + t.getMessage());
+    }
+
+    // Prefer XNNPACK (optimized CPU kernels). When it owns the compute, give it the intra-op pool
+    // and keep ORT's own intra-op threads at 1 to avoid two competing pools. If XNNPACK isn't in
+    // this AAR / on this device, fall back to ORT's CPU provider with a small intra-op pool.
+    boolean xnnpackEnabled = false;
+    try {
+      options.addXnnpack(
+          java.util.Collections.singletonMap(
+              "intra_op_num_threads", String.valueOf(SESSION_INTRA_OP_THREADS)));
+      xnnpackEnabled = true;
+    } catch (Throwable t) {
+      Logger.i(TAG, "XNNPACK execution provider unavailable, using CPU: " + t.getMessage());
+    }
+
+    try {
+      options.setIntraOpNumThreads(xnnpackEnabled ? 1 : SESSION_INTRA_OP_THREADS);
+    } catch (Throwable t) {
+      Logger.w(TAG, "Could not set ONNX intra-op thread count: " + t.getMessage());
+    }
+
+    mLastSessionProvider = xnnpackEnabled ? "xnnpack" : "cpu";
+    Logger.i(TAG, "Neural ONNX session configured with provider=" + mLastSessionProvider);
+  }
+
+  /** The execution provider the last successful activation used ("xnnpack" or "cpu"). */
+  @VisibleForTesting
+  @NonNull
+  public String getLastSessionProviderForTest() {
+    return mLastSessionProvider;
   }
 
   public void deactivate() {
