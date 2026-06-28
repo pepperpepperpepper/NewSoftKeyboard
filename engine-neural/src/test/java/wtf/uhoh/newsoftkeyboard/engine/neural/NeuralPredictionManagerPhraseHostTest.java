@@ -98,10 +98,11 @@ public class NeuralPredictionManagerPhraseHostTest {
   }
 
   private boolean isOnnxRuntimeAvailable() {
+    // See NeuralPredictionManagerHostTest: probe OrtEnvironment, not System.loadLibrary, so the
+    // desktop ONNX Runtime artifact (-PneuralHostOrt) is detected on a supported host.
     try {
-      System.loadLibrary("onnxruntime");
-      return true;
-    } catch (UnsatisfiedLinkError e) {
+      return ai.onnxruntime.OrtEnvironment.getEnvironment() != null;
+    } catch (Throwable t) {
       return false;
     }
   }

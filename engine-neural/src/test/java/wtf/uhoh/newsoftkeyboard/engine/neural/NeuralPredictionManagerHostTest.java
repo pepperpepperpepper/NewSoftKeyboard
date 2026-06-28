@@ -265,10 +265,14 @@ public class NeuralPredictionManagerHostTest {
   }
 
   private boolean isOnnxRuntimeAvailable() {
+    // Probe whether ONNX Runtime can actually initialize in this JVM. System.loadLibrary is the
+    // wrong check for the desktop artifact (it loads its native lib internally, via OrtEnvironment,
+    // by extracting it from the jar) — so we ask OrtEnvironment directly. With only the -android
+    // artifact present (default), this throws and the neural host tests skip; with -PneuralHostOrt
+    // it succeeds on a supported desktop platform.
     try {
-      System.loadLibrary("onnxruntime");
-      return true;
-    } catch (UnsatisfiedLinkError e) {
+      return ai.onnxruntime.OrtEnvironment.getEnvironment() != null;
+    } catch (Throwable t) {
       return false;
     }
   }

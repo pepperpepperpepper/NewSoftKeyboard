@@ -13,6 +13,12 @@ dependencies {
     implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.19.2'
     testImplementation 'junit:junit:4.13.2'
     testImplementation project(':ime:base-test')
+    // Host (Robolectric) execution of the neural tests needs ONNX Runtime's desktop native lib; the
+    // -android artifact only ships Android .so files. Gated behind -PneuralHostOrt so the default
+    // unit-test classpath is unchanged (tests then skip via isOnnxRuntimeAvailable()).
+    if (project.hasProperty('neuralHostOrt')) {
+        testImplementation 'com.microsoft.onnxruntime:onnxruntime:1.19.2'
+    }
 }
 
 def skipNeuralModel = project.hasProperty('skipNeuralModel') || System.getenv('SKIP_NEURAL_MODEL')
