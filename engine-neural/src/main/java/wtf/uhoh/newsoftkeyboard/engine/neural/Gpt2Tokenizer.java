@@ -34,6 +34,13 @@ final class Gpt2Tokenizer {
   private final Map<String, Integer> bpeRanks = new HashMap<>();
   private final Map<String, String[]> bpeCache = new HashMap<>();
 
+  // Lazily-built index from the lowercase first letter of a word-start token's surface form to the
+  // ids of all word-start tokens beginning with that letter. Used to constrain prefix-completion
+  // candidates to the (small) set of tokens compatible with the typed prefix without scanning the
+  // whole vocab per keystroke. Word-start tokens are those whose decoded form begins with a space
+  // (GPT-2's Ġ marker) followed by a letter.
+  private volatile Map<Character, int[]> wordStartPrefixIndex;
+
   Gpt2Tokenizer(@NonNull File vocabJson, @NonNull File mergesTxt) throws IOException {
     loadVocab(vocabJson);
     loadMerges(mergesTxt);
@@ -191,6 +198,72 @@ final class Gpt2Tokenizer {
     final String token = idToToken.get(id);
     if (token == null) return String.valueOf(id);
     return decodeToken(token);
+  }
+
+  /**
+   * Returns the ids of word-start tokens whose surface form (the leading space stripped) begins
+   * with {@code prefix}, matched case-insensitively. These are the only seeds worth scoring when
+   * completing a word the user has begun typing. Results are bounded by {@code maxResults} (a
+   * non-positive value means no cap) and returned in ascending id order; the caller ranks them by
+   * model logit.
+   */
+  @NonNull
+  List<Integer> tokenIdsForWordPrefix(@NonNull String prefix, int maxResults) {
+    final String trimmedPrefix = prefix.trim();
+    if (trimmedPrefix.isEmpty()) {
+      return java.util.Collections.emptyList();
+    }
+    final String lowerPrefix = trimmedPrefix.toLowerCase(java.util.Locale.ROOT);
+    final int[] bucket = ensurePrefixIndex().get(lowerPrefix.charAt(0));
+    if (bucket == null || bucket.length == 0) {
+      return java.util.Collections.emptyList();
+    }
+
+    final List<Integer> out = new ArrayList<>();
+    for (int id : bucket) {
+      final String surface = decodeId(id).trim();
+      if (surface.isEmpty()) continue;
+      if (surface.toLowerCase(java.util.Locale.ROOT).startsWith(lowerPrefix)) {
+        out.add(id);
+        if (maxResults > 0 && out.size() >= maxResults) break;
+      }
+    }
+    return out;
+  }
+
+  @NonNull
+  private Map<Character, int[]> ensurePrefixIndex() {
+    Map<Character, int[]> index = wordStartPrefixIndex;
+    if (index != null) {
+      return index;
+    }
+    synchronized (this) {
+      if (wordStartPrefixIndex != null) {
+        return wordStartPrefixIndex;
+      }
+      final Map<Character, List<Integer>> builder = new HashMap<>();
+      final String[] tokenArray = idToTokenArray;
+      final int limit = tokenArray != null ? tokenArray.length : 0;
+      for (int id = 0; id < limit; id++) {
+        if (tokenArray[id] == null) continue;
+        final String decoded = decodeId(id);
+        if (decoded.isEmpty() || !Character.isWhitespace(decoded.charAt(0))) continue;
+        final String surface = decoded.trim();
+        if (surface.isEmpty() || !Character.isLetter(surface.charAt(0))) continue;
+        final char key = Character.toLowerCase(surface.charAt(0));
+        builder.computeIfAbsent(key, k -> new ArrayList<>()).add(id);
+      }
+      final Map<Character, int[]> built = new HashMap<>(builder.size());
+      for (Map.Entry<Character, List<Integer>> e : builder.entrySet()) {
+        final List<Integer> ids = e.getValue();
+        final int[] arr = new int[ids.size()];
+        for (int i = 0; i < arr.length; i++) arr[i] = ids.get(i);
+        built.put(e.getKey(), arr);
+      }
+      index = built;
+      wordStartPrefixIndex = built;
+      return index;
+    }
   }
 
   @NonNull

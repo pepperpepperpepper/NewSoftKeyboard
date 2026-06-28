@@ -1,5 +1,6 @@
 package wtf.uhoh.newsoftkeyboard.engine.neural;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -115,6 +116,49 @@ public class NeuralPredictionManagerHostTest {
     for (String token : predictions) {
       assertTrue("Unexpected token: " + token, token.matches("[A-Za-z'.]{1,24}"));
     }
+  }
+
+  @Test
+  public void completeWordIsPrefixConstrainedAndReusesContextKv() {
+    assumeTrue("ONNX runtime not available on host", isOnnxRuntimeAvailable());
+
+    final File modelDir = resolveModelDirectory();
+    assumeTrue(
+        "Missing NEURAL_MODEL_DIR with model files", modelDir != null && modelDir.isDirectory());
+    assumeTrue(isModelDirectoryUsable(modelDir));
+
+    final NeuralPredictionManager manager =
+        new NeuralPredictionManager(
+            ApplicationProvider.getApplicationContext(), fakeStoreFor(modelDir));
+    assumeTrue("Activation failed", manager.activate());
+
+    final String[] context = new String[] {"I", "would", "like", "to"};
+
+    // Successive keystrokes of one word: same context, growing prefix. Every completion must begin
+    // with the typed prefix.
+    final List<String> afterR = manager.completeWordWithScoringContext(context, "r", 5).candidates;
+    final List<String> afterRe = manager.completeWordWithScoringContext(context, "re", 5).candidates;
+    final List<String> afterRec =
+        manager.completeWordWithScoringContext(context, "rec", 5).candidates;
+
+    for (List<String> completions : java.util.Arrays.asList(afterR, afterRe, afterRec)) {
+      assertNotNull(completions);
+      for (String word : completions) {
+        assertTrue("Non-word-like completion: " + word, word.matches("[A-Za-z'.]{1,24}"));
+      }
+    }
+    for (String word : afterRec) {
+      assertTrue("'" + word + "' does not start with prefix", word.toLowerCase().startsWith("rec"));
+    }
+
+    // KV reuse (#2): three calls sharing one context must trigger exactly one context forward pass.
+    assertEquals(1, manager.getContextForwardPassCountForTest());
+
+    // Changing context forces a fresh forward pass.
+    manager.completeWordWithScoringContext(new String[] {"the", "weather", "is"}, "su", 5);
+    assertEquals(2, manager.getContextForwardPassCountForTest());
+
+    manager.deactivate();
   }
 
   @NonNull

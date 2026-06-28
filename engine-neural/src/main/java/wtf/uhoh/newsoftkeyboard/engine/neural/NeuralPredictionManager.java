@@ -46,6 +46,11 @@ public final class NeuralPredictionManager {
   private static final int WORD_EXPANSION_MIN_LEN = 8;
   private static final int WORD_EXPANSION_NO_PAST_MAX_EXTRA_TOKENS = 2;
   private static final int WORD_EXPANSION_NO_PAST_MAX_CANDIDATES = 1;
+  // Prefix-completion: cap how many prefix-compatible token ids we pull from the tokenizer index,
+  // and how many of the best-scoring seeds we expand into full words. Both are small because the
+  // candidate set is already constrained to the typed prefix.
+  private static final int PREFIX_CANDIDATE_ID_CAP = 256;
+  private static final int PREFIX_MAX_SEEDS_TO_EXPAND = 4;
   private static final int WORD_CANDIDATE_SEARCH_WINDOW_MIN = 256;
   private static final int WORD_CANDIDATE_SEARCH_WINDOW_MAX = 1024;
   private static final int WORD_CANDIDATE_SEARCH_WINDOW_MULTIPLIER = 40;
@@ -194,6 +199,42 @@ public final class NeuralPredictionManager {
   @Nullable private KvCacheState mKvCache;
   @Nullable private LastInferenceDebugState mLastInferenceDebugState;
 
+  /**
+   * Layer-A cache for prefix completion: the forward pass over the committed context (the words
+   * before the in-progress one), keyed by the exact encoded context. While the user types one word,
+   * the context is unchanged, so every keystroke reuses this — only the cheap prefix-constrained
+   * seed scoring + expansion (Layer B) reruns. Invalidated automatically on context change (the key
+   * differs) and explicitly on word/sentence/field boundaries via {@link #invalidateContextCache()}.
+   */
+  private static final class ContextInference {
+    @NonNull final int[] encodedContext;
+    @NonNull final float[] lastLogits;
+    final float logSumExp;
+    @NonNull final OrtSession.Result result;
+    @NonNull final Map<String, OnnxTensor> pastTensorsByInputName;
+    final boolean canExpand;
+
+    ContextInference(
+        @NonNull int[] encodedContext,
+        @NonNull float[] lastLogits,
+        float logSumExp,
+        @NonNull OrtSession.Result result,
+        @NonNull Map<String, OnnxTensor> pastTensorsByInputName,
+        boolean canExpand) {
+      this.encodedContext = encodedContext;
+      this.lastLogits = lastLogits;
+      this.logSumExp = logSumExp;
+      this.result = result;
+      this.pastTensorsByInputName = pastTensorsByInputName;
+      this.canExpand = canExpand;
+    }
+  }
+
+  @Nullable private ContextInference mContextInference;
+  // Counts Layer-A context forward passes that actually ran (cache misses). Lets tests assert that
+  // typing successive keystrokes of one word triggers exactly one context forward pass.
+  private int mContextForwardPassCount = 0;
+
   public NeuralPredictionManager(@NonNull Context context) {
     this(context, new ModelStore(context));
   }
@@ -311,10 +352,22 @@ public final class NeuralPredictionManager {
     return mLastSessionProvider;
   }
 
+  /** Number of Layer-A context forward passes that actually ran (cache misses). */
+  @VisibleForTesting
+  public int getContextForwardPassCountForTest() {
+    mSessionLock.lock();
+    try {
+      return mContextForwardPassCount;
+    } finally {
+      mSessionLock.unlock();
+    }
+  }
+
   public void deactivate() {
     mSessionLock.lock();
     try {
       clearKvCacheLocked();
+      clearContextInferenceLocked();
       mLastInferenceDebugState = null;
       mActiveModel = null;
       if (mSession != null) {
@@ -507,6 +560,235 @@ public final class NeuralPredictionManager {
           tensor.close();
         }
       }
+      mSessionLock.unlock();
+    }
+  }
+
+  /**
+   * Prefix-constrained word completion (#1+#2). Given the committed context and the in-progress
+   * word prefix, returns full-word completions that begin with the prefix, ranked by model
+   * probability. The expensive context forward pass (Layer A) is cached per word and reused across
+   * keystrokes; only the prefix-constrained seed scoring and bounded greedy expansion (Layer B) run
+   * each call.
+   */
+  @NonNull
+  public NextWordPredictions completeWordWithScoringContext(
+      @NonNull String[] contextTokens, @NonNull String prefix, int maxResults) {
+    if (maxResults <= 0) {
+      return NextWordPredictions.empty();
+    }
+    final String trimmedPrefix = prefix.trim();
+    if (trimmedPrefix.isEmpty()) {
+      return NextWordPredictions.empty();
+    }
+    mSessionLock.lock();
+    try {
+      if (!isActive() && !activate()) {
+        return NextWordPredictions.empty();
+      }
+      if (mTokenizer == null || mSession == null || mEnvironment == null) {
+        return NextWordPredictions.empty();
+      }
+
+      final int[] encoded = encodeContextTokens(contextTokens);
+      if (encoded.length == 0) {
+        return NextWordPredictions.empty();
+      }
+
+      final ContextInference ctx = ensureContextInferenceLocked(encoded);
+      if (ctx == null) {
+        return NextWordPredictions.empty();
+      }
+
+      final NextWordScoringContext scoringContext =
+          new NextWordScoringContext(
+              java.util.Arrays.copyOf(ctx.lastLogits, ctx.lastLogits.length), ctx.logSumExp);
+
+      final List<Integer> candidateIds =
+          mTokenizer.tokenIdsForWordPrefix(trimmedPrefix, PREFIX_CANDIDATE_ID_CAP);
+      if (candidateIds.isEmpty()) {
+        return new NextWordPredictions(java.util.Collections.emptyList(), scoringContext);
+      }
+
+      List<String> rawCompletions;
+      try {
+        rawCompletions = expandPrefixCandidates(ctx, encoded, candidateIds, trimmedPrefix, maxResults);
+      } catch (Throwable t) {
+        Logger.w(TAG, "Failed expanding prefix completions: " + t.getMessage());
+        rawCompletions = java.util.Collections.emptyList();
+      }
+      final List<String> filtered = filterCandidatesForKeyboardUx(contextTokens, rawCompletions);
+      return new NextWordPredictions(filtered, scoringContext);
+    } catch (OrtException exception) {
+      Logger.e(TAG, "ONNX runtime failure (completeWord): " + exception.getMessage(), exception);
+      mLastActivationError = exception.getMessage();
+      deactivate();
+      return NextWordPredictions.empty();
+    } finally {
+      mSessionLock.unlock();
+    }
+  }
+
+  /** Encodes committed context the same way {@link #predictNextWordsWithScoringContext} does. */
+  private int[] encodeContextTokens(@NonNull String[] contextTokens) {
+    if (mTokenizer == null) {
+      return new int[0];
+    }
+    final String contextText = " " + String.join(" ", contextTokens);
+    if (contextText.trim().isEmpty()) {
+      return new int[0];
+    }
+    int[] encoded = mTokenizer.encode(contextText);
+    if (encoded.length > MAX_CONTEXT_TOKENS) {
+      final int[] trimmed = new int[MAX_CONTEXT_TOKENS];
+      System.arraycopy(encoded, encoded.length - MAX_CONTEXT_TOKENS, trimmed, 0, MAX_CONTEXT_TOKENS);
+      encoded = trimmed;
+    }
+    return encoded;
+  }
+
+  /**
+   * Returns the Layer-A context inference for {@code encoded}, reusing the cached one when the
+   * context is unchanged (the common per-keystroke case) and otherwise running a fresh forward pass
+   * and caching it. Must be called with {@link #mSessionLock} held.
+   */
+  @Nullable
+  private ContextInference ensureContextInferenceLocked(@NonNull int[] encoded)
+      throws OrtException {
+    final ContextInference cached = mContextInference;
+    if (cached != null && java.util.Arrays.equals(cached.encodedContext, encoded)) {
+      return cached;
+    }
+
+    final java.util.ArrayList<OnnxTensor> owned = new java.util.ArrayList<>();
+    OrtSession.Result result = null;
+    boolean keepResult = false;
+    try {
+      mContextForwardPassCount++;
+      result = runSequenceStep(encoded, 0, null, owned);
+      final float[] logits = extractLogits(getLogitsValue(result));
+      if (logits == null) {
+        return null;
+      }
+      final float[] lastLogits = java.util.Arrays.copyOf(logits, logits.length);
+      final java.util.HashMap<String, OnnxTensor> past = new java.util.HashMap<>();
+      final boolean canExpand = tryPopulatePastTensors(result, past);
+
+      clearContextInferenceLocked();
+      final ContextInference next =
+          new ContextInference(
+              java.util.Arrays.copyOf(encoded, encoded.length),
+              lastLogits,
+              logSumExp(lastLogits),
+              result,
+              past,
+              canExpand);
+      mContextInference = next;
+      keepResult = true;
+      return next;
+    } finally {
+      if (result != null && !keepResult) {
+        result.close();
+      }
+      for (OnnxTensor tensor : owned) {
+        if (tensor != null) {
+          tensor.close();
+        }
+      }
+    }
+  }
+
+  /**
+   * Scores the prefix-compatible seed tokens against the cached context logits, expands the best few
+   * into full words (reusing the existing greedy expansion over the context KV), and returns
+   * completions that still begin with the typed prefix, deduped and capped to {@code maxResults}.
+   */
+  @NonNull
+  private List<String> expandPrefixCandidates(
+      @NonNull ContextInference ctx,
+      @NonNull int[] encoded,
+      @NonNull List<Integer> candidateIds,
+      @NonNull String prefix,
+      int maxResults)
+      throws OrtException {
+    if (mTokenizer == null) {
+      return java.util.Collections.emptyList();
+    }
+    final String lowerPrefix = prefix.toLowerCase(Locale.ROOT);
+
+    final java.util.ArrayList<ScoredWordCandidate> seeds = new java.util.ArrayList<>();
+    for (int tokenId : candidateIds) {
+      final String decoded = normalizeDecodedToken(mTokenizer.decodeId(tokenId));
+      if (decoded.isEmpty() || !isSimpleWord(decoded)) continue;
+      final float score = logProbForTokenId(ctx.lastLogits, ctx.logSumExp, tokenId);
+      if (!Float.isFinite(score)) continue;
+      seeds.add(new ScoredWordCandidate(tokenId, decoded, score, 1));
+    }
+    seeds.sort((a, b) -> Float.compare(b.score, a.score));
+
+    int expanded = 0;
+    for (ScoredWordCandidate candidate : seeds) {
+      if (expanded >= PREFIX_MAX_SEEDS_TO_EXPAND) break;
+      // Only expand seeds that don't already cover the whole prefix as a complete word; a seed whose
+      // surface is itself a prefix of (or equal to) the typed text still needs continuation.
+      if (candidate.word.length() > WORD_EXPANSION_MIN_LEN) continue;
+      expanded++;
+      final ExpansionResult expansion =
+          ctx.canExpand
+              ? greedyExpandWordScored(
+                  candidate.firstTokenId,
+                  candidate.word,
+                  ctx.pastTensorsByInputName,
+                  encoded.length,
+                  WORD_EXPANSION_MAX_EXTRA_TOKENS,
+                  WORD_EXPANSION_SEARCH_WINDOW)
+              : greedyExpandWordFullSequenceScored(
+                  encoded,
+                  candidate.firstTokenId,
+                  candidate.word,
+                  WORD_EXPANSION_NO_PAST_MAX_EXTRA_TOKENS,
+                  WORD_EXPANSION_SEARCH_WINDOW);
+      candidate.word = expansion.word;
+      candidate.score += expansion.scoreDelta;
+      candidate.tokens += expansion.extraTokens;
+    }
+
+    seeds.sort((a, b) -> Float.compare(b.score, a.score));
+    final java.util.ArrayList<String> out = new java.util.ArrayList<>(maxResults);
+    final java.util.HashSet<String> seenLower = new java.util.HashSet<>();
+    for (ScoredWordCandidate candidate : seeds) {
+      final String word = candidate.word;
+      if (word.isEmpty() || !isSimpleWord(word)) continue;
+      final String lower = word.toLowerCase(Locale.ROOT);
+      // Enforce the constraint: the completed word must still begin with what the user typed. Greedy
+      // expansion of a short seed can diverge from the prefix; such completions are dropped here.
+      if (!lower.startsWith(lowerPrefix)) continue;
+      if (seenLower.add(lower)) {
+        out.add(word);
+        if (out.size() == maxResults) break;
+      }
+    }
+    return out;
+  }
+
+  /** Drops the retained Layer-A context inference (frees its ONNX result). Call with lock held. */
+  private void clearContextInferenceLocked() {
+    if (mContextInference != null) {
+      mContextInference.result.close();
+      mContextInference = null;
+    }
+  }
+
+  /**
+   * Explicitly invalidates the per-word context cache. The integration layer calls this on word /
+   * sentence / field boundaries; correctness doesn't depend on it (the cache is content-keyed), but
+   * it frees the retained ONNX result promptly.
+   */
+  public void invalidateContextCache() {
+    mSessionLock.lock();
+    try {
+      clearContextInferenceLocked();
+    } finally {
       mSessionLock.unlock();
     }
   }
