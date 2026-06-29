@@ -19,6 +19,7 @@ final class SuggestionsProviderPrefsBinder {
       Consumer<Boolean> contactsDictionaryEnabledConsumer,
       Consumer<Boolean> userDictionaryEnabledConsumer,
       Consumer<String> predictionEngineModeConsumer,
+      Consumer<Boolean> neuralPrefixCompletionEnabledConsumer,
       Consumer<Integer> predictionContextWindowWordsConsumer,
       Consumer<String> nextWordAggressivenessConsumer,
       Consumer<String> nextWordDictionaryTypeConsumer) {
@@ -69,6 +70,16 @@ final class SuggestionsProviderPrefsBinder {
             .subscribe(
                 predictionEngineModeConsumer::accept,
                 GenericOnError.onError("settings_key_prediction_engine_mode")));
+
+    disposables.add(
+        prefs
+            .getBoolean(
+                R.string.settings_key_neural_prefix_completion,
+                R.bool.settings_default_neural_prefix_completion)
+            .asObservable()
+            .subscribe(
+                neuralPrefixCompletionEnabledConsumer::accept,
+                GenericOnError.onError("settings_key_neural_prefix_completion")));
 
     disposables.add(
         prefs

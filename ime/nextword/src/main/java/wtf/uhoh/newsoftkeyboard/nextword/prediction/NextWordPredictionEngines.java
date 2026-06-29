@@ -216,6 +216,10 @@ public final class NextWordPredictionEngines {
 
   @NonNull private volatile Mode mMode = Mode.HYBRID;
 
+  // Gates the in-progress-word neural completion (#1+#2) independently of the engine mode. When off,
+  // the neural engine still produces next-word suggestions but never completes the word being typed.
+  private volatile boolean mNeuralPrefixCompletionEnabled = true;
+
   @NonNull
   private final ArrayDeque<String> mPresageContext = new ArrayDeque<>(DEFAULT_CONTEXT_WINDOW_WORDS);
 
@@ -312,6 +316,21 @@ public final class NextWordPredictionEngines {
 
   public boolean isPresageEnabled() {
     return usesPresageEngine();
+  }
+
+  /**
+   * Enables or disables neural completion of the in-progress word (#1+#2). Independent of the engine
+   * mode: disabling it leaves next-word neural suggestions intact but stops word-completion calls and
+   * drops any cached completions.
+   */
+  public void setNeuralPrefixCompletionEnabled(boolean enabled) {
+    if (mNeuralPrefixCompletionEnabled == enabled) {
+      return;
+    }
+    mNeuralPrefixCompletionEnabled = enabled;
+    if (!enabled) {
+      invalidateNeuralContextCache();
+    }
   }
 
   public void setContextWindowWords(int contextWindowWords) {
@@ -952,7 +971,9 @@ public final class NextWordPredictionEngines {
    */
   @NonNull
   public List<String> getOrScheduleWordCompletions(@NonNull String prefix, int maxResults) {
-    if (maxResults <= 0 || (mMode != Mode.NEURAL && mMode != Mode.HYBRID)) {
+    if (maxResults <= 0
+        || !mNeuralPrefixCompletionEnabled
+        || (mMode != Mode.NEURAL && mMode != Mode.HYBRID)) {
       return java.util.Collections.emptyList();
     }
     final String trimmedPrefix = prefix.trim();

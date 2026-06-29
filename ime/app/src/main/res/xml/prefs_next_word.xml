@@ -35,6 +35,12 @@
             android:summary="@string/prediction_engine_mode_summary"
             android:title="@string/prediction_engine_mode_title"/>
 
+        <androidx.preference.CheckBoxPreference
+            android:key="@string/settings_key_neural_prefix_completion"
+            android:defaultValue="@bool/settings_default_neural_prefix_completion"
+            android:summary="@string/neural_prefix_completion_summary"
+            android:title="@string/neural_prefix_completion_title"/>
+
         <net.evendanan.pixel.SlidePreference
             android:key="@string/settings_key_prediction_context_window_words"
             android:defaultValue="@integer/settings_default_prediction_context_window_words"

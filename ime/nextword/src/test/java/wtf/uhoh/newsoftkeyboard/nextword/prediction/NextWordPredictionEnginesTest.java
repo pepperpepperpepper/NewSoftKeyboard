@@ -97,6 +97,13 @@ public class NextWordPredictionEnginesTest {
     // Valid request with no model installed: returns empty synchronously (schedules async, which
     // fails activation gracefully) rather than blocking the suggestion thread.
     Assert.assertTrue(engines.getOrScheduleWordCompletions("rec", 3).isEmpty());
+
+    // Word completion gated off: returns empty regardless of mode/context/prefix.
+    engines.setNeuralPrefixCompletionEnabled(false);
+    Assert.assertTrue(engines.getOrScheduleWordCompletions("rec", 3).isEmpty());
+    // Re-enabling restores the scheduling path (still empty here only because no model is installed).
+    engines.setNeuralPrefixCompletionEnabled(true);
+    Assert.assertTrue(engines.getOrScheduleWordCompletions("rec", 3).isEmpty());
   }
 
   @Test

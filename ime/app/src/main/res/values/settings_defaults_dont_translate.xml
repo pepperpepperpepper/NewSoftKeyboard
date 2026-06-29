@@ -17,6 +17,7 @@
     <bool name="settings_default_keyboard_icon_in_status_bar">false</bool>
     <bool name="settings_default_auto_capitalization">true</bool>
     <bool name="settings_default_show_suggestions">true</bool>
+    <bool name="settings_default_neural_prefix_completion">true</bool>
     <bool name="settings_default_respect_app_no_suggestions_flag">false</bool>
     <bool name="settings_default_allow_suggestions_restart">true</bool>
     <bool name="settings_default_lang_key_shows_popup">false</bool>

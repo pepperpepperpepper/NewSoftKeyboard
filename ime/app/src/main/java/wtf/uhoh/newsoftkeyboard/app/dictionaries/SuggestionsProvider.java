@@ -78,6 +78,7 @@ public class SuggestionsProvider {
         mDictionariesManager::setContactsDictionaryEnabled,
         mDictionariesManager::setUserDictionaryEnabled,
         this::onPredictionEngineModeChanged,
+        mPredictionEngines::setNeuralPrefixCompletionEnabled,
         this::setPredictionContextWindowWords,
         this::setNextWordAggressiveness,
         this::setNextWordDictionaryType);

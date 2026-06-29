@@ -34,6 +34,7 @@
         <item>hybrid</item>
     </string-array>
     <string name="settings_default_prediction_engine_mode">hybrid</string>
+    <string name="settings_key_neural_prefix_completion">settings_key_neural_prefix_completion</string>
     <string name="settings_key_prediction_context_window_words">settings_key_prediction_context_window_words</string>
     <string name="settings_key_manage_presage_models">settings_key_manage_presage_models</string>
     <string name="settings_key_prediction_engine_last_neural_error">settings_key_prediction_engine_last_neural_error</string>
