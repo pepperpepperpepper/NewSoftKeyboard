@@ -1001,6 +1001,34 @@ public class ImeServiceClipboardTest extends ImeServiceBaseTest {
   }
 
   @Test
+  public void testDoorwayTapAfterHintExpiredDoesNotCrash() {
+    // Regression: tapping the doorway calls setAsHint(false) on the (now removed) hint provider.
+    // Once the transient hint has auto-hidden its view is null, so setAsHint must be a no-op rather
+    // than NPE on the missing TextView.
+    simulateFinishInputFlow();
+    mClipboardManager.setPrimaryClip(
+        new ClipData("text 1", new String[0], new ClipData.Item("text 1")));
+    ShadowSystemClock.advanceBy(Duration.of(121, ChronoUnit.SECONDS));
+    simulateOnStartInputFlow();
+
+    // Hint view is gone, but the doorway remains because history still exists.
+    Assert.assertFalse(mImeServiceUnderTest.getClipboardStripActionProvider().isVisible());
+    final View doorway =
+        mImeServiceUnderTest
+            .getInputViewContainer()
+            .findViewById(R.id.clipboard_action_doorway_icon);
+    Assert.assertNotNull(doorway);
+
+    // Must open the picker without crashing on the absent hint view.
+    doorway.performClick();
+
+    final AlertDialog latestAlertDialog = GeneralDialogTestUtil.getLatestShownDialog();
+    Assert.assertNotNull(latestAlertDialog);
+    Assert.assertEquals(
+        "Pick text to paste", GeneralDialogTestUtil.getTitleFromDialog(latestAlertDialog));
+  }
+
+  @Test
   public void testShowHintStripActionIfClipboardEntryIsKindaOld() {
     simulateFinishInputFlow();
     mClipboardManager.setPrimaryClip(

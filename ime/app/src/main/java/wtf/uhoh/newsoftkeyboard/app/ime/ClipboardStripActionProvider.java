@@ -92,6 +92,11 @@ class ClipboardStripActionProvider implements KeyboardViewContainerView.StripAct
   }
 
   void setAsHint(boolean now) {
+    // The hint view may already be removed (e.g. it auto-hid before the doorway was tapped, which
+    // still calls setAsHint(false) to dismiss it). With no view there is nothing to update.
+    if (clipboardText == null) {
+      return;
+    }
     if (now) {
       clipboardText.setVisibility(View.GONE);
     } else if (clipboardText.getVisibility() != View.GONE
