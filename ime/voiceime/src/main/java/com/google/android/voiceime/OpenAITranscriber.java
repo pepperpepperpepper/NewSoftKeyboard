@@ -568,13 +568,40 @@ public class OpenAITranscriber {
     return "gpt-4o-transcribe".equals(model) || "gpt-4o-mini-transcribe".equals(model);
   }
 
-  /** Formats the chunking strategy value according to OpenAI API requirements */
-  private String formatChunkingStrategy(String chunkingStrategy) {
-    // For supported models, chunking_strategy should be a JSON object
-    if ("auto".equals(chunkingStrategy) || "server_vad".equals(chunkingStrategy)) {
+  /**
+   * Formats the {@code chunking_strategy} multipart value for the gpt-4o transcription models,
+   * which expect a JSON object rather than a bare string.
+   *
+   * <p>We deliberately emit only {@code {"type": "server_vad"}} with NO tuning fields. As of 2026-07,
+   * for these models OpenAI's {@code /v1/audio/transcriptions} endpoint returns HTTP 500
+   * (server_error) whenever the {@code server_vad} object carries {@code threshold} / {@code
+   * silence_duration_ms} / {@code prefix_padding_ms} — a single tuning field is enough to trip it;
+   * bare {@code server_vad}, {@code
+   * "auto"}, and omitting the parameter all return 200. This normalization is defensive-in-depth:
+   * even if a tuning-bearing value ever reaches here (a legacy stored pref, a future settings
+   * option, or an OpenAI-compatible proxy), we strip it back down to bare server_vad so the 500 can
+   * never be resurrected.
+   */
+  static String formatChunkingStrategy(String chunkingStrategy) {
+    if (isServerVadStrategy(chunkingStrategy)) {
       return "{\"type\": \"server_vad\"}";
     }
-    // Return as-is for any other values (though "none" should be filtered out before this)
+    // "none" is filtered out upstream; forward anything else unchanged.
     return chunkingStrategy;
+  }
+
+  /**
+   * True when the value selects server-side VAD chunking in any form the settings/API or an
+   * OpenAI-compatible proxy might hand us: the UI values {@code "auto"} / {@code "server_vad"}, or a
+   * JSON object naming {@code server_vad} (possibly carrying the tuning fields we must strip).
+   */
+  public static boolean isServerVadStrategy(String chunkingStrategy) {
+    if (chunkingStrategy == null) {
+      return false;
+    }
+    String normalized = chunkingStrategy.trim();
+    return "auto".equals(normalized)
+        || "server_vad".equals(normalized)
+        || normalized.contains("\"server_vad\"");
   }
 }

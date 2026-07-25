@@ -205,15 +205,26 @@ public final class OpenAISpeechBackend implements SpeechToTextBackend {
     return "text";
   }
 
-  private static String sanitizeChunkingStrategy(String strategy, String model) {
-    if ("none".equals(strategy)) {
+  /**
+   * Normalizes the stored chunking-strategy preference into a value safe to forward to the API.
+   *
+   * <p>Server-side VAD is only ever emitted as bare {@code {"type": "server_vad"}} — never with the
+   * tuning fields (threshold / silence_duration_ms / prefix_padding_ms) that OpenAI's endpoint began
+   * rejecting with HTTP 500 in 2026-07 (see {@link OpenAITranscriber#formatChunkingStrategy}). Any
+   * value we don't recognize falls back to {@code "none"} (no chunking) rather than being forwarded
+   * verbatim.
+   */
+  static String sanitizeChunkingStrategy(String strategy, String model) {
+    if (strategy == null || "none".equals(strategy.trim())) {
       return "none";
     }
     if ("gpt-4o-transcribe".equals(model) || "gpt-4o-mini-transcribe".equals(model)) {
-      if ("auto".equals(strategy) || "server_vad".equals(strategy)) {
+      if (OpenAITranscriber.isServerVadStrategy(strategy)) {
         return "{\"type\": \"server_vad\"}";
       }
-      return strategy;
+      // Unknown/unsupported value for a chunking-capable model: disable chunking rather than
+      // forwarding an unvetted value that could 4xx/5xx.
+      return "none";
     }
     return "none";
   }
